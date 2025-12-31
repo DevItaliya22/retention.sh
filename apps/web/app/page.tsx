@@ -1,4 +1,4 @@
-import { Button } from "@workspace/ui/components/button"
+import { Button } from "@reelo/ui/components"
 
 export default function Page() {
   return (

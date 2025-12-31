@@ -1,9 +1,11 @@
 {
-  "extends": "@workspace/typescript-config/react-library.json",
+  "extends": "@reelo/typescript-config/react-library.json",
   "compilerOptions": {
     "baseUrl": ".",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
     "paths": {
-      "@workspace/ui/*": ["./src/*"]
+      "@reelo/ui/*": ["./src/*"]
     }
   },
   "include": ["."],

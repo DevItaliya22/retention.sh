@@ -11,10 +11,10 @@
   },
   "iconLibrary": "lucide",
   "aliases": {
-    "components": "@workspace/ui/components",
-    "utils": "@workspace/ui/lib/utils",
-    "hooks": "@workspace/ui/hooks",
-    "lib": "@workspace/ui/lib",
-    "ui": "@workspace/ui/components"
+    "components": "@reelo/ui/components",
+    "utils": "@reelo/ui/lib/utils",
+    "hooks": "@reelo/ui/hooks",
+    "lib": "@reelo/ui/lib",
+    "ui": "@reelo/ui/components"
   }
 }

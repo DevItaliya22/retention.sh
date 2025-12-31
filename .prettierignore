@@ -1,0 +1,9 @@
+# Ignore build outputs
+dist/
+build/
+.next/
+node_modules/
+
+# Ignore generated files
+*.generated.*
+*.d.ts
