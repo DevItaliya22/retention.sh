@@ -1,6 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  transpilePackages: ["@reelo/ui"],
+  transpilePackages: ["@reelo/ui", "@reelo/db"],
+  experimental: {
+    serverComponentsExternalPackages: ["@prisma/client"],
+  },
 };
 
 export default nextConfig;

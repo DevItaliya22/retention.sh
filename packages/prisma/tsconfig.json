@@ -1,0 +1,15 @@
+{
+    "extends": "@reelo/typescript-config/base.json",
+    "compilerOptions": {
+      "baseUrl": ".",
+      "paths": {
+        "@zeropaper/prisma/*": ["./src/*"]
+      },
+      "outDir": "./dist",
+      "module": "ESNext",
+      "moduleResolution": "Bundler"
+    },
+    "include": ["."],
+    "exclude": ["node_modules", "dist"]
+  }
+  
