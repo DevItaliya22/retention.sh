@@ -19,6 +19,7 @@
     "prettier-plugin-tailwindcss": "^0.7.2"
   },
   "dependencies": {
+    "@reelo/db": "workspace:*",
     "@reelo/ui": "workspace:*"
   },
   "packageManager": "pnpm@10.4.1",

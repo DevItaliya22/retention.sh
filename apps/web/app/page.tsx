@@ -1,12 +1,10 @@
-import { Button } from "@reelo/ui/components"
-
-export default function Page() {
-  return (
-    <div className="flex items-center justify-center min-h-svh">
-      <div className="flex flex-col items-center justify-center gap-4">
-        <h1 className="text-2xl font-bold">Hello World</h1>
-        <Button size="sm">Button</Button>
-      </div>
+import { prisma } from "@reelo/db";
+export default async function Home() {
+  const users = await prisma.user.findMany();
+    return (
+    <div>
+      <h1>Hello World</h1>
+      <pre>{JSON.stringify(users, null, 2)}</pre>
     </div>
-  )
+  );
 }
