@@ -1,15 +1,15 @@
 {
-    "extends": "@reelo/typescript-config/base.json",
-    "compilerOptions": {
-      "baseUrl": ".",
-      "paths": {
-        "@zeropaper/prisma/*": ["./src/*"]
-      },
-      "outDir": "./dist",
-      "module": "ESNext",
-      "moduleResolution": "Bundler"
+  "extends": "@reelo/typescript-config/base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@zeropaper/prisma/*": ["./src/*"]
     },
-    "include": ["."],
-    "exclude": ["node_modules", "dist"]
-  }
-  
+    "outDir": "./dist",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "allowImportingTsExtensions": false
+  },
+  "include": ["."],
+  "exclude": ["node_modules", "dist"]
+}
