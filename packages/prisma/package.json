@@ -13,9 +13,22 @@
     "pg": "^8.16.3"
   },
   "scripts": {
-    "db:generate": "prisma generate",
-    "db:migrate": "prisma migrate dev",
-    "db:deploy": "prisma migrate deploy"
+    "build": "tsup",
+    "prebuild": "pnpm run db:generate",
+    "predev": "pnpm run db:generate",
+    "db:generate": "prisma generate --schema ./prisma",
+    "db:migrate": "prisma migrate dev --schema ./prisma",
+    "db:deploy": "prisma migrate deploy --schema ./prisma",
+    "db:studio": "prisma studio --schema ./prisma",
+    "db:reset": "prisma migrate reset --schema ./prisma",
+    "db:push": "prisma db push --schema ./prisma",
+    "db:validate": "prisma validate --schema ./prisma",
+    "db:format": "prisma format --schema ./prisma",
+    "db:lint": "prisma validate --schema ./prisma && prisma format --schema ./prisma",
+    "schema:check": "echo '📋 Checking modular schema structure...' && ls -la prisma/models/ && echo '✅ Schema files found'",
+    "schema:validate": "npm run db:validate && npm run schema:check",
+    "schema:format": "npm run db:format",
+    "schema:lint": "npm run db:lint"
   },
   "exports": {
     ".": "./src/index.ts"
