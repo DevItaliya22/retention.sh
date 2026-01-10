@@ -1,0 +1,114 @@
+enum LoyaltyMessageType {
+  FIRST_PURCHASE      // Sent on first purchase
+  EXPIRE              // Sent when points are about to expire
+  REMINDER            // Sent as point reminder
+  SUBSEQUENT_PURCHASE // Sent on subsequent purchases
+  MEMBERSHIP_JOIN     // Added for membership
+}
+
+enum MembershipBenefitType {
+  CASH_DISCOUNT
+  PERCENTAGE_DISCOUNT
+  FREE_ITEM
+  LOYALTY_BONUS
+  NO_DISCOUNT
+}
+
+enum BenefitAppliesTo {
+  ENTIRE_PURCHASE
+  SPECIFIC_ITEMS
+}
+
+enum QrBenefitType {
+  CASH_DISCOUNT
+  PERCENTAGE_DISCOUNT
+  FREE_ITEM
+  LOYALTY_BONUS 
+}
+
+enum MembershipStatus {
+  DRAFT
+  ACTIVE
+  INACTIVE
+}
+
+enum FeedbackTiming {
+  IMMEDIATELY
+  AFTER_DELAY
+}
+
+enum FeedbackCollectionChannel {
+  WHATSAPP
+  SMS
+  EMAIL
+  CASHIER_PORTAL
+}
+
+enum OnlineReviewPlatform {
+  GOOGLE
+  INSTAGRAM
+  FACEBOOK
+  ZOMATO
+  OTHER
+}
+
+enum CollectionChannel {
+  WHATSAPP
+  LANDING_PAGE
+}
+
+enum CustomerTargetGroup {
+  NEW_CUSTOMERS
+  NEW_AND_EXISTING
+  EXISTING_CUSTOMERS_ONLY
+}
+
+enum RedemptionLimit {
+  ONCE
+  MULTIPLE
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  SENT
+  FAILED
+}
+
+enum CampaignChannel {
+  SMS
+  EMAIL
+  WHATSAPP
+}
+
+enum AutoCampaignTrigger {
+  BIRTHDAY
+  ANNIVERSARY
+  FIRST_PURCHASE
+  WIN_BACK
+  MEMBERSHIP_EXPIRY
+  POINTS_EXPIRY
+}
+
+enum TransactionType {
+  EARNED
+  REDEEMED
+  REFUNDED
+  GIFTED
+  ADJUSTMENT
+  EXPIRED
+}
+
+enum TransactionSource {
+  BILL
+  FEEDBACK
+  SCRATCH_CARD
+  CAMPAIGN
+  REFERRAL
+  MANUAL_ADJUSTMENT
+}
+
+enum WalletType {
+  POINTS
+  STORE_CREDIT
+}

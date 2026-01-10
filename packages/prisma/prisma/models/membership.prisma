@@ -1,0 +1,100 @@
+model Membership {
+    id String @id @default(uuid())
+
+    // Business Connection
+    businessId String
+    business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+    // Status
+    status MembershipStatus @default(DRAFT)
+
+    // Branding
+    brandingId String?  @unique
+    branding   Branding? @relation(fields: [brandingId], references: [id], onDelete: SetNull, map: "membership_branding_fkey")
+    
+    // Marketing
+    marketingSlug String @unique @default(uuid())
+
+    // Pricing
+    convenienceFee      Float @default(0)
+    paymentGatewayCharge Float @default(0)
+    userReceives         Float @default(0)
+    totalPrice           Float @default(0) // Calculated: convenienceFee + gateway + receives
+
+    // Terms
+    termsAndConditions TermsAndConditions[]
+
+    // QR Config
+    qrImage String? // URL or path to QR image
+    qrData  String? // Link or encrypted data encoded in QR
+    
+    // Benefits relation
+    membershipBenefits MembershipBenefit[]
+
+    // Channels
+    whatsappEnabled Boolean @default(false)
+    emailEnabled    Boolean @default(false)
+    smsEnabled      Boolean @default(false)
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    // Relations
+    qrs                Qr[]
+    membershipActions MembershipAction[]
+
+    @@index([businessId])
+    @@index([marketingSlug])
+    @@map("membership")
+}
+
+// have to chnage this once we check the form , we have to add diff field for diff things 
+model MembershipBenefit {
+    id String @id @default(uuid())
+
+    type  MembershipBenefitType
+    
+    // For PERCENTAGE_DISCOUNT
+    percentage           Float?
+    maxRedeemableAmount  Float?
+    
+    // For CASH_DISCOUNT
+    amount               Float?
+    minPurchaseAmount    Float?
+    
+    // For FREE_ITEM
+    item                 String? // For free item description
+    
+    // For LOYALTY_BONUS
+    points               Int?
+
+    // Common for discounts
+    appliesTo            BenefitAppliesTo? @default(ENTIRE_PURCHASE)
+    specificItems        String[]          // List of items if appliesTo is SPECIFIC_ITEMS
+
+    membershipId String
+    membership   Membership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@index([membershipId])
+    @@map("membership_benefit")
+}
+
+model MembershipAction {
+    id String @id @default(uuid())
+
+    platform String
+    label    String
+    url      String
+
+    membershipId String
+    membership   Membership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@map("membership_action")
+    @@index([membershipId])
+}

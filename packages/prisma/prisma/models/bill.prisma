@@ -1,0 +1,22 @@
+
+model Bill {
+    id String @id @default(uuid())
+
+    billNumber String
+    amount     Float?
+
+    businessId String
+    customerId String
+    businessCustomer BusinessCustomer @relation(fields: [businessId, customerId], references: [businessId, customerId], onDelete: Cascade)
+
+    // Relation to scratch cards
+    scratchCardResponses ScratchCardResponse[]
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@unique([businessId, billNumber])
+    @@map("bill")
+    @@index([businessId])
+    @@index([customerId])
+}

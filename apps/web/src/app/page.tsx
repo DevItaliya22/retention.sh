@@ -5,7 +5,6 @@ import { Button } from "@reelo/ui/components"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@reelo/ui/components"
 import { authClient } from "@/lib/auth/auth-client"
 
-
 export default function HomePage() {
   const router = useRouter()
   const { data: session, isPending } = authClient.useSession()

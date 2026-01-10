@@ -1,0 +1,102 @@
+
+model ScratchCard {
+    id String @id @default(uuid())
+
+    title       String
+    description String?
+    slug        String  @unique
+
+    // Branding
+    brandingId String?   @unique
+    branding   Branding? @relation(fields: [brandingId], references: [id], onDelete: SetNull)
+
+    // Configuration
+    targetGroup                CustomerTargetGroup @default(NEW_AND_EXISTING)
+    allowMultipleRedemptions   Boolean             @default(false)
+
+    // Redirection / Review
+    redirectUrl          String?
+    onlineReviewPlatform OnlineReviewPlatform?
+    reviewPlatformUrl    String?
+
+    // Business Relation
+    businessId String
+    business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+    // Relations
+    benefits  ScratchCardBenefit[]
+    responses ScratchCardResponse[]
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@map("scratch_card")
+    @@index([businessId])
+}
+
+model ScratchCardBenefit {
+    id String @id @default(uuid())
+
+    type QrBenefitType
+
+    // For PERCENTAGE_DISCOUNT
+    percentage           Float?
+    maxRedeemableAmount  Float?
+
+    // For CASH_DISCOUNT
+    amount               Float?
+    minPurchaseAmount    Float?
+
+    // For FREE_ITEM
+    item                 String?
+
+    // For LOYALTY_BONUS
+    points               Int?
+
+    // Probability weight for random distribution
+    weight Int @default(1) // show on ui by doing x100 in %
+
+    scratchCardId String
+    scratchCard   ScratchCard @relation(fields: [scratchCardId], references: [id], onDelete: Cascade)
+
+    // Link to responses to track what was won
+    responses ScratchCardResponse[]
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@map("scratch_card_benefit")
+    @@index([scratchCardId])
+}
+
+model ScratchCardResponse {
+    id String @id @default(uuid())
+
+    scratchCardId String
+    scratchCard   ScratchCard @relation(fields: [scratchCardId], references: [id], onDelete: Cascade)
+
+    businessId String
+    customerId String
+    businessCustomer BusinessCustomer @relation(fields: [businessId, customerId], references: [businessId, customerId], onDelete: Cascade)
+
+    // Optional relation to a bill for "one scratch per bill" logic
+    billId String?
+    bill   Bill?   @relation(fields: [billId], references: [id], onDelete: SetNull)
+
+    // The specific benefit won by the customer
+    benefitId String?
+    benefit   ScratchCardBenefit? @relation(fields: [benefitId], references: [id], onDelete: SetNull)
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    // If allowMultipleRedemptions is true, we validate uniqueness of (scratchCardId, billId).
+    // If false, we validate uniqueness of (scratchCardId, customerId).
+    // Adding billId to the unique constraint allows the same customer to have multiple responses 
+    // as long as they are for different bills.
+    @@unique([scratchCardId, businessId, customerId, billId])
+    @@map("scratch_card_response")
+    @@index([scratchCardId])
+    @@index([businessId, customerId])
+    @@index([billId])
+}

@@ -1,0 +1,32 @@
+
+model TermsAndConditions {
+    id      String @id @default(uuid())
+    content String
+
+    // Relations
+    loyaltyId String?
+    loyalty   Loyalty? @relation(fields: [loyaltyId], references: [id], onDelete: Cascade)
+
+    membershipId String?
+    membership   Membership? @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+
+    qrId String?
+    qr   Qr? @relation(fields: [qrId], references: [id], onDelete: Cascade)
+
+    loyaltyTierId String?
+    loyaltyTier   LoyaltyTier? @relation(fields: [loyaltyTierId], references: [id], onDelete: Cascade)
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@index([loyaltyId])
+    @@index([membershipId])
+    @@index([qrId])
+    
+    // Ensure uniqueness per campaign
+    @@unique([content, loyaltyId])
+    @@unique([content, membershipId])
+    @@unique([content, qrId])
+
+    @@map("terms_and_conditions")
+}

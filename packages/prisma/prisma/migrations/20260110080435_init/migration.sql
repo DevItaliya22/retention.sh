@@ -1,0 +1,766 @@
+-- CreateEnum
+CREATE TYPE "LoyaltyMessageType" AS ENUM ('FIRST_PURCHASE', 'EXPIRE', 'REMINDER', 'SUBSEQUENT_PURCHASE', 'MEMBERSHIP_JOIN');
+
+-- CreateEnum
+CREATE TYPE "MembershipBenefitType" AS ENUM ('CASH_DISCOUNT', 'PERCENTAGE_DISCOUNT', 'FREE_ITEM', 'LOYALTY_BONUS', 'NO_DISCOUNT');
+
+-- CreateEnum
+CREATE TYPE "BenefitAppliesTo" AS ENUM ('ENTIRE_PURCHASE', 'SPECIFIC_ITEMS');
+
+-- CreateEnum
+CREATE TYPE "QrBenefitType" AS ENUM ('CASH_DISCOUNT', 'PERCENTAGE_DISCOUNT', 'FREE_ITEM', 'LOYALTY_BONUS');
+
+-- CreateEnum
+CREATE TYPE "MembershipStatus" AS ENUM ('DRAFT', 'ACTIVE', 'INACTIVE');
+
+-- CreateEnum
+CREATE TYPE "FeedbackTiming" AS ENUM ('IMMEDIATELY', 'AFTER_DELAY');
+
+-- CreateEnum
+CREATE TYPE "FeedbackCollectionChannel" AS ENUM ('WHATSAPP', 'SMS', 'EMAIL', 'CASHIER_PORTAL');
+
+-- CreateEnum
+CREATE TYPE "OnlineReviewPlatform" AS ENUM ('GOOGLE', 'INSTAGRAM', 'FACEBOOK', 'ZOMATO', 'OTHER');
+
+-- CreateEnum
+CREATE TYPE "CollectionChannel" AS ENUM ('WHATSAPP', 'LANDING_PAGE');
+
+-- CreateEnum
+CREATE TYPE "CustomerTargetGroup" AS ENUM ('NEW_CUSTOMERS', 'NEW_AND_EXISTING', 'EXISTING_CUSTOMERS_ONLY');
+
+-- CreateEnum
+CREATE TYPE "RedemptionLimit" AS ENUM ('ONCE', 'MULTIPLE');
+
+-- CreateEnum
+CREATE TYPE "CampaignStatus" AS ENUM ('DRAFT', 'SCHEDULED', 'SENT', 'FAILED');
+
+-- CreateEnum
+CREATE TYPE "CampaignChannel" AS ENUM ('SMS', 'EMAIL', 'WHATSAPP');
+
+-- CreateEnum
+CREATE TYPE "AutoCampaignTrigger" AS ENUM ('BIRTHDAY', 'ANNIVERSARY', 'FIRST_PURCHASE', 'WIN_BACK', 'MEMBERSHIP_EXPIRY', 'POINTS_EXPIRY');
+
+-- CreateEnum
+CREATE TYPE "TransactionType" AS ENUM ('EARNED', 'REDEEMED', 'REFUNDED', 'GIFTED', 'ADJUSTMENT', 'EXPIRED');
+
+-- CreateEnum
+CREATE TYPE "TransactionSource" AS ENUM ('BILL', 'FEEDBACK', 'SCRATCH_CARD', 'CAMPAIGN', 'REFERRAL', 'MANUAL_ADJUSTMENT');
+
+-- CreateEnum
+CREATE TYPE "WalletType" AS ENUM ('POINTS', 'STORE_CREDIT');
+
+-- AlterTable
+ALTER TABLE "user" ADD COLUMN     "businessId" TEXT;
+
+-- CreateTable
+CREATE TABLE "bill" (
+    "id" TEXT NOT NULL,
+    "billNumber" TEXT NOT NULL,
+    "amount" DOUBLE PRECISION,
+    "businessId" TEXT NOT NULL,
+    "customerId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "bill_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "branding" (
+    "id" TEXT NOT NULL,
+    "logo" TEXT,
+    "themeColor" TEXT,
+    "textColor" TEXT,
+    "bannerImage" TEXT,
+    "header" TEXT,
+    "subtitle" TEXT,
+    "posterTitle" TEXT,
+    "posterThemeColor" TEXT,
+    "posterTextColor" TEXT,
+    "businessId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "branding_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "business" (
+    "id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "pointsName" TEXT NOT NULL DEFAULT 'Points',
+    "currencySymbol" TEXT NOT NULL DEFAULT '₹',
+    "currencyCode" TEXT NOT NULL DEFAULT 'INR',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "business_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "cashier" (
+    "id" TEXT NOT NULL,
+    "name" TEXT,
+    "email" TEXT NOT NULL,
+    "password" TEXT NOT NULL,
+    "cashierLinkSlug" TEXT NOT NULL,
+    "businessId" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "cashier_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "customer" (
+    "id" TEXT NOT NULL,
+    "phoneNumber" TEXT NOT NULL,
+    "name" TEXT,
+    "email" TEXT,
+    "addressLine1" TEXT,
+    "addressLine2" TEXT,
+    "city" TEXT,
+    "state" TEXT,
+    "country" TEXT,
+    "postalCode" TEXT,
+    "referralSlug" TEXT NOT NULL,
+    "referredById" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "customer_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "business_customer" (
+    "businessId" TEXT NOT NULL,
+    "customerId" TEXT NOT NULL,
+    "currentpoints" INTEGER NOT NULL DEFAULT 0,
+    "storeCredit" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "currentTierId" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "business_customer_pkey" PRIMARY KEY ("businessId","customerId")
+);
+
+-- CreateTable
+CREATE TABLE "feedback_config" (
+    "id" TEXT NOT NULL,
+    "businessId" TEXT NOT NULL,
+    "brandingId" TEXT,
+    "positiveFollowUp" TEXT,
+    "negativeFollowUp" TEXT,
+    "isHowDidYouHearEnabled" BOOLEAN NOT NULL DEFAULT true,
+    "feedbackRewardEnabled" BOOLEAN NOT NULL DEFAULT false,
+    "rewardAmount" DOUBLE PRECISION,
+    "timing" "FeedbackTiming" NOT NULL DEFAULT 'IMMEDIATELY',
+    "delaySeconds" INTEGER,
+    "collectionChannel" "FeedbackCollectionChannel" NOT NULL DEFAULT 'WHATSAPP',
+    "sendViaSmsIfWpFailed" BOOLEAN NOT NULL DEFAULT false,
+    "negAlertChannelsWp" BOOLEAN NOT NULL DEFAULT false,
+    "negAlertChannelsSms" BOOLEAN NOT NULL DEFAULT false,
+    "negAlertChannelsEmail" BOOLEAN NOT NULL DEFAULT false,
+    "negFeedbackAlertNumber" TEXT,
+    "negFeedbackAlertSmsNumber" TEXT,
+    "negFeedbackAlertEmailAddress" TEXT,
+    "askForOnlineReviews" BOOLEAN NOT NULL DEFAULT false,
+    "onlineReviewLink" TEXT,
+    "onlineReviewPlatform" "OnlineReviewPlatform",
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "feedback_config_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "feedback_question" (
+    "id" TEXT NOT NULL,
+    "question" TEXT NOT NULL,
+    "iconType" TEXT,
+    "configId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "feedback_question_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "feedback_category" (
+    "id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "configId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "feedback_category_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "how_did_you_hear_option" (
+    "id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "configId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "how_did_you_hear_option_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "feedback_response" (
+    "id" TEXT NOT NULL,
+    "configId" TEXT NOT NULL,
+    "businessId" TEXT NOT NULL,
+    "customerId" TEXT NOT NULL,
+    "rating" INTEGER,
+    "comment" TEXT,
+    "howDidYouHear" TEXT,
+    "selectedCategories" TEXT[],
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "feedback_response_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "loyalty" (
+    "id" TEXT NOT NULL,
+    "businessId" TEXT NOT NULL,
+    "brandingId" TEXT,
+    "earningPercentage" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "cashbackInFinalAmount" BOOLEAN NOT NULL DEFAULT false,
+    "cashbackBranding" TEXT,
+    "minPurchaseForEarning" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "minPurchaseForRedemption" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "upperLimitBillAmount" DOUBLE PRECISION,
+    "upperLimitClaimableAmount" DOUBLE PRECISION,
+    "pointReminderDays" INTEGER,
+    "pointExpiryDays" INTEGER,
+    "whatsappEnabled" BOOLEAN NOT NULL DEFAULT false,
+    "emailEnabled" BOOLEAN NOT NULL DEFAULT false,
+    "smsEnabled" BOOLEAN NOT NULL DEFAULT false,
+    "customerNumbers" TEXT[],
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "loyalty_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "loyalty_tier" (
+    "id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "rank" INTEGER NOT NULL,
+    "minPoints" INTEGER NOT NULL DEFAULT 0,
+    "rewards" TEXT[],
+    "loyaltyId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "loyalty_tier_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "loyalty_bonus" (
+    "id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "description" TEXT,
+    "bonusPoints" INTEGER NOT NULL,
+    "loyaltyId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "loyalty_bonus_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "loyalty_message" (
+    "id" TEXT NOT NULL,
+    "messageType" "LoyaltyMessageType" NOT NULL,
+    "content" TEXT NOT NULL,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "loyaltyId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "loyalty_message_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "membership" (
+    "id" TEXT NOT NULL,
+    "businessId" TEXT NOT NULL,
+    "status" "MembershipStatus" NOT NULL DEFAULT 'DRAFT',
+    "brandingId" TEXT,
+    "marketingSlug" TEXT NOT NULL,
+    "convenienceFee" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "paymentGatewayCharge" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "userReceives" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "totalPrice" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "qrImage" TEXT,
+    "qrData" TEXT,
+    "whatsappEnabled" BOOLEAN NOT NULL DEFAULT false,
+    "emailEnabled" BOOLEAN NOT NULL DEFAULT false,
+    "smsEnabled" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "membership_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "membership_benefit" (
+    "id" TEXT NOT NULL,
+    "type" "MembershipBenefitType" NOT NULL,
+    "percentage" DOUBLE PRECISION,
+    "maxRedeemableAmount" DOUBLE PRECISION,
+    "amount" DOUBLE PRECISION,
+    "minPurchaseAmount" DOUBLE PRECISION,
+    "item" TEXT,
+    "points" INTEGER,
+    "appliesTo" "BenefitAppliesTo" DEFAULT 'ENTIRE_PURCHASE',
+    "specificItems" TEXT[],
+    "membershipId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "membership_benefit_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "membership_action" (
+    "id" TEXT NOT NULL,
+    "platform" TEXT NOT NULL,
+    "label" TEXT NOT NULL,
+    "url" TEXT NOT NULL,
+    "membershipId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "membership_action_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "qr" (
+    "id" TEXT NOT NULL,
+    "businessId" TEXT NOT NULL,
+    "name" TEXT,
+    "collectionChannel" "CollectionChannel" NOT NULL DEFAULT 'LANDING_PAGE',
+    "landingPageTitle" TEXT,
+    "successPageTitle" TEXT,
+    "customerTarget" "CustomerTargetGroup" NOT NULL DEFAULT 'NEW_AND_EXISTING',
+    "redemptionLimit" "RedemptionLimit" NOT NULL DEFAULT 'ONCE',
+    "brandingId" TEXT,
+    "rewardExpiryDays" INTEGER DEFAULT 30,
+    "rewardExpiryCommunicationDays" INTEGER DEFAULT 3,
+    "emailEnabled" BOOLEAN NOT NULL DEFAULT false,
+    "smsEnabled" BOOLEAN NOT NULL DEFAULT false,
+    "whatsappEnabled" BOOLEAN NOT NULL DEFAULT false,
+    "qrImage" TEXT,
+    "redirectSlug" TEXT,
+    "successSlug" TEXT,
+    "redirectLink" TEXT,
+    "successLink" TEXT,
+    "membershipId" TEXT,
+    "loyaltyId" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "qr_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "qr_benefit" (
+    "id" TEXT NOT NULL,
+    "type" "QrBenefitType" NOT NULL,
+    "percentage" DOUBLE PRECISION,
+    "maxRedeemableAmount" DOUBLE PRECISION,
+    "amount" DOUBLE PRECISION,
+    "minPurchaseAmount" DOUBLE PRECISION,
+    "item" TEXT,
+    "points" INTEGER,
+    "appliesTo" "BenefitAppliesTo" DEFAULT 'ENTIRE_PURCHASE',
+    "specificItems" TEXT[],
+    "qrId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "qr_benefit_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "qr_action" (
+    "id" TEXT NOT NULL,
+    "platform" TEXT NOT NULL,
+    "label" TEXT NOT NULL,
+    "url" TEXT NOT NULL,
+    "qrId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "qr_action_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "referral_log" (
+    "id" TEXT NOT NULL,
+    "referrerId" TEXT NOT NULL,
+    "newCustomerPhone" TEXT NOT NULL,
+    "newCustomerName" TEXT,
+    "rewardGiven" BOOLEAN NOT NULL DEFAULT false,
+    "rewardDetails" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "referral_log_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "scratch_card" (
+    "id" TEXT NOT NULL,
+    "title" TEXT NOT NULL,
+    "description" TEXT,
+    "slug" TEXT NOT NULL,
+    "brandingId" TEXT,
+    "targetGroup" "CustomerTargetGroup" NOT NULL DEFAULT 'NEW_AND_EXISTING',
+    "allowMultipleRedemptions" BOOLEAN NOT NULL DEFAULT false,
+    "redirectUrl" TEXT,
+    "onlineReviewPlatform" "OnlineReviewPlatform",
+    "reviewPlatformUrl" TEXT,
+    "businessId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "scratch_card_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "scratch_card_benefit" (
+    "id" TEXT NOT NULL,
+    "type" "QrBenefitType" NOT NULL,
+    "percentage" DOUBLE PRECISION,
+    "maxRedeemableAmount" DOUBLE PRECISION,
+    "amount" DOUBLE PRECISION,
+    "minPurchaseAmount" DOUBLE PRECISION,
+    "item" TEXT,
+    "points" INTEGER,
+    "weight" INTEGER NOT NULL DEFAULT 1,
+    "scratchCardId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "scratch_card_benefit_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "scratch_card_response" (
+    "id" TEXT NOT NULL,
+    "scratchCardId" TEXT NOT NULL,
+    "businessId" TEXT NOT NULL,
+    "customerId" TEXT NOT NULL,
+    "billId" TEXT,
+    "benefitId" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "scratch_card_response_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "terms_and_conditions" (
+    "id" TEXT NOT NULL,
+    "content" TEXT NOT NULL,
+    "loyaltyId" TEXT,
+    "membershipId" TEXT,
+    "qrId" TEXT,
+    "loyaltyTierId" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "terms_and_conditions_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE INDEX "bill_businessId_idx" ON "bill"("businessId");
+
+-- CreateIndex
+CREATE INDEX "bill_customerId_idx" ON "bill"("customerId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "bill_businessId_billNumber_key" ON "bill"("businessId", "billNumber");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "branding_businessId_key" ON "branding"("businessId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "cashier_cashierLinkSlug_key" ON "cashier"("cashierLinkSlug");
+
+-- CreateIndex
+CREATE INDEX "cashier_email_idx" ON "cashier"("email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "customer_phoneNumber_key" ON "customer"("phoneNumber");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "customer_referralSlug_key" ON "customer"("referralSlug");
+
+-- CreateIndex
+CREATE INDEX "customer_phoneNumber_idx" ON "customer"("phoneNumber");
+
+-- CreateIndex
+CREATE INDEX "customer_referralSlug_idx" ON "customer"("referralSlug");
+
+-- CreateIndex
+CREATE INDEX "customer_referredById_idx" ON "customer"("referredById");
+
+-- CreateIndex
+CREATE INDEX "business_customer_currentTierId_idx" ON "business_customer"("currentTierId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "feedback_config_businessId_key" ON "feedback_config"("businessId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "feedback_config_brandingId_key" ON "feedback_config"("brandingId");
+
+-- CreateIndex
+CREATE INDEX "feedback_config_businessId_idx" ON "feedback_config"("businessId");
+
+-- CreateIndex
+CREATE INDEX "feedback_question_configId_idx" ON "feedback_question"("configId");
+
+-- CreateIndex
+CREATE INDEX "feedback_category_configId_idx" ON "feedback_category"("configId");
+
+-- CreateIndex
+CREATE INDEX "how_did_you_hear_option_configId_idx" ON "how_did_you_hear_option"("configId");
+
+-- CreateIndex
+CREATE INDEX "feedback_response_configId_idx" ON "feedback_response"("configId");
+
+-- CreateIndex
+CREATE INDEX "feedback_response_customerId_idx" ON "feedback_response"("customerId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "loyalty_businessId_key" ON "loyalty"("businessId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "loyalty_brandingId_key" ON "loyalty"("brandingId");
+
+-- CreateIndex
+CREATE INDEX "loyalty_businessId_idx" ON "loyalty"("businessId");
+
+-- CreateIndex
+CREATE INDEX "loyalty_tier_loyaltyId_idx" ON "loyalty_tier"("loyaltyId");
+
+-- CreateIndex
+CREATE INDEX "loyalty_bonus_loyaltyId_idx" ON "loyalty_bonus"("loyaltyId");
+
+-- CreateIndex
+CREATE INDEX "loyalty_message_loyaltyId_idx" ON "loyalty_message"("loyaltyId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "membership_brandingId_key" ON "membership"("brandingId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "membership_marketingSlug_key" ON "membership"("marketingSlug");
+
+-- CreateIndex
+CREATE INDEX "membership_businessId_idx" ON "membership"("businessId");
+
+-- CreateIndex
+CREATE INDEX "membership_marketingSlug_idx" ON "membership"("marketingSlug");
+
+-- CreateIndex
+CREATE INDEX "membership_benefit_membershipId_idx" ON "membership_benefit"("membershipId");
+
+-- CreateIndex
+CREATE INDEX "membership_action_membershipId_idx" ON "membership_action"("membershipId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "qr_brandingId_key" ON "qr"("brandingId");
+
+-- CreateIndex
+CREATE INDEX "qr_businessId_idx" ON "qr"("businessId");
+
+-- CreateIndex
+CREATE INDEX "qr_membershipId_idx" ON "qr"("membershipId");
+
+-- CreateIndex
+CREATE INDEX "qr_loyaltyId_idx" ON "qr"("loyaltyId");
+
+-- CreateIndex
+CREATE INDEX "qr_benefit_qrId_idx" ON "qr_benefit"("qrId");
+
+-- CreateIndex
+CREATE INDEX "qr_action_qrId_idx" ON "qr_action"("qrId");
+
+-- CreateIndex
+CREATE INDEX "referral_log_referrerId_idx" ON "referral_log"("referrerId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "scratch_card_slug_key" ON "scratch_card"("slug");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "scratch_card_brandingId_key" ON "scratch_card"("brandingId");
+
+-- CreateIndex
+CREATE INDEX "scratch_card_businessId_idx" ON "scratch_card"("businessId");
+
+-- CreateIndex
+CREATE INDEX "scratch_card_benefit_scratchCardId_idx" ON "scratch_card_benefit"("scratchCardId");
+
+-- CreateIndex
+CREATE INDEX "scratch_card_response_scratchCardId_idx" ON "scratch_card_response"("scratchCardId");
+
+-- CreateIndex
+CREATE INDEX "scratch_card_response_businessId_customerId_idx" ON "scratch_card_response"("businessId", "customerId");
+
+-- CreateIndex
+CREATE INDEX "scratch_card_response_billId_idx" ON "scratch_card_response"("billId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "scratch_card_response_scratchCardId_businessId_customerId_b_key" ON "scratch_card_response"("scratchCardId", "businessId", "customerId", "billId");
+
+-- CreateIndex
+CREATE INDEX "terms_and_conditions_loyaltyId_idx" ON "terms_and_conditions"("loyaltyId");
+
+-- CreateIndex
+CREATE INDEX "terms_and_conditions_membershipId_idx" ON "terms_and_conditions"("membershipId");
+
+-- CreateIndex
+CREATE INDEX "terms_and_conditions_qrId_idx" ON "terms_and_conditions"("qrId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "terms_and_conditions_content_loyaltyId_key" ON "terms_and_conditions"("content", "loyaltyId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "terms_and_conditions_content_membershipId_key" ON "terms_and_conditions"("content", "membershipId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "terms_and_conditions_content_qrId_key" ON "terms_and_conditions"("content", "qrId");
+
+-- AddForeignKey
+ALTER TABLE "user" ADD CONSTRAINT "user_businessId_fkey" FOREIGN KEY ("businessId") REFERENCES "business"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "bill" ADD CONSTRAINT "bill_businessId_customerId_fkey" FOREIGN KEY ("businessId", "customerId") REFERENCES "business_customer"("businessId", "customerId") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "branding" ADD CONSTRAINT "branding_businessId_fkey" FOREIGN KEY ("businessId") REFERENCES "business"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "cashier" ADD CONSTRAINT "cashier_businessId_fkey" FOREIGN KEY ("businessId") REFERENCES "business"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "customer" ADD CONSTRAINT "customer_referredById_fkey" FOREIGN KEY ("referredById") REFERENCES "customer"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "business_customer" ADD CONSTRAINT "business_customer_businessId_fkey" FOREIGN KEY ("businessId") REFERENCES "business"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "business_customer" ADD CONSTRAINT "business_customer_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "customer"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "business_customer" ADD CONSTRAINT "business_customer_currentTierId_fkey" FOREIGN KEY ("currentTierId") REFERENCES "loyalty_tier"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "feedback_config" ADD CONSTRAINT "feedback_config_businessId_fkey" FOREIGN KEY ("businessId") REFERENCES "business"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "feedback_config" ADD CONSTRAINT "feedback_branding_fkey" FOREIGN KEY ("brandingId") REFERENCES "branding"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "feedback_question" ADD CONSTRAINT "feedback_question_configId_fkey" FOREIGN KEY ("configId") REFERENCES "feedback_config"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "feedback_category" ADD CONSTRAINT "feedback_category_configId_fkey" FOREIGN KEY ("configId") REFERENCES "feedback_config"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "how_did_you_hear_option" ADD CONSTRAINT "how_did_you_hear_option_configId_fkey" FOREIGN KEY ("configId") REFERENCES "feedback_config"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "feedback_response" ADD CONSTRAINT "feedback_response_configId_fkey" FOREIGN KEY ("configId") REFERENCES "feedback_config"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "feedback_response" ADD CONSTRAINT "feedback_response_businessId_customerId_fkey" FOREIGN KEY ("businessId", "customerId") REFERENCES "business_customer"("businessId", "customerId") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "loyalty" ADD CONSTRAINT "loyalty_businessId_fkey" FOREIGN KEY ("businessId") REFERENCES "business"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "loyalty" ADD CONSTRAINT "loyalty_branding_fkey" FOREIGN KEY ("brandingId") REFERENCES "branding"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "loyalty_tier" ADD CONSTRAINT "loyalty_tier_loyaltyId_fkey" FOREIGN KEY ("loyaltyId") REFERENCES "loyalty"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "loyalty_bonus" ADD CONSTRAINT "loyalty_bonus_loyaltyId_fkey" FOREIGN KEY ("loyaltyId") REFERENCES "loyalty"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "loyalty_message" ADD CONSTRAINT "loyalty_message_loyaltyId_fkey" FOREIGN KEY ("loyaltyId") REFERENCES "loyalty"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "membership" ADD CONSTRAINT "membership_businessId_fkey" FOREIGN KEY ("businessId") REFERENCES "business"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "membership" ADD CONSTRAINT "membership_branding_fkey" FOREIGN KEY ("brandingId") REFERENCES "branding"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "membership_benefit" ADD CONSTRAINT "membership_benefit_membershipId_fkey" FOREIGN KEY ("membershipId") REFERENCES "membership"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "membership_action" ADD CONSTRAINT "membership_action_membershipId_fkey" FOREIGN KEY ("membershipId") REFERENCES "membership"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "qr" ADD CONSTRAINT "qr_businessId_fkey" FOREIGN KEY ("businessId") REFERENCES "business"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "qr" ADD CONSTRAINT "qr_branding_fkey" FOREIGN KEY ("brandingId") REFERENCES "branding"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "qr" ADD CONSTRAINT "qr_membershipId_fkey" FOREIGN KEY ("membershipId") REFERENCES "membership"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "qr" ADD CONSTRAINT "qr_loyaltyId_fkey" FOREIGN KEY ("loyaltyId") REFERENCES "loyalty"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "qr_benefit" ADD CONSTRAINT "qr_benefit_qrId_fkey" FOREIGN KEY ("qrId") REFERENCES "qr"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "qr_action" ADD CONSTRAINT "qr_action_qrId_fkey" FOREIGN KEY ("qrId") REFERENCES "qr"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "referral_log" ADD CONSTRAINT "referral_log_referrerId_fkey" FOREIGN KEY ("referrerId") REFERENCES "customer"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "scratch_card" ADD CONSTRAINT "scratch_card_brandingId_fkey" FOREIGN KEY ("brandingId") REFERENCES "branding"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "scratch_card" ADD CONSTRAINT "scratch_card_businessId_fkey" FOREIGN KEY ("businessId") REFERENCES "business"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "scratch_card_benefit" ADD CONSTRAINT "scratch_card_benefit_scratchCardId_fkey" FOREIGN KEY ("scratchCardId") REFERENCES "scratch_card"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "scratch_card_response" ADD CONSTRAINT "scratch_card_response_scratchCardId_fkey" FOREIGN KEY ("scratchCardId") REFERENCES "scratch_card"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "scratch_card_response" ADD CONSTRAINT "scratch_card_response_businessId_customerId_fkey" FOREIGN KEY ("businessId", "customerId") REFERENCES "business_customer"("businessId", "customerId") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "scratch_card_response" ADD CONSTRAINT "scratch_card_response_billId_fkey" FOREIGN KEY ("billId") REFERENCES "bill"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "scratch_card_response" ADD CONSTRAINT "scratch_card_response_benefitId_fkey" FOREIGN KEY ("benefitId") REFERENCES "scratch_card_benefit"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "terms_and_conditions" ADD CONSTRAINT "terms_and_conditions_loyaltyId_fkey" FOREIGN KEY ("loyaltyId") REFERENCES "loyalty"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "terms_and_conditions" ADD CONSTRAINT "terms_and_conditions_membershipId_fkey" FOREIGN KEY ("membershipId") REFERENCES "membership"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "terms_and_conditions" ADD CONSTRAINT "terms_and_conditions_qrId_fkey" FOREIGN KEY ("qrId") REFERENCES "qr"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "terms_and_conditions" ADD CONSTRAINT "terms_and_conditions_loyaltyTierId_fkey" FOREIGN KEY ("loyaltyTierId") REFERENCES "loyalty_tier"("id") ON DELETE CASCADE ON UPDATE CASCADE;

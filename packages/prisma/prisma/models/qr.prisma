@@ -1,0 +1,106 @@
+model Qr {
+    id String @id @default(uuid())
+
+    businessId String
+    business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+    name              String?
+    collectionChannel CollectionChannel @default(LANDING_PAGE)
+    
+    // Data Collection Page
+    landingPageTitle  String?
+    successPageTitle  String?
+    
+    // Target & Redemption
+    customerTarget    CustomerTargetGroup @default(NEW_AND_EXISTING)
+    redemptionLimit   RedemptionLimit     @default(ONCE)
+    
+    // Branding
+    brandingId String?  @unique
+    branding   Branding? @relation(fields: [brandingId], references: [id], onDelete: SetNull, map: "qr_branding_fkey")
+
+    // Reward Expiry & Communication
+    rewardExpiryDays              Int?      @default(30)
+    rewardExpiryCommunicationDays Int?      @default(3)
+    
+    emailEnabled    Boolean @default(false)
+    smsEnabled      Boolean @default(false)
+    whatsappEnabled Boolean @default(false)
+
+    qrImage         String?   // S3 path for QR code image
+    redirectSlug    String?
+    successSlug     String?
+    redirectLink    String?
+    successLink     String?
+
+    termsAndConditions TermsAndConditions[]
+
+    // Optional Relations to Membership or Loyalty
+    membershipId String?
+    membership   Membership? @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+    
+    loyaltyId    String?
+    loyalty      Loyalty?    @relation(fields: [loyaltyId], references: [id], onDelete: Cascade)
+
+    // Relations
+    benefits QrBenefit[]
+    actions  QrAction[]
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@map("qr")
+    @@index([businessId])
+    @@index([membershipId])
+    @@index([loyaltyId])
+}
+
+model QrBenefit {
+    id String @id @default(uuid())
+
+    type QrBenefitType
+
+    // For PERCENTAGE_DISCOUNT
+    percentage           Float?
+    maxRedeemableAmount  Float?
+    
+    // For CASH_DISCOUNT
+    amount               Float?
+    minPurchaseAmount    Float?
+    
+    // For FREE_ITEM
+    item                 String?
+    
+    // For LOYALTY_BONUS
+    points               Int?
+
+    // Common for discounts
+    appliesTo            BenefitAppliesTo? @default(ENTIRE_PURCHASE)
+    specificItems        String[]
+
+    qrId   String
+    qr     Qr     @relation(fields: [qrId], references: [id], onDelete: Cascade)
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@map("qr_benefit")
+    @@index([qrId])
+}
+
+model QrAction {
+    id String @id @default(uuid())
+
+    platform String // e.g., "Website", "Instagram", etc.
+    label    String // e.g., "Visit our website"
+    url      String
+
+    qrId String
+    qr   Qr     @relation(fields: [qrId], references: [id], onDelete: Cascade)
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@map("qr_action")
+    @@index([qrId])
+}

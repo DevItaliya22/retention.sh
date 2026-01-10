@@ -1,0 +1,20 @@
+model ReferralLog {
+    id String @id @default(uuid())
+
+    // The customer who made the referral
+    referrerId String
+    referrer   Customer @relation("ReferrerLog", fields: [referrerId], references: [id], onDelete: Cascade)
+
+    // The new customer's phone number (for reference)
+    newCustomerPhone String
+    newCustomerName  String?
+
+    // Reward tracking
+    rewardGiven   Boolean @default(false)
+    rewardDetails String?
+
+    createdAt DateTime @default(now())
+
+    @@index([referrerId])
+    @@map("referral_log")
+}

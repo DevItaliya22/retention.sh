@@ -1,0 +1,46 @@
+
+model Business {
+  id        String   @id @default(uuid())
+  name      String
+  
+  // Relations
+  users     User[]
+  cashiers  Cashier[]
+  
+  branding  Branding?
+
+  pointsName     String @default("Points")
+  currencySymbol String @default("₹")
+  currencyCode   String @default("INR")
+
+  feedbackConfig FeedbackConfig?
+  memberships    Membership[]
+  customers      BusinessCustomer[]
+  loyalty        Loyalty?
+  qrs            Qr[]
+  scratchCards   ScratchCard[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("business")
+}
+
+model Cashier{
+  id String @id @default(uuid())
+
+  name String?
+  email String
+  password String
+
+  cashierLinkSlug String @unique
+
+  businessId String?
+  business   Business? @relation(fields: [businessId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+  @@map("cashier")
+}
