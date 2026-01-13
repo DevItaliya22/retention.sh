@@ -8,7 +8,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@dy/ui/components";
+} from "@reelo/ui/components";
 import { useRouter } from "next/navigation";
 
 export default function HomePage() {

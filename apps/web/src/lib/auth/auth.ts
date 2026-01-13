@@ -1,4 +1,4 @@
-import { prisma } from "@dy/db";
+import { prisma } from "@reelo/db";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { magicLink, phoneNumber } from "better-auth/plugins";

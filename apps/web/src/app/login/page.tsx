@@ -17,7 +17,7 @@ import {
   TabsContent,
   TabsList,
   TabsTrigger,
-} from "@dy/ui/components";
+} from "@reelo/ui/components";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
