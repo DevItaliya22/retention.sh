@@ -1,5 +1,5 @@
 {
-  "name": "@reelo/db",
+  "name": "@dy/db",
   "version": "0.0.0",
   "type": "module",
   "devDependencies": {

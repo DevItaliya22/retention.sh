@@ -1,64 +1,65 @@
 model Customer {
-    id String @id @default(uuid())
+  id String @id @default(uuid())
 
-    // Business Connection
-    businesses BusinessCustomer[]
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-    // Required - Phone number (unique identifier)
-    phoneNumber String @unique
+  // Optional Address fields
+  addressLine1 String?
+  addressLine2 String?
+  city         String?
+  state        String?
+  country      String?
+  postalCode   String?
 
-    // Optional fields
-    name  String?
-    email String?
+  // Business Connection (Customer can belong to multiple businesses)
+  businesses BusinessCustomer[]
 
-    // Optional Address (embedded fields)
-    addressLine1 String?
-    addressLine2 String?
-    city         String?
-    state        String?
-    country      String?
-    postalCode   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    // Referral slug - unique per customer for sharing
-    referralSlug String @unique @default(uuid())
-    referredById String?
-    referredBy   Customer?  @relation("CustomerReferral", fields: [referredById], references: [id], onDelete: SetNull)
-    // Customers this person has referred
-    referrals Customer[] @relation("CustomerReferral")
-    // Referral logs (for tracking/rewards)
-    referralLogs ReferralLog[] @relation("ReferrerLog")
-
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-
-    @@index([phoneNumber])
-    @@index([referralSlug])
-    @@index([referredById])
-    @@map("customer")
+  @@map("customer")
 }
 
 // This is bussiness customer relation , all the data related to customer for that particular bussiness will come in this thing
 model BusinessCustomer {
-    businessId String
-    business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
 
-    customerId String
-    customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
-    currentpoints      Int   @default(0)
-    storeCredit Float @default(0)
+  // Referral slug - unique per business-customer for sharing
+  referralSlug String @unique @default(uuid())
 
-    feedbackResponses     FeedbackResponse[]
-    scratchCardResponses  ScratchCardResponse[]
-    bills                 Bill[]
+  // Referred by other business customer (business-specific)
+  referredByBusinessId String?
+  referredByCustomerId String?
+  referredBy           BusinessCustomer? @relation("BusinessCustomerReferral", fields: [referredByBusinessId, referredByCustomerId], references: [businessId, customerId], onDelete: SetNull)
 
-    currentTierId String?
-    currentTier   LoyaltyTier? @relation(fields: [currentTierId], references: [id], onDelete: SetNull)
+  // Business customers this person has referred (business-specific)
+  referrals BusinessCustomer[] @relation("BusinessCustomerReferral")
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-    
-    @@id([businessId, customerId])
-    @@map("business_customer")
-    @@index([currentTierId])
+  // Referral logs (for tracking/rewards) - business-specific
+  referralLogs ReferralLog[]
+
+  pointsBalance     Int                 @default(0)
+  pointTransactions PointsTransaction[]
+
+  feedbackResponses    FeedbackResponse[]
+  scratchCardResponses ScratchCardResponse[]
+  bills                Bill[]
+
+  currentTierId String?
+  currentTier   LoyaltyTier? @relation(fields: [currentTierId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@id([businessId, customerId])
+  @@index([referralSlug])
+  @@index([referredByBusinessId, referredByCustomerId])
+  @@index([currentTierId])
+  @@index([customerId])
+  @@map("business_customer")
 }

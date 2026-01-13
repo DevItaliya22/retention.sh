@@ -1,46 +1,34 @@
-
 model Business {
-  id        String   @id @default(uuid())
-  name      String
-  
+  id   String @id @default(uuid())
+  name String
+  slug String @unique
+
+  defaultPointsName     String    @default("Points")
+  defaultCurrencySymbol String    @default("₹")
+  defaultCurrencyCode   String    @default("INR")
+  defaultBranding       Branding?
+
+  // Referral settings -> to enable this , business should have a loyatly first
+  referralEnabled Boolean @default(false)
+
+  // this will be loyalty points for now
+  referralRewardPoints Int @default(0)
+  referedBonusPoints   Int @default(0)
+
   // Relations
-  users     User[]
+  admins    Admin[]
   cashiers  Cashier[]
-  
-  branding  Branding?
+  customers BusinessCustomer[]
 
-  pointsName     String @default("Points")
-  currencySymbol String @default("₹")
-  currencyCode   String @default("INR")
-
-  feedbackConfig FeedbackConfig?
-  memberships    Membership[]
-  customers      BusinessCustomer[]
-  loyalty        Loyalty?
-  qrs            Qr[]
-  scratchCards   ScratchCard[]
+  memberships  Membership[]
+  loyalty      Loyalty?
+  qrs          Qr[]
+  scratchCards ScratchCard[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([id])
+  @@index([slug])
   @@map("business")
-}
-
-model Cashier{
-  id String @id @default(uuid())
-
-  name String?
-  email String
-  password String
-
-  cashierLinkSlug String @unique
-
-  businessId String?
-  business   Business? @relation(fields: [businessId], references: [id], onDelete: SetNull)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([email])
-  @@map("cashier")
 }

@@ -49,9 +49,6 @@ CREATE TYPE "TransactionSource" AS ENUM ('BILL', 'FEEDBACK', 'SCRATCH_CARD', 'CA
 -- CreateEnum
 CREATE TYPE "WalletType" AS ENUM ('POINTS', 'STORE_CREDIT');
 
--- AlterTable
-ALTER TABLE "user" ADD COLUMN     "businessId" TEXT;
-
 -- CreateTable
 CREATE TABLE "bill" (
     "id" TEXT NOT NULL,
@@ -98,13 +95,23 @@ CREATE TABLE "business" (
 );
 
 -- CreateTable
+CREATE TABLE "admin" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "businessId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "admin_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "cashier" (
     "id" TEXT NOT NULL,
-    "name" TEXT,
-    "email" TEXT NOT NULL,
-    "password" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
     "cashierLinkSlug" TEXT NOT NULL,
-    "businessId" TEXT,
+    "password" TEXT NOT NULL,
+    "businessId" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -114,9 +121,7 @@ CREATE TABLE "cashier" (
 -- CreateTable
 CREATE TABLE "customer" (
     "id" TEXT NOT NULL,
-    "phoneNumber" TEXT NOT NULL,
-    "name" TEXT,
-    "email" TEXT,
+    "userId" TEXT NOT NULL,
     "addressLine1" TEXT,
     "addressLine2" TEXT,
     "city" TEXT,
@@ -480,6 +485,66 @@ CREATE TABLE "terms_and_conditions" (
     CONSTRAINT "terms_and_conditions_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "user" (
+    "id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "email" TEXT,
+    "emailVerified" BOOLEAN NOT NULL DEFAULT false,
+    "phoneNumber" TEXT,
+    "phoneNumberVerified" BOOLEAN,
+    "image" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "user_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "session" (
+    "id" TEXT NOT NULL,
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "token" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "ipAddress" TEXT,
+    "userAgent" TEXT,
+    "userId" TEXT NOT NULL,
+
+    CONSTRAINT "session_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "account" (
+    "id" TEXT NOT NULL,
+    "accountId" TEXT NOT NULL,
+    "providerId" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "accessToken" TEXT,
+    "refreshToken" TEXT,
+    "idToken" TEXT,
+    "accessTokenExpiresAt" TIMESTAMP(3),
+    "refreshTokenExpiresAt" TIMESTAMP(3),
+    "scope" TEXT,
+    "password" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "account_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "verification" (
+    "id" TEXT NOT NULL,
+    "identifier" TEXT NOT NULL,
+    "value" TEXT NOT NULL,
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "verification_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE INDEX "bill_businessId_idx" ON "bill"("businessId");
 
@@ -493,19 +558,31 @@ CREATE UNIQUE INDEX "bill_businessId_billNumber_key" ON "bill"("businessId", "bi
 CREATE UNIQUE INDEX "branding_businessId_key" ON "branding"("businessId");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "admin_userId_key" ON "admin"("userId");
+
+-- CreateIndex
+CREATE INDEX "admin_userId_idx" ON "admin"("userId");
+
+-- CreateIndex
+CREATE INDEX "admin_businessId_idx" ON "admin"("businessId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "cashier_userId_key" ON "cashier"("userId");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "cashier_cashierLinkSlug_key" ON "cashier"("cashierLinkSlug");
 
 -- CreateIndex
-CREATE INDEX "cashier_email_idx" ON "cashier"("email");
+CREATE INDEX "cashier_userId_idx" ON "cashier"("userId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "customer_phoneNumber_key" ON "customer"("phoneNumber");
+CREATE INDEX "cashier_businessId_idx" ON "cashier"("businessId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "customer_userId_key" ON "customer"("userId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "customer_referralSlug_key" ON "customer"("referralSlug");
-
--- CreateIndex
-CREATE INDEX "customer_phoneNumber_idx" ON "customer"("phoneNumber");
 
 -- CreateIndex
 CREATE INDEX "customer_referralSlug_idx" ON "customer"("referralSlug");
@@ -515,6 +592,9 @@ CREATE INDEX "customer_referredById_idx" ON "customer"("referredById");
 
 -- CreateIndex
 CREATE INDEX "business_customer_currentTierId_idx" ON "business_customer"("currentTierId");
+
+-- CreateIndex
+CREATE INDEX "business_customer_customerId_idx" ON "business_customer"("customerId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "feedback_config_businessId_key" ON "feedback_config"("businessId");
@@ -639,8 +719,29 @@ CREATE UNIQUE INDEX "terms_and_conditions_content_membershipId_key" ON "terms_an
 -- CreateIndex
 CREATE UNIQUE INDEX "terms_and_conditions_content_qrId_key" ON "terms_and_conditions"("content", "qrId");
 
--- AddForeignKey
-ALTER TABLE "user" ADD CONSTRAINT "user_businessId_fkey" FOREIGN KEY ("businessId") REFERENCES "business"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+-- CreateIndex
+CREATE INDEX "user_email_idx" ON "user"("email");
+
+-- CreateIndex
+CREATE INDEX "user_phoneNumber_idx" ON "user"("phoneNumber");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "user_email_key" ON "user"("email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "user_phoneNumber_key" ON "user"("phoneNumber");
+
+-- CreateIndex
+CREATE INDEX "session_userId_idx" ON "session"("userId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "session_token_key" ON "session"("token");
+
+-- CreateIndex
+CREATE INDEX "account_userId_idx" ON "account"("userId");
+
+-- CreateIndex
+CREATE INDEX "verification_identifier_idx" ON "verification"("identifier");
 
 -- AddForeignKey
 ALTER TABLE "bill" ADD CONSTRAINT "bill_businessId_customerId_fkey" FOREIGN KEY ("businessId", "customerId") REFERENCES "business_customer"("businessId", "customerId") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -649,7 +750,19 @@ ALTER TABLE "bill" ADD CONSTRAINT "bill_businessId_customerId_fkey" FOREIGN KEY 
 ALTER TABLE "branding" ADD CONSTRAINT "branding_businessId_fkey" FOREIGN KEY ("businessId") REFERENCES "business"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "cashier" ADD CONSTRAINT "cashier_businessId_fkey" FOREIGN KEY ("businessId") REFERENCES "business"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "admin" ADD CONSTRAINT "admin_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "admin" ADD CONSTRAINT "admin_businessId_fkey" FOREIGN KEY ("businessId") REFERENCES "business"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "cashier" ADD CONSTRAINT "cashier_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "cashier" ADD CONSTRAINT "cashier_businessId_fkey" FOREIGN KEY ("businessId") REFERENCES "business"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "customer" ADD CONSTRAINT "customer_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "customer" ADD CONSTRAINT "customer_referredById_fkey" FOREIGN KEY ("referredById") REFERENCES "customer"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -764,3 +877,9 @@ ALTER TABLE "terms_and_conditions" ADD CONSTRAINT "terms_and_conditions_qrId_fke
 
 -- AddForeignKey
 ALTER TABLE "terms_and_conditions" ADD CONSTRAINT "terms_and_conditions_loyaltyTierId_fkey" FOREIGN KEY ("loyaltyTierId") REFERENCES "loyalty_tier"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "session" ADD CONSTRAINT "session_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "account" ADD CONSTRAINT "account_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;

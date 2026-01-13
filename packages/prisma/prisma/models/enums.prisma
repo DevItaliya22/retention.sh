@@ -1,9 +1,9 @@
 enum LoyaltyMessageType {
-  FIRST_PURCHASE      // Sent on first purchase
-  EXPIRE              // Sent when points are about to expire
-  REMINDER            // Sent as point reminder
+  FIRST_PURCHASE // Sent on first purchase
+  EXPIRE // Sent when points are about to expire
+  REMINDER // Sent as point reminder
   SUBSEQUENT_PURCHASE // Sent on subsequent purchases
-  MEMBERSHIP_JOIN     // Added for membership
+  MEMBERSHIP_JOIN // Added for membership
 }
 
 enum MembershipBenefitType {
@@ -23,7 +23,7 @@ enum QrBenefitType {
   CASH_DISCOUNT
   PERCENTAGE_DISCOUNT
   FREE_ITEM
-  LOYALTY_BONUS 
+  LOYALTY_BONUS
 }
 
 enum MembershipStatus {
@@ -111,4 +111,10 @@ enum TransactionSource {
 enum WalletType {
   POINTS
   STORE_CREDIT
+}
+
+enum Role {
+  CUSTOMER
+  ADMIN
+  CASHIER
 }

@@ -1,131 +1,126 @@
 model FeedbackConfig {
-    id String @id @default(uuid())
+  id String @id @default(uuid())
 
-    // Business Connection
-    businessId String @unique
-    business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  // Branding
+  brandingId String?   @unique
+  branding   Branding? @relation(fields: [brandingId], references: [id], onDelete: SetNull, map: "feedback_branding_fkey")
 
-    // Branding
-    brandingId String?  @unique
-    branding   Branding? @relation(fields: [brandingId], references: [id], onDelete: SetNull, map: "feedback_branding_fkey")
+  // Follow up messages
+  positiveFollowUp String?
+  negativeFollowUp String?
 
-    // Follow up messages
-    positiveFollowUp String?
-    negativeFollowUp String?
+  // Questions & Categories
+  questions  FeedbackQuestion[]
+  categories FeedbackCategory[]
 
-    // Questions & Categories
-    questions  FeedbackQuestion[]
-    categories FeedbackCategory[]
+  // How did you hear about us?
+  isHowDidYouHearEnabled Boolean               @default(true)
+  howDidYouHearOptions   HowDidYouHearOption[]
 
-    // How did you hear about us?
-    isHowDidYouHearEnabled Boolean @default(true)
-    howDidYouHearOptions   HowDidYouHearOption[]
+  // Rewards
+  feedbackRewardEnabled Boolean @default(false)
+  rewardAmount          Float? // this is loyalty point of the business  
 
-    // Rewards
-    feedbackRewardEnabled Boolean @default(false)
-    rewardAmount          Float? // this is loyalty point of the business  
+  // Timing
+  timing       FeedbackTiming @default(IMMEDIATELY)
+  delaySeconds Int? // Active if timing is AFTER_DELAY
 
-    // Timing
-    timing       FeedbackTiming @default(IMMEDIATELY)
-    delaySeconds Int?           // Active if timing is AFTER_DELAY
+  // Collection Settings
+  collectionChannel    FeedbackCollectionChannel @default(WHATSAPP)
+  sendViaSmsIfWpFailed Boolean                   @default(false)
 
-    // Collection Settings
-    collectionChannel     FeedbackCollectionChannel @default(WHATSAPP)
-    sendViaSmsIfWpFailed  Boolean                   @default(false)
+  // Negative Feedback Alerts
+  negAlertChannelsWp    Boolean @default(false)
+  negAlertChannelsSms   Boolean @default(false)
+  negAlertChannelsEmail Boolean @default(false)
 
-    // Negative Feedback Alerts
-    negAlertChannelsWp    Boolean @default(false)
-    negAlertChannelsSms   Boolean @default(false)
-    negAlertChannelsEmail Boolean @default(false)
-    
-    negFeedbackAlertNumber       String?
-    negFeedbackAlertSmsNumber    String?
-    negFeedbackAlertEmailAddress String?
+  negFeedbackAlertNumber       String?
+  negFeedbackAlertSmsNumber    String?
+  negFeedbackAlertEmailAddress String?
 
-    // Online Reviews
-    askForOnlineReviews  Boolean               @default(false)
-    onlineReviewLink     String?
-    onlineReviewPlatform OnlineReviewPlatform?
+  // Online Reviews
+  askForOnlineReviews  Boolean               @default(false)
+  onlineReviewLink     String?
+  onlineReviewPlatform OnlineReviewPlatform?
 
-    // Responses
-    responses FeedbackResponse[]
+  // Responses
+  responses FeedbackResponse[]
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    @@index([businessId])
-    @@map("feedback_config")
+  @@map("feedback_config")
 }
 
 model FeedbackQuestion {
-    id String @id @default(uuid())
+  id String @id @default(uuid())
 
-    question String
-    // iconType: emoji, number, etc. (Not enum for now)
-    iconType String? 
+  question String
+  // iconType: emoji, number, etc. (Not enum for now)
+  iconType String?
 
-    configId String
-    config   FeedbackConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+  configId String
+  config   FeedbackConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    @@index([configId])
-    @@map("feedback_question")
+  @@index([configId])
+  @@map("feedback_question")
 }
 
 model FeedbackCategory {
-    id String @id @default(uuid())
+  id String @id @default(uuid())
 
-    // Examples: Service, Quality of products, Value for money
-    name String
+  // Examples: Service, Quality of products, Value for money
+  name String
 
-    configId String
-    config   FeedbackConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+  configId String
+  config   FeedbackConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    @@index([configId])
-    @@map("feedback_category")
+  @@index([configId])
+  @@map("feedback_category")
 }
 
 model HowDidYouHearOption {
-    id String @id @default(uuid())
+  id String @id @default(uuid())
 
-    name String
+  name String
 
-    configId String
-    config   FeedbackConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+  configId String
+  config   FeedbackConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    @@index([configId])
-    @@map("how_did_you_hear_option")
+  @@index([configId])
+  @@map("how_did_you_hear_option")
 }
 
 model FeedbackResponse {
-    id String @id @default(uuid())
+  id String @id @default(uuid())
 
-    // Relations
-    configId String
-    config   FeedbackConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+  // Relations
+  configId String
+  config   FeedbackConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
 
-    businessId String
-    customerId String
-    businessCustomer BusinessCustomer @relation(fields: [businessId, customerId], references: [businessId, customerId], onDelete: Cascade)
+  businessId       String
+  customerId       String
+  businessCustomer BusinessCustomer @relation(fields: [businessId, customerId], references: [businessId, customerId], onDelete: Cascade)
 
-    // Response Data
-    rating            Int?
-    comment           String?
-    howDidYouHear     String?
-    selectedCategories String[] // Storing as names for simplicity or could be relation
+  // Response Data
+  rating             Int?
+  comment            String?
+  howDidYouHear      String?
+  selectedCategories String[] // Storing as names for simplicity or could be relation
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    @@index([configId])
-    @@index([customerId])
-    @@map("feedback_response")
+  @@index([configId])
+  @@index([customerId])
+  @@map("feedback_response")
 }

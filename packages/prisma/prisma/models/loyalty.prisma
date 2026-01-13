@@ -1,113 +1,91 @@
 model Loyalty {
-    id String @id @default(uuid())
+  id String @id @default(uuid())
 
-    // Business Connection (One business has one loyalty)
-    businessId String @unique
-    business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  // Business Connection (One business has one loyalty)
+  businessId String   @unique
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
 
-    // Branding
-    brandingId String?  @unique
-    branding   Branding? @relation(fields: [brandingId], references: [id], onDelete: SetNull, map: "loyalty_branding_fkey")
+  // Branding
+  brandingId String?   @unique
+  branding   Branding? @relation(fields: [brandingId], references: [id], onDelete: SetNull, map: "loyalty_branding_fkey")
 
-    // Form STEP 2 - Cashback Settings
-    earningPercentage         Float    @default(0)    // Customer earns X%
-    cashbackInFinalAmount     Boolean  @default(false) // Cashback available in final amount?
-    cashbackBranding          String?  // e.g., "cookies", "chillies"
-    minPurchaseForEarning     Float    @default(0)    // Minimum purchase for earning cashback
-    minPurchaseForRedemption  Float    @default(0)    // Minimum purchase for using loyalty coupon
+  // Form STEP 2 - Cashback Settings
+  earningPercentage        Float   @default(0) // Customer earns X%
+  cashbackInFinalAmount    Boolean @default(false) // Cashback available in final amount?
+  cashbackBranding         String? // e.g., "cookies", "chillies"
+  minPurchaseForEarning    Float   @default(0) // Minimum purchase for earning cashback
+  minPurchaseForRedemption Float   @default(0) // Minimum purchase for using loyalty coupon
 
-    // Form STEP 3 - Limits
-    upperLimitBillAmount      Float?   // Upper limit on bill amount
-    upperLimitClaimableAmount Float?   // Upper limit on claimable amount
+  // Form STEP 3 - Limits
+  upperLimitBillAmount      Float? // Upper limit on bill amount
+  upperLimitClaimableAmount Float? // Upper limit on claimable amount
 
-    // Form STEP 4 - Terms & Conditions
-    termsAndConditions TermsAndConditions[]
+  // Form STEP 4 - Terms & Conditions
+  termsAndConditions TermsAndConditions[]
 
-    // Form STEP 5 - Points Configuration
-    pointReminderDays  Int?     // Point reminder after how many days
-    pointExpiryDays    Int?     // Points expire after how many days
+  // Form STEP 5 - Points Configuration
+  pointReminderDays Int? // Point reminder after how many days
+  pointExpiryDays   Int? // Points expire after how many days
 
-    // Form STEP 6 - Communication Channels
-    whatsappEnabled Boolean @default(false)
-    emailEnabled    Boolean @default(false)
-    smsEnabled      Boolean @default(false)
+  // Form STEP 6 - Communication Channels
+  whatsappEnabled Boolean @default(false)
+  emailEnabled    Boolean @default(false)
+  smsEnabled      Boolean @default(false)
 
-    // Customer data
-    customerNumbers String[] // Array of customer phone numbers
+  // Relations
+  tiers LoyaltyTier[]
 
-    // Relations
-    bonuses  LoyaltyBonus[]
-    messages LoyaltyMessage[]
-    tiers    LoyaltyTier[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  // Relations
+  qrs Qr[]
 
-    // Relations
-    qrs            Qr[]
-
-    @@index([businessId])
-    @@map("loyalty")
+  @@index([businessId])
+  @@map("loyalty")
 }
 
 model LoyaltyTier {
-    id String @id @default(uuid())
+  id String @id @default(uuid())
 
-    name        String // e.g. "Gold", "Silver"
-    rank        Int    // 1 = lowest, 2 = higher, etc.
-    minPoints   Int    @default(0) // Entry criteria
+  name      String // e.g. "Gold", "Silver"
+  rank      Int // 1- highest rank , 2- second highest rank , 3- third highest rank , etc.
+  minPoints Int    @default(0) // Entry criteria
 
-    rewards     String[] // Simple text rewards for now
+  rewards String[] // Simple text rewards for now
 
-    // Relation to Loyalty
-    loyaltyId String
-    loyalty   Loyalty @relation(fields: [loyaltyId], references: [id], onDelete: Cascade)
+  // Relation to Loyalty
+  loyaltyId String
+  loyalty   Loyalty @relation(fields: [loyaltyId], references: [id], onDelete: Cascade)
 
-    // Terms
-    termsAndConditions TermsAndConditions[]
+  // Terms
+  termsAndConditions TermsAndConditions[]
 
-    // Customers in this tier
-    customers BusinessCustomer[]
+  // Customers in this tier
+  customers BusinessCustomer[]
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    @@index([loyaltyId])
-    @@map("loyalty_tier")
+  @@index([loyaltyId])
+  @@map("loyalty_tier")
 }
 
-model LoyaltyBonus {
-    id String @id @default(uuid())
+model PointsTransaction {
+  id String @id @default(uuid())
 
-    name        String  // Bonus name
-    description String? // Bonus description
-    bonusPoints Int     // How many bonus points
+  businessId       String
+  customerId       String
+  businessCustomer BusinessCustomer @relation(fields: [businessId, customerId], references: [businessId, customerId], onDelete: Cascade)
 
-    // Relation to Loyalty
-    loyaltyId String
-    loyalty   Loyalty @relation(fields: [loyaltyId], references: [id], onDelete: Cascade)
+  amount Int
+  type   TransactionType
+  source TransactionSource
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
 
-    @@index([loyaltyId])
-    @@map("loyalty_bonus")
-}
-
-model LoyaltyMessage {
-    id String @id @default(uuid())
-
-    messageType LoyaltyMessageType // Type of message trigger
-    content     String             // Message content
-    isActive    Boolean            @default(true)
-
-    // Relation to Loyalty
-    loyaltyId String
-    loyalty   Loyalty @relation(fields: [loyaltyId], references: [id], onDelete: Cascade)
-
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-
-    @@index([loyaltyId])
-    @@map("loyalty_message")
+  @@index([businessId, customerId])
+  @@index([source])
+  @@index([type])
+  @@map("points_transaction")
 }

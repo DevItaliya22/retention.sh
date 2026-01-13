@@ -1,20 +1,28 @@
 model ReferralLog {
-    id String @id @default(uuid())
+  id String @id @default(uuid())
 
-    // The customer who made the referral
-    referrerId String
-    referrer   Customer @relation("ReferrerLog", fields: [referrerId], references: [id], onDelete: Cascade)
+  // Slug used as URL for this referral
+  slug String @unique
 
-    // The new customer's phone number (for reference)
-    newCustomerPhone String
-    newCustomerName  String?
+  // The business customer who made the referral (business-specific)
+  referrerBusinessId String
+  referrerCustomerId String
+  referrer           BusinessCustomer @relation(fields: [referrerBusinessId, referrerCustomerId], references: [businessId, customerId], onDelete: Cascade)
 
-    // Reward tracking
-    rewardGiven   Boolean @default(false)
-    rewardDetails String?
+  // The referred person's details , this will do 2 things , if in customer table there is no customer wiht ths numver then create a new customer also and if there is a customer with this number then use that customer -> then it will add that customer to the business customer table also , but if he is alreayd there in business customer table then we wont give referal points 
+  newCustomerPhone String
+  newCustomerName  String?
 
-    createdAt DateTime @default(now())
+  // Status: true when the referred person becomes a customer
+  becameCustomer Boolean @default(false)
 
-    @@index([referrerId])
-    @@map("referral_log")
+  // Reward points (not yet given)
+  rewardPoints Int @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@index([slug])
+  @@index([referrerBusinessId, referrerCustomerId])
+  @@index([becameCustomer])
+  @@map("referral_log")
 }

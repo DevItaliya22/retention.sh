@@ -1,31 +1,30 @@
-
 model Branding {
-    id String @id @default(uuid())
+  id String @id @default(uuid())
 
-    logo         String?
-    themeColor   String?
-    textColor    String?
-    bannerImage  String?
-    header       String?
-    subtitle     String?
+  logo        String?
+  themeColor  String?
+  textColor   String?
+  bannerImage String?
+  header      String?
+  subtitle    String?
 
-    // Poster specific
-    posterTitle      String?
-    posterThemeColor String?
-    posterTextColor  String?
+  // Poster specific
+  posterTitle      String?
+  posterThemeColor String?
+  posterTextColor  String?
 
-    // Back-references for 1-to-1 relations
-    loyalty        Loyalty?
-    feedbackConfig FeedbackConfig?
-    qr             Qr?
-    membership     Membership?
-    scratchCard    ScratchCard?
+  // Back-references for 1-to-1 relations
+  loyalty        Loyalty?
+  feedbackConfig FeedbackConfig?
+  qr             Qr?
+  membership     Membership?
+  scratchCard    ScratchCard?
 
-    businessId     String   @unique
-    business       Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  businessId String   @unique
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    @@map("branding")
+  @@map("branding")
 }
