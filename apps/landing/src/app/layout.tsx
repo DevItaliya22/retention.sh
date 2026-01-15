@@ -1,17 +1,16 @@
+import FooterSection from "@/components/footer";
+import Header from "@/components/header";
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
+import { Plus_Jakarta_Sans } from 'next/font/google';
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+const plusJakarta = Plus_Jakarta_Sans({
+  variable: '--font-plus-jakarta',
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
 });
-
 export const metadata: Metadata = {
   title: {
     default: "DY - Business Loyalty & Marketing Platform",
@@ -38,9 +37,7 @@ export const metadata: Metadata = {
     address: false,
     telephone: false,
   },
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL || "https://dy.com",
-  ),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://dy.com"),
   alternates: {
     canonical: "/",
   },
@@ -123,9 +120,11 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${plusJakarta.variable} antialiased`}
       >
-        {children}
+        <Header />
+        <main className="pt-16">{children}</main>
+        <FooterSection />
       </body>
     </html>
   );
