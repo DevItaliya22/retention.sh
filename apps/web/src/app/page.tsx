@@ -1,5 +1,5 @@
-"use client";
+import { redirect } from "next/navigation";
 
 export default function HomePage() {
-  return <div>HomePage</div>;
+  return redirect("inbox")
 }

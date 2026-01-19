@@ -26,8 +26,19 @@ export function UserSidebarFooter({
   className,
   isCollapsed = false,
 }: UserSidebarFooterProps = {}) {
-  const { user } = useSessionContext();
+  const { user, isLoading } = useSessionContext();
   const { isMobile } = useSidebar();
+
+  if (isLoading) {
+    return (
+      <div className={`flex items-center gap-2 ${className || ""}`}>
+        <div className="h-6 w-6 animate-pulse rounded-md bg-muted" />
+        {!isCollapsed && (
+          <div className="h-4 w-24 animate-pulse rounded bg-muted" />
+        )}
+      </div>
+    );
+  }
 
   if (!user) {
     return null;

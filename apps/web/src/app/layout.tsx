@@ -1,6 +1,4 @@
 import { Geist, Geist_Mono } from "next/font/google";
-
-import { DefaultLayout } from "@/components/layouts";
 import { Providers } from "@/components/providers";
 import "@reelo/ui/globals.css";
 
@@ -24,9 +22,9 @@ export default function RootLayout({
       <body
         className={`${fontSans.variable} ${fontMono.variable} font-sans antialiased`}
       >
-        <Providers>
-          <DefaultLayout>{children}</DefaultLayout>
-        </Providers>
+        {/* <Providers> */}
+          {children}
+        {/* </Providers> */}
       </body>
     </html>
   );
