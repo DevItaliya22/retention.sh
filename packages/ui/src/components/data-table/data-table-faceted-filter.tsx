@@ -90,48 +90,45 @@ export function DataTableFacetedFilter<TData, TValue>({
               <PlusCircle />
             )
           }
-          text={
+        >
+          {title}
+          {selectedValues?.size > 0 && (
             <>
-              {title}
-              {selectedValues?.size > 0 && (
-                <>
-                  <Separator
-                    orientation="vertical"
-                    className="mx-0.5 data-[orientation=vertical]:h-4"
-                  />
+              <Separator
+                orientation="vertical"
+                className="mx-0.5 data-[orientation=vertical]:h-4"
+              />
+              <Badge
+                variant="secondary"
+                className="rounded-sm px-1 font-normal lg:hidden"
+              >
+                {selectedValues.size}
+              </Badge>
+              <div className="hidden items-center gap-1 lg:flex">
+                {selectedValues.size > 2 ? (
                   <Badge
                     variant="secondary"
-                    className="rounded-sm px-1 font-normal lg:hidden"
+                    className="rounded-sm px-1 font-normal"
                   >
-                    {selectedValues.size}
+                    {selectedValues.size} selected
                   </Badge>
-                  <div className="hidden items-center gap-1 lg:flex">
-                    {selectedValues.size > 2 ? (
+                ) : (
+                  options
+                    .filter((option) => selectedValues.has(option.value))
+                    .map((option) => (
                       <Badge
                         variant="secondary"
+                        key={option.value}
                         className="rounded-sm px-1 font-normal"
                       >
-                        {selectedValues.size} selected
+                        {option.label}
                       </Badge>
-                    ) : (
-                      options
-                        .filter((option) => selectedValues.has(option.value))
-                        .map((option) => (
-                          <Badge
-                            variant="secondary"
-                            key={option.value}
-                            className="rounded-sm px-1 font-normal"
-                          >
-                            {option.label}
-                          </Badge>
-                        ))
-                    )}
-                  </div>
-                </>
-              )}
+                    ))
+                )}
+              </div>
             </>
-          }
-        />
+          )}
+        </Button>
       </PopoverTrigger>
       <PopoverContent className="w-50 p-0" align="start">
         <Command>

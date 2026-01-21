@@ -168,20 +168,17 @@ export function DataTableSortList<TData>({
             className="font-normal"
             onKeyDown={onTriggerKeyDown}
             icon={<ArrowDownUp className="text-muted-foreground" />}
-            text={
-              <>
-                Sort
-                {sorting.length > 0 && (
-                  <Badge
-                    variant="secondary"
-                    className="h-[18.24px] rounded-[3.2px] px-[5.12px] font-mono text-[10.4px] font-normal"
-                  >
-                    {sorting.length}
-                  </Badge>
-                )}
-              </>
-            }
-          />
+          >
+            Sort
+            {sorting.length > 0 && (
+              <Badge
+                variant="secondary"
+                className="h-[18.24px] rounded-[3.2px] px-[5.12px] font-mono text-[10.4px] font-normal"
+              >
+                {sorting.length}
+              </Badge>
+            )}
+          </Button>
         </PopoverTrigger>
         <PopoverContent
           aria-labelledby={labelId}
@@ -228,15 +225,17 @@ export function DataTableSortList<TData>({
               ref={addButtonRef}
               onClick={onSortAdd}
               disabled={columns.length === 0}
-              text="Add sort"
-            />
+            >
+              Add sort
+            </Button>
             {sorting.length > 0 && (
               <Button
                 variant="outline"
                 className="rounded"
                 onClick={onSortingReset}
-                text="Reset sorting"
-              />
+              >
+                Reset sorting
+              </Button>
             )}
           </div>
         </PopoverContent>
@@ -314,13 +313,10 @@ function DataTableSortItem({
               aria-controls={fieldListboxId}
               variant="outline"
               className="w-44 justify-between rounded font-normal"
-              text={
-                <>
-                  <span className="truncate">{columnLabels.get(sort.id)}</span>
-                  <ChevronsUpDown className="opacity-50" />
-                </>
-              }
-            />
+            >
+              <span className="truncate">{columnLabels.get(sort.id)}</span>
+              <ChevronsUpDown className="opacity-50" />
+            </Button>
           </PopoverTrigger>
           <PopoverContent
             id={fieldListboxId}
@@ -383,8 +379,9 @@ function DataTableSortItem({
             variant="outline"
             size="icon"
             className="size-8 shrink-0 rounded"
-            text={<GripVertical />}
-          />
+          >
+            <GripVertical />
+          </Button>
         </SortableItemHandle>
       </li>
     </SortableItem>

@@ -1941,8 +1941,9 @@ export function FileCell<TData>({
                       variant="ghost"
                       className="text-muted-foreground h-6 text-xs"
                       onClick={clearAll}
-                      text="Clear all"
-                    />
+                    >
+                      Clear all
+                    </Button>
                   </div>
                   <div className="max-h-[200px] space-y-1 overflow-y-auto">
                     {files.map((file) => {

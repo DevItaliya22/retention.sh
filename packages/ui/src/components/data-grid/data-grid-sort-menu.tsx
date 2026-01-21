@@ -175,7 +175,6 @@ export function DataGridSortMenu<TData>({
             className="font-normal"
             onKeyDown={onTriggerKeyDown}
             icon={<ArrowDownUp className="text-muted-foreground" />}
-            text="Sort"
             right={
               sorting.length > 0 ? (
                 <Badge
@@ -186,7 +185,9 @@ export function DataGridSortMenu<TData>({
                 </Badge>
               ) : undefined
             }
-          />
+          >
+            Sort
+          </Button>
         </PopoverTrigger>
         <PopoverContent
           aria-labelledby={labelId}
@@ -235,15 +236,17 @@ export function DataGridSortMenu<TData>({
               ref={addButtonRef}
               onClick={onSortAdd}
               disabled={columns.length === 0}
-              text="Add sort"
-            />
+            >
+              Add sort
+            </Button>
             {sorting.length > 0 && (
               <Button
                 variant="outline"
                 className="rounded"
                 onClick={onSortingReset}
-                text="Reset sorting"
-              />
+              >
+                Reset sorting
+              </Button>
             )}
           </div>
         </PopoverContent>
@@ -323,11 +326,10 @@ function DataTableSortItem({
               aria-controls={fieldListboxId}
               variant="outline"
               className="w-44 justify-between rounded font-normal"
-              text={
-                <span className="truncate">{columnLabels.get(sort.id)}</span>
-              }
               right={<ChevronsUpDown className="opacity-50" />}
-            />
+            >
+              <span className="truncate">{columnLabels.get(sort.id)}</span>
+            </Button>
           </PopoverTrigger>
           <PopoverContent
             id={fieldListboxId}

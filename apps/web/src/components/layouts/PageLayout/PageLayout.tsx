@@ -143,15 +143,12 @@ const PageLayout = ({
                       onClick={item.onClick}
                       className={cn(isActive && "text-foreground font-medium")}
                       icon={item.icon && <span>{item.icon}</span>}
-                      text={
-                        <>
-                          {item.label}
-                          {item.badge && (
-                            <Badge variant="default">{item.badge}</Badge>
-                          )}
-                        </>
-                      }
-                    />
+                    >
+                      {item.label}
+                      {item.badge && (
+                        <Badge variant="default">{item.badge}</Badge>
+                      )}
+                    </Button>
                   )}
                 </NavMenuItem>
               );

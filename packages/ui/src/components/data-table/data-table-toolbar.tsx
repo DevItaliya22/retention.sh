@@ -52,9 +52,10 @@ export function DataTableToolbar<TData>({
             variant="outline"
             className="border-dashed"
             icon={<X />}
-            text="Reset"
             onClick={onReset}
-          />
+          >
+            Reset
+          </Button>
         )}
       </div>
       <div className="flex items-center gap-2">

@@ -101,10 +101,11 @@ function DataTableActionBarAction({
         className,
       )}
       disabled={disabled || isPending}
-      text={isPending ? <Loader className="animate-spin" /> : children}
       tooltip={tooltip}
       {...props}
-    />
+    >
+      {isPending ? <Loader className="animate-spin" /> : children}
+    </Button>
   );
 }
 
@@ -133,10 +134,11 @@ function DataTableActionBarSelection<TData>({
         size="icon"
         className="size-5"
         onClick={onClearSelection}
-        text={<X className="size-3.5" />}
         tooltip="Clear selection"
         shortcut="Esc"
-      />
+      >
+        <X className="size-3.5" />
+      </Button>
     </div>
   );
 }

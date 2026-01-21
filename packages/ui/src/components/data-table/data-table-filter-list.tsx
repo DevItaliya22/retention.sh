@@ -226,21 +226,18 @@ export function DataTableFilterList<TData>({
             variant="outline"
             className="font-normal"
             icon={<ListFilter className="text-muted-foreground" />}
-            text={
-              <>
-                Filter
-                {filters.length > 0 && (
-                  <Badge
-                    variant="secondary"
-                    className="h-[18.24px] rounded-[3.2px] px-[5.12px] font-mono text-[10.4px] font-normal"
-                  >
-                    {filters.length}
-                  </Badge>
-                )}
-              </>
-            }
             onKeyDown={onTriggerKeyDown}
-          />
+          >
+            Filter
+            {filters.length > 0 && (
+              <Badge
+                variant="secondary"
+                className="h-[18.24px] rounded-[3.2px] px-[5.12px] font-mono text-[10.4px] font-normal"
+              >
+                {filters.length}
+              </Badge>
+            )}
+          </Button>
         </PopoverTrigger>
         <PopoverContent
           aria-describedby={descriptionId}
@@ -288,15 +285,17 @@ export function DataTableFilterList<TData>({
               className="rounded"
               ref={addButtonRef}
               onClick={onFilterAdd}
-              text="Add filter"
-            />
+            >
+              Add filter
+            </Button>
             {filters.length > 0 ? (
               <Button
                 variant="outline"
                 className="rounded"
                 onClick={onFiltersReset}
-                text={"Reset filters"}
-              />
+              >
+                Reset filters
+              </Button>
             ) : null}
           </div>
         </PopoverContent>
@@ -429,16 +428,13 @@ function DataTableFilterItem<TData>({
               aria-controls={fieldListboxId}
               variant="outline"
               className="w-32 justify-between rounded font-normal"
-              text={
-                <>
-                  <span className="truncate">
-                    {columns.find((column) => column.id === filter.id)
-                      ?.columnDef.meta?.label ?? "Select field"}
-                  </span>
-                  <ChevronsUpDown className="opacity-50" />
-                </>
-              }
-            />
+            >
+              <span className="truncate">
+                {columns.find((column) => column.id === filter.id)
+                  ?.columnDef.meta?.label ?? "Select field"}
+              </span>
+              <ChevronsUpDown className="opacity-50" />
+            </Button>
           </PopoverTrigger>
           <PopoverContent
             id={fieldListboxId}
@@ -689,16 +685,15 @@ function onFilterInputRender<TData>({
               aria-label={`${columnMeta?.label} filter value${multiple ? "s" : ""}`}
               variant="outline"
               className="w-full rounded font-normal"
-              text={
-                <FacetedBadgeList
-                  options={columnMeta?.options}
-                  placeholder={
-                    columnMeta?.placeholder ??
-                    `Select option${multiple ? "s" : ""}...`
-                  }
-                />
-              }
-            />
+            >
+              <FacetedBadgeList
+                options={columnMeta?.options}
+                placeholder={
+                  columnMeta?.placeholder ??
+                  `Select option${multiple ? "s" : ""}...`
+                }
+              />
+            </Button>
           </FacetedTrigger>
           <FacetedContent id={inputListboxId} className="w-[200px]">
             <FacetedInput
@@ -756,8 +751,9 @@ function onFilterInputRender<TData>({
                 !filter.value && "text-muted-foreground",
               )}
               icon={<CalendarIcon />}
-              text={displayValue}
-            />
+            >
+              {displayValue}
+            </Button>
           </PopoverTrigger>
           <PopoverContent
             id={inputListboxId}

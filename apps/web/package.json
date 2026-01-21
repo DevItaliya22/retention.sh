@@ -14,6 +14,7 @@
     "db:generate": "pnpm --filter=@reelo/db db:generate"
   },
   "dependencies": {
+    "@hookform/resolvers": "^5.2.2",
     "@prisma/adapter-pg": "^7.2.0",
     "@prisma/client": "^7.2.0",
     "@prisma/nextjs-monorepo-workaround-plugin": "^7.2.0",
@@ -27,7 +28,11 @@
     "pg": "^8.16.3",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
-    "swr": "^2.3.8"
+    "react-hook-form": "^7.69.0",
+    "sonner": "^2.0.7",
+    "swr": "^2.3.8",
+    "zod": "^4.3.0",
+    "zustand": "^5.0.9"
   },
   "devDependencies": {
     "@reelo/eslint-config": "workspace:^",

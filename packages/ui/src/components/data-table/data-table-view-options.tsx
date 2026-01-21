@@ -45,8 +45,9 @@ export function DataTableViewOptions<TData>({
           variant="outline"
           className="ml-auto hidden h-8 font-normal lg:flex"
           icon={<Settings2 className="text-muted-foreground" />}
-          text="View"
-        />
+        >
+          View
+        </Button>
       </PopoverTrigger>
       <PopoverContent className="w-44 p-0" {...props}>
         <Command>

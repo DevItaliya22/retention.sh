@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Inbox } from "lucide-react";
+import { Inbox, Settings } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import * as React from "react";
@@ -67,6 +67,30 @@ export function SimpleSidebar({
                     <Link href="/inbox">
                       <Inbox className="h-4 w-4" />
                       <span className="sidebar-text">Inbox</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname === "/sample-form"}
+                    tooltip="Inbox"
+                  >
+                    <Link href="/sample-form">
+                      <Inbox className="h-4 w-4" />
+                      <span className="sidebar-text">Sample form</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname === "/settings"}
+                    tooltip="Settings"
+                  >
+                    <Link href="/settings">
+                      <Settings className="h-4 w-4" />
+                      <span className="sidebar-text">Settings</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

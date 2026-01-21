@@ -9,9 +9,6 @@ import {
   CardHeader,
   CardTitle,
   Input,
-  InputOTP,
-  InputOTPGroup,
-  InputOTPSlot,
   Label,
   Tabs,
   TabsContent,
@@ -33,11 +30,6 @@ export default function LoginPage() {
   const [magicLinkEmail, setMagicLinkEmail] = useState("");
   const [magicLinkSent, setMagicLinkSent] = useState(false);
 
-  // Phone Number state
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const [otpSent, setOtpSent] = useState(false);
-  const [otpCode, setOtpCode] = useState("");
-
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -58,7 +50,15 @@ export default function LoginPage() {
         setError(result.error.message || "Invalid credentials");
       } else {
         setSuccess("Successfully signed in!");
-        router.push("/");
+        
+        // Check role and redirect
+        const session = await authClient.getSession();
+        const user = session.data?.user as any;
+        if (user?.role === "ADMIN") {
+          router.push("/inbox");
+        } else {
+          router.push("/welcome");
+        }
         router.refresh();
       }
     } catch (err) {
@@ -87,58 +87,6 @@ export default function LoginPage() {
         setSuccess(
           "Magic link sent! Check your email (and console logs for the link).",
         );
-      }
-    } catch (err) {
-      setError("An unexpected error occurred");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleSendOTP = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError(null);
-    setSuccess(null);
-
-    try {
-      const result = await authClient.phoneNumber.sendOtp({
-        phoneNumber: phoneNumber,
-      });
-
-      if (result.error) {
-        setError(result.error.message || "Failed to send OTP");
-      } else {
-        setOtpSent(true);
-        setSuccess(
-          "OTP sent! Check your server console logs for the OTP code.",
-        );
-      }
-    } catch (err) {
-      setError("An unexpected error occurred");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleVerifyOTP = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError(null);
-    setSuccess(null);
-
-    try {
-      const result = await authClient.phoneNumber.verify({
-        phoneNumber: phoneNumber,
-        code: otpCode,
-      });
-
-      if (result.error) {
-        setError(result.error.message || "Invalid OTP code");
-      } else {
-        setSuccess("Successfully signed in with phone number!");
-        router.push("/");
-        router.refresh();
       }
     } catch (err) {
       setError("An unexpected error occurred");
@@ -180,10 +128,9 @@ export default function LoginPage() {
             onValueChange={setActiveTab}
             className="w-full"
           >
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="email">Email</TabsTrigger>
               <TabsTrigger value="magic">Magic Link</TabsTrigger>
-              <TabsTrigger value="phone">Phone</TabsTrigger>
             </TabsList>
 
             {error && (
@@ -235,9 +182,10 @@ export default function LoginPage() {
                 <Button
                   type="submit"
                   loading={isLoading}
-                  text={isLoading ? "Signing in..." : "Sign in"}
                   className="w-full"
-                />
+                >
+                  {isLoading ? "Signing in..." : "Sign in"}
+                </Button>
               </form>
             </TabsContent>
 
@@ -255,14 +203,16 @@ export default function LoginPage() {
                   </div>
                   <Button
                     type="button"
-                    variant="outline"
-                    text="Send another link"
+                      variant="outline" 
+                      loading={isLoading}
                     onClick={() => {
                       setMagicLinkSent(false);
                       setSuccess(null);
                     }}
                     className="w-full"
-                  />
+                  >
+                    Send another link
+                  </Button>
                 </div>
               ) : (
                 <form onSubmit={handleMagicLinkSubmit} className="space-y-4">
@@ -281,94 +231,14 @@ export default function LoginPage() {
                   <Button
                     type="submit"
                     loading={isLoading}
-                    text={isLoading ? "Sending..." : "Send magic link"}
                     className="w-full"
-                  />
-                </form>
-              )}
-            </TabsContent>
-
-            <TabsContent value="phone" className="mt-4 space-y-4">
-              {!otpSent ? (
-                <form onSubmit={handleSendOTP} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Phone Number</Label>
-                    <Input
-                      id="phone"
-                      type="tel"
-                      placeholder="+1234567890"
-                      value={phoneNumber}
-                      onChange={(e) => setPhoneNumber(e.target.value)}
-                      required
-                    />
-                    <p className="text-muted-foreground text-xs">
-                      Include country code (e.g., +1 for US)
-                    </p>
-                  </div>
-
-                  <Button
-                    type="submit"
-                    loading={isLoading}
-                    text={isLoading ? "Sending OTP..." : "Send OTP"}
-                    className="w-full"
-                  />
-                </form>
-              ) : (
-                <form onSubmit={handleVerifyOTP} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Enter OTP Code</Label>
-                    <InputOTP
-                      maxLength={6}
-                      value={otpCode}
-                      onChange={(value) => setOtpCode(value)}
-                    >
-                      <InputOTPGroup>
-                        <InputOTPSlot index={0} />
-                        <InputOTPSlot index={1} />
-                        <InputOTPSlot index={2} />
-                        <InputOTPSlot index={3} />
-                        <InputOTPSlot index={4} />
-                        <InputOTPSlot index={5} />
-                      </InputOTPGroup>
-                    </InputOTP>
-                    <p className="text-muted-foreground text-xs">
-                      Check your server console logs for the OTP code
-                    </p>
-                  </div>
-
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      text="Resend OTP"
-                      onClick={() => {
-                        setOtpSent(false);
-                        setOtpCode("");
-                        setSuccess(null);
-                      }}
-                      className="flex-1"
-                    />
-                    <Button
-                      type="submit"
-                      loading={isLoading}
-                      text={isLoading ? "Verifying..." : "Verify"}
-                      className="flex-1"
-                    />
-                  </div>
+                  >
+                    {isLoading ? "Sending..." : "Send magic link"}
+                  </Button>
                 </form>
               )}
             </TabsContent>
           </Tabs>
-
-          <p className="text-muted-foreground mt-6 text-center text-sm">
-            Don't have an account?{" "}
-            <a
-              href="/register"
-              className="text-primary hover:text-primary/80 font-medium transition-colors"
-            >
-              Sign up
-            </a>
-          </p>
         </CardContent>
       </Card>
     </div>

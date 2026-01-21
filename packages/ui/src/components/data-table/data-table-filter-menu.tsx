@@ -255,8 +255,9 @@ export function DataTableFilterMenu<TData>({
             ref={triggerRef}
             onKeyDown={onTriggerKeyDown}
             icon={<ListFilter className="text-muted-foreground" />}
-            text={filters.length > 0 ? undefined : "Filter"}
-          />
+          >
+            {filters.length > 0 ? undefined : "Filter"}
+          </Button>
         </PopoverTrigger>
         <PopoverContent
           align={align}
@@ -401,8 +402,9 @@ function DataTableFilterItem<TData>({
                   <columnMeta.icon className="text-muted-foreground" />
                 )
               }
-              text={columnMeta?.label ?? column.id}
-            />
+            >
+              {columnMeta?.label ?? column.id}
+            </Button>
           </PopoverTrigger>
           <PopoverContent align="start" className="w-48 p-0">
             <Command loop>
@@ -703,36 +705,35 @@ function onFilterInputRender<TData>({
               aria-controls={inputListboxId}
               variant="ghost"
               className="dark:bg-input/30 h-full min-w-16 rounded-none border px-1.5 font-normal"
-              text={
-                selectedOptions.length === 0 ? (
-                  filter.variant === "multiSelect" ? (
-                    "Select options..."
-                  ) : (
-                    "Select option..."
-                  )
+            >
+              {selectedOptions.length === 0 ? (
+                filter.variant === "multiSelect" ? (
+                  "Select options..."
                 ) : (
-                  <>
-                    <div className="flex items-center -space-x-2 rtl:space-x-reverse">
-                      {selectedOptions.map((selectedOption) =>
-                        selectedOption.icon ? (
-                          <div
-                            key={selectedOption.value}
-                            className="bg-background rounded-full border p-0.5"
-                          >
-                            <selectedOption.icon className="size-3.5" />
-                          </div>
-                        ) : null,
-                      )}
-                    </div>
-                    <span className="truncate">
-                      {selectedOptions.length > 1
-                        ? `${selectedOptions.length} selected`
-                        : selectedOptions[0]?.label}
-                    </span>
-                  </>
+                  "Select option..."
                 )
-              }
-            />
+              ) : (
+                <>
+                  <div className="flex items-center -space-x-2 rtl:space-x-reverse">
+                    {selectedOptions.map((selectedOption) =>
+                      selectedOption.icon ? (
+                        <div
+                          key={selectedOption.value}
+                          className="bg-background rounded-full border p-0.5"
+                        >
+                          <selectedOption.icon className="size-3.5" />
+                        </div>
+                      ) : null,
+                    )}
+                  </div>
+                  <span className="truncate">
+                    {selectedOptions.length > 1
+                      ? `${selectedOptions.length} selected`
+                      : selectedOptions[0]?.label}
+                  </span>
+                </>
+              )}
+            </Button>
           </PopoverTrigger>
           <PopoverContent
             id={inputListboxId}
@@ -808,9 +809,10 @@ function onFilterInputRender<TData>({
                 "dark:bg-input/30 h-full rounded-none border px-1.5 font-normal",
                 !filter.value && "text-muted-foreground",
               )}
-              text={<span className="truncate">{displayValue}</span>}
               icon={<CalendarIcon className="size-3.5" />}
-            />
+            >
+              <span className="truncate">{displayValue}</span>
+            </Button>
           </PopoverTrigger>
           <PopoverContent
             id={inputListboxId}

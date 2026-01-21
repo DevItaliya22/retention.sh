@@ -50,8 +50,9 @@ export function DataGridViewMenu<TData>({
           variant="outline"
           className="ms-auto hidden h-8 font-normal lg:flex"
           icon={<Settings2 className="text-muted-foreground" />}
-          text="View"
-        />
+        >
+          View
+        </Button>
       </PopoverTrigger>
       <PopoverContent
         dir={dir}

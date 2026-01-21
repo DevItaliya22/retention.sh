@@ -63,3 +63,6 @@ export * from "./toggleGroup";
 export * from "./tooltip";
 export * from "./tree-view";
 export * from "./video-player";
+export * from "./linear-multi-step-form/linear-multi-step-form";
+export * from "./linear-multi-step-form/use-linear-multi-step-form";
+export * from "./linear-multi-step-form/types";

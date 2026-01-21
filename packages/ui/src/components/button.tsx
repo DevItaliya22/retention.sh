@@ -41,7 +41,6 @@ const buttonVariants = cva(
 interface ButtonProps
   extends React.ComponentProps<"button">, VariantProps<typeof buttonVariants> {
   asChild?: boolean;
-  text?: string | React.ReactNode;
   icon?: React.ReactNode;
   shortcut?: string | React.ReactNode;
   disabledTooltip?: string;
@@ -56,7 +55,6 @@ interface ButtonProps
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   (
     {
-      text,
       variant = "default",
       className,
       textWrapperClassName,
@@ -93,7 +91,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
               )}
             >
               {icon}
-              {text && typeof text === "string" ? (
+              {props.children && typeof props.children === "string" ? (
                 <div
                   className={cn(
                     "min-w-0 truncate",
@@ -101,10 +99,10 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
                     textWrapperClassName,
                   )}
                 >
-                  {text}
+                  {props.children}
                 </div>
               ) : (
-                text
+                props.children
               )}
               {shortcut && (
                 <kbd
@@ -150,7 +148,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         ) : icon ? (
           icon
         ) : null}
-        {text && typeof text === "string" ? (
+        {props.children && typeof props.children === "string" ? (
           <div
             className={cn(
               "min-w-0 truncate",
@@ -158,10 +156,10 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
               textWrapperClassName,
             )}
           >
-            {text}
+            {props.children}
           </div>
         ) : (
-          text
+          props.children
         )}
         {shortcut &&
           !tooltip &&

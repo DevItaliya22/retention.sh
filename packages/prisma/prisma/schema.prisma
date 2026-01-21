@@ -97,6 +97,8 @@ model Session {
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  role String?
+
   @@unique([token])
   @@index([userId])
   @@map("session")

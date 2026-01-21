@@ -196,7 +196,6 @@ export function DataGridFilterMenu<TData>({
             className="font-normal"
             onKeyDown={onTriggerKeyDown}
             icon={<ListFilter className="text-muted-foreground" />}
-            text="Filter"
             right={
               columnFilters.length > 0 ? (
                 <Badge
@@ -207,7 +206,9 @@ export function DataGridFilterMenu<TData>({
                 </Badge>
               ) : undefined
             }
-          />
+          >
+            Filter
+          </Button>
         </PopoverTrigger>
         <PopoverContent
           aria-labelledby={labelId}
@@ -262,15 +263,17 @@ export function DataGridFilterMenu<TData>({
               ref={addButtonRef}
               onClick={onFilterAdd}
               disabled={columns.length === 0}
-              text="Add filter"
-            />
+            >
+              Add filter
+            </Button>
             {columnFilters.length > 0 && (
               <Button
                 variant="outline"
                 className="rounded"
                 onClick={onFiltersReset}
-                text="Reset filters"
-              />
+              >
+                Reset filters
+              </Button>
             )}
           </div>
         </PopoverContent>
@@ -414,11 +417,10 @@ function DataGridFilterItem<TData>({
               dir={dir}
               variant="outline"
               className="w-32 justify-between rounded font-normal"
-              text={
-                <span className="truncate">{columnLabels.get(filter.id)}</span>
-              }
               right={<ChevronsUpDown className="opacity-50" />}
-            />
+            >
+              <span className="truncate">{columnLabels.get(filter.id)}</span>
+            </Button>
           </PopoverTrigger>
           <PopoverContent
             id={fieldListboxId}
@@ -678,8 +680,9 @@ function DataGridFilterInput<TData>({
                 !startDate && "text-muted-foreground",
               )}
               icon={<CalendarIcon />}
-              text={<span className="truncate">{displayValue}</span>}
-            />
+            >
+              <span className="truncate">{displayValue}</span>
+            </Button>
           </PopoverTrigger>
           <PopoverContent
             id={inputListboxId}
@@ -732,12 +735,11 @@ function DataGridFilterInput<TData>({
               !dateValue && "text-muted-foreground",
             )}
             icon={<CalendarIcon />}
-            text={
-              <span className="truncate">
-                {dateValue ? formatDate(dateValue) : "Pick a date"}
-              </span>
-            }
-          />
+          >
+            <span className="truncate">
+              {dateValue ? formatDate(dateValue) : "Pick a date"}
+            </span>
+          </Button>
         </PopoverTrigger>
         <PopoverContent
           id={inputListboxId}
@@ -788,35 +790,34 @@ function DataGridFilterInput<TData>({
               dir={dir}
               variant="outline"
               className="h-8 w-full justify-start rounded font-normal"
-              text={
-                selectedOptions.length === 0 ? (
-                  <span className="text-muted-foreground">{placeholder}</span>
-                ) : (
-                  <>
-                    {selectedOptionsWithIcons.length > 0 && (
-                      <div className="flex items-center -space-x-2 rtl:space-x-reverse">
-                        {selectedOptionsWithIcons.map(
-                          (selectedOption) =>
-                            selectedOption.icon && (
-                              <div
-                                key={selectedOption.value}
-                                className="bg-background rounded-full border p-0.5"
-                              >
-                                <selectedOption.icon className="size-3.5" />
-                              </div>
-                            ),
-                        )}
-                      </div>
-                    )}
-                    <span className="truncate">
-                      {selectedOptions.length > 1
-                        ? `${selectedOptions.length} selected`
-                        : selectedOptions[0]?.label}
-                    </span>
-                  </>
-                )
-              }
-            />
+            >
+              {selectedOptions.length === 0 ? (
+                <span className="text-muted-foreground">{placeholder}</span>
+              ) : (
+                <>
+                  {selectedOptionsWithIcons.length > 0 && (
+                    <div className="flex items-center -space-x-2 rtl:space-x-reverse">
+                      {selectedOptionsWithIcons.map(
+                        (selectedOption) =>
+                          selectedOption.icon && (
+                            <div
+                              key={selectedOption.value}
+                              className="bg-background rounded-full border p-0.5"
+                            >
+                              <selectedOption.icon className="size-3.5" />
+                            </div>
+                          ),
+                      )}
+                    </div>
+                  )}
+                  <span className="truncate">
+                    {selectedOptions.length > 1
+                      ? `${selectedOptions.length} selected`
+                      : selectedOptions[0]?.label}
+                  </span>
+                </>
+              )}
+            </Button>
           </PopoverTrigger>
           <PopoverContent
             id={inputListboxId}
@@ -882,14 +883,13 @@ function DataGridFilterInput<TData>({
             variant="outline"
             className="h-8 w-full justify-start rounded font-normal"
             icon={selectedOption?.icon ? <selectedOption.icon /> : undefined}
-            text={
-              selectedOption ? (
-                <span className="truncate">{selectedOption.label}</span>
-              ) : (
-                <span className="text-muted-foreground">{placeholder}</span>
-              )
-            }
-          />
+          >
+            {selectedOption ? (
+              <span className="truncate">{selectedOption.label}</span>
+            ) : (
+              <span className="text-muted-foreground">{placeholder}</span>
+            )}
+          </Button>
         </PopoverTrigger>
         <PopoverContent
           id={inputListboxId}

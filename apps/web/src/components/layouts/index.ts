@@ -1,6 +1,5 @@
 // Layout Components
 export { AppLayout } from "./AppLayout";
-export { DefaultLayout } from "./DefaultLayout";
 export { PageHeader, PageLayout, PageLayoutSkeleton } from "./PageLayout";
 
 // Scaffold Components

@@ -106,8 +106,7 @@ export function TagMultiSelect({
           className="h-auto min-h-9 w-full justify-start px-2.5 py-1.5 whitespace-normal"
           disabled={disabled}
           textWrapperClassName="w-full"
-          text={
-            selectedOptions.length === 0 ? (
+        >{selectedOptions.length === 0 ? (
               <span className="text-foreground-lighter">{placeholder}</span>
             ) : (
               <div className="flex w-full flex-wrap gap-1.5">
@@ -136,9 +135,7 @@ export function TagMultiSelect({
                   </Badge>
                 ))}
               </div>
-            )
-          }
-        />
+            )}</Button>
       </FacetedTrigger>
       <FacetedContent className="w-full">
         <Command shouldFilter={false}>

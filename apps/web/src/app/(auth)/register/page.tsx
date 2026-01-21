@@ -9,152 +9,37 @@ import {
   CardHeader,
   CardTitle,
   Input,
-  InputOTP,
-  InputOTPGroup,
-  InputOTPSlot,
   Label,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
 } from "@reelo/ui/components";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import Link from "next/link";
 
 export default function RegisterPage() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState("email");
-
-  // Email/Password state
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-
-  // Magic Link state
-  const [magicLinkName, setMagicLinkName] = useState("");
-  const [magicLinkEmail, setMagicLinkEmail] = useState("");
-  const [magicLinkSent, setMagicLinkSent] = useState(false);
-
-  // Phone Number state
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const [otpSent, setOtpSent] = useState(false);
-  const [otpCode, setOtpCode] = useState("");
-
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
 
-  const handleEmailPasswordSubmit = async (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-    setSuccess(null);
-
-    if (password !== confirmPassword) {
-      setError("Passwords do not match");
-      return;
-    }
-
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters");
-      return;
-    }
-
     setIsLoading(true);
+    setError(null);
 
     try {
       const result = await authClient.signUp.email({
         email,
         password,
         name,
+        callbackURL: "/welcome",
       });
 
       if (result.error) {
         setError(result.error.message || "Failed to create account");
       } else {
-        setSuccess("Account created successfully!");
-        router.push("/");
-        router.refresh();
-      }
-    } catch (err) {
-      setError("An unexpected error occurred");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleMagicLinkSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError(null);
-    setSuccess(null);
-
-    try {
-      const result = await authClient.signIn.magicLink({
-        email: magicLinkEmail,
-        name: magicLinkName || undefined,
-        callbackURL: "/",
-        newUserCallbackURL: "/",
-      });
-
-      if (result.error) {
-        setError(result.error.message || "Failed to send magic link");
-      } else {
-        setMagicLinkSent(true);
-        setSuccess(
-          "Magic link sent! Check your email (and console logs for the link).",
-        );
-      }
-    } catch (err) {
-      setError("An unexpected error occurred");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleSendOTP = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError(null);
-    setSuccess(null);
-
-    try {
-      const result = await authClient.phoneNumber.sendOtp({
-        phoneNumber: phoneNumber,
-      });
-
-      if (result.error) {
-        setError(result.error.message || "Failed to send OTP");
-      } else {
-        setOtpSent(true);
-        setSuccess(
-          "OTP sent! Check your server console logs for the OTP code.",
-        );
-      }
-    } catch (err) {
-      setError("An unexpected error occurred");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleVerifyOTP = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError(null);
-    setSuccess(null);
-
-    try {
-      const result = await authClient.phoneNumber.verify({
-        phoneNumber: phoneNumber,
-        code: otpCode,
-      });
-
-      if (result.error) {
-        setError(result.error.message || "Invalid OTP code");
-      } else {
-        setSuccess("Account created and signed in successfully!");
-        router.push("/");
+        router.push("/welcome");
         router.refresh();
       }
     } catch (err) {
@@ -188,234 +73,70 @@ export default function RegisterPage() {
               <path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3" />
             </svg>
           </div>
-          <CardTitle className="text-2xl font-bold">
-            Create an account
-          </CardTitle>
+          <CardTitle className="text-2xl font-bold">Create an account</CardTitle>
           <CardDescription>Enter your details to get started</CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs
-            value={activeTab}
-            onValueChange={setActiveTab}
-            className="w-full"
-          >
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="email">Email</TabsTrigger>
-              <TabsTrigger value="magic">Magic Link</TabsTrigger>
-              <TabsTrigger value="phone">Phone</TabsTrigger>
-            </TabsList>
+          {error && (
+            <div className="bg-destructive/10 border-destructive/20 text-destructive mb-4 rounded-lg border p-3 text-center text-sm">
+              {error}
+            </div>
+          )}
 
-            {error && (
-              <div className="bg-destructive/10 border-destructive/20 text-destructive mt-4 rounded-lg border p-3 text-center text-sm">
-                {error}
-              </div>
-            )}
+          <form onSubmit={handleRegister} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Full Name</Label>
+              <Input
+                id="name"
+                placeholder="John Doe"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
 
-            {success && (
-              <div className="mt-4 rounded-lg border border-green-500/20 bg-green-500/10 p-3 text-center text-sm text-green-600 dark:text-green-400">
-                {success}
-              </div>
-            )}
-
-            <TabsContent value="email" className="mt-4 space-y-4">
-              <form onSubmit={handleEmailPasswordSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Full Name</Label>
-                  <Input
-                    id="name"
-                    type="text"
-                    placeholder="John Doe"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="you@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirm Password</Label>
-                  <Input
-                    id="confirmPassword"
-                    type="password"
-                    placeholder="••••••••"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <Button
-                  type="submit"
-                  loading={isLoading}
-                  text={isLoading ? "Creating account..." : "Create account"}
-                  className="w-full"
-                />
-              </form>
-            </TabsContent>
-
-            <TabsContent value="magic" className="mt-4 space-y-4">
-              {magicLinkSent ? (
-                <div className="space-y-4">
-                  <div className="bg-muted border-border rounded-lg border p-4">
-                    <p className="text-muted-foreground mb-2 text-sm">
-                      Magic link sent to <strong>{magicLinkEmail}</strong>
-                    </p>
-                    <p className="text-muted-foreground text-xs">
-                      Check your email inbox and click the link to sign up. Also
-                      check your server console logs for the magic link URL.
-                    </p>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    text="Send another link"
-                    onClick={() => {
-                      setMagicLinkSent(false);
-                      setSuccess(null);
-                    }}
-                    className="w-full"
-                  />
-                </div>
-              ) : (
-                <form onSubmit={handleMagicLinkSubmit} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="magic-name">Full Name (Optional)</Label>
-                    <Input
-                      id="magic-name"
-                      type="text"
-                      placeholder="John Doe"
-                      value={magicLinkName}
-                      onChange={(e) => setMagicLinkName(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="magic-email">Email</Label>
-                    <Input
-                      id="magic-email"
-                      type="email"
-                      placeholder="you@example.com"
-                      value={magicLinkEmail}
-                      onChange={(e) => setMagicLinkEmail(e.target.value)}
-                      required
-                    />
-                  </div>
-
-                  <Button
-                    type="submit"
-                    loading={isLoading}
-                    text={isLoading ? "Sending..." : "Send magic link"}
-                    className="w-full"
-                  />
-                </form>
-              )}
-            </TabsContent>
-
-            <TabsContent value="phone" className="mt-4 space-y-4">
-              {!otpSent ? (
-                <form onSubmit={handleSendOTP} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Phone Number</Label>
-                    <Input
-                      id="phone"
-                      type="tel"
-                      placeholder="+1234567890"
-                      value={phoneNumber}
-                      onChange={(e) => setPhoneNumber(e.target.value)}
-                      required
-                    />
-                    <p className="text-muted-foreground text-xs">
-                      Include country code (e.g., +1 for US). A new account will
-                      be created when you verify the OTP.
-                    </p>
-                  </div>
-
-                  <Button
-                    type="submit"
-                    loading={isLoading}
-                    text={isLoading ? "Sending OTP..." : "Send OTP"}
-                    className="w-full"
-                  />
-                </form>
-              ) : (
-                <form onSubmit={handleVerifyOTP} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Enter OTP Code</Label>
-                    <InputOTP
-                      maxLength={6}
-                      value={otpCode}
-                      onChange={(value) => setOtpCode(value)}
-                    >
-                      <InputOTPGroup>
-                        <InputOTPSlot index={0} />
-                        <InputOTPSlot index={1} />
-                        <InputOTPSlot index={2} />
-                        <InputOTPSlot index={3} />
-                        <InputOTPSlot index={4} />
-                        <InputOTPSlot index={5} />
-                      </InputOTPGroup>
-                    </InputOTP>
-                    <p className="text-muted-foreground text-xs">
-                      Check your server console logs for the OTP code
-                    </p>
-                  </div>
-
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      text="Resend OTP"
-                      onClick={() => {
-                        setOtpSent(false);
-                        setOtpCode("");
-                        setSuccess(null);
-                      }}
-                      className="flex-1"
-                    />
-                    <Button
-                      type="submit"
-                      loading={isLoading}
-                      text={isLoading ? "Verifying..." : "Verify & Sign Up"}
-                      className="flex-1"
-                    />
-                  </div>
-                </form>
-              )}
-            </TabsContent>
-          </Tabs>
-
-          <p className="text-muted-foreground mt-6 text-center text-sm">
-            Already have an account?{" "}
-            <a
-              href="/login"
-              className="text-primary hover:text-primary/80 font-medium transition-colors"
+            <Button
+              type="submit"
+              loading={isLoading}
+              className="w-full"
             >
-              Sign in
-            </a>
-          </p>
+              {isLoading ? "Creating account..." : "Sign up"}
+            </Button>
+          </form>
+
+          <div className="mt-6 text-center text-sm">
+            <p className="text-muted-foreground">
+              Already have an account?{" "}
+              <Link
+                href="/login"
+                className="text-primary hover:underline font-medium"
+              >
+                Sign in
+              </Link>
+            </p>
+          </div>
         </CardContent>
       </Card>
     </div>

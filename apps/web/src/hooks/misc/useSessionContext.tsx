@@ -49,7 +49,7 @@ export function SessionProvider({
   const signOut = useMemo(() => {
     return async () => {
       await authClient.signOut();
-      window.location.href = "/register";
+      window.location.href = "/login";
     };
   }, []);
 

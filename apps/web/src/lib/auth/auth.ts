@@ -1,7 +1,8 @@
 import { prisma } from "@reelo/db";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
-import { magicLink, phoneNumber } from "better-auth/plugins";
+import { magicLink } from "better-auth/plugins";
+import { APIError, createAuthMiddleware } from "better-auth/api";
 
 export const auth = betterAuth({
   database: prismaAdapter(prisma, {
@@ -9,6 +10,13 @@ export const auth = betterAuth({
   }),
   emailAndPassword: {
     enabled: true,
+  },
+  user: {
+    additionalFields: {
+      role: {
+        type: "string",
+      },
+    },
   },
   rateLimit: {
     enabled: true,
@@ -50,6 +58,11 @@ export const auth = betterAuth({
       enabled: true,
       maxAge: 15 * 60, // 15 minutes
     },
+    additionalFields: {
+      role: {
+        type: "string",
+      },
+    },
   },
   advanced: {
     useSecureCookies: process.env.NODE_ENV === "production",
@@ -62,25 +75,34 @@ export const auth = betterAuth({
   plugins: [
     magicLink({
       sendMagicLink: async ({ email, token, url }, ctx) => {
-        // TODO: Implement email sending service
-        // Example: await sendEmail({ to: email, subject: "Magic Link", html: `<a href="${url}">Click here to sign in</a>` })
         console.log("Magic link:", { email, token, url });
       },
     }),
-    phoneNumber({
-      sendOTP: async ({ phoneNumber, code }, ctx) => {
-        // TODO: Implement SMS sending service
-        // Example: await sendSMS({ to: phoneNumber, message: `Your OTP code is: ${code}` })
-        console.log("OTP code:", { phoneNumber, code });
-      },
-      signUpOnVerification: {
-        getTempEmail: (phoneNumber) => {
-          return `${phoneNumber.replace(/[^0-9]/g, "")}@temp.dy.com`;
-        },
-        getTempName: (phoneNumber) => {
-          return phoneNumber;
-        },
-      },
-    }),
   ],
+  hooks: {
+    before: createAuthMiddleware(async (ctx) => {
+      const restrictedPaths = ["/sign-in/email", "/sign-in/magic-link"];
+
+      if (!restrictedPaths.includes(ctx.path)) {
+        return;
+      }
+
+      const email = ctx.body?.email;
+
+      if (!email) {
+        return;
+      }
+
+      const user = await prisma.user.findUnique({
+        where: { email },
+        select: { role: true },
+      });
+
+      if (user && user.role !== "ADMIN") {
+        throw new APIError("FORBIDDEN", {
+          message: "You are not allowed to sign in here.",
+        });
+      }
+    }),
+  },
 });

@@ -5,10 +5,7 @@ const protectedAdminRoutes = [
   "/"
 ]
 
-const AuthRoutes = [
-  "/login",
-  "/register",
-]
+const AuthRoutes = ["/login"];
 
 // Change it when it's needed 
 const userRoutes = [
