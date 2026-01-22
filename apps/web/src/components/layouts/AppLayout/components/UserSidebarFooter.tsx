@@ -20,11 +20,13 @@ import { UserMenuContent } from "./UserMenuContent";
 interface UserSidebarFooterProps {
   className?: string;
   isCollapsed?: boolean;
+  onContactClick?: () => void;
 }
 
 export function UserSidebarFooter({
   className,
   isCollapsed = false,
+  onContactClick,
 }: UserSidebarFooterProps = {}) {
   const { user, isLoading } = useSessionContext();
   const { isMobile } = useSidebar();
@@ -110,6 +112,7 @@ export function UserSidebarFooter({
                 name: user.name,
                 email: user.email || "",
               }}
+              onContactClick={onContactClick}
             />
           </DropdownMenuContent>
         </DropdownMenu>

@@ -1,5 +1,4 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
 
 type StepState = {
   committedSnapshot?: string;
@@ -24,104 +23,98 @@ type StoreState = {
 };
 
 export const useLinearMultiStepFormStore = create<StoreState>()(
-  persist(
-    (set, get) => ({
-      forms: {},
-      initForm: ({ formId, initialValues }) => {
-        const existing = get().forms[formId];
-        if (existing) return;
-        set((s) => ({
+  (set, get) => ({
+    forms: {},
+    initForm: ({ formId, initialValues }) => {
+      const existing = get().forms[formId];
+      if (existing) return;
+      set((s) => ({
+        forms: {
+          ...s.forms,
+          [formId]: {
+            currentStepIndex: 0,
+            values: initialValues ?? {},
+            steps: {},
+          },
+        },
+      }));
+    },
+    setCurrentStepIndex: ({ formId, stepIndex }) => {
+      set((s) => {
+        const f = s.forms[formId];
+        if (!f) return s;
+        return {
           forms: {
             ...s.forms,
-            [formId]: {
-              currentStepIndex: 0,
-              values: initialValues ?? {},
-              steps: {},
-            },
+            [formId]: { ...f, currentStepIndex: stepIndex },
           },
-        }));
-      },
-      setCurrentStepIndex: ({ formId, stepIndex }) => {
-        set((s) => {
-          const f = s.forms[formId];
-          if (!f) return s;
-          return {
-            forms: {
-              ...s.forms,
-              [formId]: { ...f, currentStepIndex: stepIndex },
-            },
-          };
-        });
-      },
-      setValues: ({ formId, values }) => {
-        set((s) => {
-          const f = s.forms[formId];
-          if (!f) return s;
-          return {
-            forms: {
-              ...s.forms,
-              [formId]: { ...f, values },
-            },
-          };
-        });
-      },
-      mergeValues: ({ formId, values }) => {
-        set((s) => {
-          const f = s.forms[formId];
-          if (!f) return s;
-          return {
-            forms: {
-              ...s.forms,
-              [formId]: { ...f, values: { ...f.values, ...values } },
-            },
-          };
-        });
-      },
-      visitStep: ({ formId, stepId }) => {
-        set((s) => {
-          const f = s.forms[formId];
-          if (!f) return s;
-          const prev = f.steps[stepId];
-          const next: StepState = {
-            committedSnapshot: prev?.committedSnapshot,
-            visitedCount: (prev?.visitedCount ?? 0) + 1,
-          };
-          return {
-            forms: {
-              ...s.forms,
-              [formId]: { ...f, steps: { ...f.steps, [stepId]: next } },
-            },
-          };
-        });
-      },
-      commitStep: ({ formId, stepId, snapshot }) => {
-        set((s) => {
-          const f = s.forms[formId];
-          if (!f) return s;
-          const prev = f.steps[stepId];
-          const next: StepState = {
-            committedSnapshot: snapshot,
-            visitedCount: prev?.visitedCount ?? 0,
-          };
-          return {
-            forms: {
-              ...s.forms,
-              [formId]: { ...f, steps: { ...f.steps, [stepId]: next } },
-            },
-          };
-        });
-      },
-      resetForm: ({ formId }) => {
-        set((s) => {
-          const next = { ...s.forms };
-          delete next[formId];
-          return { forms: next };
-        });
-      },
-    }),
-    {
-      name: "reelo.linearMultiStepForms.v1",
-      partialize: (s) => ({ forms: s.forms }),
+        };
+      });
     },
-  ),
+    setValues: ({ formId, values }) => {
+      set((s) => {
+        const f = s.forms[formId];
+        if (!f) return s;
+        return {
+          forms: {
+            ...s.forms,
+            [formId]: { ...f, values },
+          },
+        };
+      });
+    },
+    mergeValues: ({ formId, values }) => {
+      set((s) => {
+        const f = s.forms[formId];
+        if (!f) return s;
+        return {
+          forms: {
+            ...s.forms,
+            [formId]: { ...f, values: { ...f.values, ...values } },
+          },
+        };
+      });
+    },
+    visitStep: ({ formId, stepId }) => {
+      set((s) => {
+        const f = s.forms[formId];
+        if (!f) return s;
+        const prev = f.steps[stepId];
+        const next: StepState = {
+          committedSnapshot: prev?.committedSnapshot,
+          visitedCount: (prev?.visitedCount ?? 0) + 1,
+        };
+        return {
+          forms: {
+            ...s.forms,
+            [formId]: { ...f, steps: { ...f.steps, [stepId]: next } },
+          },
+        };
+      });
+    },
+    commitStep: ({ formId, stepId, snapshot }) => {
+      set((s) => {
+        const f = s.forms[formId];
+        if (!f) return s;
+        const prev = f.steps[stepId];
+        const next: StepState = {
+          committedSnapshot: snapshot,
+          visitedCount: prev?.visitedCount ?? 0,
+        };
+        return {
+          forms: {
+            ...s.forms,
+            [formId]: { ...f, steps: { ...f.steps, [stepId]: next } },
+          },
+        };
+      });
+    },
+    resetForm: ({ formId }) => {
+      set((s) => {
+        const next = { ...s.forms };
+        delete next[formId];
+        return { forms: next };
+      });
+    },
+  }),
 );

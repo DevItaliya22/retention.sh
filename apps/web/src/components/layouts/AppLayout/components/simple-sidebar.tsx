@@ -1,5 +1,6 @@
 "use client";
 
+import { useSessionContext } from "@/hooks/misc/useSessionContext";
 import { motion } from "framer-motion";
 import { Inbox, Settings } from "lucide-react";
 import Link from "next/link";
@@ -20,6 +21,7 @@ import {
 } from "@reelo/ui/components/sidebar";
 import { SidebarHeader } from "./sidebar-header";
 import { UserSidebarFooter } from "./UserSidebarFooter";
+import { ContactUsModal } from "./ContactUsModal";
 
 const sidebarVariants = {
   initial: {},
@@ -41,6 +43,8 @@ export function SimpleSidebar({
   const pathname = usePathname();
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
+  const { user } = useSessionContext();
+  const [isContactModalOpen, setIsContactModalOpen] = React.useState(false);
 
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -73,18 +77,6 @@ export function SimpleSidebar({
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     asChild
-                    isActive={pathname === "/sample-form"}
-                    tooltip="Inbox"
-                  >
-                    <Link href="/sample-form">
-                      <Inbox className="h-4 w-4" />
-                      <span className="sidebar-text">Sample form</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    asChild
                     isActive={pathname === "/settings"}
                     tooltip="Settings"
                   >
@@ -97,7 +89,6 @@ export function SimpleSidebar({
               </SidebarMenu>
             </SidebarGroup>
           </motion.div>
-
         </motion.div>
       </SidebarContent>
       <SidebarFooter>
@@ -111,9 +102,20 @@ export function SimpleSidebar({
           <UserSidebarFooter
             className="flex w-full items-center justify-between"
             isCollapsed={isCollapsed}
+            onContactClick={() => {
+                setIsContactModalOpen(true);
+            }}
           />
         </div>
       </SidebarFooter>
+      {user && (
+        <ContactUsModal
+          open={isContactModalOpen}
+          onOpenChange={setIsContactModalOpen}
+          userEmail={user.email || ""}
+          userName={user.name}
+        />
+      )}
       <SidebarRail />
     </Sidebar>
   );

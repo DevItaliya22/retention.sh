@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSessionCookie } from "better-auth/cookies";
 
 const protectedAdminRoutes = [
-  "/"
+  "/",
+  "/inbox",
+  "/welcome",
 ]
 
 const AuthRoutes = ["/login"];

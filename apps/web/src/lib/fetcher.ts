@@ -11,7 +11,10 @@ export async function fetcher<T = unknown>(
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch: ${response.statusText}`);
+    const error = await response.json().catch(() => ({
+      error: response.statusText,
+    }));
+    throw new Error(error.error || `Failed to fetch: ${response.statusText}`);
   }
 
   return response.json();

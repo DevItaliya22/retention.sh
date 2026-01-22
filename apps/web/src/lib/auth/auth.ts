@@ -1,8 +1,8 @@
 import { prisma } from "@reelo/db";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
-import { magicLink } from "better-auth/plugins";
 import { APIError, createAuthMiddleware } from "better-auth/api";
+import { magicLink } from "better-auth/plugins";
 
 export const auth = betterAuth({
   database: prismaAdapter(prisma, {
@@ -33,11 +33,6 @@ export const auth = betterAuth({
       "/magic-link/verify": {
         window: 10, // 10 seconds
         max: 3,
-      },
-      // Organization invitation sending
-      "/organization/invite": {
-        window: 60 * 60 * 24, // 1 day
-        max: 10,
       },
       // Social sign-in attempts
       "/sign-in/social": {
@@ -81,7 +76,7 @@ export const auth = betterAuth({
   ],
   hooks: {
     before: createAuthMiddleware(async (ctx) => {
-      const restrictedPaths = ["/sign-in/email", "/sign-in/magic-link"];
+      const restrictedPaths = ["/sign-in/email", "/sign-in/magic-link", "/sign-up/email"];
 
       if (!restrictedPaths.includes(ctx.path)) {
         return;
@@ -98,11 +93,51 @@ export const auth = betterAuth({
         select: { role: true },
       });
 
+      // Allow new users (user doesn't exist) - they will get ADMIN role via database hook
+      // Only block existing users who are not ADMIN
       if (user && user.role !== "ADMIN") {
         throw new APIError("FORBIDDEN", {
           message: "You are not allowed to sign in here.",
         });
       }
     }),
+  },
+  databaseHooks: {
+    user: {
+      create: {
+        before: async (user) => {
+          return {
+            data: {
+              ...user,
+              role: "ADMIN",
+            },
+          };
+        },
+      },
+    },
+    session: {
+      create: {
+        before: async (session: {
+          userId: string;
+          expiresAt: Date;
+          token: string;
+          ipAddress?: string | null;
+          userAgent?: string | null;
+          role?: string | null;
+        }) => {
+          const user = await prisma.user.findUnique({
+            where: { id: session.userId },
+            select: { role: true },
+          });
+
+          return {
+            data: {
+              ...session,
+              role: (user?.role as unknown as string | null) ?? null,
+            },
+          };
+        },
+      },
+    },
   },
 });

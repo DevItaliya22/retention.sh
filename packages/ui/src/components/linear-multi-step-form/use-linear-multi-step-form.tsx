@@ -19,7 +19,10 @@ function applyZodErrorsToForm<TValues extends FieldValues>(args: {
   for (const issue of args.error.issues) {
     const path = issue.path.filter((p) => typeof p === "string").join(".");
     if (!path) continue;
-    args.setError(path as FieldPath<TValues>, { type: "zod", message: issue.message });
+    args.setError(path as FieldPath<TValues>, {
+      type: "zod",
+      message: issue.message,
+    });
   }
 }
 
@@ -46,7 +49,9 @@ export function useLinearMultiStepForm<TValues extends AnyValues>(args: {
 
   const storageKey = config.storageKey ?? "reelo.linearMultiStepForms.v1";
 
-  const [loadingAction, setLoadingAction] = React.useState<"next" | "prev" | "submit" | null>(null);
+  const [loadingAction, setLoadingAction] = React.useState<
+    "next" | "prev" | "submit" | null
+  >(null);
 
   const initForm = useLinearMultiStepFormStore((s) => s.initForm);
   const setCurrentStepIndex = useLinearMultiStepFormStore(
@@ -89,7 +94,8 @@ export function useLinearMultiStepForm<TValues extends AnyValues>(args: {
 
   const values = form.watch() as TValues;
 
-  const stepCommittedSnapshot = formState?.steps?.[currentStep.id]?.committedSnapshot;
+  const stepCommittedSnapshot =
+    formState?.steps?.[currentStep.id]?.committedSnapshot;
 
   const stepPayload = React.useMemo(
     () => getStepPayload(values, currentStep),
@@ -101,16 +107,13 @@ export function useLinearMultiStepForm<TValues extends AnyValues>(args: {
     [stepPayload],
   );
 
-  const initialStepSnapshot = React.useMemo(
-    () => {
-      const initialPayload = getStepPayload(
-        (formState?.values ?? {}) as TValues,
-        currentStep,
-      );
-      return stableSerialize(initialPayload);
-    },
-    [formState?.values, currentStep],
-  );
+  const initialStepSnapshot = React.useMemo(() => {
+    const initialPayload = getStepPayload(
+      (formState?.values ?? {}) as TValues,
+      currentStep,
+    );
+    return stableSerialize(initialPayload);
+  }, [formState?.values, currentStep]);
 
   const isCurrentStepChanged = React.useMemo(
     () =>
@@ -198,7 +201,9 @@ export function useLinearMultiStepForm<TValues extends AnyValues>(args: {
       if (isLastStep && currentConfig.onSubmit) {
         setLoadingAction("submit");
         try {
-          const finalValues = (currentFormState?.values ?? currentValues ?? {}) as TValues;
+          const finalValues = (currentFormState?.values ??
+            currentValues ??
+            {}) as TValues;
           await currentConfig.onSubmit({
             formId: currentConfig.id,
             values: finalValues,
@@ -247,7 +252,9 @@ export function useLinearMultiStepForm<TValues extends AnyValues>(args: {
       if (isLastStep && currentConfig.onSubmit) {
         setLoadingAction("submit");
         try {
-          const finalValues = (currentFormState?.values ?? currentValues ?? {}) as TValues;
+          const finalValues = (currentFormState?.values ??
+            currentValues ??
+            {}) as TValues;
           await currentConfig.onSubmit({
             formId: currentConfig.id,
             values: finalValues,
@@ -302,23 +309,23 @@ export function useLinearMultiStepForm<TValues extends AnyValues>(args: {
     (stepIndex: number): string | null => {
       const step = steps[stepIndex];
       if (!step || !step.schema) return null;
-      
+
       const payload = getStepPayload(allValues, step);
       const result = (step.schema as z.ZodTypeAny).safeParse(payload);
-      
+
       if (!result.success && result.error.issues.length > 0) {
         const firstError = result.error.issues[0];
         if (!firstError) return null;
-        
+
         let message = firstError.message || "Validation error";
-        
+
         if (message.length > 50) {
           message = message.substring(0, 47) + "...";
         }
-        
+
         return message;
       }
-      
+
       return null;
     },
     [steps, allValues],
@@ -329,10 +336,10 @@ export function useLinearMultiStepForm<TValues extends AnyValues>(args: {
       const step = steps[stepIndex];
       if (!step) return "pending";
       if (stepIndex === currentStepIndex) return "current";
-      
+
       const stepState = formState?.steps?.[step.id];
       const hasCommittedSnapshot = stepState?.committedSnapshot != null;
-      
+
       if (hasCommittedSnapshot) {
         if (step.schema) {
           const payload = getStepPayload(allValues, step);
@@ -341,13 +348,13 @@ export function useLinearMultiStepForm<TValues extends AnyValues>(args: {
         }
         return "complete";
       }
-      
+
       if (step.schema && stepIndex < currentStepIndex) {
         const payload = getStepPayload(allValues, step);
         const result = (step.schema as z.ZodTypeAny).safeParse(payload);
         if (!result.success) return "invalid";
       }
-      
+
       return stepIndex < currentStepIndex ? "pending" : "pending";
     },
     [steps, currentStepIndex, formState?.steps, allValues],
@@ -357,7 +364,7 @@ export function useLinearMultiStepForm<TValues extends AnyValues>(args: {
     (stepIndex: number): boolean => {
       const step = steps[stepIndex];
       if (!step || !step.schema) return false;
-      
+
       try {
         const schema = step.schema as z.ZodTypeAny;
         const shape = (schema as any)._def?.shape?.();
@@ -368,25 +375,29 @@ export function useLinearMultiStepForm<TValues extends AnyValues>(args: {
           }
           return false;
         }
-        
+
         const fields = step.fields || Object.keys(shape);
         return fields.some((fieldName: string) => {
           const fieldSchema = shape[fieldName];
           if (!fieldSchema) return false;
-          
+
           const def = fieldSchema._def;
           if (!def) return false;
-          
+
           const typeName = def.typeName;
-          if (typeName === "ZodOptional" || typeName === "ZodDefault" || typeName === "ZodNullable") {
+          if (
+            typeName === "ZodOptional" ||
+            typeName === "ZodDefault" ||
+            typeName === "ZodNullable"
+          ) {
             return false;
           }
-          
+
           if (typeName === "ZodEffects") {
             const innerType = def.schema?._def?.typeName;
             return innerType !== "ZodOptional" && innerType !== "ZodDefault";
           }
-          
+
           return true;
         });
       } catch {
@@ -399,10 +410,13 @@ export function useLinearMultiStepForm<TValues extends AnyValues>(args: {
   const isStepAccessible = React.useCallback(
     (stepIndex: number): boolean => {
       if (stepIndex <= currentStepIndex) return true;
-      
+
       for (let i = 0; i < stepIndex; i++) {
         const status = getStepStatus(i);
-        if (status === "invalid" || (status === "pending" && i < currentStepIndex)) {
+        if (
+          status === "invalid" ||
+          (status === "pending" && i < currentStepIndex)
+        ) {
           return false;
         }
       }
@@ -412,11 +426,9 @@ export function useLinearMultiStepForm<TValues extends AnyValues>(args: {
   );
 
   const completedStepsCount = React.useMemo(() => {
-    return steps.reduce((count, step, index) => {
-      const status = getStepStatus(index);
-      return status === "complete" ? count + 1 : count;
-    }, 0);
-  }, [steps, getStepStatus]);
+    if (totalSteps === 0) return 0;
+    return Math.min(totalSteps, Math.max(0, currentStepIndex + 1));
+  }, [currentStepIndex, totalSteps]);
 
   const progress = React.useMemo(() => {
     if (totalSteps === 0) return 0;

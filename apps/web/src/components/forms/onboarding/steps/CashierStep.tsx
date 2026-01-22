@@ -5,11 +5,12 @@ import {
   FormField,
   FormItem,
   FormLabel,
+  FormMessage,
+  Input,
   Checkbox,
   useFormContext,
 } from "@reelo/ui/components";
 import type { WelcomeFormValues } from "@/lib/schemas/onboarding";
-import { CashierInfoFields } from "@/components/forms/shared/CashierInfoFields"; 
 
 export function CashierStep() {
   const form = useFormContext<WelcomeFormValues>();
@@ -41,8 +42,64 @@ export function CashierStep() {
       />
 
       {createCashier && (
-        <div className="animate-in fade-in slide-in-from-top-4 duration-300">
-          <CashierInfoFields control={form.control as any} includePassword />
+        <div className="animate-in fade-in slide-in-from-top-4 duration-300 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control as any}
+              name="cashierName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="John Doe" {...field} value={field.value ?? ""} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control as any}
+              name="cashierEmail"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email</FormLabel>
+                  <FormControl>
+                    <Input type="email" placeholder="john@example.com" {...field} value={field.value ?? ""} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control as any}
+              name="cashierLinkSlug"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Cashier Slug</FormLabel>
+                  <FormControl>
+                    <Input placeholder="john-cashier" {...field} value={field.value ?? ""} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control as any}
+              name="cashierPassword"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Password</FormLabel>
+                  <FormControl>
+                    <Input type="password" placeholder="••••••••" {...field} value={field.value ?? ""} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
         </div>
       )}
       

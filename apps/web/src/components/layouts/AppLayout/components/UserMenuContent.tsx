@@ -22,9 +22,10 @@ interface UserMenuContentProps {
     name: string | null;
     email: string;
   };
+  onContactClick?: () => void;
 }
 
-export function UserMenuContent({ user }: UserMenuContentProps) {
+export function UserMenuContent({ user, onContactClick }: UserMenuContentProps) {
   const { signOut } = useSessionContext();
   const { theme, setTheme } = useTheme();
 
@@ -41,14 +42,6 @@ export function UserMenuContent({ user }: UserMenuContentProps) {
 
   const handleLogOut = async () => {
     await signOut();
-  };
-
-  const handleContactUs = () => {
-    const subject = encodeURIComponent("Support Request");
-    const body = encodeURIComponent(
-      `Hello,\n\nI need assistance with:\n\n[Please describe your issue here]\n\n---\nUser: ${user.name || user.email}\nEmail: ${user.email}`,
-    );
-    window.location.href = `mailto:support@reelo.com?subject=${subject}&body=${body}`;
   };
 
   const themeOptions = [
@@ -113,7 +106,12 @@ export function UserMenuContent({ user }: UserMenuContentProps) {
       {/* Actions */}
       <DropdownMenuSeparator />
       <DropdownMenuGroup>
-        <DropdownMenuItem onClick={handleContactUs} className="cursor-pointer">
+        <DropdownMenuItem
+          onSelect={() => {
+            onContactClick?.();
+          }}
+          className="cursor-pointer"
+        >
           <Mail className="h-4 w-4" />
           <span className="text-xs">Contact Us</span>
         </DropdownMenuItem>

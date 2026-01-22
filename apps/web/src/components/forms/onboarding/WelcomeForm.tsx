@@ -19,7 +19,7 @@ import { submitWelcomeForm } from "@/lib/actions/onboarding";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
-export default function WelcomePage() {
+export function WelcomeForm() {
   const router = useRouter();
 
   const config: LinearMultiStepFormConfig<WelcomeFormValues> = {
@@ -29,8 +29,7 @@ export default function WelcomePage() {
       const result = await submitWelcomeForm(values);
       if (result.success) {
         toast.success("Setup complete!");
-        router.push("/inbox");
-        router.refresh();
+        router.replace("/inbox");
       } else {
         toast.error(result.error || "Something went wrong");
       }
@@ -108,7 +107,7 @@ export default function WelcomePage() {
                         }}
                         navigationPosition="footer"
                         NavigationComponent={FormNavigation}
-                        showProgressStepper={true}
+                        progressType="bar"
                     />
                 </CardContent>
             </Card>

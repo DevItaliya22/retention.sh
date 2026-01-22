@@ -17,7 +17,9 @@ export function ProgressStepper({
   steps: Array<{ id: string; title?: string; description?: string }>;
   currentStepIndex: number;
   totalSteps: number;
-  getStepStatus: (stepIndex: number) => "complete" | "current" | "pending" | "invalid";
+  getStepStatus: (
+    stepIndex: number,
+  ) => "complete" | "current" | "pending" | "invalid";
   getStepError: (stepIndex: number) => string | null;
   isStepRequired: (stepIndex: number) => boolean;
   isStepAccessible: (stepIndex: number) => boolean;
@@ -33,24 +35,24 @@ export function ProgressStepper({
           const isClickable = isAccessible && index !== currentStepIndex;
 
           return (
-            <div key={step.id} className="flex items-center flex-1">
-              <div className="flex flex-col items-center flex-1">
+            <div key={step.id} className="flex flex-1 items-center">
+              <div className="flex flex-1 flex-col items-center">
                 <button
                   type="button"
                   onClick={() => isClickable && goToStep(index)}
                   disabled={!isClickable}
                   className={cn(
-                    "flex items-center justify-center size-10 rounded-full border-2 transition-colors",
+                    "flex size-10 items-center justify-center rounded-full border-2 transition-colors",
                     status === "complete" &&
                       "bg-primary border-primary text-primary-foreground",
                     status === "current" &&
-                      "bg-primary border-primary text-primary-foreground ring-4 ring-primary/20",
+                      "bg-primary border-primary text-primary-foreground ring-primary/20 ring-4",
                     status === "pending" &&
                       "bg-background border-muted-foreground/30 text-muted-foreground",
                     status === "invalid" &&
                       "bg-destructive/10 border-destructive text-destructive",
-                    isClickable && "cursor-pointer hover:border-primary/50",
-                    !isClickable && "cursor-not-allowed opacity-50"
+                    isClickable && "hover:border-primary/50 cursor-pointer",
+                    !isClickable && "cursor-not-allowed opacity-50",
                   )}
                   aria-label={`Step ${index + 1}: ${step.title || step.id}`}
                   aria-current={status === "current" ? "step" : undefined}
@@ -63,14 +65,14 @@ export function ProgressStepper({
                     <span className="text-sm font-medium">{index + 1}</span>
                   )}
                 </button>
-                <div className="mt-2 text-center max-w-[120px]">
+                <div className="mt-2 max-w-[120px] text-center">
                   {step.title && (
                     <div
                       className={cn(
-                        "text-xs font-medium flex items-center justify-center gap-1",
+                        "flex items-center justify-center gap-1 text-xs font-medium",
                         status === "current" && "text-foreground",
                         status !== "current" && "text-muted-foreground",
-                        status === "invalid" && "text-destructive"
+                        status === "invalid" && "text-destructive",
                       )}
                     >
                       <span>{step.title}</span>
@@ -80,12 +82,12 @@ export function ProgressStepper({
                     </div>
                   )}
                   {step.description && (
-                    <div className="text-xs text-muted-foreground mt-0.5">
+                    <div className="text-muted-foreground mt-0.5 text-xs">
                       {step.description}
                     </div>
                   )}
                   {status === "invalid" && getStepError(index) && (
-                    <div className="text-xs text-destructive mt-1 font-medium line-clamp-2">
+                    <div className="text-destructive mt-1 line-clamp-2 text-xs font-medium">
                       {getStepError(index)}
                     </div>
                   )}
@@ -94,10 +96,10 @@ export function ProgressStepper({
               {index < totalSteps - 1 && (
                 <div
                   className={cn(
-                    "h-0.5 flex-1 mx-2 transition-colors",
+                    "mx-2 h-0.5 flex-1 transition-colors",
                     getStepStatus(index) === "complete"
                       ? "bg-primary"
-                      : "bg-muted-foreground/30"
+                      : "bg-muted-foreground/30",
                   )}
                 />
               )}

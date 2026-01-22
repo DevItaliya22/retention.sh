@@ -1,6 +1,7 @@
 "use client";
 
 import { authClient } from "@/lib/auth/auth-client";
+import { checkAdminHasBusiness } from "@/lib/actions/auth";
 import {
   Button,
   Card,
@@ -51,11 +52,17 @@ export default function LoginPage() {
       } else {
         setSuccess("Successfully signed in!");
         
-        // Check role and redirect
+        // Check if user has business (first time login)
         const session = await authClient.getSession();
         const user = session.data?.user as any;
         if (user?.role === "ADMIN") {
-          router.push("/inbox");
+          // Check if admin has a business
+          const { hasBusiness } = await checkAdminHasBusiness();
+          if (hasBusiness) {
+            router.push("/inbox");
+          } else {
+            router.push("/welcome");
+          }
         } else {
           router.push("/welcome");
         }
@@ -77,7 +84,8 @@ export default function LoginPage() {
     try {
       const result = await authClient.signIn.magicLink({
         email: magicLinkEmail,
-        callbackURL: "/",
+        callbackURL: "/inbox",
+        newUserCallbackURL: "/welcome",
       });
 
       if (result.error) {

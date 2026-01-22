@@ -1,28 +1,30 @@
 "use client";
 
-import { useState } from "react";
-import { 
-  Button, 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
+import { updateBusinessSettings } from "@/lib/actions/business-settings";
+import { updateBusinessSchema } from "@/lib/schemas/business-settings";
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
   CardTitle,
   Form,
 } from "@reelo/ui/components";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { updateBusinessSchema } from "@/lib/schemas/business-settings";
-import { updateBusinessSettings } from "@/lib/actions/business-settings";
 import { toast } from "sonner";
 import { z } from "zod";
-import { BusinessInfoFields } from "../../../shared/BusinessInfoFields";
+import { BusinessInfoFields } from "./BusinessInfoFields";
 
 interface BusinessSettingsStepProps {
   initialData: any;
 }
 
-export function BusinessSettingsStep({ initialData }: BusinessSettingsStepProps) {
+export function BusinessSettingsStep({
+  initialData,
+}: BusinessSettingsStepProps) {
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<z.infer<typeof updateBusinessSchema>>({
@@ -60,7 +62,7 @@ export function BusinessSettingsStep({ initialData }: BusinessSettingsStepProps)
         <Form {...(form as any)}>
           <form onSubmit={form.handleSubmit(onUpdate)} className="space-y-6">
             <BusinessInfoFields control={form.control as any} />
-            <div className="pt-4 border-t flex justify-end">
+            <div className="flex justify-end border-t pt-4">
               <Button type="submit" loading={isLoading} className="px-8">
                 Save Changes
               </Button>

@@ -39,25 +39,25 @@ export function ReviewStep() {
           </div>
         </div>
 
-        <div className="border-t border-b px-6 py-4">
-          <h4 className="font-semibold text-primary">Cashier Setup</h4>
-        </div>
-        <div className="p-6 text-sm">
-          {values.createCashier ? (
-            <div className="grid grid-cols-2 gap-x-4 gap-y-4">
-              <div>
-                <p className="text-muted-foreground">Cashier Name</p>
-                <p className="font-medium">{values.cashierName}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Cashier Email</p>
-                <p className="font-medium">{values.cashierEmail}</p>
+        {values.createCashier && (
+          <>
+            <div className="border-t border-b px-6 py-4">
+              <h4 className="font-semibold text-primary">Cashier Setup</h4>
+            </div>
+            <div className="p-6 text-sm">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-4">
+                <div>
+                  <p className="text-muted-foreground">Cashier Name</p>
+                  <p className="font-medium">{values.cashierName}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Cashier Email</p>
+                  <p className="font-medium">{values.cashierEmail}</p>
+                </div>
               </div>
             </div>
-          ) : (
-            <p className="text-muted-foreground italic">No cashier will be created at this time.</p>
-          )}
-        </div>
+          </>
+        )}
       </div>
     </div>
   );

@@ -141,7 +141,10 @@ const PageLayout = ({
                     <Button
                       variant="link"
                       onClick={item.onClick}
-                      className={cn(isActive && "text-foreground font-medium")}
+                      className={cn(
+                        isActive && "text-foreground font-medium",
+                        "hover:no-underline"
+                      )}
                       icon={item.icon && <span>{item.icon}</span>}
                     >
                       {item.label}
