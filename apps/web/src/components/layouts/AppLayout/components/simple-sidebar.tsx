@@ -21,7 +21,6 @@ import {
 } from "@reelo/ui/components/sidebar";
 import { SidebarHeader } from "./sidebar-header";
 import { UserSidebarFooter } from "./UserSidebarFooter";
-import { ContactUsModal } from "./ContactUsModal";
 
 const sidebarVariants = {
   initial: {},
@@ -108,14 +107,6 @@ export function SimpleSidebar({
           />
         </div>
       </SidebarFooter>
-      {user && (
-        <ContactUsModal
-          open={isContactModalOpen}
-          onOpenChange={setIsContactModalOpen}
-          userEmail={user.email || ""}
-          userName={user.name}
-        />
-      )}
       <SidebarRail />
     </Sidebar>
   );

@@ -11,6 +11,8 @@ export function FormNavigation({
   isLoadingNext,
   isLoadingPrev,
   isSubmitting,
+  isNextDisabled,
+  isPrevDisabled,
 }: NavigationArgs) {
   const isLoading = isLoadingNext || isLoadingPrev || isSubmitting;
 
@@ -19,12 +21,16 @@ export function FormNavigation({
       <Button
         variant="outline"
         onClick={prev}
-        disabled={isFirstStep || isLoading}
+        disabled={isFirstStep || isLoading || isPrevDisabled}
         loading={isLoadingPrev}
       >
         Prev
       </Button>
-      <Button onClick={next} disabled={isLoading} loading={isLoadingNext || isSubmitting}>
+      <Button
+        onClick={next}
+        disabled={isLoading || isNextDisabled}
+        loading={isLoadingNext || isSubmitting}
+      >
         {isLastStep ? "Finish" : "Next"}
       </Button>
     </div>

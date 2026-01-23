@@ -1,0 +1,87 @@
+"use client";
+
+import { fetcher } from "@/lib/fetcher";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+
+export interface CurrentBusinessBranding {
+  id: string;
+  logo: string | null;
+  themeColor: string | null;
+  textColor: string | null;
+  bannerImage: string | null;
+  header: string | null;
+  subtitle: string | null;
+}
+
+export interface CurrentBusiness {
+  id: string;
+  name: string;
+  slug: string;
+  defaultPointsName: string;
+  defaultCurrencySymbol: string;
+  defaultCurrencyCode: string;
+  defaultBranding?: CurrentBusinessBranding | null;
+}
+
+export interface CurrentBusinessResponse {
+  business: CurrentBusiness | null;
+  error?: string;
+}
+
+export function useCurrentBusiness() {
+  return useQuery<CurrentBusinessResponse, Error>({
+    queryKey: ["currentBusiness"],
+    queryFn: () => fetcher<CurrentBusinessResponse>("/api/business/current"),
+  });
+}
+
+export interface UpdateBusinessBrandingInput {
+  logo?: string | null;
+  themeColor?: string | null;
+  textColor?: string | null;
+  bannerImage?: string | null;
+  header?: string | null;
+  subtitle?: string | null;
+}
+
+export interface UpdateBusinessInput {
+  name?: string;
+  defaultPointsName?: string;
+  defaultCurrencySymbol?: string;
+  defaultCurrencyCode?: string;
+  defaultBranding?: UpdateBusinessBrandingInput;
+}
+
+export interface UpdateBusinessResponse {
+  business: CurrentBusiness | null;
+  error?: string;
+}
+
+export function useUpdateBusiness() {
+  const queryClient = useQueryClient();
+
+  return useMutation<UpdateBusinessResponse, Error, UpdateBusinessInput>({
+    mutationFn: async (payload: UpdateBusinessInput) => {
+      return fetcher<UpdateBusinessResponse>("/api/business/current", {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      });
+    },
+    onSuccess: (data) => {
+      queryClient.setQueryData<CurrentBusinessResponse | undefined>(
+        ["currentBusiness"],
+        (existing) => {
+          if (!data.business) {
+            return { business: null, error: data.error };
+          }
+          return {
+            business: data.business,
+            error: data.error ?? existing?.error,
+          };
+        },
+      );
+    },
+  });
+}
+
+

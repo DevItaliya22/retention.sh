@@ -48,6 +48,8 @@ export function LinearMultiStepForm<TValues extends FieldValues>(props: {
     isSubmitting: msf.isSubmitting,
     isLoadingNext: msf.isLoadingNext,
     isLoadingPrev: msf.isLoadingPrev,
+    isNextDisabled: msf.isNextDisabled,
+    isPrevDisabled: msf.isPrevDisabled,
     progress: msf.progress,
     getStepStatus: msf.getStepStatus,
     getStepError: msf.getStepError,

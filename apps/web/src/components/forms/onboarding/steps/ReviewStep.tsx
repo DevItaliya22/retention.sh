@@ -1,7 +1,7 @@
 "use client";
 
-import { useFormContext } from "@reelo/ui/components";
 import type { WelcomeFormValues } from "@/lib/schemas/onboarding";
+import { useFormContext } from "@reelo/ui/components";
 
 export function ReviewStep() {
   const form = useFormContext<WelcomeFormValues>();
@@ -18,7 +18,7 @@ export function ReviewStep() {
 
       <div className="bg-muted/50 overflow-hidden rounded-xl border">
         <div className="border-b px-6 py-4">
-          <h4 className="font-semibold text-primary">Business Information</h4>
+          <h4 className="text-primary font-semibold">Business Information</h4>
         </div>
         <div className="grid grid-cols-2 gap-x-4 gap-y-4 p-6 text-sm">
           <div>
@@ -31,7 +31,9 @@ export function ReviewStep() {
           </div>
           <div>
             <p className="text-muted-foreground">Currency</p>
-            <p className="font-medium">{values.defaultCurrencyCode} ({values.defaultCurrencySymbol})</p>
+            <p className="font-medium">
+              {values.defaultCurrencyCode} ({values.defaultCurrencySymbol})
+            </p>
           </div>
           <div>
             <p className="text-muted-foreground">Points Name</p>
@@ -42,7 +44,7 @@ export function ReviewStep() {
         {values.createCashier && (
           <>
             <div className="border-t border-b px-6 py-4">
-              <h4 className="font-semibold text-primary">Cashier Setup</h4>
+              <h4 className="text-primary font-semibold">Cashier Setup</h4>
             </div>
             <div className="p-6 text-sm">
               <div className="grid grid-cols-2 gap-x-4 gap-y-4">

@@ -20,6 +20,7 @@
     "@prisma/nextjs-monorepo-workaround-plugin": "^7.2.0",
     "@reelo/db": "workspace:*",
     "@reelo/ui": "workspace:*",
+    "@tanstack/react-query": "^5.90.19",
     "@tanstack/react-table": "^8.21.3",
     "better-auth": "^1.4.10",
     "framer-motion": "^12.23.26",

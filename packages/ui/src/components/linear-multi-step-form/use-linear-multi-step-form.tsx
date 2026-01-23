@@ -184,6 +184,12 @@ export function useLinearMultiStepForm<TValues extends AnyValues>(args: {
     return { ok: true as const, payload };
   }, [currentStep, values]);
 
+  const isCurrentStepSchemaValid = React.useMemo(() => {
+    const payload = getStepPayload(values, currentStep);
+    if (!currentStep.schema) return true;
+    return (currentStep.schema as z.ZodTypeAny).safeParse(payload).success;
+  }, [currentStep, values]);
+
   const isLastStep = currentStepIndex >= totalSteps - 1;
 
   const next = React.useCallback(async () => {
@@ -443,6 +449,36 @@ export function useLinearMultiStepForm<TValues extends AnyValues>(args: {
     [isStepAccessible, goToStep],
   );
 
+  const isNextDisabled = React.useMemo(() => {
+    const defaultDisable =
+      (config.defaultDisableNextWhenInvalid ?? true) &&
+      !isCurrentStepSchemaValid;
+    if (defaultDisable) return true;
+    return (
+      config.disableNext?.({
+        formId: config.id,
+        stepId: currentStep.id,
+        stepIndex: currentStepIndex,
+        values: values as any,
+      }) ?? false
+    );
+  }, [config, currentStep.id, currentStepIndex, isCurrentStepSchemaValid, values]);
+
+  const isPrevDisabled = React.useMemo(() => {
+    const defaultDisable =
+      (config.defaultDisablePrevWhenInvalid ?? false) &&
+      !isCurrentStepSchemaValid;
+    if (defaultDisable) return true;
+    return (
+      config.disablePrev?.({
+        formId: config.id,
+        stepId: currentStep.id,
+        stepIndex: currentStepIndex,
+        values: values as any,
+      }) ?? false
+    );
+  }, [config, currentStep.id, currentStepIndex, isCurrentStepSchemaValid, values]);
+
   return {
     storageKey,
     formId: config.id,
@@ -467,6 +503,8 @@ export function useLinearMultiStepForm<TValues extends AnyValues>(args: {
     isSubmitting: loadingAction === "submit",
     isLoadingNext: loadingAction === "next",
     isLoadingPrev: loadingAction === "prev",
+    isNextDisabled,
+    isPrevDisabled,
     getStepStatus,
     getStepError,
     isStepRequired,

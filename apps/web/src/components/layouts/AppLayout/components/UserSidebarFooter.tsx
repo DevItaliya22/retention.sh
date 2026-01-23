@@ -15,6 +15,7 @@ import {
   TooltipTrigger,
 } from "@reelo/ui/components/tooltip";
 import { ChevronsUpDown } from "lucide-react";
+import { useEffect, useState } from "react";
 import { UserMenuContent } from "./UserMenuContent";
 
 interface UserSidebarFooterProps {
@@ -30,6 +31,15 @@ export function UserSidebarFooter({
 }: UserSidebarFooterProps = {}) {
   const { user, isLoading } = useSessionContext();
   const { isMobile } = useSidebar();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return null;
+  }
 
   if (isLoading) {
     return (

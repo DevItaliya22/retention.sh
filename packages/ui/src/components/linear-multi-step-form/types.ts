@@ -40,6 +40,8 @@ export type NavigationArgs = {
   isSubmitting: boolean;
   isLoadingNext: boolean;
   isLoadingPrev: boolean;
+  isNextDisabled: boolean;
+  isPrevDisabled: boolean;
   progress: number;
   getStepStatus: (stepIndex: number) => "complete" | "current" | "pending" | "invalid";
   getStepError: (stepIndex: number) => string | null;
@@ -53,6 +55,20 @@ export type LinearMultiStepFormConfig<TValues extends Record<string, any>> = {
   title?: string;
   storageKey?: string;
   steps: LinearMultiStepFormStepConfig<TValues>[];
+  defaultDisableNextWhenInvalid?: boolean;
+  defaultDisablePrevWhenInvalid?: boolean;
+  disableNext?: (args: {
+    formId: LinearMultiStepFormId;
+    stepId: LinearMultiStepFormStepId;
+    stepIndex: number;
+    values: TValues;
+  }) => boolean;
+  disablePrev?: (args: {
+    formId: LinearMultiStepFormId;
+    stepId: LinearMultiStepFormStepId;
+    stepIndex: number;
+    values: TValues;
+  }) => boolean;
   onSubmit?: (args: {
     formId: LinearMultiStepFormId;
     values: TValues;

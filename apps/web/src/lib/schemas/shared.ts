@@ -5,10 +5,14 @@ export const baseBusinessSchema = {
   businessSlug: z
     .string()
     .min(2, "Slug is too short")
-    .regex(/^[a-z0-9-]+$/, "Slug can only contain lowercase letters, numbers, and hyphens"),
+    .regex(
+      /^[a-z0-9-]+$/,
+      "Slug can only contain lowercase letters, numbers, and hyphens",
+    ),
   defaultPointsName: z.string().min(1, "Points name is required"),
   defaultCurrencySymbol: z.string().min(1, "Currency symbol is required"),
   defaultCurrencyCode: z.string().min(1, "Currency code is required"),
+  businessSlugAvailable: z.boolean().optional(),
   logo: z.string().optional().nullable(),
   themeColor: z.string().optional().nullable(),
 };
