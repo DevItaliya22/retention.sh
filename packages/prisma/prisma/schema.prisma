@@ -17,7 +17,7 @@ model User {
   id   String @id @default(uuid())
   name String
 
-  // Email for Admin/Cashier (email IDP auth)
+  // Email for Admin/Cashier (email IDP auth) ( this will be used for admin and cashier only , we will not use it for the customer , the email will be number@dy.com in user table for just sake of making user and identification purpose )
   email         String?
   emailVerified Boolean @default(false)
 
@@ -76,7 +76,7 @@ model Cashier {
 
   // Cashier must belong to a Business
   businessId String
-  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  business   Business @relation(fields: [businessId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

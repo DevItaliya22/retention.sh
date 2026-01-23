@@ -1,6 +1,10 @@
 import { auth } from "@/lib/auth/auth";
+import { generateRouteMetadata } from "@/lib/utils/route-metadata";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = generateRouteMetadata("/");
 
 export default async function BusinessPage() {
   const session = await auth.api.getSession({

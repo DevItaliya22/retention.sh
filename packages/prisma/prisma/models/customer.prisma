@@ -4,6 +4,8 @@ model Customer {
   userId String @unique
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  email String // This is the email of the customer , it will be used for sending emails to the custome r, the email in the User table is for the admin and cashier only , we will not use it for the customer , the email will be number@dy.com in user table for just sake of making user and identification purpose
+
   // Optional Address fields
   addressLine1 String?
   addressLine2 String?

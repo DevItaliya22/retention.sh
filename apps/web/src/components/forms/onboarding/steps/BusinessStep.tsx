@@ -56,13 +56,11 @@ export function BusinessStep() {
   }, [businessSlug]);
 
   useEffect(() => {
-    const nextAvailable = slugAvailability?.available ?? false;
-    const currentAvailable = form.getValues("businessSlugAvailable") ?? false;
-    if (currentAvailable === nextAvailable) return;
-    form.setValue("businessSlugAvailable", nextAvailable, {
-      shouldValidate: false,
-      shouldDirty: false,
-    });
+    form.setValue(
+      "businessSlugAvailable",
+      slugAvailability?.available ?? false,
+      { shouldValidate: false, shouldDirty: true },
+    );
   }, [form, slugAvailability?.available]);
 
   const handleRegenerateSlug = () => {

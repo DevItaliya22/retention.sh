@@ -1,6 +1,8 @@
 import { Providers } from "@/components/providers";
+import { constructMetadata } from "@/lib/utils/metadata";
 import "@reelo/ui/globals.css";
 import { Geist, Geist_Mono } from "next/font/google";
+import type { Metadata } from "next";
 
 const fontSans = Geist({
   subsets: ["latin"],
@@ -10,6 +12,11 @@ const fontSans = Geist({
 const fontMono = Geist_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
+});
+
+export const metadata: Metadata = constructMetadata({
+  title: "Dashboard",
+  description: "Manage your business loyalty programs and customer engagement",
 });
 
 export default function RootLayout({

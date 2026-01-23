@@ -1,17 +1,9 @@
-import { PageLayout, ScaffoldContainer } from "@/components/layouts";
+import { CashierSettingPageClient } from "./_components/CashierSettingPageClient";
+import { generateRouteMetadata } from "@/lib/utils/route-metadata";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = generateRouteMetadata("/settings/cashier");
 
 export default function CashierSettingPage() {
-  return (
-    <PageLayout
-    title="Cashier Settings"
-    subtitle="Manage your cashier settings"
-    size="full"
-    scaffoldSectionClassName="h-full w-full pt-2 pb-0"
-    >
-
-    <ScaffoldContainer>
-      
-    </ScaffoldContainer>
-    </PageLayout>
-  );
+  return <CashierSettingPageClient />;
 }

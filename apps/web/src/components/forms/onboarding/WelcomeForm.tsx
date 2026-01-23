@@ -4,6 +4,8 @@ import { BusinessStep } from "@/components/forms/onboarding/steps/BusinessStep";
 import { CashierStep } from "@/components/forms/onboarding/steps/CashierStep";
 import { ReviewStep } from "@/components/forms/onboarding/steps/ReviewStep";
 import useOnboarding from "@/hooks/onboarding/useOnboarding";
+import { useManageCashier } from "@/hooks/cashier/useManageCashier";
+import { useCurrentBusiness } from "@/hooks/business/useCurrentBusiness";
 import {
   businessStepSchema,
   cashierStepSchema,
@@ -32,15 +34,50 @@ export function WelcomeForm({ onCompleted }: WelcomeFormProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { mutateAsync: submitOnboarding } = useOnboarding();
+  const { create: createCashier } = useManageCashier();
+  const { refetch: refetchCurrentBusiness } = useCurrentBusiness();
 
   const config: LinearMultiStepFormConfig<WelcomeFormValues> = {
     id: "welcome-form",
     title: "Setup your business",
     onSubmit: async ({ values }) => {
       try {
-        const result = await submitOnboarding(values);
+        const businessData = {
+          businessName: values.businessName,
+          businessSlug: values.businessSlug,
+          defaultPointsName: values.defaultPointsName,
+          defaultCurrencySymbol: values.defaultCurrencySymbol,
+          defaultCurrencyCode: values.defaultCurrencyCode,
+          themeColor: values.themeColor,
+          logo: values.logo,
+          createCashier: false,
+        };
+
+        const result = await submitOnboarding(businessData as WelcomeFormValues);
         if (result.success) {
           await queryClient.invalidateQueries({ queryKey: ["currentBusiness"] });
+          
+          const businessResult = await refetchCurrentBusiness();
+          
+          if (!businessResult.data?.business) {
+            throw new Error("Business was created but could not be retrieved. Please refresh the page.");
+          }
+          
+          if (values.createCashier && values.cashierEmail && values.cashierPassword && values.cashierLinkSlug) {
+            try {
+              await createCashier.mutateAsync({
+                name: values.cashierName || "Cashier",
+                email: values.cashierEmail,
+                password: values.cashierPassword,
+                cashierLinkSlug: values.cashierLinkSlug,
+              });
+            } catch (cashierError) {
+              console.error("Failed to create cashier:", cashierError);
+              const errorMessage = cashierError instanceof Error ? cashierError.message : "Failed to create cashier";
+              toast.error(`Business created but failed to create cashier: ${errorMessage}. You can add one later.`);
+            }
+          }
+
           toast.success("Setup complete!");
           if (onCompleted) {
             onCompleted();
@@ -51,8 +88,9 @@ export function WelcomeForm({ onCompleted }: WelcomeFormProps) {
           toast.error(result.error || "Something went wrong");
           throw new Error(result.error || "Something went wrong");
         }
-      } catch (error: any) {
-        toast.error(error.message || "Something went wrong");
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : "Something went wrong";
+        toast.error(errorMessage);
         throw error;
       }
     },
