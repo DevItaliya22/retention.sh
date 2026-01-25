@@ -30,7 +30,7 @@ export function CashierNoSessionPage({ businessName }: CashierNoSessionPageProps
           </p>
           <div className="bg-muted/50 rounded-lg border p-4 space-y-2">
             <div className="flex items-start gap-2">
-              <Mail className="text-muted-foreground mt-0.5 h-4 w-4 flex-shrink-0" />
+              <Mail className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
               <div className="space-y-1">
                 <p className="text-sm font-medium">Need Help?</p>
                 <p className="text-muted-foreground text-xs">

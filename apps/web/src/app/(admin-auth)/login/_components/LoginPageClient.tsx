@@ -2,7 +2,8 @@
 
 import { checkAdminHasBusiness } from "@/lib/actions/auth";
 import { authClient } from "@/lib/auth/auth-client";
-import { loginSchema, emailSchema } from "@/lib/schemas/auth";
+import { loginSchema } from "@/lib/schemas/auth";
+import { emailSchema } from "@/lib/schemas/common";
 import { getErrorMessageFromResponse } from "@/lib/utils/error-handler";
 import {
   Button,
@@ -48,7 +49,7 @@ export function LoginPageClient() {
       const validationResult = loginSchema.safeParse({ email, password });
       
       if (!validationResult.success) {
-        const firstError = validationResult.error.errors[0];
+        const firstError = validationResult.error.issues[0];
         const errorMessage = firstError?.message || "Invalid input";
         setError(errorMessage);
         toast.error(errorMessage);
@@ -110,7 +111,7 @@ export function LoginPageClient() {
       const validationResult = emailSchema.safeParse(magicLinkEmail);
       
       if (!validationResult.success) {
-        const errorMessage = validationResult.error.errors[0]?.message || "Invalid email";
+        const errorMessage = validationResult.error.issues[0]?.message || "Invalid email";
         setError(errorMessage);
         toast.error(errorMessage);
         setIsLoading(false);

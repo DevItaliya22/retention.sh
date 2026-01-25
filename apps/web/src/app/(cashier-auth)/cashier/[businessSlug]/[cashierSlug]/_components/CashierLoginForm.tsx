@@ -39,7 +39,7 @@ export function CashierLoginForm({
       });
 
       if (!validationResult.success) {
-        const firstError = validationResult.error.errors[0];
+        const firstError = validationResult.error.issues[0];
         const errorMessage = firstError?.message || "Invalid input";
         setError(errorMessage);
         toast.error(errorMessage);

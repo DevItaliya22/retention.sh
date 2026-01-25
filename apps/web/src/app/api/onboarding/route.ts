@@ -73,8 +73,11 @@ export async function POST(request: Request) {
         validatedData.cashierPassword &&
         validatedData.cashierLinkSlug
       ) {
-        const existingCashierSlug = await tx.cashier.findUnique({
-          where: { cashierLinkSlug: validatedData.cashierLinkSlug },
+        const existingCashierSlug = await tx.cashier.findFirst({
+          where: {
+            cashierLinkSlug: validatedData.cashierLinkSlug,
+            businessId: business.id,
+          },
         });
 
         if (existingCashierSlug) {
