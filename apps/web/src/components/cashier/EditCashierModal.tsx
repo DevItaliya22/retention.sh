@@ -202,6 +202,7 @@ export function EditCashierModal({
                       <Input
                         placeholder="Enter cashier name"
                         disabled={update.isPending}
+                        className="placeholder:text-muted-foreground/60"
                         {...field}
                         onChange={(e) => {
                           field.onChange(e);
@@ -227,6 +228,7 @@ export function EditCashierModal({
                         type="email"
                         placeholder="Enter email address"
                         disabled={update.isPending}
+                        className="placeholder:text-muted-foreground/60"
                         {...field}
                       />
                     </FormControl>
@@ -245,6 +247,7 @@ export function EditCashierModal({
                         type="password"
                         placeholder="Leave empty to keep current password"
                         disabled={update.isPending}
+                        className="placeholder:text-muted-foreground/60"
                         {...field}
                       />
                     </FormControl>
@@ -276,7 +279,7 @@ export function EditCashierModal({
                       <FormControl>
                         <div className="focus-within:ring-ring flex items-center overflow-hidden rounded-md border shadow-sm focus-within:ring-1">
                           <Input
-                            className="border-0 shadow-none focus-visible:ring-0"
+                            className="border-0 shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/60"
                             placeholder="cashier-link-slug"
                             disabled={update.isPending}
                             {...field}

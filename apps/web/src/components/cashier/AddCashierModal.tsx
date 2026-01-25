@@ -170,6 +170,7 @@ export function AddCashierModal({ isOpen, onClose }: AddCashierModalProps) {
                       <Input
                         placeholder="Enter cashier name"
                         disabled={create.isPending}
+                        className="placeholder:text-muted-foreground/60"
                         {...field}
                         onChange={(e) => {
                           field.onChange(e);
@@ -195,6 +196,7 @@ export function AddCashierModal({ isOpen, onClose }: AddCashierModalProps) {
                         type="email"
                         placeholder="Enter email address"
                         disabled={create.isPending}
+                        className="placeholder:text-muted-foreground/60"
                         {...field}
                       />
                     </FormControl>
@@ -213,6 +215,7 @@ export function AddCashierModal({ isOpen, onClose }: AddCashierModalProps) {
                         type="password"
                         placeholder="Enter password"
                         disabled={create.isPending}
+                        className="placeholder:text-muted-foreground/60"
                         {...field}
                       />
                     </FormControl>
@@ -244,7 +247,7 @@ export function AddCashierModal({ isOpen, onClose }: AddCashierModalProps) {
                       <FormControl>
                         <div className="focus-within:ring-ring flex items-center overflow-hidden rounded-md border shadow-sm focus-within:ring-1">
                           <Input
-                            className="border-0 shadow-none focus-visible:ring-0"
+                            className="border-0 shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/60"
                             placeholder="cashier-link-slug"
                             disabled={create.isPending}
                             {...field}

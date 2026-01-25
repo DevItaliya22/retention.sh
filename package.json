@@ -9,18 +9,18 @@
     "format": "prettier --write \"**/*.{ts,tsx,md}\""
   },
   "devDependencies": {
-    "@reelo/eslint-config": "workspace:*",
-    "@reelo/typescript-config": "workspace:*",
+    "@reelo/eslint-config": "0.0.0",
+    "@reelo/typescript-config": "0.0.0",
     "prettier": "^3.7.4",
     "turbo": "^2.6.3",
-    "typescript": "5.9.3",
+    "typescript": "^5.9.3",
     "eslint": "^9.39.2",
     "prettier-plugin-organize-imports": "^4.3.0",
     "prettier-plugin-tailwindcss": "^0.7.2"
   },
   "dependencies": {
-    "@reelo/db": "workspace:*",
-    "@reelo/ui": "workspace:*"
+    "@reelo/db": "0.0.0",
+    "@reelo/ui": "0.0.0"
   },
   "packageManager": "pnpm@10.4.1",
   "engines": {

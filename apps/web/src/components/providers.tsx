@@ -1,11 +1,11 @@
 "use client";
 
 import { SessionProvider } from "@/hooks/misc/useSessionContext";
-import { ThemeProvider as NextThemesProvider, useTheme } from "next-themes";
 import { NuqsAdapter } from "@reelo/ui/components/nuqs-adapter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Toaster } from "sonner";
+import { ThemeProvider as NextThemesProvider } from "next-themes";
 import * as React from "react";
+import { Toaster } from "sonner";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -32,7 +32,17 @@ export function Providers({ children }: { children: React.ReactNode }) {
             enableColorScheme
           >
             {children}
-            <Toaster theme={theme as "light" | "dark" | "system"} />
+            <Toaster 
+              theme={theme as "light" | "dark" | "system"}
+              visibleToasts={5}
+              position="bottom-right"
+              gap={12}
+              expand={true}
+              richColors
+              toastOptions={{
+                duration: 4000,
+              }}
+            />
           </NextThemesProvider>
         </SessionProvider>
       </NuqsAdapter>

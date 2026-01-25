@@ -28,9 +28,10 @@ import { toast } from "sonner";
 
 interface WelcomeFormProps {
   onCompleted?: () => void;
+  embedded?: boolean;
 }
 
-export function WelcomeForm({ onCompleted }: WelcomeFormProps) {
+export function WelcomeForm({ onCompleted, embedded = false }: WelcomeFormProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { mutateAsync: submitOnboarding } = useOnboarding();
@@ -170,6 +171,45 @@ export function WelcomeForm({ onCompleted }: WelcomeFormProps) {
       },
     ],
   };
+
+  if (embedded) {
+    return (
+      <div className="w-full space-y-8">
+        <div className="space-y-2 text-center">
+          <h1 className="text-4xl font-bold tracking-tight">
+            Welcome to Reelo!
+          </h1>
+          <p className="text-muted-foreground text-lg">
+            Let's get your business set up in just a few steps.
+          </p>
+        </div>
+
+        <Card className="bg-card border-border shadow-xl backdrop-blur-sm">
+          <CardContent className="p-8">
+            <LinearMultiStepForm<WelcomeFormValues>
+              config={config}
+              initialValues={{
+                businessName: "",
+                businessSlug: "",
+                businessSlugAvailable: false,
+                defaultPointsName: "Points",
+                defaultCurrencySymbol: "₹",
+                defaultCurrencyCode: "INR",
+                createCashier: false,
+                cashierName: "",
+                cashierEmail: "",
+                cashierPassword: "",
+                cashierLinkSlug: "",
+              }}
+              navigationPosition="footer"
+              NavigationComponent={FormNavigation}
+              progressType="bar"
+            />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-muted/30 flex min-h-screen items-center justify-center p-4">
