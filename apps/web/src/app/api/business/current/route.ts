@@ -1,4 +1,6 @@
 import { auth } from "@/lib/auth/auth";
+import { updateBusinessSchema } from "@/lib/schemas/business";
+import { sanitizeErrorMessage } from "@/lib/utils/error-handler";
 import { prisma } from "@reelo/db";
 import { NextResponse } from "next/server";
 
@@ -36,7 +38,7 @@ export async function GET(request: Request) {
     return NextResponse.json(
       {
         business: null,
-        error: error.message || "Failed to fetch business",
+        error: sanitizeErrorMessage(error) || "Failed to fetch business. Please try again.",
       },
       { status: 500 },
     );
@@ -57,6 +59,26 @@ export async function PUT(request: Request) {
     }
 
     const body = await request.json();
+
+    let validatedData;
+    try {
+      validatedData = updateBusinessSchema.parse(body);
+    } catch (error: any) {
+      if (error.name === "ZodError") {
+        const firstError = error.errors?.[0];
+        const errorMessage = firstError
+          ? `${firstError.path.join(".")}: ${firstError.message}`
+          : "Invalid input data";
+        return NextResponse.json(
+          { business: null, error: errorMessage },
+          { status: 400 },
+        );
+      }
+      return NextResponse.json(
+        { business: null, error: "Invalid input data" },
+        { status: 400 },
+      );
+    }
 
     const admin = await prisma.admin.findFirst({
       where: { userId: session.user.id },
@@ -81,28 +103,28 @@ export async function PUT(request: Request) {
     const updated = await prisma.business.update({
       where: { id: businessId },
       data: {
-        name: body.name ?? undefined,
-        defaultPointsName: body.defaultPointsName ?? undefined,
-        defaultCurrencySymbol: body.defaultCurrencySymbol ?? undefined,
-        defaultCurrencyCode: body.defaultCurrencyCode ?? undefined,
-        defaultBranding: body.defaultBranding
+        name: validatedData.name ?? undefined,
+        defaultPointsName: validatedData.defaultPointsName ?? undefined,
+        defaultCurrencySymbol: validatedData.defaultCurrencySymbol ?? undefined,
+        defaultCurrencyCode: validatedData.defaultCurrencyCode ?? undefined,
+        defaultBranding: validatedData.defaultBranding
           ? {
               upsert: {
                 create: {
-                  logo: body.defaultBranding.logo ?? null,
-                  themeColor: body.defaultBranding.themeColor ?? null,
-                  textColor: body.defaultBranding.textColor ?? null,
-                  bannerImage: body.defaultBranding.bannerImage ?? null,
-                  header: body.defaultBranding.header ?? null,
-                  subtitle: body.defaultBranding.subtitle ?? null,
+                  logo: validatedData.defaultBranding.logo ?? null,
+                  themeColor: validatedData.defaultBranding.themeColor ?? null,
+                  textColor: validatedData.defaultBranding.textColor ?? null,
+                  bannerImage: validatedData.defaultBranding.bannerImage ?? null,
+                  header: validatedData.defaultBranding.header ?? null,
+                  subtitle: validatedData.defaultBranding.subtitle ?? null,
                 },
                 update: {
-                  logo: body.defaultBranding.logo ?? null,
-                  themeColor: body.defaultBranding.themeColor ?? null,
-                  textColor: body.defaultBranding.textColor ?? null,
-                  bannerImage: body.defaultBranding.bannerImage ?? null,
-                  header: body.defaultBranding.header ?? null,
-                  subtitle: body.defaultBranding.subtitle ?? null,
+                  logo: validatedData.defaultBranding.logo ?? null,
+                  themeColor: validatedData.defaultBranding.themeColor ?? null,
+                  textColor: validatedData.defaultBranding.textColor ?? null,
+                  bannerImage: validatedData.defaultBranding.bannerImage ?? null,
+                  header: validatedData.defaultBranding.header ?? null,
+                  subtitle: validatedData.defaultBranding.subtitle ?? null,
                 },
               },
             }
@@ -119,7 +141,7 @@ export async function PUT(request: Request) {
     return NextResponse.json(
       {
         business: null,
-        error: error.message || "Failed to update business",
+        error: sanitizeErrorMessage(error) || "Failed to update business. Please try again.",
       },
       { status: 500 },
     );

@@ -2,6 +2,8 @@
 
 import { checkAdminHasBusiness } from "@/lib/actions/auth";
 import { authClient } from "@/lib/auth/auth-client";
+import { loginSchema, emailSchema } from "@/lib/schemas/auth";
+import { getErrorMessageFromResponse } from "@/lib/utils/error-handler";
 import {
   Button,
   Card,
@@ -18,6 +20,7 @@ import {
 } from "@reelo/ui/components";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { toast } from "sonner";
 
 export function LoginPageClient() {
   const router = useRouter();
@@ -42,15 +45,32 @@ export function LoginPageClient() {
     setSuccess(null);
 
     try {
+      const validationResult = loginSchema.safeParse({ email, password });
+      
+      if (!validationResult.success) {
+        const firstError = validationResult.error.errors[0];
+        const errorMessage = firstError?.message || "Invalid input";
+        setError(errorMessage);
+        toast.error(errorMessage);
+        setIsLoading(false);
+        return;
+      }
+
       const result = await authClient.signIn.email({
-        email,
-        password,
+        email: validationResult.data.email,
+        password: validationResult.data.password,
       });
 
       if (result.error) {
-        setError(result.error.message || "Invalid credentials");
+        const errorMsg = getErrorMessageFromResponse(
+          result.error,
+          "Invalid email or password. Please try again.",
+        );
+        setError(errorMsg);
+        toast.error(errorMsg);
       } else {
         setSuccess("Successfully signed in!");
+        toast.success("Successfully signed in!");
 
         // Check if user has business (first time login)
         const session = await authClient.getSession();
@@ -68,8 +88,13 @@ export function LoginPageClient() {
         }
         router.refresh();
       }
-    } catch (err) {
-      setError("An unexpected error occurred");
+    } catch (err: any) {
+      const errorMsg = getErrorMessageFromResponse(
+        err,
+        "An unexpected error occurred. Please try again.",
+      );
+      setError(errorMsg);
+      toast.error(errorMsg);
     } finally {
       setIsLoading(false);
     }
@@ -82,22 +107,42 @@ export function LoginPageClient() {
     setSuccess(null);
 
     try {
+      const validationResult = emailSchema.safeParse(magicLinkEmail);
+      
+      if (!validationResult.success) {
+        const errorMessage = validationResult.error.errors[0]?.message || "Invalid email";
+        setError(errorMessage);
+        toast.error(errorMessage);
+        setIsLoading(false);
+        return;
+      }
+
       const result = await authClient.signIn.magicLink({
-        email: magicLinkEmail,
+        email: validationResult.data,
         callbackURL: "/inbox",
         newUserCallbackURL: "/welcome",
       });
 
       if (result.error) {
-        setError(result.error.message || "Failed to send magic link");
+        const errorMsg = getErrorMessageFromResponse(
+          result.error,
+          "Failed to send magic link. Please try again.",
+        );
+        setError(errorMsg);
+        toast.error(errorMsg);
       } else {
         setMagicLinkSent(true);
-        setSuccess(
-          "Magic link sent! Check your email (and console logs for the link).",
-        );
+        const successMsg = "Magic link sent! Check your email (and console logs for the link).";
+        setSuccess(successMsg);
+        toast.success("Magic link sent! Check your email.");
       }
-    } catch (err) {
-      setError("An unexpected error occurred");
+    } catch (err: any) {
+      const errorMsg = getErrorMessageFromResponse(
+        err,
+        "An unexpected error occurred. Please try again.",
+      );
+      setError(errorMsg);
+      toast.error(errorMsg);
     } finally {
       setIsLoading(false);
     }

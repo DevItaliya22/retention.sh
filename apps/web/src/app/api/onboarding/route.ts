@@ -3,6 +3,7 @@ import {
   type WelcomeFormValues,
   welcomeFormSchema,
 } from "@/lib/schemas/onboarding";
+import { sanitizeErrorMessage } from "@/lib/utils/error-handler";
 import { prisma } from "@reelo/db";
 import { NextResponse } from "next/server";
 
@@ -123,7 +124,7 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json(
-      { error: error.message || "Failed to complete setup", success: false },
+      { error: sanitizeErrorMessage(error) || "Failed to complete setup. Please try again.", success: false },
       { status: 500 },
     );
   }

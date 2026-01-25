@@ -130,10 +130,17 @@ export const auth = betterAuth({
             select: { role: true },
           });
 
+          const cashier = await prisma.cashier.findUnique({
+            where: { userId: session.userId },
+            select: { id: true },
+          });
+
+          const role = cashier ? "CASHIER" : (user?.role as unknown as string | null) ?? null;
+
           return {
             data: {
               ...session,
-              role: (user?.role as unknown as string | null) ?? null,
+              role,
             },
           };
         },
@@ -141,3 +148,96 @@ export const auth = betterAuth({
     },
   },
 });
+
+export interface CashierLoginData {
+  id: string;
+  userId: string;
+  businessId: string;
+  cashierLinkSlug: string;
+  user: {
+    id: string;
+    email: string | null;
+    name: string;
+  };
+}
+
+export async function validateCashierLogin(params: {
+  businessSlug: string;
+  cashierSlug: string;
+  email: string;
+  password: string;
+}): Promise<{ success: boolean; error?: string; cashier?: CashierLoginData }> {
+  try {
+    const { businessSlug, cashierSlug, email, password } = params;
+
+    const business = await prisma.business.findUnique({
+      where: { slug: businessSlug },
+    });
+
+    if (!business) {
+      return {
+        success: false,
+        error: "Business not found",
+      };
+    }
+
+    const cashier = await prisma.cashier.findFirst({
+      where: {
+        cashierLinkSlug: cashierSlug,
+        businessId: business.id,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    if (!cashier) {
+      return {
+        success: false,
+        error: "Cashier not found in this business",
+      };
+    }
+
+    if (cashier.user.email !== email) {
+      return {
+        success: false,
+        error: "Invalid email for this cashier",
+      };
+    }
+
+    if (cashier.password !== password) {
+      return {
+        success: false,
+        error: "Invalid password",
+      };
+    }
+
+    return {
+      success: true,
+      cashier: {
+        id: cashier.id,
+        userId: cashier.userId,
+        businessId: cashier.businessId,
+        cashierLinkSlug: cashier.cashierLinkSlug,
+        user: {
+          id: cashier.user.id,
+          email: cashier.user.email,
+          name: cashier.user.name,
+        },
+      },
+    };
+  } catch (error: any) {
+    console.error("Failed to validate cashier login:", error);
+    return {
+      success: false,
+      error: error.message || "Failed to validate cashier login",
+    };
+  }
+}
+

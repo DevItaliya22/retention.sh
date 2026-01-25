@@ -38,7 +38,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
               position="bottom-right"
               gap={12}
               expand={true}
-              richColors
+              // richColors
               toastOptions={{
                 duration: 4000,
               }}

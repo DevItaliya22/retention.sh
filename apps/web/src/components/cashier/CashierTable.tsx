@@ -7,6 +7,7 @@ import { useMemo } from "react";
 import type { Cashier } from "@/hooks/cashier/useManageCashier";
 import { EditCashierButton } from "./EditCashierButton";
 import { DeleteCashierButton } from "./DeleteCashierButton";
+import { OpenCashierPortalButton } from "./OpenCashierPortalButton";
 
 interface CashierTableProps {
   cashiers: Cashier[];
@@ -79,6 +80,7 @@ export function CashierTable({ cashiers }: CashierTableProps) {
           const cashier = row.original;
           return (
             <div className="flex justify-end gap-1">
+              <OpenCashierPortalButton cashier={cashier} />
               <EditCashierButton cashier={cashier} />
               <DeleteCashierButton cashierId={cashier.id} />
             </div>

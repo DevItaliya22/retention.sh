@@ -11,7 +11,8 @@ import {
   cashierStepSchema,
   type WelcomeFormValues,
 } from "@/lib/schemas/onboarding";
-import slugify from "slugify";
+import { generateSlug } from "@/lib/utils/slug";
+import { getErrorMessageFromResponse } from "@/lib/utils/error-handler";
 import {
   Card,
   CardContent,
@@ -74,8 +75,13 @@ export function WelcomeForm({ onCompleted, embedded = false }: WelcomeFormProps)
               });
             } catch (cashierError) {
               console.error("Failed to create cashier:", cashierError);
-              const errorMessage = cashierError instanceof Error ? cashierError.message : "Failed to create cashier";
-              toast.error(`Business created but failed to create cashier: ${errorMessage}. You can add one later.`);
+              const errorMessage = getErrorMessageFromResponse(
+                cashierError,
+                "Failed to create cashier",
+              );
+              toast.error(
+                `Business created but failed to create cashier: ${errorMessage}. You can add one later.`,
+              );
             }
           }
 
@@ -86,11 +92,18 @@ export function WelcomeForm({ onCompleted, embedded = false }: WelcomeFormProps)
             router.replace("/inbox");
           }
         } else {
-          toast.error(result.error || "Something went wrong");
-          throw new Error(result.error || "Something went wrong");
+          const errorMsg = getErrorMessageFromResponse(
+            result.error,
+            "Something went wrong. Please try again.",
+          );
+          toast.error(errorMsg);
+          throw new Error(errorMsg);
         }
       } catch (error: unknown) {
-        const errorMessage = error instanceof Error ? error.message : "Something went wrong";
+        const errorMessage = getErrorMessageFromResponse(
+          error,
+          "Something went wrong. Please try again.",
+        );
         toast.error(errorMessage);
         throw error;
       }
@@ -98,11 +111,7 @@ export function WelcomeForm({ onCompleted, embedded = false }: WelcomeFormProps)
     disableNext: ({ stepId, values }) => {
       if (stepId !== "business") return false;
       const slug = (values.businessSlug ?? "").trim();
-      const normalized = slugify(slug, {
-        lower: true,
-        strict: true,
-        trim: true,
-      });
+      const normalized = generateSlug(slug);
       const isValid =
         normalized.length >= 2 &&
         /^[a-z0-9-]+$/.test(normalized) &&

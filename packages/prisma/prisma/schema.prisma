@@ -71,7 +71,7 @@ model Cashier {
   userId String @unique
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  cashierLinkSlug String @unique
+  cashierLinkSlug String 
   password        String
 
   // Cashier must belong to a Business
@@ -83,6 +83,7 @@ model Cashier {
 
   @@index([userId])
   @@index([businessId])
+  @@unique([cashierLinkSlug,businessId])
   @@map("cashier")
 }
 

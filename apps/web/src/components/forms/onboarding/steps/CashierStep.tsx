@@ -15,7 +15,7 @@ import {
 import { useDebouncedCallback } from "@reelo/ui/hooks";
 import { RotateCw } from "lucide-react";
 import { useEffect, useRef } from "react";
-import slugify from "slugify";
+import { generateSlug } from "@/lib/utils/slug";
 
 export function CashierStep() {
   const form = useFormContext<WelcomeFormValues>();
@@ -28,14 +28,6 @@ export function CashierStep() {
     null,
   );
 
-  const generateSlug = (name: string): string => {
-    if (!name) return "";
-    return slugify(name, {
-      lower: true,
-      strict: true,
-      trim: true,
-    });
-  };
 
   const debouncedSetSlug = useDebouncedCallback((name: string) => {
     if (!slugTouchedRef.current && name) {

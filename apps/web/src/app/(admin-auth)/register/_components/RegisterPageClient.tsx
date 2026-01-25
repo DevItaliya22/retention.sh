@@ -1,6 +1,8 @@
 "use client";
 
 import { authClient } from "@/lib/auth/auth-client";
+import { registerSchema } from "@/lib/schemas/auth";
+import { getErrorMessageFromResponse } from "@/lib/utils/error-handler";
 import {
   Button,
   Card,
@@ -14,6 +16,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { toast } from "sonner";
 
 export function RegisterPageClient() {
   const router = useRouter();
@@ -29,21 +32,43 @@ export function RegisterPageClient() {
     setError(null);
 
     try {
+      const validationResult = registerSchema.safeParse({ name, email, password });
+      
+      if (!validationResult.success) {
+        const firstError = validationResult.error.errors[0];
+        const errorMessage = firstError?.message || "Invalid input";
+        setError(errorMessage);
+        toast.error(errorMessage);
+        setIsLoading(false);
+        return;
+      }
+
       const result = await authClient.signUp.email({
-        email,
-        password,
-        name,
+        email: validationResult.data.email,
+        password: validationResult.data.password,
+        name: validationResult.data.name,
         callbackURL: "/welcome",
       });
 
       if (result.error) {
-        setError(result.error.message || "Failed to create account");
+        const errorMsg = getErrorMessageFromResponse(
+          result.error,
+          "Failed to create account. Please try again.",
+        );
+        setError(errorMsg);
+        toast.error(errorMsg);
       } else {
+        toast.success("Account created successfully!");
         router.push("/welcome");
         router.refresh();
       }
-    } catch (err) {
-      setError("An unexpected error occurred");
+    } catch (err: any) {
+      const errorMsg = getErrorMessageFromResponse(
+        err,
+        "An unexpected error occurred. Please try again.",
+      );
+      setError(errorMsg);
+      toast.error(errorMsg);
     } finally {
       setIsLoading(false);
     }

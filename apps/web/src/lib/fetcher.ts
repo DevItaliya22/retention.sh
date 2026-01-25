@@ -1,3 +1,5 @@
+import { handleApiError } from "./utils/error-handler";
+
 export async function fetcher<T = unknown>(
   url: string,
   options?: RequestInit,
@@ -11,10 +13,11 @@ export async function fetcher<T = unknown>(
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({
-      error: response.statusText,
-    }));
-    throw new Error(error.error || `Failed to fetch: ${response.statusText}`);
+    const errorMessage = await handleApiError(
+      response,
+      `Failed to ${options?.method || "fetch"}. Please try again.`,
+    );
+    throw new Error(errorMessage);
   }
 
   return response.json();

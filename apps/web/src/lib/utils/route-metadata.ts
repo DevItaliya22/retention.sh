@@ -51,6 +51,16 @@ const ROUTE_METADATA_MAP: Record<string, RouteMetadataConfig> = {
     title: "Cashier Settings",
     description: "Manage cashier accounts and permissions for your business",
   },
+  "/cashier/[businessSlug]/[cashierSlug]": {
+    title: (segments) => `Cashier Login - ${formatSlug(segments[1])}`,
+    description: "Sign in to your cashier account",
+    noIndex: true,
+  },
+  "/cashier/[businessSlug]/[cashierSlug]/home": {
+    title: (segments) => `Cashier Dashboard - ${formatSlug(segments[1])}`,
+    description: "Cashier dashboard",
+    noIndex: true,
+  },
 };
 
 /**
@@ -96,8 +106,17 @@ function getRoutePattern(
     (seg) => !seg.startsWith("(") && !seg.endsWith(")")
   );
 
+  // Handle cashier portal routes
+  if (filteredSegments[0] === "cashier" && filteredSegments.length >= 3) {
+    if (filteredSegments.length === 3) {
+      return "/cashier/[businessSlug]/[cashierSlug]";
+    }
+    if (filteredSegments.length === 4 && filteredSegments[3] === "home") {
+      return "/cashier/[businessSlug]/[cashierSlug]/home";
+    }
+  }
+
   // Simple pattern matching - return path as-is for static routes
-  // For dynamic routes, we'll handle them as needed
   const pattern = filteredSegments.join("/");
   
   // Return with leading slash for consistency

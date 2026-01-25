@@ -21,30 +21,17 @@ import { useDebouncedCallback } from "@reelo/ui/hooks";
 import { RotateCw } from "lucide-react";
 import { useEffect, useMemo, useRef } from "react";
 import { useForm } from "react-hook-form";
-import slugify from "slugify";
 import { toast } from "sonner";
 import { z } from "zod";
 
 import type { Cashier } from "@/hooks/cashier/useManageCashier";
 import { useManageCashier } from "@/hooks/cashier/useManageCashier";
 import { DialogSection } from "@reelo/ui/components";
+import { updateCashierSchema } from "@/lib/schemas/cashier";
+import { generateSlug } from "@/lib/utils/slug";
+import { getErrorMessageFromResponse } from "@/lib/utils/error-handler";
 
-const editCashierSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  email: z.string().email("Invalid email address"),
-  password: z
-    .string()
-    .min(6, "Password must be at least 6 characters")
-    .optional()
-    .or(z.literal("")),
-  cashierLinkSlug: z
-    .string()
-    .min(1, "Link slug is required")
-    .regex(
-      /^[a-z0-9-]+$/,
-      "Link slug can only contain lowercase letters, numbers, and hyphens",
-    ),
-});
+const editCashierSchema = updateCashierSchema;
 
 type EditCashierFormValues = z.infer<typeof editCashierSchema>;
 
@@ -79,15 +66,6 @@ export function EditCashierModal({
   const cashierName = form.watch("name");
   const cashierSlug = form.watch("cashierLinkSlug");
 
-  const generateSlug = (name: string): string => {
-    if (!name) return "";
-    return slugify(name, {
-      lower: true,
-      strict: true,
-      trim: true,
-    });
-  };
-
   const debouncedSetSlug = useDebouncedCallback((name: string) => {
     if (!slugTouchedRef.current && name) {
       const slug = generateSlug(name);
@@ -106,11 +84,7 @@ export function EditCashierModal({
     if (!cashierSlug || cashierSlug.trim().length === 0) {
       return { available: null, checking: false };
     }
-    const normalized = slugify(cashierSlug.trim(), {
-      lower: true,
-      strict: true,
-      trim: true,
-    });
+    const normalized = generateSlug(cashierSlug.trim());
     if (normalized !== cashierSlug) {
       return { available: null, checking: false };
     }
@@ -131,6 +105,7 @@ export function EditCashierModal({
 
   const handleSubmit = (data: EditCashierFormValues) => {
     if (!slugAvailability.available) {
+      toast.error("This slug is already taken. Please choose another one.");
       form.setError("cashierLinkSlug", {
         message: "This slug is already taken. Please choose another one.",
       });
@@ -162,7 +137,8 @@ export function EditCashierModal({
       {
         loading: "Updating cashier...",
         success: "Cashier updated successfully",
-        error: (err: Error) => err.message || "Failed to update cashier",
+        error: (err: Error) =>
+          getErrorMessageFromResponse(err, "Failed to update cashier. Please try again."),
       },
     );
   };

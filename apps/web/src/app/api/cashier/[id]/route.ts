@@ -1,4 +1,6 @@
 import { auth } from "@/lib/auth/auth";
+import { updateCashierSchema } from "@/lib/schemas/cashier";
+import { sanitizeErrorMessage } from "@/lib/utils/error-handler";
 import { prisma } from "@reelo/db";
 import { NextResponse } from "next/server";
 
@@ -32,8 +34,11 @@ export async function PUT(
       );
     }
 
-    const cashier = await prisma.cashier.findUnique({
-      where: { id },
+    const cashier = await prisma.cashier.findFirst({
+      where: {
+        id,
+        businessId: admin.business.id,
+      },
       include: { user: true },
     });
 
@@ -44,24 +49,41 @@ export async function PUT(
       );
     }
 
-    if (cashier.businessId !== admin.business.id) {
+    const body = await request.json();
+
+    let validatedData;
+    try {
+      validatedData = updateCashierSchema.parse(body);
+    } catch (error: any) {
+      if (error.name === "ZodError") {
+        const firstError = error.errors?.[0];
+        const errorMessage = firstError
+          ? `${firstError.path.join(".")}: ${firstError.message}`
+          : "Invalid input data";
+        return NextResponse.json(
+          { error: errorMessage, cashier: null },
+          { status: 400 },
+        );
+      }
       return NextResponse.json(
-        { error: "Forbidden: You can only edit cashiers from your business", cashier: null },
-        { status: 403 },
+        { error: "Invalid input data", cashier: null },
+        { status: 400 },
       );
     }
 
-    const body = await request.json();
-    const { name, email, password, cashierLinkSlug } = body;
+    const { name, email, password, cashierLinkSlug } = validatedData;
 
     if (cashierLinkSlug && cashierLinkSlug !== cashier.cashierLinkSlug) {
-      const existingCashierSlug = await prisma.cashier.findUnique({
-        where: { cashierLinkSlug },
+      const existingCashierSlug = await prisma.cashier.findFirst({
+        where: {
+          cashierLinkSlug,
+          businessId: admin.business.id,
+        },
       });
 
       if (existingCashierSlug) {
         return NextResponse.json(
-          { error: "Cashier link slug already exists", cashier: null },
+          { error: "Cashier link slug already exists in this business", cashier: null },
           { status: 400 },
         );
       }
@@ -137,7 +159,7 @@ export async function PUT(
     console.error("Failed to update cashier:", error);
     return NextResponse.json(
       {
-        error: error.message || "Failed to update cashier",
+        error: sanitizeErrorMessage(error) || "Failed to update cashier. Please try again.",
         cashier: null,
       },
       { status: 500 },
@@ -175,21 +197,17 @@ export async function DELETE(
       );
     }
 
-    const cashier = await prisma.cashier.findUnique({
-      where: { id },
+    const cashier = await prisma.cashier.findFirst({
+      where: {
+        id,
+        businessId: admin.business.id,
+      },
     });
 
     if (!cashier) {
       return NextResponse.json(
         { error: "Cashier not found", success: false },
         { status: 404 },
-      );
-    }
-
-    if (cashier.businessId !== admin.business.id) {
-      return NextResponse.json(
-        { error: "Forbidden: You can only delete cashiers from your business", success: false },
-        { status: 403 },
       );
     }
 
@@ -208,7 +226,7 @@ export async function DELETE(
     console.error("Failed to delete cashier:", error);
     return NextResponse.json(
       {
-        error: error.message || "Failed to delete cashier",
+        error: sanitizeErrorMessage(error) || "Failed to delete cashier. Please try again.",
         success: false,
       },
       { status: 500 },

@@ -1,24 +1,17 @@
-import { NextRequest, NextResponse } from "next/server";
+import { getCashierSessionFromHeaders } from "@/lib/auth/cashier-session";
+import { parseCashierRoute } from "@/lib/utils/cashier-routes";
 import { getSessionCookie } from "better-auth/cookies";
+import { NextRequest, NextResponse } from "next/server";
 
-const protectedAdminRoutes = [
-  "/",
-  "/inbox",
-  "/welcome",
-]
+const protectedAdminRoutes = ["/", "/inbox", "/welcome"];
 
 const AuthRoutes = ["/login"];
 
-// Change it when it's needed 
-const userRoutes = [
-  "/user"
-]
+const protectedCashierRoutes = ["/home"];
 
-const cashierRoutes = [
-  "/cashier",
-]
+const publicCashierRoutes = ["/", "/no-session"];
 
-export function proxy(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { nextUrl } = req;
   const hostname = req.headers.get("host") || "";
   const pathname = nextUrl.pathname;
@@ -27,11 +20,34 @@ export function proxy(req: NextRequest) {
     cookiePrefix: "reelo",
   });
 
-  if(!sessionCookie && protectedAdminRoutes.includes(pathname)) {
+  const cashierRoute = parseCashierRoute(pathname);
+
+  if (cashierRoute) {
+    const { businessSlug, cashierSlug, subPath } = cashierRoute;
+    const cookieHeader = req.headers.get("cookie");
+    const cashierSession = await getCashierSessionFromHeaders(cookieHeader);
+
+    const isProtectedRoute = protectedCashierRoutes.includes(subPath);
+
+    if (isProtectedRoute) {
+      if (!cashierSession || cashierSession.user.role !== "CASHIER") {
+        return NextResponse.redirect(
+          new URL(
+            `/cashier/${businessSlug}/${cashierSlug}/no-session`,
+            req.url,
+          ),
+        );
+      }
+    }
+
+    return NextResponse.next();
+  }
+
+  if (!sessionCookie && protectedAdminRoutes.includes(pathname)) {
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
-  if(sessionCookie && AuthRoutes.includes(pathname)) {
+  if (sessionCookie && AuthRoutes.includes(pathname)) {
     return NextResponse.redirect(new URL("/", req.url));
   }
 

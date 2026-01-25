@@ -1,4 +1,6 @@
 import { auth } from "@/lib/auth/auth";
+import { createCashierSchema } from "@/lib/schemas/cashier";
+import { sanitizeErrorMessage } from "@/lib/utils/error-handler";
 import { prisma } from "@reelo/db";
 import { NextResponse } from "next/server";
 
@@ -72,7 +74,7 @@ export async function GET(request: Request) {
     console.error("Failed to fetch cashiers:", error);
     return NextResponse.json(
       {
-        error: error.message || "Failed to fetch cashiers",
+        error: sanitizeErrorMessage(error) || "Failed to fetch cashiers. Please try again.",
         cashiers: [],
       },
       { status: 500 },
@@ -106,22 +108,39 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { name, email, password, cashierLinkSlug } = body;
 
-    if (!name || !email || !password || !cashierLinkSlug) {
+    let validatedData;
+    try {
+      validatedData = createCashierSchema.parse(body);
+    } catch (error: any) {
+      if (error.name === "ZodError") {
+        const firstError = error.errors?.[0];
+        const errorMessage = firstError
+          ? `${firstError.path.join(".")}: ${firstError.message}`
+          : "Invalid input data";
+        return NextResponse.json(
+          { error: errorMessage, cashier: null },
+          { status: 400 },
+        );
+      }
       return NextResponse.json(
-        { error: "Missing required fields", cashier: null },
+        { error: "Invalid input data", cashier: null },
         { status: 400 },
       );
     }
 
-    const existingCashierSlug = await prisma.cashier.findUnique({
-      where: { cashierLinkSlug },
+    const { name, email, password, cashierLinkSlug } = validatedData;
+
+    const existingCashierSlug = await prisma.cashier.findFirst({
+      where: {
+        cashierLinkSlug,
+        businessId: admin.business.id,
+      },
     });
 
     if (existingCashierSlug) {
       return NextResponse.json(
-        { error: "Cashier link slug already exists", cashier: null },
+        { error: "Cashier link slug already exists in this business", cashier: null },
         { status: 400 },
       );
     }
@@ -183,7 +202,7 @@ export async function POST(request: Request) {
     console.error("Failed to create cashier:", error);
     return NextResponse.json(
       {
-        error: error.message || "Failed to create cashier",
+        error: sanitizeErrorMessage(error) || "Failed to create cashier. Please try again.",
         cashier: null,
       },
       { status: 500 },

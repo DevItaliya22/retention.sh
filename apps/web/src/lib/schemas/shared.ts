@@ -1,24 +1,29 @@
 import { z } from "zod";
+import {
+  businessNameSchema,
+  slugSchema,
+  pointsNameSchema,
+  currencySymbolSchema,
+  currencyCodeSchema,
+  urlSchema,
+  themeColorSchema,
+  nameSchema,
+  emailSchema,
+} from "./common";
 
 export const baseBusinessSchema = {
-  businessName: z.string().min(2, "Business name is too short"),
-  businessSlug: z
-    .string()
-    .min(2, "Slug is too short")
-    .regex(
-      /^[a-z0-9-]+$/,
-      "Slug can only contain lowercase letters, numbers, and hyphens",
-    ),
-  defaultPointsName: z.string().min(1, "Points name is required"),
-  defaultCurrencySymbol: z.string().min(1, "Currency symbol is required"),
-  defaultCurrencyCode: z.string().min(1, "Currency code is required"),
+  businessName: businessNameSchema,
+  businessSlug: slugSchema,
+  defaultPointsName: pointsNameSchema,
+  defaultCurrencySymbol: currencySymbolSchema,
+  defaultCurrencyCode: currencyCodeSchema,
   businessSlugAvailable: z.boolean().optional(),
-  logo: z.string().optional().nullable(),
-  themeColor: z.string().optional().nullable(),
+  logo: urlSchema,
+  themeColor: themeColorSchema,
 };
 
 export const baseCashierSchema = {
-  cashierName: z.string().optional(),
-  cashierEmail: z.string().email("Invalid email").optional().or(z.literal("")),
-  cashierLinkSlug: z.string().optional().or(z.literal("")),
+  cashierName: nameSchema.optional(),
+  cashierEmail: emailSchema.optional().or(z.literal("")),
+  cashierLinkSlug: slugSchema.optional().or(z.literal("")),
 };
