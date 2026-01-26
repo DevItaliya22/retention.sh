@@ -1,19 +1,64 @@
 "use client";
 
-import { DataTable, DataTableColumnHeader, DataTableToolbar } from "@reelo/ui/components";
+import type { Cashier } from "@/hooks/cashier/useCashiersQuery";
+import type { Cashier as ManageCashier } from "@/hooks/cashier/useManageCashier";
+import {
+  DataTable,
+  DataTableColumnHeader,
+  DataTableToolbar,
+  DateDisplay,
+  Skeleton,
+} from "@reelo/ui/components";
 import { useDataTable } from "@reelo/ui/hooks";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useMemo } from "react";
-import type { Cashier } from "@/hooks/cashier/useManageCashier";
-import { EditCashierButton } from "./EditCashierButton";
 import { DeleteCashierButton } from "./DeleteCashierButton";
+import { EditCashierButton } from "./EditCashierButton";
 import { OpenCashierPortalButton } from "./OpenCashierPortalButton";
 
 interface CashierTableProps {
   cashiers: Cashier[];
+  total: number;
+  perPage: number;
+  isLoading?: boolean;
 }
 
-export function CashierTable({ cashiers }: CashierTableProps) {
+export function CashierTable({
+  cashiers,
+  total,
+  perPage,
+  isLoading = false,
+}: CashierTableProps) {
+  const pageCount = Math.max(1, Math.ceil(total / perPage));
+  const isEmpty = !isLoading && cashiers.length === 0;
+
+  const displayCashiers = useMemo(() => {
+    if (isLoading && cashiers.length === 0) {
+      return Array.from({ length: perPage }, (_, i) => ({
+        id: `skeleton-${i}`,
+        userId: "",
+        name: "",
+        email: null,
+        cashierLinkSlug: "",
+        createdAt: "",
+        updatedAt: "",
+      })) as Cashier[];
+    }
+    if (isEmpty) {
+      return [
+        {
+          id: "empty-state",
+          userId: "",
+          name: "",
+          email: null,
+          cashierLinkSlug: "",
+          createdAt: "",
+          updatedAt: "",
+        },
+      ] as Cashier[];
+    }
+    return cashiers;
+  }, [cashiers, isLoading, perPage, isEmpty]);
   const columns = useMemo<ColumnDef<Cashier>[]>(
     () => [
       {
@@ -23,13 +68,22 @@ export function CashierTable({ cashiers }: CashierTableProps) {
           <DataTableColumnHeader column={column} label="Name" />
         ),
         cell: ({ row }) => {
-          return <div className="font-medium">{row.original.name}</div>;
+          const cashier = row.original;
+          if (cashier.id === "empty-state") {
+            return <div className="sr-only">Empty state</div>;
+          }
+          if (isLoading && cashier.id.startsWith("skeleton-")) {
+            return <Skeleton className="h-4 w-32" />;
+          }
+          return <div className="font-medium">{cashier.name}</div>;
         },
         enableColumnFilter: true,
+        enableSorting: true,
         meta: {
           label: "Name",
           variant: "text" as const,
           placeholder: "Filter by name...",
+          maxLength: 255,
         },
       },
       {
@@ -39,13 +93,22 @@ export function CashierTable({ cashiers }: CashierTableProps) {
           <DataTableColumnHeader column={column} label="Email" />
         ),
         cell: ({ row }) => {
-          return <div>{row.original.email || "-"}</div>;
+          const cashier = row.original;
+          if (cashier.id === "empty-state") {
+            return null;
+          }
+          if (isLoading && cashier.id.startsWith("skeleton-")) {
+            return <Skeleton className="h-4 w-40" />;
+          }
+          return <div>{cashier.email || "-"}</div>;
         },
         enableColumnFilter: true,
+        enableSorting: true,
         meta: {
           label: "Email",
           variant: "text" as const,
           placeholder: "Filter by email...",
+          maxLength: 254,
         },
       },
       {
@@ -55,7 +118,16 @@ export function CashierTable({ cashiers }: CashierTableProps) {
           <DataTableColumnHeader column={column} label="Link Slug" />
         ),
         cell: ({ row }) => {
-          return <div className="font-mono text-sm">{row.original.cashierLinkSlug}</div>;
+          const cashier = row.original;
+          if (cashier.id === "empty-state") {
+            return null;
+          }
+          if (isLoading && cashier.id.startsWith("skeleton-")) {
+            return <Skeleton className="h-4 w-24" />;
+          }
+          return (
+            <div className="font-mono text-sm">{cashier.cashierLinkSlug}</div>
+          );
         },
       },
       {
@@ -64,10 +136,26 @@ export function CashierTable({ cashiers }: CashierTableProps) {
         header: ({ column }) => (
           <DataTableColumnHeader column={column} label="Created" />
         ),
+        enableSorting: true,
         cell: ({ row }) => {
+          const cashier = row.original;
+          if (cashier.id === "empty-state") {
+            return null;
+          }
+          if (isLoading && cashier.id.startsWith("skeleton-")) {
+            return <Skeleton className="h-4 w-20" />;
+          }
           return (
-            <div className="text-sm text-muted-foreground">
-              {new Date(row.original.createdAt).toLocaleDateString()}
+            <div className="text-muted-foreground text-sm">
+              <DateDisplay
+                date={cashier.createdAt}
+                relative={false}
+                formatOptions={{
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                }}
+              />
             </div>
           );
         },
@@ -78,10 +166,27 @@ export function CashierTable({ cashiers }: CashierTableProps) {
         header: () => <span className="sr-only">Actions</span>,
         cell: ({ row }) => {
           const cashier = row.original;
+          if (cashier.id === "empty-state") {
+            return null;
+          }
+          if (isLoading && cashier.id.startsWith("skeleton-")) {
+            return (
+              <div className="flex justify-end gap-1">
+                <Skeleton className="h-8 w-8" />
+                <Skeleton className="h-8 w-8" />
+                <Skeleton className="h-8 w-8" />
+              </div>
+            );
+          }
+          const cashierForButtons: ManageCashier = {
+            ...cashier,
+            createdAt: new Date(cashier.createdAt),
+            updatedAt: new Date(cashier.updatedAt),
+          };
           return (
             <div className="flex justify-end gap-1">
-              <OpenCashierPortalButton cashier={cashier} />
-              <EditCashierButton cashier={cashier} />
+              <OpenCashierPortalButton cashier={cashierForButtons} />
+              <EditCashierButton cashier={cashierForButtons} />
               <DeleteCashierButton cashierId={cashier.id} />
             </div>
           );
@@ -94,9 +199,20 @@ export function CashierTable({ cashiers }: CashierTableProps) {
   );
 
   const { table } = useDataTable({
-    data: cashiers,
+    data: displayCashiers,
     columns,
-    pageCount: -1,
+    pageCount: isLoading && cashiers.length === 0 ? 1 : pageCount,
+    shallow: false,
+    initialState: {
+      pagination: {
+        pageIndex: 0,
+        pageSize: perPage,
+      },
+      sorting: [{ id: "createdAt", desc: true }],
+      columnPinning: {
+        right: ["actions"],
+      },
+    },
     queryKeys: {
       page: "cashiersPage",
       perPage: "cashiersPerPage",
@@ -106,7 +222,24 @@ export function CashierTable({ cashiers }: CashierTableProps) {
   });
 
   return (
-    <DataTable table={table}>
+    <DataTable
+      table={table}
+      renderRowFooter={(row) => {
+        if (isEmpty && row.original.id === "empty-state") {
+          return (
+            <div className="flex flex-col items-center justify-center px-4 py-12">
+              <p className="text-muted-foreground text-sm font-medium">
+                No cashiers found
+              </p>
+              <p className="text-muted-foreground mt-1 text-xs">
+                Try adjusting your filters or add a new cashier
+              </p>
+            </div>
+          );
+        }
+        return null;
+      }}
+    >
       <DataTableToolbar table={table} />
     </DataTable>
   );

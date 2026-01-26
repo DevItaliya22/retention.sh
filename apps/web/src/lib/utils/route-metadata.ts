@@ -22,21 +22,25 @@ const ROUTE_METADATA_MAP: Record<string, RouteMetadataConfig> = {
   // Root routes
   "/": {
     title: "Dashboard",
-    description: "Manage your business loyalty programs and customer engagement",
+    description:
+      "Manage your business loyalty programs and customer engagement",
   },
   "/login": {
     title: "Sign In",
-    description: "Sign in to your Dy account to manage your loyalty programs and campaigns",
+    description:
+      "Sign in to your Dy account to manage your loyalty programs and campaigns",
     noIndex: true,
   },
   "/register": {
     title: "Sign Up",
-    description: "Create your Dy account to start building customer loyalty programs",
+    description:
+      "Create your Dy account to start building customer loyalty programs",
     noIndex: true,
   },
   "/welcome": {
     title: "Welcome",
-    description: "Set up your business to get started with loyalty programs and marketing",
+    description:
+      "Set up your business to get started with loyalty programs and marketing",
     noIndex: true,
   },
   "/inbox": {
@@ -47,9 +51,14 @@ const ROUTE_METADATA_MAP: Record<string, RouteMetadataConfig> = {
     title: "Bills",
     description: "View and manage all bills for your business",
   },
+  "/customers": {
+    title: "Customers",
+    description: "View and manage all customers for your business",
+  },
   "/settings": {
     title: "Settings",
-    description: "Manage your business settings, preferences, and configurations",
+    description:
+      "Manage your business settings, preferences, and configurations",
   },
   "/settings/cashier": {
     title: "Cashier Settings",
@@ -107,7 +116,7 @@ function getRoutePattern(
 
   // Filter out route groups (parentheses) from segments
   const filteredSegments = segments.filter(
-    (seg) => !seg.startsWith("(") && !seg.endsWith(")")
+    (seg) => !seg.startsWith("(") && !seg.endsWith(")"),
   );
 
   // Handle cashier portal routes
@@ -122,7 +131,7 @@ function getRoutePattern(
 
   // Simple pattern matching - return path as-is for static routes
   const pattern = filteredSegments.join("/");
-  
+
   // Return with leading slash for consistency
   return pattern ? `/${pattern}` : "/";
 }
@@ -148,9 +157,10 @@ export function generateRouteMetadata(
     // Fallback: generate from path segments
     const segments = pathname.split("/").filter(Boolean);
     const filteredSegments = segments.filter(
-      (seg) => !seg.startsWith("(") && !seg.endsWith(")")
+      (seg) => !seg.startsWith("(") && !seg.endsWith(")"),
     );
-    const lastSegment = filteredSegments[filteredSegments.length - 1] || "Dashboard";
+    const lastSegment =
+      filteredSegments[filteredSegments.length - 1] || "Dashboard";
     const title = formatSlug(lastSegment);
     const description = `Manage ${title.toLowerCase()} in Dy`;
 
@@ -164,12 +174,14 @@ export function generateRouteMetadata(
   // Extract segments for dynamic functions
   const segments = pathname.split("/").filter(Boolean);
   const filteredSegments = segments.filter(
-    (seg) => !seg.startsWith("(") && !seg.endsWith(")")
+    (seg) => !seg.startsWith("(") && !seg.endsWith(")"),
   );
 
   // Generate title and description
   const title =
-    typeof config.title === "function" ? config.title(filteredSegments) : config.title;
+    typeof config.title === "function"
+      ? config.title(filteredSegments)
+      : config.title;
   const description =
     typeof config.description === "function"
       ? config.description(filteredSegments)

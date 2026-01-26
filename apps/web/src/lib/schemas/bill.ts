@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { nameSchema, emailSchema } from "./common";
+import { emailSchema, nameSchema } from "./common";
 
 export const phoneNumberSchema = z
   .string()
@@ -87,9 +87,18 @@ export const searchUserCustomerSchema = z.object({
 export const billsQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1).optional(),
   perPage: z.coerce.number().int().min(1).max(100).default(10).optional(),
-  sort: z.string().optional(),
-  billNumber: z.string().optional(),
-  email: z.string().optional(),
+  sort: z.string().max(100, "Sort parameter is too long").optional(),
+  billNumber: z
+    .string()
+    .max(255, "Bill number filter is too long")
+    .trim()
+    .optional(),
+  email: z.string().max(254, "Email filter is too long").trim().optional(),
+  customerName: z
+    .string()
+    .max(255, "Customer name filter is too long")
+    .trim()
+    .optional(),
   dateFrom: z.string().datetime().optional(),
   dateTo: z.string().datetime().optional(),
   amountMin: z.coerce.number().optional(),
@@ -98,6 +107,8 @@ export const billsQuerySchema = z.object({
 
 export type BillFormInput = z.infer<typeof billFormSchema>;
 export type CreateBillApiInput = z.infer<typeof createBillApiSchema>;
-export type SearchBusinessCustomerInput = z.infer<typeof searchBusinessCustomerSchema>;
+export type SearchBusinessCustomerInput = z.infer<
+  typeof searchBusinessCustomerSchema
+>;
 export type SearchUserCustomerInput = z.infer<typeof searchUserCustomerSchema>;
 export type BillsQueryInput = z.infer<typeof billsQuerySchema>;

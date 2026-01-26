@@ -1,8 +1,8 @@
 import { auth } from "@/lib/auth/auth";
 import { generateRouteMetadata } from "@/lib/utils/route-metadata";
+import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import type { Metadata } from "next";
 
 export const metadata: Metadata = generateRouteMetadata("/");
 

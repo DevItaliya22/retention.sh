@@ -15,7 +15,9 @@ export default function useBusinessSlugAvailability(slug: string) {
     trim: true,
   });
   const isValid =
-    normalized.length >= 2 && /^[a-z0-9-]+$/.test(normalized) && !normalized.startsWith("-");
+    normalized.length >= 2 &&
+    /^[a-z0-9-]+$/.test(normalized) &&
+    !normalized.startsWith("-");
 
   return useQuery<BusinessSlugAvailabilityResponse, Error>({
     queryKey: ["businessSlugAvailability", normalized],

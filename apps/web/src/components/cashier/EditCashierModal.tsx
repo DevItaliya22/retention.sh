@@ -26,10 +26,10 @@ import { z } from "zod";
 
 import type { Cashier } from "@/hooks/cashier/useManageCashier";
 import { useManageCashier } from "@/hooks/cashier/useManageCashier";
-import { DialogSection } from "@reelo/ui/components";
 import { updateCashierSchema } from "@/lib/schemas/cashier";
-import { generateSlug } from "@/lib/utils/slug";
 import { getErrorMessageFromResponse } from "@/lib/utils/error-handler";
+import { generateSlug } from "@/lib/utils/slug";
+import { DialogSection } from "@reelo/ui/components";
 
 const editCashierSchema = updateCashierSchema;
 
@@ -138,7 +138,10 @@ export function EditCashierModal({
         loading: "Updating cashier...",
         success: "Cashier updated successfully",
         error: (err: Error) =>
-          getErrorMessageFromResponse(err, "Failed to update cashier. Please try again."),
+          getErrorMessageFromResponse(
+            err,
+            "Failed to update cashier. Please try again.",
+          ),
       },
     );
   };
@@ -255,7 +258,7 @@ export function EditCashierModal({
                       <FormControl>
                         <div className="focus-within:ring-ring flex items-center overflow-hidden rounded-md border shadow-sm focus-within:ring-1">
                           <Input
-                            className="border-0 shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/60"
+                            className="placeholder:text-muted-foreground/60 border-0 shadow-none focus-visible:ring-0"
                             placeholder="cashier-link-slug"
                             disabled={update.isPending}
                             {...field}

@@ -1,4 +1,10 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@reelo/ui/components";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@reelo/ui/components";
 import { AlertCircle } from "lucide-react";
 
 interface CashierErrorPageProps {
@@ -25,7 +31,8 @@ export function CashierErrorPage({ title, message }: CashierErrorPageProps) {
         </CardHeader>
         <CardContent>
           <p className="text-muted-foreground text-center text-sm">
-            Please check the URL and try again, or contact your administrator if you believe this is an error.
+            Please check the URL and try again, or contact your administrator if
+            you believe this is an error.
           </p>
         </CardContent>
       </Card>

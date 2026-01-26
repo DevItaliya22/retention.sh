@@ -3,16 +3,16 @@
 import { BusinessStep } from "@/components/forms/onboarding/steps/BusinessStep";
 import { CashierStep } from "@/components/forms/onboarding/steps/CashierStep";
 import { ReviewStep } from "@/components/forms/onboarding/steps/ReviewStep";
-import useOnboarding from "@/hooks/onboarding/useOnboarding";
-import { useManageCashier } from "@/hooks/cashier/useManageCashier";
 import { useCurrentBusiness } from "@/hooks/business/useCurrentBusiness";
+import { useManageCashier } from "@/hooks/cashier/useManageCashier";
+import useOnboarding from "@/hooks/onboarding/useOnboarding";
 import {
   businessStepSchema,
   cashierStepSchema,
   type WelcomeFormValues,
 } from "@/lib/schemas/onboarding";
-import { generateSlug } from "@/lib/utils/slug";
 import { getErrorMessageFromResponse } from "@/lib/utils/error-handler";
+import { generateSlug } from "@/lib/utils/slug";
 import {
   Card,
   CardContent,
@@ -32,7 +32,10 @@ interface WelcomeFormProps {
   embedded?: boolean;
 }
 
-export function WelcomeForm({ onCompleted, embedded = false }: WelcomeFormProps) {
+export function WelcomeForm({
+  onCompleted,
+  embedded = false,
+}: WelcomeFormProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { mutateAsync: submitOnboarding } = useOnboarding();
@@ -55,17 +58,28 @@ export function WelcomeForm({ onCompleted, embedded = false }: WelcomeFormProps)
           createCashier: false,
         };
 
-        const result = await submitOnboarding(businessData as WelcomeFormValues);
+        const result = await submitOnboarding(
+          businessData as WelcomeFormValues,
+        );
         if (result.success) {
-          await queryClient.invalidateQueries({ queryKey: ["currentBusiness"] });
-          
+          await queryClient.invalidateQueries({
+            queryKey: ["currentBusiness"],
+          });
+
           const businessResult = await refetchCurrentBusiness();
-          
+
           if (!businessResult.data?.business) {
-            throw new Error("Business was created but could not be retrieved. Please refresh the page.");
+            throw new Error(
+              "Business was created but could not be retrieved. Please refresh the page.",
+            );
           }
-          
-          if (values.createCashier && values.cashierEmail && values.cashierPassword && values.cashierLinkSlug) {
+
+          if (
+            values.createCashier &&
+            values.cashierEmail &&
+            values.cashierPassword &&
+            values.cashierLinkSlug
+          ) {
             try {
               await createCashier.mutateAsync({
                 name: values.cashierName || "Cashier",

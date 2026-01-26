@@ -21,40 +21,52 @@ export function BusinessExistingSettings({
         defaultPointsName: business.defaultPointsName,
         defaultCurrencySymbol: business.defaultCurrencySymbol,
         defaultCurrencyCode: business.defaultCurrencyCode,
-        defaultBranding: business.defaultBranding ? {
-          logo: business.defaultBranding.logo ?? null,
-          themeColor: business.defaultBranding.themeColor ?? null,
-          textColor: business.defaultBranding.textColor ?? null,
-          bannerImage: business.defaultBranding.bannerImage ?? null,
-          header: business.defaultBranding.header ?? null,
-          subtitle: business.defaultBranding.subtitle ?? null,
-        } : undefined,
+        defaultBranding: business.defaultBranding
+          ? {
+              logo: business.defaultBranding.logo ?? null,
+              themeColor: business.defaultBranding.themeColor ?? null,
+              textColor: business.defaultBranding.textColor ?? null,
+              bannerImage: business.defaultBranding.bannerImage ?? null,
+              header: business.defaultBranding.header ?? null,
+              subtitle: business.defaultBranding.subtitle ?? null,
+            }
+          : undefined,
       });
       return { success: true };
     } catch (error: any) {
-      return { success: false, error: error.message || "Failed to update business information" };
+      return {
+        success: false,
+        error: error.message || "Failed to update business information",
+      };
     }
   };
 
-  const handleUpdateCurrencySettings = async (values: Record<string, string>) => {
+  const handleUpdateCurrencySettings = async (
+    values: Record<string, string>,
+  ) => {
     try {
       await updateBusiness({
         name: business.name,
         defaultPointsName: values.defaultPointsName,
         defaultCurrencySymbol: values.defaultCurrencySymbol,
         defaultCurrencyCode: values.defaultCurrencyCode,
-        defaultBranding: business.defaultBranding ? {
-          logo: business.defaultBranding.logo ?? null,
-          themeColor: business.defaultBranding.themeColor ?? null,
-          textColor: business.defaultBranding.textColor ?? null,
-          bannerImage: business.defaultBranding.bannerImage ?? null,
-          header: business.defaultBranding.header ?? null,
-          subtitle: business.defaultBranding.subtitle ?? null,
-        } : undefined,
+        defaultBranding: business.defaultBranding
+          ? {
+              logo: business.defaultBranding.logo ?? null,
+              themeColor: business.defaultBranding.themeColor ?? null,
+              textColor: business.defaultBranding.textColor ?? null,
+              bannerImage: business.defaultBranding.bannerImage ?? null,
+              header: business.defaultBranding.header ?? null,
+              subtitle: business.defaultBranding.subtitle ?? null,
+            }
+          : undefined,
       });
       return { success: true };
     } catch (error: any) {
-      return { success: false, error: error.message || "Failed to update currency settings" };
+      return {
+        success: false,
+        error: error.message || "Failed to update currency settings",
+      };
     }
   };
 
@@ -76,7 +88,10 @@ export function BusinessExistingSettings({
       });
       return { success: true };
     } catch (error: any) {
-      return { success: false, error: error.message || "Failed to update branding" };
+      return {
+        success: false,
+        error: error.message || "Failed to update branding",
+      };
     }
   };
 
@@ -120,7 +135,8 @@ export function BusinessExistingSettings({
                 name: "defaultPointsName",
                 label: "Points Name",
                 placeholder: "e.g., Points",
-                helpText: "This will be displayed to customers when they earn or redeem points.",
+                helpText:
+                  "This will be displayed to customers when they earn or redeem points.",
               },
               {
                 name: "defaultCurrencySymbol",
@@ -175,7 +191,8 @@ export function BusinessExistingSettings({
                 name: "header",
                 label: "Header",
                 placeholder: "Welcome to Acme Store",
-                helpText: "This text appears prominently on customer-facing pages.",
+                helpText:
+                  "This text appears prominently on customer-facing pages.",
               },
               {
                 name: "subtitle",
@@ -199,4 +216,3 @@ export function BusinessExistingSettings({
     </PageLayout>
   );
 }
-

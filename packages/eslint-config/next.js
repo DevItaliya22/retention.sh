@@ -15,6 +15,15 @@ import { config as baseConfig } from "./base.js"
  * */
 export const nextJsConfig = [
   ...baseConfig,
+  {
+    ignores: [
+      "**/.next/**",
+      "**/node_modules/**",
+      "**/dist/**",
+      "**/build/**",
+      "**/.turbo/**",
+    ],
+  },
   js.configs.recommended,
   eslintConfigPrettier,
   ...tseslint.configs.recommended,

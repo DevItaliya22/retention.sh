@@ -1,7 +1,7 @@
 import { getCashierSessionFromHeaders } from "@/lib/auth/cashier-session";
 import { searchUserCustomerSchema } from "@/lib/schemas/bill";
-import { formatPhoneNumberForSearch } from "@/lib/utils/phone";
 import { sanitizeErrorMessage } from "@/lib/utils/error-handler";
+import { formatPhoneNumberForSearch } from "@/lib/utils/phone";
 import { prisma } from "@reelo/db";
 import { NextResponse } from "next/server";
 

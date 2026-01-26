@@ -1,6 +1,6 @@
+import { getCashierSession } from "@/lib/auth/cashier-session";
 import { prisma } from "@reelo/db";
 import { redirect } from "next/navigation";
-import { getCashierSession } from "@/lib/auth/cashier-session";
 import { CashierProvider } from "./_context/CashierProvider";
 
 interface CashierHomeLayoutProps {

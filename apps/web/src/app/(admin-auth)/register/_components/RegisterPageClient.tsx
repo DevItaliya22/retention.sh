@@ -32,8 +32,12 @@ export function RegisterPageClient() {
     setError(null);
 
     try {
-      const validationResult = registerSchema.safeParse({ name, email, password });
-      
+      const validationResult = registerSchema.safeParse({
+        name,
+        email,
+        password,
+      });
+
       if (!validationResult.success) {
         const firstError = validationResult.error.issues[0];
         const errorMessage = firstError?.message || "Invalid input";

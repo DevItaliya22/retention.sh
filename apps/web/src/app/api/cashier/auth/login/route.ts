@@ -1,14 +1,14 @@
-import { validateCashierLogin, auth } from "@/lib/auth/auth";
+import { validateCashierLogin } from "@/lib/auth/auth";
 import { cashierLoginSchema } from "@/lib/schemas/auth";
 import { sanitizeErrorMessage } from "@/lib/utils/error-handler";
 import { prisma } from "@reelo/db";
-import { NextResponse } from "next/server";
 import { randomBytes } from "crypto";
+import { NextResponse } from "next/server";
 
 function getIpAddress(request: Request): string | null {
   const headers = request.headers;
   const ipHeaders = ["x-forwarded-for", "x-real-ip", "cf-connecting-ip"];
-  
+
   for (const header of ipHeaders) {
     const value = headers.get(header);
     if (value) {
@@ -16,7 +16,7 @@ function getIpAddress(request: Request): string | null {
       if (ip) return ip;
     }
   }
-  
+
   return null;
 }
 
@@ -118,7 +118,7 @@ export async function POST(request: Request) {
 
     const cookieName = "reelo.session.token";
     const isSecure = isSecureContext(request);
-    
+
     response.cookies.set(cookieName, token, {
       httpOnly: true,
       secure: isSecure,
@@ -133,7 +133,8 @@ export async function POST(request: Request) {
     console.error("Failed to login cashier:", error);
     return NextResponse.json(
       {
-        error: sanitizeErrorMessage(error) || "Failed to sign in. Please try again.",
+        error:
+          sanitizeErrorMessage(error) || "Failed to sign in. Please try again.",
         session: null,
       },
       { status: 500 },

@@ -2,6 +2,7 @@
 
 import useBusinessSlugAvailability from "@/hooks/onboarding/useBusinessSlugAvailability";
 import type { WelcomeFormValues } from "@/lib/schemas/onboarding";
+import { generateSlug } from "@/lib/utils/slug";
 import {
   Button,
   FormControl,
@@ -15,7 +16,6 @@ import {
 import { useDebouncedCallback } from "@reelo/ui/hooks";
 import { RotateCw } from "lucide-react";
 import { useEffect, useRef } from "react";
-import { generateSlug } from "@/lib/utils/slug";
 
 export function BusinessStep() {
   const form = useFormContext<WelcomeFormValues>();
@@ -31,7 +31,6 @@ export function BusinessStep() {
   const slugFieldRef = useRef<{ onChange: (value: string) => void } | null>(
     null,
   );
-
 
   const debouncedSetSlug = useDebouncedCallback((name: string) => {
     if (!slugTouchedRef.current && name) {
@@ -51,11 +50,10 @@ export function BusinessStep() {
     const newValue = slugAvailability?.available ?? false;
     const currentValue = form.getValues("businessSlugAvailable");
     if (currentValue !== newValue) {
-      form.setValue(
-        "businessSlugAvailable",
-        newValue,
-        { shouldValidate: false, shouldDirty: true },
-      );
+      form.setValue("businessSlugAvailable", newValue, {
+        shouldValidate: false,
+        shouldDirty: true,
+      });
     }
   }, [slugAvailability?.available]);
 

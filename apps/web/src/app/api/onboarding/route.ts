@@ -127,7 +127,12 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json(
-      { error: sanitizeErrorMessage(error) || "Failed to complete setup. Please try again.", success: false },
+      {
+        error:
+          sanitizeErrorMessage(error) ||
+          "Failed to complete setup. Please try again.",
+        success: false,
+      },
       { status: 500 },
     );
   }

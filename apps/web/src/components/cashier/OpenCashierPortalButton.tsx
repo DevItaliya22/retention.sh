@@ -11,7 +11,9 @@ interface OpenCashierPortalButtonProps {
   cashier: Cashier;
 }
 
-export function OpenCashierPortalButton({ cashier }: OpenCashierPortalButtonProps) {
+export function OpenCashierPortalButton({
+  cashier,
+}: OpenCashierPortalButtonProps) {
   const router = useRouter();
   const { data: businessData } = useCurrentBusiness();
 
@@ -19,7 +21,9 @@ export function OpenCashierPortalButton({ cashier }: OpenCashierPortalButtonProp
     if (!businessData?.business?.slug) {
       return;
     }
-    router.push(`/cashier/${businessData.business.slug}/${cashier.cashierLinkSlug}`);
+    router.push(
+      `/cashier/${businessData.business.slug}/${cashier.cashierLinkSlug}`,
+    );
   };
 
   if (!businessData?.business?.slug) {

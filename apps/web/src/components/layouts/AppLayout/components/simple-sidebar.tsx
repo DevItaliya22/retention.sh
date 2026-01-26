@@ -2,7 +2,7 @@
 
 import { useSessionContext } from "@/hooks/misc/useSessionContext";
 import { motion } from "framer-motion";
-import { FileText, Inbox, Settings } from "lucide-react";
+import { FileText, Inbox, Settings, Users } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import * as React from "react";
@@ -88,6 +88,18 @@ export function SimpleSidebar({
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     asChild
+                    isActive={pathname === "/customers"}
+                    tooltip="Customers"
+                  >
+                    <Link href="/customers">
+                      <Users className="h-4 w-4" />
+                      <span className="sidebar-text">Customers</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
                     isActive={pathname === "/settings"}
                     tooltip="Settings"
                   >
@@ -114,7 +126,7 @@ export function SimpleSidebar({
             className="flex w-full items-center justify-between"
             isCollapsed={isCollapsed}
             onContactClick={() => {
-                setIsContactModalOpen(true);
+              setIsContactModalOpen(true);
             }}
           />
         </div>

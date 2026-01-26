@@ -52,14 +52,17 @@ export function SettingsFieldGroup({
   const [isPending, startTransition] = useTransition();
 
   const schema = z.object(
-    fields.reduce((acc, field) => {
-      if (!field.disabled) {
-        acc[field.name] = z.string().min(1, `${field.label} is required`);
-      } else {
-        acc[field.name] = z.string().optional();
-      }
-      return acc;
-    }, {} as Record<string, z.ZodString | z.ZodOptional<z.ZodString>>)
+    fields.reduce(
+      (acc, field) => {
+        if (!field.disabled) {
+          acc[field.name] = z.string().min(1, `${field.label} is required`);
+        } else {
+          acc[field.name] = z.string().optional();
+        }
+        return acc;
+      },
+      {} as Record<string, z.ZodString | z.ZodOptional<z.ZodString>>,
+    ),
   );
 
   const form = useForm<Record<string, string | undefined>>({

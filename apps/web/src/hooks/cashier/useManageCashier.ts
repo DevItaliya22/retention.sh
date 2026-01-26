@@ -72,25 +72,22 @@ export function useManageCashier(emailFilter?: string) {
         "",
       ]);
 
-      queryClient.setQueryData<CashiersResponse>(
-        ["cashiers", ""],
-        (old) => {
-          if (!old) return old;
-          const optimisticCashier: Cashier = {
-            id: `temp-${Date.now()}`,
-            userId: `temp-user-${Date.now()}`,
-            name: newCashier.name,
-            email: newCashier.email,
-            cashierLinkSlug: newCashier.cashierLinkSlug,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          };
-          return {
-            ...old,
-            cashiers: [optimisticCashier, ...old.cashiers],
-          };
-        },
-      );
+      queryClient.setQueryData<CashiersResponse>(["cashiers", ""], (old) => {
+        if (!old) return old;
+        const optimisticCashier: Cashier = {
+          id: `temp-${Date.now()}`,
+          userId: `temp-user-${Date.now()}`,
+          name: newCashier.name,
+          email: newCashier.email,
+          cashierLinkSlug: newCashier.cashierLinkSlug,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+        return {
+          ...old,
+          cashiers: [optimisticCashier, ...old.cashiers],
+        };
+      });
 
       return { previousCashiers };
     },
@@ -108,7 +105,11 @@ export function useManageCashier(emailFilter?: string) {
     CashierResponse,
     Error,
     { id: string; data: UpdateCashierInput },
-    { previousCashiers: Array<[readonly unknown[], CashiersResponse | undefined]> }
+    {
+      previousCashiers: Array<
+        [readonly unknown[], CashiersResponse | undefined]
+      >;
+    }
   >({
     mutationFn: async ({ id, data }) => {
       return fetcher<CashierResponse>(`/api/cashier/${id}`, {
@@ -150,9 +151,14 @@ export function useManageCashier(emailFilter?: string) {
     },
     onError: (err, variables, context) => {
       if (context?.previousCashiers) {
-        context.previousCashiers.forEach(([queryKey, data]: [readonly unknown[], CashiersResponse | undefined]) => {
-          queryClient.setQueryData(queryKey, data);
-        });
+        context.previousCashiers.forEach(
+          ([queryKey, data]: [
+            readonly unknown[],
+            CashiersResponse | undefined,
+          ]) => {
+            queryClient.setQueryData(queryKey, data);
+          },
+        );
       }
     },
     onSuccess: () => {
@@ -164,7 +170,11 @@ export function useManageCashier(emailFilter?: string) {
     { success: boolean; error?: string },
     Error,
     string,
-    { previousCashiers: Array<[readonly unknown[], CashiersResponse | undefined]> }
+    {
+      previousCashiers: Array<
+        [readonly unknown[], CashiersResponse | undefined]
+      >;
+    }
   >({
     mutationFn: async (id: string) => {
       return fetcher<{ success: boolean; error?: string }>(
@@ -196,9 +206,14 @@ export function useManageCashier(emailFilter?: string) {
     },
     onError: (err, id, context) => {
       if (context?.previousCashiers) {
-        context.previousCashiers.forEach(([queryKey, data]: [readonly unknown[], CashiersResponse | undefined]) => {
-          queryClient.setQueryData(queryKey, data);
-        });
+        context.previousCashiers.forEach(
+          ([queryKey, data]: [
+            readonly unknown[],
+            CashiersResponse | undefined,
+          ]) => {
+            queryClient.setQueryData(queryKey, data);
+          },
+        );
       }
     },
     onSuccess: () => {

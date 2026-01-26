@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth/auth";
 import { generateRouteMetadata } from "@/lib/utils/route-metadata";
-import { headers } from "next/headers";
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 
 export const metadata: Metadata = generateRouteMetadata("/inbox");
 
@@ -10,7 +10,7 @@ export default async function InboxPage() {
     headers: await headers(),
   });
 
-  console.log(session?.user,"From inbox page");
+  console.log(session?.user, "From inbox page");
 
   return (
     <div>

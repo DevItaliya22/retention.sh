@@ -84,7 +84,14 @@ function DataTableToolbarFilter<TData>({
             <Input
               placeholder={columnMeta.placeholder ?? columnMeta.label}
               value={(column.getFilterValue() as string) ?? ""}
-              onChange={(event) => column.setFilterValue(event.target.value)}
+              onChange={(event) => {
+                const value = event.target.value;
+                const maxLength = columnMeta.maxLength ?? 255;
+                if (value.length <= maxLength) {
+                  column.setFilterValue(value);
+                }
+              }}
+              maxLength={columnMeta.maxLength ?? 255}
               className="h-8 w-40 lg:w-56"
             />
           );

@@ -47,7 +47,7 @@ export function LoginPageClient() {
 
     try {
       const validationResult = loginSchema.safeParse({ email, password });
-      
+
       if (!validationResult.success) {
         const firstError = validationResult.error.issues[0];
         const errorMessage = firstError?.message || "Invalid input";
@@ -109,9 +109,10 @@ export function LoginPageClient() {
 
     try {
       const validationResult = emailSchema.safeParse(magicLinkEmail);
-      
+
       if (!validationResult.success) {
-        const errorMessage = validationResult.error.issues[0]?.message || "Invalid email";
+        const errorMessage =
+          validationResult.error.issues[0]?.message || "Invalid email";
         setError(errorMessage);
         toast.error(errorMessage);
         setIsLoading(false);
@@ -133,7 +134,8 @@ export function LoginPageClient() {
         toast.error(errorMsg);
       } else {
         setMagicLinkSent(true);
-        const successMsg = "Magic link sent! Check your email (and console logs for the link).";
+        const successMsg =
+          "Magic link sent! Check your email (and console logs for the link).";
         setSuccess(successMsg);
         toast.success("Magic link sent! Check your email.");
       }

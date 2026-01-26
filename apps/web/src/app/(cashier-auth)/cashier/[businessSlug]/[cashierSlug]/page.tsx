@@ -1,10 +1,10 @@
-import { prisma } from "@reelo/db";
-import { CashierLoginForm } from "./_components/CashierLoginForm";
-import { CashierErrorPage } from "./_components/CashierErrorPage";
-import { generateRouteMetadata } from "@/lib/utils/route-metadata";
 import { getCashierSession } from "@/lib/auth/cashier-session";
-import { redirect } from "next/navigation";
+import { generateRouteMetadata } from "@/lib/utils/route-metadata";
+import { prisma } from "@reelo/db";
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
+import { CashierErrorPage } from "./_components/CashierErrorPage";
+import { CashierLoginForm } from "./_components/CashierLoginForm";
 
 interface CashierLoginPageProps {
   params: Promise<{

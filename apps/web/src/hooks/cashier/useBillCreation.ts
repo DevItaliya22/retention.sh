@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
-import { useMutation } from "@tanstack/react-query";
 import { fetcher } from "@/lib/fetcher";
-import { useDebouncedCallback } from "@reelo/ui/hooks";
 import { BillFormInput } from "@/lib/schemas/bill";
+import { useDebouncedCallback } from "@reelo/ui/hooks";
+import { useMutation } from "@tanstack/react-query";
+import { useCallback, useMemo, useState } from "react";
 
 export interface Customer {
   id: string;
@@ -128,7 +128,11 @@ export function useBillCreation(businessId: string) {
     setSelectedCustomer(null);
   }, []);
 
-  const createBillMutation = useMutation<CreateBillResponse, Error, BillFormInput>({
+  const createBillMutation = useMutation<
+    CreateBillResponse,
+    Error,
+    BillFormInput
+  >({
     mutationFn: async (input: BillFormInput) => {
       return fetcher<CreateBillResponse>("/api/cashier/bill", {
         method: "POST",
@@ -145,9 +149,7 @@ export function useBillCreation(businessId: string) {
   );
 
   const memoizedSearchResults = useMemo(() => {
-    const businessCustomers = searchResults.filter(
-      (c) => c.isBusinessCustomer,
-    );
+    const businessCustomers = searchResults.filter((c) => c.isBusinessCustomer);
     const otherCustomers = searchResults.filter((c) => !c.isBusinessCustomer);
     return [...businessCustomers, ...otherCustomers];
   }, [searchResults]);

@@ -25,7 +25,10 @@ interface UserMenuContentProps {
   onContactClick?: () => void;
 }
 
-export function UserMenuContent({ user, onContactClick }: UserMenuContentProps) {
+export function UserMenuContent({
+  user,
+  onContactClick,
+}: UserMenuContentProps) {
   const { signOut } = useSessionContext();
   const { theme, setTheme } = useTheme();
 

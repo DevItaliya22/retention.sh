@@ -7,8 +7,9 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "lint:fix": "next lint --fix",
+    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "lint": "eslint . --max-warnings=0",
+    "lint:fix": "eslint . --fix",
     "typecheck": "tsc --noEmit",
     "auth:generate": "npx @better-auth/cli generate --config ./src/lib/auth/auth.ts --output ../../packages/prisma/prisma/schema.prisma --yes",
     "db:generate": "pnpm --filter=@reelo/db db:generate"

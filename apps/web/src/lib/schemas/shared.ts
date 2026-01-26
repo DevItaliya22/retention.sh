@@ -1,14 +1,14 @@
 import { z } from "zod";
 import {
   businessNameSchema,
-  slugSchema,
-  pointsNameSchema,
-  currencySymbolSchema,
   currencyCodeSchema,
-  urlSchema,
-  themeColorSchema,
-  nameSchema,
+  currencySymbolSchema,
   emailSchema,
+  nameSchema,
+  pointsNameSchema,
+  slugSchema,
+  themeColorSchema,
+  urlSchema,
 } from "./common";
 
 export const baseBusinessSchema = {

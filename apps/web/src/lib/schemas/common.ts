@@ -1,5 +1,5 @@
+import { isReservedSlug } from "@/lib/utils/slug";
 import { z } from "zod";
-import { generateSlug, isReservedSlug } from "@/lib/utils/slug";
 
 // Common field validations with proper length limits
 export const emailSchema = z

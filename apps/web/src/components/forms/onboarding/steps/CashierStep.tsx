@@ -1,6 +1,7 @@
 "use client";
 
 import type { WelcomeFormValues } from "@/lib/schemas/onboarding";
+import { generateSlug } from "@/lib/utils/slug";
 import {
   Button,
   Checkbox,
@@ -15,7 +16,6 @@ import {
 import { useDebouncedCallback } from "@reelo/ui/hooks";
 import { RotateCw } from "lucide-react";
 import { useEffect, useRef } from "react";
-import { generateSlug } from "@/lib/utils/slug";
 
 export function CashierStep() {
   const form = useFormContext<WelcomeFormValues>();
@@ -27,7 +27,6 @@ export function CashierStep() {
   const slugFieldRef = useRef<{ onChange: (value: string) => void } | null>(
     null,
   );
-
 
   const debouncedSetSlug = useDebouncedCallback((name: string) => {
     if (!slugTouchedRef.current && name) {

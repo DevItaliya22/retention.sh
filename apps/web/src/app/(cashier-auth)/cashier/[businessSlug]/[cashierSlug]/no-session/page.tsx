@@ -1,8 +1,8 @@
-import { prisma } from "@reelo/db";
-import { CashierNoSessionPage } from "../_components/CashierNoSessionPage";
-import { CashierErrorPage } from "../_components/CashierErrorPage";
 import { generateRouteMetadata } from "@/lib/utils/route-metadata";
+import { prisma } from "@reelo/db";
 import type { Metadata } from "next";
+import { CashierErrorPage } from "../_components/CashierErrorPage";
+import { CashierNoSessionPage } from "../_components/CashierNoSessionPage";
 
 interface CashierNoSessionPageProps {
   params: Promise<{
@@ -15,7 +15,9 @@ export async function generateMetadata({
   params,
 }: CashierNoSessionPageProps): Promise<Metadata> {
   const { businessSlug, cashierSlug } = await params;
-  return generateRouteMetadata(`/cashier/${businessSlug}/${cashierSlug}/no-session`);
+  return generateRouteMetadata(
+    `/cashier/${businessSlug}/${cashierSlug}/no-session`,
+  );
 }
 
 export default async function CashierNoSessionRoute({

@@ -39,4 +39,4 @@ export function useCashierContext() {
 }
 
 export { CashierContext };
-export type { CashierContextValue, Business, Cashier, CashierUser };
+export type { Business, Cashier, CashierContextValue, CashierUser };

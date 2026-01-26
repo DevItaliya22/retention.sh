@@ -1,12 +1,12 @@
 import { z } from "zod";
 import {
   businessNameSchema,
-  pointsNameSchema,
-  currencySymbolSchema,
   currencyCodeSchema,
-  urlSchema,
-  themeColorSchema,
+  currencySymbolSchema,
+  pointsNameSchema,
   textSchema,
+  themeColorSchema,
+  urlSchema,
 } from "./common";
 
 export const updateBusinessSchema = z.object({

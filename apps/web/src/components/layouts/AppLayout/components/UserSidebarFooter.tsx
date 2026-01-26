@@ -44,9 +44,9 @@ export function UserSidebarFooter({
   if (isLoading) {
     return (
       <div className={`flex items-center gap-2 ${className || ""}`}>
-        <div className="h-6 w-6 animate-pulse rounded-md bg-muted" />
+        <div className="bg-muted h-6 w-6 animate-pulse rounded-md" />
         {!isCollapsed && (
-          <div className="h-4 w-24 animate-pulse rounded bg-muted" />
+          <div className="bg-muted h-4 w-24 animate-pulse rounded" />
         )}
       </div>
     );

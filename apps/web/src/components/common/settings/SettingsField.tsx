@@ -20,8 +20,7 @@ import {
   Switch,
   Textarea,
 } from "@reelo/ui/components";
-import { AlertTriangle } from "lucide-react";
-import { useState, useTransition } from "react";
+import { useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import * as z from "zod";
@@ -256,7 +255,7 @@ export function SettingsField({
                   disabled={isDeleting || isPending}
                   loading={isDeleting}
                 >
-                  { deleteAction.label }
+                  {deleteAction.label}
                 </Button>
               )}
               <Button
@@ -264,7 +263,7 @@ export function SettingsField({
                 disabled={isPending || disabled || !isDirty}
                 loading={isPending}
               >
-                { isPending ? "Saving..." : "Save changes" }
+                {isPending ? "Saving..." : "Save changes"}
               </Button>
             </CardFooter>
           )}

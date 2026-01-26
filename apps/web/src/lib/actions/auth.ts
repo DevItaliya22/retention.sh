@@ -1,12 +1,12 @@
-"use server"
+"use server";
 
-import { prisma } from "@reelo/db";
 import { auth } from "@/lib/auth/auth";
+import { prisma } from "@reelo/db";
 import { headers } from "next/headers";
 
 export async function checkAdminHasBusiness() {
   const session = await auth.api.getSession({
-    headers: await headers()
+    headers: await headers(),
   });
 
   if (!session || !session.user) {

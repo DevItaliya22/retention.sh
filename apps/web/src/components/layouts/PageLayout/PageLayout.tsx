@@ -143,7 +143,7 @@ const PageLayout = ({
                       onClick={item.onClick}
                       className={cn(
                         isActive && "text-foreground font-medium",
-                        "hover:no-underline"
+                        "hover:no-underline",
                       )}
                       icon={item.icon && <span>{item.icon}</span>}
                     >

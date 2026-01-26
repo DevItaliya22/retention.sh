@@ -38,7 +38,9 @@ export async function GET(request: Request) {
     return NextResponse.json(
       {
         business: null,
-        error: sanitizeErrorMessage(error) || "Failed to fetch business. Please try again.",
+        error:
+          sanitizeErrorMessage(error) ||
+          "Failed to fetch business. Please try again.",
       },
       { status: 500 },
     );
@@ -114,7 +116,8 @@ export async function PUT(request: Request) {
                   logo: validatedData.defaultBranding.logo ?? null,
                   themeColor: validatedData.defaultBranding.themeColor ?? null,
                   textColor: validatedData.defaultBranding.textColor ?? null,
-                  bannerImage: validatedData.defaultBranding.bannerImage ?? null,
+                  bannerImage:
+                    validatedData.defaultBranding.bannerImage ?? null,
                   header: validatedData.defaultBranding.header ?? null,
                   subtitle: validatedData.defaultBranding.subtitle ?? null,
                 },
@@ -122,7 +125,8 @@ export async function PUT(request: Request) {
                   logo: validatedData.defaultBranding.logo ?? null,
                   themeColor: validatedData.defaultBranding.themeColor ?? null,
                   textColor: validatedData.defaultBranding.textColor ?? null,
-                  bannerImage: validatedData.defaultBranding.bannerImage ?? null,
+                  bannerImage:
+                    validatedData.defaultBranding.bannerImage ?? null,
                   header: validatedData.defaultBranding.header ?? null,
                   subtitle: validatedData.defaultBranding.subtitle ?? null,
                 },
@@ -141,11 +145,11 @@ export async function PUT(request: Request) {
     return NextResponse.json(
       {
         business: null,
-        error: sanitizeErrorMessage(error) || "Failed to update business. Please try again.",
+        error:
+          sanitizeErrorMessage(error) ||
+          "Failed to update business. Please try again.",
       },
       { status: 500 },
     );
   }
 }
-
-

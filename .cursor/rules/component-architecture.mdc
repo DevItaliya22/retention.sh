@@ -1,0 +1,498 @@
+---
+description: Component architecture patterns for building features in dy
+alwaysApply: true
+---
+
+# Component Architecture
+
+## Feature Creation Order
+
+1. Schema → `lib/schemas/[feature].ts`
+2. API Route → `app/api/[feature]/route.ts`
+3. Hook → `hooks/[feature]/use[Feature]Query.ts`
+4. Component → `components/[feature]/[Feature]Table.tsx`
+5. Page Client → `components/[feature]/[Feature]PageClient.tsx`
+6. Page → `app/(business)/[feature]/page.tsx`
+
+## New Top-Level Pages
+
+- Add sidebar item in `components/layouts/AppLayout/components/simple-sidebar.tsx`
+- Add route metadata in `lib/utils/route-metadata.ts`
+- Add to `protectedAdminRoutes` in `proxy.ts`
+
+## API Routes
+
+- Always check session: `auth.api.getSession({ headers: request.headers })`
+- Always scope queries by `admin.business.id`
+- Validate inputs with Zod schema
+- Use `sanitizeErrorMessage()` from `lib/utils/error-handler.ts` for errors
+- Return consistent shape: `{ items: [], total: 0, page: 1, perPage: 10, error?: string }`
+
+## React Query Hooks
+
+- Use `useSearchParams()` for server-side filtering
+- Include queryString in queryKey: `["features", queryString]`
+- Use `placeholderData: (prev) => prev` for optimistic updates
+
+## Data Tables
+
+- Default to server-side filtering
+- Set `shallow: false` in useDataTable for URL-triggered refetches
+- Use unique `queryKeys` per table to avoid URL conflicts
+
+## Loading States
+
+- Static content (titles, labels, descriptions) stays visible
+- Only skeleton dynamic content (inputs, buttons, table rows)
+- Wrap in `<Suspense fallback={<Component isLoading={true} />}>`
+
+## Key Patterns
+
+- Index files (`index.ts`) for clean imports
+- Settings pages use `_components/` folder (underscore prefix)
+- Toast for success/error feedback via `sonner`
+- Never expose raw database errors to client
+
+Also check this fucker
+# Component Development Guide
+
+Architecture and patterns for building features in the dy codebase.
+
+---
+
+## Table of Contents
+
+1. [Architecture Overview](#architecture-overview)
+2. [Creating a New Feature](#creating-a-new-feature)
+3. [File Structure & Naming](#file-structure--naming)
+4. [Authentication & Authorization](#authentication--authorization)
+5. [API Routes](#api-routes)
+6. [Data Fetching (React Query)](#data-fetching-react-query)
+7. [Input Validation (Zod)](#input-validation-zod)
+8. [UI Patterns](#ui-patterns)
+9. [Data Tables (Server-Side Filtering)](#data-tables-server-side-filtering)
+10. [Quick Reference](#quick-reference)
+
+---
+
+## Architecture Overview
+
+```
+apps/web/src/
+├── app/                    # Next.js App Router
+│   ├── (business)/         # Protected admin routes
+│   │   └── [feature]/
+│   │       └── page.tsx    # Server component (metadata + layout)
+│   └── api/                # API routes
+│       └── [feature]/
+│           └── route.ts    # GET, POST, PUT, DELETE handlers
+├── components/             # UI components by feature
+│   └── [feature]/
+│       ├── [Feature]Table.tsx
+│       └── [Feature]PageClient.tsx
+├── hooks/                  # React Query hooks by feature
+│   └── [feature]/
+│       └── use[Feature]Query.ts
+├── lib/
+│   ├── auth/               # Authentication (Better Auth)
+│   ├── schemas/            # Zod validation schemas
+│   └── utils/              # Utilities (error-handler, fetcher)
+└── proxy.ts                # Middleware (route protection)
+```
+
+---
+
+## Creating a New Feature
+
+### Order of Operations
+
+1. **Schema** → `lib/schemas/[feature].ts`
+2. **API Route** → `app/api/[feature]/route.ts`
+3. **Hook** → `hooks/[feature]/use[Feature]Query.ts`
+4. **Component** → `components/[feature]/[Feature]Table.tsx`
+5. **Page Client** → `components/[feature]/[Feature]PageClient.tsx`
+6. **Page** → `app/(business)/[feature]/page.tsx`
+7. **Config** → Sidebar, Route Metadata, Proxy (if new page)
+
+### For New Top-Level Pages
+
+| Step | File | Action |
+|------|------|--------|
+| Sidebar | `components/layouts/AppLayout/components/simple-sidebar.tsx` | Add `SidebarMenuItem` |
+| Metadata | `lib/utils/route-metadata.ts` | Add to `ROUTE_METADATA_MAP` |
+| Protection | `proxy.ts` | Add to `protectedAdminRoutes` |
+
+---
+
+## File Structure & Naming
+
+### Naming Conventions
+
+| Type | Pattern | Example |
+|------|---------|---------|
+| Page | `page.tsx` | `app/(business)/bills/page.tsx` |
+| API Route | `route.ts` | `app/api/bills/route.ts` |
+| Hook | `use[Feature]Query.ts` | `useBillsQuery.ts` |
+| Component | `[Feature][Type].tsx` | `BillsTable.tsx` |
+| Schema | `[feature].ts` | `bill.ts` |
+| Page Client | `[Feature]PageClient.tsx` | `BillsPageClient.tsx` |
+
+### Settings Pages (Special Pattern)
+
+```
+app/(business)/settings/[setting]/
+├── _components/                    # Colocated (underscore prefix)
+│   └── [Setting]PageClient.tsx
+└── page.tsx
+```
+
+### Index Files (Clean Imports)
+
+Create `index.ts` in folders with multiple exports:
+
+```typescript
+// hooks/layout/index.ts
+export { useBreadcrumbs } from "./useBreadcrumbs";
+export { useRouteConfig } from "./useRouteConfig";
+```
+
+---
+
+## Authentication & Authorization
+
+### Server-Side (API Routes)
+
+**File:** `lib/auth/auth.ts`
+
+```typescript
+// Usage in API route
+const session = await auth.api.getSession({ headers: request.headers });
+if (!session?.user) return unauthorized();
+
+// Get business context
+const admin = await prisma.admin.findFirst({
+  where: { userId: session.user.id },
+  include: { business: true },
+});
+// Always scope queries by admin.business.id
+```
+
+### Client-Side
+
+**File:** `lib/auth/auth-client.ts`
+
+```typescript
+import { authClient } from "@/lib/auth/auth-client";
+await authClient.signOut();
+```
+
+### Route Protection (Middleware)
+
+**File:** `proxy.ts`
+
+```typescript
+const protectedAdminRoutes = ["/", "/inbox", "/bills", "/settings"];
+const AuthRoutes = ["/login"];  // Only for unauthenticated users
+```
+
+---
+
+## API Routes
+
+### Standard Structure
+
+**File:** `app/api/[feature]/route.ts`
+
+```typescript
+export async function GET(request: Request) {
+  // 1. Session check
+  // 2. Business context (admin.business.id)
+  // 3. Parse & validate query params (Zod)
+  // 4. Build where clause (ALWAYS scope by businessId)
+  // 5. Build orderBy
+  // 6. Execute queries (Promise.all for count + data)
+  // 7. Format & return response
+}
+```
+
+### Response Shape (Consistent)
+
+```typescript
+// Success
+{ items: [...], total: number, page: number, perPage: number }
+
+// Error (always include empty data)
+{ error: "message", items: [], total: 0, perPage: 10 }
+```
+
+### Error Handling
+
+**File:** `lib/utils/error-handler.ts`
+
+- `sanitizeErrorMessage(error)` - Prevents exposing DB/internal errors
+- `handleApiError(response)` - Extracts user-friendly message from response
+
+**Never send raw database errors to client.**
+
+---
+
+## Data Fetching (React Query)
+
+### Hook Structure
+
+**File:** `hooks/[feature]/use[Feature]Query.ts`
+
+```typescript
+export function useFeatureQuery() {
+  const searchParams = useSearchParams();
+  const queryString = searchParams.toString();
+
+  return useQuery({
+    queryKey: ["features", queryString],
+    queryFn: () => fetcher(`/api/feature?${queryString}`),
+    placeholderData: (prev) => prev,  // Optimistic updates
+    staleTime: 5000,
+  });
+}
+```
+
+### Key Patterns
+
+- **Query Key** includes `queryString` for cache separation per filter state
+- **`placeholderData`** shows previous data while fetching (no loading flash)
+- **`staleTime`** prevents excessive refetches
+
+### Fetcher Utility
+
+**File:** `lib/fetcher.ts`
+
+Wraps fetch with JSON headers and error handling via `handleApiError`.
+
+---
+
+## Input Validation (Zod)
+
+### Schema Location
+
+**File:** `lib/schemas/[feature].ts`
+
+### Common Patterns
+
+**File:** `lib/schemas/common.ts` - Reusable field schemas
+
+```typescript
+// Field schemas with validation
+emailSchema    // max 254, trim, email format
+nameSchema     // max 255, trim
+passwordSchema // min 6, max 128
+slugSchema     // lowercase, alphanumeric + hyphens
+```
+
+### Query Schema (for Data Tables)
+
+```typescript
+export const featureQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1).optional(),
+  perPage: z.coerce.number().int().min(1).max(100).default(10).optional(),
+  sort: z.string().max(100).optional(),
+  name: z.string().max(255).trim().optional(),
+});
+```
+
+### Key Rules
+
+- Always `.trim()` string inputs
+- Set reasonable `.max()` limits
+- Use `.coerce` for query params (they're strings from URL)
+- Export types: `export type FeatureInput = z.infer<typeof featureSchema>`
+
+---
+
+## UI Patterns
+
+### Page Structure
+
+```typescript
+// page.tsx (Server Component)
+export const metadata = generateRouteMetadata("/feature");
+
+export default function FeaturePage() {
+  return (
+    <PageLayout title="Feature" subtitle="Description" size="full">
+      <ScaffoldContainer className="px-6">
+        <FeaturePageClient />
+      </ScaffoldContainer>
+    </PageLayout>
+  );
+}
+```
+
+### PageLayout Props
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `title` | `string \| ReactNode` | Page title |
+| `subtitle` | `string \| ReactNode` | Page description |
+| `size` | `"default" \| "full" \| "large" \| "small"` | Width control |
+| `primaryActions` | `ReactNode` | Right-side buttons |
+| `navigationItems` | `NavigationItem[]` | Tab navigation |
+
+### Page Client Structure
+
+```typescript
+// FeaturePageClient.tsx
+export function FeaturePageClient() {
+  return (
+    <Suspense fallback={<FeatureTable isLoading={true} items={[]} />}>
+      <FeatureTableContent />
+    </Suspense>
+  );
+}
+
+function FeatureTableContent() {
+  const { data, isLoading, isError } = useFeatureQuery();
+  if (isError) return <ErrorState />;
+  return <FeatureTable items={data?.items} isLoading={isLoading} />;
+}
+```
+
+### Loading States (Skeletons)
+
+**Principle:** Static content visible, only dynamic content shows skeleton.
+
+| Content Type | Loading Behavior |
+|--------------|------------------|
+| Page titles, labels, descriptions | Always visible |
+| Input fields, buttons | Skeleton |
+| Table headers, toolbar | Always visible |
+| Table rows | Skeleton |
+
+### Error & Empty States
+
+```typescript
+// Error - centered
+<div className="flex flex-col items-center justify-center py-12">
+  <p className="text-destructive">Failed to load</p>
+  <p className="text-muted-foreground">{error?.message}</p>
+</div>
+
+// Empty - via renderRowFooter in DataTable
+<div className="flex flex-col items-center justify-center py-12">
+  <p>No items found</p>
+  <p>Try adjusting your filters</p>
+</div>
+```
+
+### Toast Notifications
+
+```typescript
+import { toast } from "sonner";
+toast.success("Created successfully");
+toast.error(error.message);  // Message from sanitized server error
+```
+
+---
+
+## Data Tables (Server-Side Filtering)
+
+**Default:** Always server-side filtering unless explicitly told otherwise.
+
+### useDataTable Configuration
+
+```typescript
+const { table } = useDataTable({
+  data: displayItems,
+  columns,
+  pageCount: Math.ceil(total / perPage),
+  shallow: false,  // CRITICAL: triggers URL changes to refetch
+  initialState: {
+    pagination: { pageIndex: 0, pageSize: perPage },
+    sorting: [{ id: "createdAt", desc: true }],
+    columnPinning: { right: ["actions"] },
+  },
+  queryKeys: {  // Unique per table to avoid URL conflicts
+    page: "featurePage",
+    perPage: "featurePerPage",
+    sort: "featureSort",
+    filters: "featureFilters",
+  },
+});
+```
+
+### Column Meta for Filters
+
+```typescript
+meta: {
+  label: "Name",
+  variant: "text",        // text | number | range | date | dateRange | select | multiSelect
+  placeholder: "Filter...",
+  maxLength: 255,         // Client-side limit
+  options: [],            // For select variants
+}
+```
+
+### Skeleton Rows Pattern
+
+```typescript
+const displayItems = useMemo(() => {
+  if (isLoading && items.length === 0) {
+    return Array.from({ length: perPage }, (_, i) => ({
+      id: `skeleton-${i}`,
+      // ... empty fields
+    }));
+  }
+  if (!isLoading && items.length === 0) {
+    return [{ id: "empty-state", ... }];
+  }
+  return items;
+}, [items, isLoading, perPage]);
+
+// In cell renderer
+if (item.id.startsWith("skeleton-")) return <Skeleton className="h-4 w-32" />;
+```
+
+---
+
+## Quick Reference
+
+### File Paths
+
+| Purpose | Path |
+|---------|------|
+| Server Auth | `lib/auth/auth.ts` |
+| Client Auth | `lib/auth/auth-client.ts` |
+| Route Protection | `proxy.ts` |
+| Error Handler | `lib/utils/error-handler.ts` |
+| Fetcher | `lib/fetcher.ts` |
+| Route Metadata | `lib/utils/route-metadata.ts` |
+| Sidebar | `components/layouts/AppLayout/components/simple-sidebar.tsx` |
+| Common Schemas | `lib/schemas/common.ts` |
+| PageLayout | `components/layouts/PageLayout/PageLayout.tsx` |
+| DataTable Types | `packages/ui/src/types/data-table.ts` |
+
+### Checklist: New Feature
+
+- [ ] Schema in `lib/schemas/`
+- [ ] API route with session check, Zod validation, businessId scoping
+- [ ] React Query hook with `useSearchParams`, `placeholderData`
+- [ ] Component with skeleton loading, error/empty states
+- [ ] Page client with `Suspense` wrapper
+- [ ] Page with `generateRouteMetadata`, `PageLayout`
+- [ ] Index files for exports
+- [ ] Toast for success/error feedback
+
+### Checklist: New Top-Level Page
+
+- [ ] Sidebar item in `simple-sidebar.tsx`
+- [ ] Route metadata in `route-metadata.ts`
+- [ ] Protected route in `proxy.ts`
+
+### Key Principles
+
+1. **Always scope by businessId** - Never expose other businesses' data
+2. **Validate all inputs** - Zod on both client and server
+3. **Never expose raw errors** - Use `sanitizeErrorMessage`
+4. **Server-side filtering by default** - Unless explicitly told otherwise
+5. **Static content stays visible during loading** - Only skeleton dynamic content
+6. **Consistent response shapes** - Include empty data on errors
+7. **Index files for clean imports** - Avoid deep import paths

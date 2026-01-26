@@ -25,10 +25,10 @@ import { toast } from "sonner";
 import { z } from "zod";
 
 import { useManageCashier } from "@/hooks/cashier/useManageCashier";
-import { DialogSection } from "@reelo/ui/components";
 import { createCashierSchema } from "@/lib/schemas/cashier";
-import { generateSlug } from "@/lib/utils/slug";
 import { getErrorMessageFromResponse } from "@/lib/utils/error-handler";
+import { generateSlug } from "@/lib/utils/slug";
+import { DialogSection } from "@reelo/ui/components";
 
 const addCashierSchema = createCashierSchema;
 
@@ -116,7 +116,10 @@ export function AddCashierModal({ isOpen, onClose }: AddCashierModalProps) {
         loading: "Creating cashier...",
         success: "Cashier created successfully",
         error: (err: Error) =>
-          getErrorMessageFromResponse(err, "Failed to create cashier. Please try again."),
+          getErrorMessageFromResponse(
+            err,
+            "Failed to create cashier. Please try again.",
+          ),
       },
     );
   };
@@ -227,7 +230,7 @@ export function AddCashierModal({ isOpen, onClose }: AddCashierModalProps) {
                       <FormControl>
                         <div className="focus-within:ring-ring flex items-center overflow-hidden rounded-md border shadow-sm focus-within:ring-1">
                           <Input
-                            className="border-0 shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/60"
+                            className="placeholder:text-muted-foreground/60 border-0 shadow-none focus-visible:ring-0"
                             placeholder="cashier-link-slug"
                             disabled={create.isPending}
                             {...field}

@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 
 export async function getCashierSession() {
   const headersList = await headers();
-  
+
   const cookieHeader = headersList.get("cookie") || "";
   const sessionToken = cookieHeader
     .split(";")
@@ -53,7 +53,9 @@ export async function getCashierSession() {
   };
 }
 
-export async function getCashierSessionFromHeaders(cookieHeader: string | null) {
+export async function getCashierSessionFromHeaders(
+  cookieHeader: string | null,
+) {
   if (!cookieHeader) {
     return null;
   }

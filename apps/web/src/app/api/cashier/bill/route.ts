@@ -1,8 +1,8 @@
 import { getCashierSessionFromHeaders } from "@/lib/auth/cashier-session";
-import { createBillApiSchema } from "@/lib/schemas/bill";
 import { APP_CONSTANTS } from "@/lib/constants/app";
-import { formatPhoneNumber } from "@/lib/utils/phone";
+import { createBillApiSchema } from "@/lib/schemas/bill";
 import { sanitizeErrorMessage } from "@/lib/utils/error-handler";
+import { formatPhoneNumber } from "@/lib/utils/phone";
 import { prisma } from "@reelo/db";
 import { NextResponse } from "next/server";
 
@@ -18,7 +18,9 @@ interface CustomerData {
   postalCode?: string | null;
 }
 
-async function validateCashierAndGetBusiness(request: Request): Promise<
+async function validateCashierAndGetBusiness(
+  request: Request,
+): Promise<
   | { success: true; businessId: string; error: null; status: null }
   | { success: false; error: string; status: number; businessId: null }
 > {
@@ -82,7 +84,8 @@ async function findOrCreateCustomer(data: CustomerData) {
   let customer = user.customer;
 
   if (!customer) {
-    const customerEmail = data.email && data.email.trim() ? data.email : tempEmail;
+    const customerEmail =
+      data.email && data.email.trim() ? data.email : tempEmail;
     customer = await prisma.customer.create({
       data: {
         userId: user.id,
@@ -220,7 +223,7 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
-    
+
     const formattedPhone = formatPhoneNumber(phoneNumber.trim());
 
     const { customer } = await findOrCreateCustomer({
@@ -269,7 +272,8 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         error:
-          sanitizeErrorMessage(error) || "Failed to create bill. Please try again.",
+          sanitizeErrorMessage(error) ||
+          "Failed to create bill. Please try again.",
         bill: null,
       },
       { status: 500 },

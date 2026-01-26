@@ -44,7 +44,10 @@ function sanitizeString(message: string): string {
     lowerMessage.includes("unique constraint")
   ) {
     // Check for specific user-friendly cases
-    if (lowerMessage.includes("unique constraint") || lowerMessage.includes("duplicate")) {
+    if (
+      lowerMessage.includes("unique constraint") ||
+      lowerMessage.includes("duplicate")
+    ) {
       if (lowerMessage.includes("email") || lowerMessage.includes("user")) {
         return "An account with this email already exists.";
       }
@@ -98,7 +101,11 @@ function sanitizeString(message: string): string {
   }
 
   // Stack traces or technical details
-  if (message.includes("at ") || message.includes("Error:") || message.includes("Stack:")) {
+  if (
+    message.includes("at ") ||
+    message.includes("Error:") ||
+    message.includes("Stack:")
+  ) {
     return "An unexpected error occurred. Please try again.";
   }
 

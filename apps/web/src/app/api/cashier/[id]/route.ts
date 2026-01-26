@@ -83,7 +83,10 @@ export async function PUT(
 
       if (existingCashierSlug) {
         return NextResponse.json(
-          { error: "Cashier link slug already exists in this business", cashier: null },
+          {
+            error: "Cashier link slug already exists in this business",
+            cashier: null,
+          },
           { status: 400 },
         );
       }
@@ -159,7 +162,9 @@ export async function PUT(
     console.error("Failed to update cashier:", error);
     return NextResponse.json(
       {
-        error: sanitizeErrorMessage(error) || "Failed to update cashier. Please try again.",
+        error:
+          sanitizeErrorMessage(error) ||
+          "Failed to update cashier. Please try again.",
         cashier: null,
       },
       { status: 500 },
@@ -226,7 +231,9 @@ export async function DELETE(
     console.error("Failed to delete cashier:", error);
     return NextResponse.json(
       {
-        error: sanitizeErrorMessage(error) || "Failed to delete cashier. Please try again.",
+        error:
+          sanitizeErrorMessage(error) ||
+          "Failed to delete cashier. Please try again.",
         success: false,
       },
       { status: 500 },

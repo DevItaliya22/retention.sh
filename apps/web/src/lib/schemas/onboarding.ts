@@ -1,6 +1,6 @@
 import { z } from "zod";
+import { optionalPasswordSchema } from "./common";
 import { baseBusinessSchema, baseCashierSchema } from "./shared";
-import { passwordSchema, optionalPasswordSchema } from "./common";
 
 export const businessStepSchema = z.object({
   ...baseBusinessSchema,

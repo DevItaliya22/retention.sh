@@ -32,7 +32,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
             enableColorScheme
           >
             {children}
-            <Toaster 
+            <Toaster
               theme={theme as "light" | "dark" | "system"}
               visibleToasts={5}
               position="bottom-right"

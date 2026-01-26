@@ -76,7 +76,11 @@ export const auth = betterAuth({
   ],
   hooks: {
     before: createAuthMiddleware(async (ctx) => {
-      const restrictedPaths = ["/sign-in/email", "/sign-in/magic-link", "/sign-up/email"];
+      const restrictedPaths = [
+        "/sign-in/email",
+        "/sign-in/magic-link",
+        "/sign-up/email",
+      ];
 
       if (!restrictedPaths.includes(ctx.path)) {
         return;
@@ -135,7 +139,9 @@ export const auth = betterAuth({
             select: { id: true },
           });
 
-          const role = cashier ? "CASHIER" : (user?.role as unknown as string | null) ?? null;
+          const role = cashier
+            ? "CASHIER"
+            : ((user?.role as unknown as string | null) ?? null);
 
           return {
             data: {
@@ -240,4 +246,3 @@ export async function validateCashierLogin(params: {
     };
   }
 }
-

@@ -3,7 +3,16 @@
 import { useCashierLogin } from "@/hooks/cashier/useCashierAuth";
 import { cashierLoginSchema } from "@/lib/schemas/auth";
 import { getErrorMessageFromResponse } from "@/lib/utils/error-handler";
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label } from "@reelo/ui/components";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Input,
+  Label,
+} from "@reelo/ui/components";
 import { useState } from "react";
 import { toast } from "sonner";
 

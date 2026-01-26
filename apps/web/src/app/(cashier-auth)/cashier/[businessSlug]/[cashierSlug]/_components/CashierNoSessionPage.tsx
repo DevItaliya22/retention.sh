@@ -1,11 +1,19 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@reelo/ui/components";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@reelo/ui/components";
 import { AlertCircle, Mail } from "lucide-react";
 
 interface CashierNoSessionPageProps {
   businessName: string;
 }
 
-export function CashierNoSessionPage({ businessName }: CashierNoSessionPageProps) {
+export function CashierNoSessionPage({
+  businessName,
+}: CashierNoSessionPageProps) {
   return (
     <div className="bg-background flex min-h-screen items-center justify-center p-4">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -28,13 +36,14 @@ export function CashierNoSessionPage({ businessName }: CashierNoSessionPageProps
           <p className="text-muted-foreground text-center text-sm">
             Please sign in to your cashier account to continue.
           </p>
-          <div className="bg-muted/50 rounded-lg border p-4 space-y-2">
+          <div className="bg-muted/50 space-y-2 rounded-lg border p-4">
             <div className="flex items-start gap-2">
               <Mail className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
               <div className="space-y-1">
                 <p className="text-sm font-medium">Need Help?</p>
                 <p className="text-muted-foreground text-xs">
-                  Contact the administrator of <strong>{businessName}</strong> if you need assistance accessing your cashier account.
+                  Contact the administrator of <strong>{businessName}</strong>{" "}
+                  if you need assistance accessing your cashier account.
                 </p>
               </div>
             </div>

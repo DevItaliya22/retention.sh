@@ -1,5 +1,8 @@
 import { auth } from "@/lib/auth/auth";
-import { createCashierSchema } from "@/lib/schemas/cashier";
+import {
+  cashiersQuerySchema,
+  createCashierSchema,
+} from "@/lib/schemas/cashier";
 import { sanitizeErrorMessage } from "@/lib/utils/error-handler";
 import { prisma } from "@reelo/db";
 import { NextResponse } from "next/server";
@@ -12,7 +15,7 @@ export async function GET(request: Request) {
 
     if (!session || !session.user) {
       return NextResponse.json(
-        { error: "Unauthorized", cashiers: [] },
+        { error: "Unauthorized", cashiers: [], total: 0, perPage: 10 },
         { status: 401 },
       );
     }
@@ -24,58 +27,129 @@ export async function GET(request: Request) {
 
     if (!admin || !admin.business) {
       return NextResponse.json(
-        { error: "Business not found", cashiers: [] },
+        { error: "Business not found", cashiers: [], total: 0, perPage: 10 },
         { status: 404 },
       );
     }
 
     const { searchParams } = new URL(request.url);
-    const email = searchParams.get("email") || undefined;
+    const queryParams = Object.fromEntries(searchParams.entries());
 
-    const cashiers = await prisma.cashier.findMany({
-      where: {
-        businessId: admin.business.id,
-        ...(email && {
+    let validatedData;
+    try {
+      validatedData = cashiersQuerySchema.parse(queryParams);
+    } catch (error: any) {
+      if (error.name === "ZodError") {
+        const firstError = error.errors?.[0];
+        const errorMessage = firstError
+          ? `${firstError.path.join(".")}: ${firstError.message}`
+          : "Invalid query parameters";
+        return NextResponse.json(
+          { error: errorMessage, cashiers: [], total: 0, perPage: 10 },
+          { status: 400 },
+        );
+      }
+      return NextResponse.json(
+        {
+          error: "Invalid query parameters",
+          cashiers: [],
+          total: 0,
+          perPage: 10,
+        },
+        { status: 400 },
+      );
+    }
+
+    const { page = 1, perPage = 10, sort, name, email } = validatedData;
+
+    const skip = (page - 1) * perPage;
+    const take = perPage;
+
+    const where: any = {
+      businessId: admin.business.id,
+    };
+
+    const userFilters: any = {};
+    if (name) {
+      userFilters.name = {
+        contains: name,
+        mode: "insensitive",
+      };
+    }
+    if (email) {
+      userFilters.email = {
+        contains: email,
+        mode: "insensitive",
+      };
+    }
+
+    if (Object.keys(userFilters).length > 0) {
+      where.user = userFilters;
+    }
+
+    const orderBy: any = {};
+    if (sort) {
+      const [field, direction] = sort.split(":");
+      const sortDirection = direction === "desc" ? "desc" : "asc";
+      if (field === "name" || field === "email") {
+        orderBy.user = {
+          [field]: sortDirection,
+        };
+      } else if (field === "createdAt") {
+        orderBy.createdAt = sortDirection;
+      } else {
+        orderBy.createdAt = "desc";
+      }
+    } else {
+      orderBy.createdAt = "desc";
+    }
+
+    const [cashiers, total] = await Promise.all([
+      prisma.cashier.findMany({
+        where,
+        skip,
+        take,
+        orderBy,
+        include: {
           user: {
-            email: {
-              contains: email,
-              mode: "insensitive",
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              createdAt: true,
             },
           },
-        }),
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            createdAt: true,
-          },
         },
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
+      }),
+      prisma.cashier.count({ where }),
+    ]);
+
+    const formattedCashiers = cashiers.map((cashier) => ({
+      id: cashier.id,
+      userId: cashier.userId,
+      name: cashier.user.name,
+      email: cashier.user.email,
+      cashierLinkSlug: cashier.cashierLinkSlug,
+      createdAt: cashier.createdAt.toISOString(),
+      updatedAt: cashier.updatedAt.toISOString(),
+    }));
 
     return NextResponse.json({
-      cashiers: cashiers.map((cashier) => ({
-        id: cashier.id,
-        userId: cashier.userId,
-        name: cashier.user.name,
-        email: cashier.user.email,
-        cashierLinkSlug: cashier.cashierLinkSlug,
-        createdAt: cashier.createdAt,
-        updatedAt: cashier.updatedAt,
-      })),
+      cashiers: formattedCashiers,
+      total,
+      page,
+      perPage,
     });
   } catch (error: any) {
     console.error("Failed to fetch cashiers:", error);
     return NextResponse.json(
       {
-        error: sanitizeErrorMessage(error) || "Failed to fetch cashiers. Please try again.",
+        error:
+          sanitizeErrorMessage(error) ||
+          "Failed to fetch cashiers. Please try again.",
         cashiers: [],
+        total: 0,
+        perPage: 10,
       },
       { status: 500 },
     );
@@ -140,7 +214,10 @@ export async function POST(request: Request) {
 
     if (existingCashierSlug) {
       return NextResponse.json(
-        { error: "Cashier link slug already exists in this business", cashier: null },
+        {
+          error: "Cashier link slug already exists in this business",
+          cashier: null,
+        },
         { status: 400 },
       );
     }
@@ -202,7 +279,9 @@ export async function POST(request: Request) {
     console.error("Failed to create cashier:", error);
     return NextResponse.json(
       {
-        error: sanitizeErrorMessage(error) || "Failed to create cashier. Please try again.",
+        error:
+          sanitizeErrorMessage(error) ||
+          "Failed to create cashier. Please try again.",
         cashier: null,
       },
       { status: 500 },
