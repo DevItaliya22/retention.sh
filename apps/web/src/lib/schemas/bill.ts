@@ -84,7 +84,20 @@ export const searchUserCustomerSchema = z.object({
   businessId: z.string().uuid("Invalid business ID"),
 });
 
+export const billsQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1).optional(),
+  perPage: z.coerce.number().int().min(1).max(100).default(10).optional(),
+  sort: z.string().optional(),
+  billNumber: z.string().optional(),
+  email: z.string().optional(),
+  dateFrom: z.string().datetime().optional(),
+  dateTo: z.string().datetime().optional(),
+  amountMin: z.coerce.number().optional(),
+  amountMax: z.coerce.number().optional(),
+});
+
 export type BillFormInput = z.infer<typeof billFormSchema>;
 export type CreateBillApiInput = z.infer<typeof createBillApiSchema>;
 export type SearchBusinessCustomerInput = z.infer<typeof searchBusinessCustomerSchema>;
 export type SearchUserCustomerInput = z.infer<typeof searchUserCustomerSchema>;
+export type BillsQueryInput = z.infer<typeof billsQuerySchema>;

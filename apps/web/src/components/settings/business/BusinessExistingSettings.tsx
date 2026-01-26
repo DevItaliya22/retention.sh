@@ -1,241 +1,199 @@
 "use client";
 
+import { SettingsFieldGroup } from "@/components/common/settings/SettingsFieldGroup";
 import { PageLayout, ScaffoldContainer } from "@/components/layouts";
 import type { CurrentBusiness } from "@/hooks/business/useCurrentBusiness";
 import { useUpdateBusiness } from "@/hooks/business/useCurrentBusiness";
-import {
-  Button,
-  Input,
-  Form as UiForm,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@reelo/ui/components";
-import { useEffect } from "react";
-import { useForm } from "react-hook-form";
-import { toast } from "sonner";
 
 interface BusinessExistingSettingsProps {
   business: CurrentBusiness;
 }
 
-interface BusinessSettingsFormValues {
-  name: string;
-  defaultPointsName: string;
-  defaultCurrencySymbol: string;
-  defaultCurrencyCode: string;
-  logo: string;
-  themeColor: string;
-  header: string;
-  subtitle: string;
-}
-
 export function BusinessExistingSettings({
   business,
 }: BusinessExistingSettingsProps) {
-  const { mutateAsync: updateBusiness, isPending } = useUpdateBusiness();
+  const { mutateAsync: updateBusiness } = useUpdateBusiness();
 
-  const form = useForm<BusinessSettingsFormValues>({
-    defaultValues: {
-      name: business.name,
-      defaultPointsName: business.defaultPointsName,
-      defaultCurrencySymbol: business.defaultCurrencySymbol,
-      defaultCurrencyCode: business.defaultCurrencyCode,
-      logo: business.defaultBranding?.logo ?? "",
-      themeColor: business.defaultBranding?.themeColor ?? "",
-      header: business.defaultBranding?.header ?? "",
-      subtitle: business.defaultBranding?.subtitle ?? "",
-    },
-  });
-
-  useEffect(() => {
-    form.reset({
-      name: business.name,
-      defaultPointsName: business.defaultPointsName,
-      defaultCurrencySymbol: business.defaultCurrencySymbol,
-      defaultCurrencyCode: business.defaultCurrencyCode,
-      logo: business.defaultBranding?.logo ?? "",
-      themeColor: business.defaultBranding?.themeColor ?? "",
-      header: business.defaultBranding?.header ?? "",
-      subtitle: business.defaultBranding?.subtitle ?? "",
-    });
-  }, [business, form]);
-
-  const handleSubmit = async (values: BusinessSettingsFormValues) => {
+  const handleUpdateBasicInfo = async (values: Record<string, string>) => {
     try {
       await updateBusiness({
         name: values.name,
+        defaultPointsName: business.defaultPointsName,
+        defaultCurrencySymbol: business.defaultCurrencySymbol,
+        defaultCurrencyCode: business.defaultCurrencyCode,
+        defaultBranding: business.defaultBranding ? {
+          logo: business.defaultBranding.logo ?? null,
+          themeColor: business.defaultBranding.themeColor ?? null,
+          textColor: business.defaultBranding.textColor ?? null,
+          bannerImage: business.defaultBranding.bannerImage ?? null,
+          header: business.defaultBranding.header ?? null,
+          subtitle: business.defaultBranding.subtitle ?? null,
+        } : undefined,
+      });
+      return { success: true };
+    } catch (error: any) {
+      return { success: false, error: error.message || "Failed to update business information" };
+    }
+  };
+
+  const handleUpdateCurrencySettings = async (values: Record<string, string>) => {
+    try {
+      await updateBusiness({
+        name: business.name,
         defaultPointsName: values.defaultPointsName,
         defaultCurrencySymbol: values.defaultCurrencySymbol,
         defaultCurrencyCode: values.defaultCurrencyCode,
+        defaultBranding: business.defaultBranding ? {
+          logo: business.defaultBranding.logo ?? null,
+          themeColor: business.defaultBranding.themeColor ?? null,
+          textColor: business.defaultBranding.textColor ?? null,
+          bannerImage: business.defaultBranding.bannerImage ?? null,
+          header: business.defaultBranding.header ?? null,
+          subtitle: business.defaultBranding.subtitle ?? null,
+        } : undefined,
+      });
+      return { success: true };
+    } catch (error: any) {
+      return { success: false, error: error.message || "Failed to update currency settings" };
+    }
+  };
+
+  const handleUpdateBranding = async (values: Record<string, string>) => {
+    try {
+      await updateBusiness({
+        name: business.name,
+        defaultPointsName: business.defaultPointsName,
+        defaultCurrencySymbol: business.defaultCurrencySymbol,
+        defaultCurrencyCode: business.defaultCurrencyCode,
         defaultBranding: {
           logo: values.logo || null,
           themeColor: values.themeColor || null,
+          textColor: values.textColor || null,
+          bannerImage: values.bannerImage || null,
           header: values.header || null,
           subtitle: values.subtitle || null,
         },
       });
-      toast.success("Business settings updated");
+      return { success: true };
     } catch (error: any) {
-      toast.error(error.message || "Failed to update business settings");
+      return { success: false, error: error.message || "Failed to update branding" };
     }
   };
 
   return (
     <PageLayout
-      title="Business Settings"
-      subtitle="Manage your business settings"
       size="default"
       scaffoldSectionClassName="h-full w-full pt-2 pb-0"
     >
       <ScaffoldContainer>
-        <div className="flex w-full justify-center">
-          <div className="w-full max-w-xl">
-            <UiForm {...(form as any)}>
-              <form
-                className="space-y-6"
-                onSubmit={form.handleSubmit(handleSubmit)}
-              >
-                <FormField
-                  control={form.control as any}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Business Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Acme Store" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+        <div className="space-y-6">
+          <SettingsFieldGroup
+            title="Basic Information"
+            description="Manage your business name and identifier"
+            fields={[
+              {
+                name: "name",
+                label: "Business Name",
+                placeholder: "e.g., Acme Store",
+                helpText: "This is the primary name for your business.",
+              },
+              {
+                name: "slug",
+                label: "Business Slug",
+                placeholder: "reelo.in/your-slug",
+                helpText: "This field is read-only.",
+                disabled: true,
+              },
+            ]}
+            defaultValues={{
+              name: business.name,
+              slug: `reelo.in/${business.slug}`,
+            }}
+            onSubmit={handleUpdateBasicInfo}
+          />
 
-                <FormItem>
-                  <FormLabel>Business Slug</FormLabel>
-                  <FormControl>
-                    <Input
-                      value={`reelo.in/${business.slug}`}
-                      readOnly
-                      className="bg-muted"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+          <SettingsFieldGroup
+            title="Points & Currency"
+            description="Configure your loyalty points system and currency settings"
+            fields={[
+              {
+                name: "defaultPointsName",
+                label: "Points Name",
+                placeholder: "e.g., Points",
+                helpText: "This will be displayed to customers when they earn or redeem points.",
+              },
+              {
+                name: "defaultCurrencySymbol",
+                label: "Currency Symbol",
+                placeholder: "e.g., ₹",
+                helpText: "Common examples: ₹, $, €, £",
+              },
+              {
+                name: "defaultCurrencyCode",
+                label: "Currency Code",
+                placeholder: "e.g., INR",
+                helpText: "Common examples: INR, USD, EUR, GBP",
+              },
+            ]}
+            defaultValues={{
+              defaultPointsName: business.defaultPointsName,
+              defaultCurrencySymbol: business.defaultCurrencySymbol,
+              defaultCurrencyCode: business.defaultCurrencyCode,
+            }}
+            onSubmit={handleUpdateCurrencySettings}
+          />
 
-                <FormField
-                  control={form.control as any}
-                  name="defaultPointsName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Points Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Points" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control as any}
-                  name="defaultCurrencySymbol"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Currency Symbol</FormLabel>
-                      <FormControl>
-                        <Input placeholder="₹" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control as any}
-                  name="defaultCurrencyCode"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Currency Code</FormLabel>
-                      <FormControl>
-                        <Input placeholder="INR" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control as any}
-                  name="logo"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Logo URL</FormLabel>
-                      <FormControl>
-                        <Input placeholder="https://..." {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control as any}
-                  name="themeColor"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Theme Color</FormLabel>
-                      <FormControl>
-                        <Input placeholder="#7c3aed" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control as any}
-                  name="header"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Header</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Welcome to Acme Store"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control as any}
-                  name="subtitle"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Subtitle</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Earn points on every purchase"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <div className="flex justify-end">
-                  <Button type="submit" disabled={isPending}>
-                    {isPending ? "Saving..." : "Save changes"}
-                  </Button>
-                </div>
-              </form>
-            </UiForm>
-          </div>
+          <SettingsFieldGroup
+            title="Branding"
+            description="Customize your business appearance and messaging"
+            fields={[
+              {
+                name: "logo",
+                label: "Logo URL",
+                placeholder: "https://...",
+                helpText: "Enter a valid image URL for your business logo.",
+              },
+              {
+                name: "themeColor",
+                label: "Theme Color",
+                placeholder: "#7c3aed",
+                helpText: "Enter a hex color code (e.g., #7c3aed).",
+              },
+              {
+                name: "textColor",
+                label: "Text Color",
+                placeholder: "#ffffff",
+                helpText: "Enter a hex color code for text (e.g., #ffffff).",
+              },
+              {
+                name: "bannerImage",
+                label: "Banner Image URL",
+                placeholder: "https://...",
+                helpText: "Enter a valid image URL for your business banner.",
+              },
+              {
+                name: "header",
+                label: "Header",
+                placeholder: "Welcome to Acme Store",
+                helpText: "This text appears prominently on customer-facing pages.",
+              },
+              {
+                name: "subtitle",
+                label: "Subtitle",
+                placeholder: "Earn points on every purchase",
+                helpText: "This text provides additional context or messaging.",
+              },
+            ]}
+            defaultValues={{
+              logo: business.defaultBranding?.logo ?? "",
+              themeColor: business.defaultBranding?.themeColor ?? "",
+              textColor: business.defaultBranding?.textColor ?? "",
+              bannerImage: business.defaultBranding?.bannerImage ?? "",
+              header: business.defaultBranding?.header ?? "",
+              subtitle: business.defaultBranding?.subtitle ?? "",
+            }}
+            onSubmit={handleUpdateBranding}
+          />
         </div>
       </ScaffoldContainer>
     </PageLayout>

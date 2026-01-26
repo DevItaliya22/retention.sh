@@ -2,7 +2,7 @@
 
 import { useSessionContext } from "@/hooks/misc/useSessionContext";
 import { motion } from "framer-motion";
-import { Inbox, Settings } from "lucide-react";
+import { FileText, Inbox, Settings } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import * as React from "react";
@@ -70,6 +70,18 @@ export function SimpleSidebar({
                     <Link href="/inbox">
                       <Inbox className="h-4 w-4" />
                       <span className="sidebar-text">Inbox</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname === "/bills"}
+                    tooltip="Bills"
+                  >
+                    <Link href="/bills">
+                      <FileText className="h-4 w-4" />
+                      <span className="sidebar-text">Bills</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

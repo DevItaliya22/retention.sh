@@ -43,6 +43,10 @@ const ROUTE_METADATA_MAP: Record<string, RouteMetadataConfig> = {
     title: "Inbox",
     description: "View and manage your customer messages and notifications",
   },
+  "/bills": {
+    title: "Bills",
+    description: "View and manage all bills for your business",
+  },
   "/settings": {
     title: "Settings",
     description: "Manage your business settings, preferences, and configurations",

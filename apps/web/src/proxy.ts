@@ -3,7 +3,7 @@ import { parseCashierRoute } from "@/lib/utils/cashier-routes";
 import { getSessionCookie } from "better-auth/cookies";
 import { NextRequest, NextResponse } from "next/server";
 
-const protectedAdminRoutes = ["/", "/inbox", "/welcome"];
+const protectedAdminRoutes = ["/", "/inbox", "/welcome", "/bills"];
 
 const AuthRoutes = ["/login"];
 
