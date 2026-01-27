@@ -1,0 +1,12 @@
+{
+    "importOrder": [
+        "^react",
+        "^next",
+        "<THIRD_PARTY_MODULES>",
+        "^@reelo/(.*)$",
+        "^[./]"
+    ],
+    "importOrderSortSpecifiers": true,
+    "importOrderTypeScriptVersion": "5.0.0",
+    "importOrderCaseSensitive": false
+}
