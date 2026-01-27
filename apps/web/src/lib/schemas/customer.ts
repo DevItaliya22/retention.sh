@@ -12,3 +12,9 @@ export const customersQuerySchema = z.object({
 });
 
 export type CustomersQueryInput = z.infer<typeof customersQuerySchema>;
+
+/** Validates customer detail route param – slugId is BusinessCustomer.slugId (uuid) */
+export const customerSlugIdParamSchema = z.object({
+  slugId: z.string().uuid("Invalid customer slug ID"),
+});
+export type CustomerSlugIdParam = z.infer<typeof customerSlugIdParamSchema>;

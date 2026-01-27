@@ -59,6 +59,10 @@ const ROUTE_METADATA_MAP: Record<string, RouteMetadataConfig> = {
     title: "Customers",
     description: "View and manage all customers for your business",
   },
+  "/customers/[slugId]": {
+    title: "Customer details",
+    description: "View customer details and loyalty information",
+  },
   "/settings": {
     title: "Settings",
     description:
@@ -126,6 +130,11 @@ function getRoutePattern(
   // Handle bills detail
   if (filteredSegments[0] === "bills" && filteredSegments.length === 2) {
     return "/bills/[id]";
+  }
+
+  // Handle customers detail
+  if (filteredSegments[0] === "customers" && filteredSegments.length === 2) {
+    return "/customers/[slugId]";
   }
 
   // Handle cashier portal routes

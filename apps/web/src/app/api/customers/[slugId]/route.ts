@@ -1,0 +1,94 @@
+import { withAdminAuth } from "@/lib/auth/middleware";
+import { customerSlugIdParamSchema } from "@/lib/schemas/customer";
+import {
+  sanitizeErrorMessage,
+  validateSchema,
+} from "@/lib/utils/error-handler";
+import { prisma } from "@reelo/db";
+import { NextRequest, NextResponse } from "next/server";
+
+/**
+ * GET /api/customers/[slugId]
+ *
+ * Route segment is [slugId] (not [id]) to avoid confusion with Customer.id or
+ * BusinessCustomer composite id (businessId + customerId). The param value is
+ * BusinessCustomer.slugId – a short uuid used in URLs and APIs. Scoped by
+ * admin.business.id.
+ */
+export const GET = withAdminAuth<{ slugId: string }>(
+  async (request: NextRequest, context, params) => {
+    try {
+      const validation = validateSchema(customerSlugIdParamSchema, params);
+      if (!validation.success) {
+        return NextResponse.json(
+          { error: validation.error, customer: null },
+          { status: 400 },
+        );
+      }
+
+      const { slugId } = validation.data;
+
+      const businessCustomer = await prisma.businessCustomer.findFirst({
+        where: {
+          slugId,
+          businessId: context.business.id,
+        },
+        include: {
+          customer: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  phoneNumber: true,
+                },
+              },
+            },
+          },
+          bills: {
+            orderBy: { createdAt: "desc" },
+            take: 50,
+          },
+        },
+      });
+
+      if (!businessCustomer) {
+        return NextResponse.json(
+          { error: "Customer not found", customer: null },
+          { status: 404 },
+        );
+      }
+
+      const customer = {
+        id: businessCustomer.slugId,
+        slugId: businessCustomer.slugId,
+        customerId: businessCustomer.customer.id,
+        name: businessCustomer.customer.user.name,
+        email: businessCustomer.customer.email,
+        phone: businessCustomer.customer.user.phoneNumber,
+        pointsBalance: businessCustomer.pointsBalance,
+        createdAt: businessCustomer.createdAt.toISOString(),
+        updatedAt: businessCustomer.updatedAt.toISOString(),
+        bills: businessCustomer.bills.map((b) => ({
+          id: b.id,
+          billNumber: b.billNumber,
+          amount: b.amount,
+          createdAt: b.createdAt.toISOString(),
+        })),
+      };
+
+      return NextResponse.json({ customer });
+    } catch (error: unknown) {
+      console.error("Failed to fetch customer:", error);
+      return NextResponse.json(
+        {
+          error:
+            sanitizeErrorMessage(error) ||
+            "Failed to fetch customer. Please try again.",
+          customer: null,
+        },
+        { status: 500 },
+      );
+    }
+  },
+);

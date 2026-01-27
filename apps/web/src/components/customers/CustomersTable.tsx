@@ -5,6 +5,7 @@ import {
   type Customer,
 } from "@/hooks/customers/useCustomersQuery";
 import {
+  buttonVariants,
   DataTable,
   DataTableColumnHeader,
   DataTableToolbar,
@@ -12,7 +13,10 @@ import {
   Skeleton,
 } from "@reelo/ui/components";
 import { useDataTable } from "@reelo/ui/hooks";
+import { cn } from "@reelo/ui/lib/utils";
 import type { ColumnDef } from "@tanstack/react-table";
+import { Eye } from "lucide-react";
+import Link from "next/link";
 import { useMemo } from "react";
 
 export function CustomersTable() {
@@ -233,6 +237,40 @@ export function CustomersTable() {
           variant: "dateRange" as const,
         },
       },
+      {
+        id: "actions",
+        size: 80,
+        header: () => <span className="sr-only">Actions</span>,
+        cell: ({ row }) => {
+          const customer = row.original;
+          if (customer.id === "empty-state") {
+            return null;
+          }
+          if (isLoading && customer.id.startsWith("skeleton-")) {
+            return (
+              <div className="flex justify-end">
+                <Skeleton className="h-4 w-12" />
+              </div>
+            );
+          }
+          return (
+            <div className="flex justify-end">
+              <Link
+                href={`/customers/${customer.id}`}
+                aria-label={`View customer ${customer.name}`}
+                className={cn(
+                  buttonVariants({ variant: "ghost", size: "xs" }),
+                  "h-8 w-8 p-0",
+                )}
+              >
+                <Eye className="h-4 w-4" />
+              </Link>
+            </div>
+          );
+        },
+        enableSorting: false,
+        enableHiding: false,
+      },
     ],
     [isLoading],
   );
@@ -248,6 +286,7 @@ export function CustomersTable() {
         pageSize: perPage,
       },
       sorting: [{ id: "createdAt", desc: true }],
+      columnPinning: { right: ["actions"] },
     },
     queryKeys: {
       page: "customersPage",

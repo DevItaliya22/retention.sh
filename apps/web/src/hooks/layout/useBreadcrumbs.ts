@@ -44,6 +44,18 @@ export function useBreadcrumbs(): BreadcrumbConfig {
       items.push({ label: billSegmentLabel, isActive: true });
     }
 
+    // Handle customers routes
+    if (pathname === "/customers") {
+      items.push({ label: "Customers", isActive: true });
+    } else if (
+      pathname.startsWith("/customers/") &&
+      pathname !== "/customers"
+    ) {
+      const customerSegmentLabel = override?.segmentLabel ?? "Customer details";
+      items.push({ label: "Customers", href: "/customers" });
+      items.push({ label: customerSegmentLabel, isActive: true });
+    }
+
     // Handle organization routes
     if (pathname.startsWith("/organization/") && slug) {
       const segments = pathname.split("/").filter(Boolean);

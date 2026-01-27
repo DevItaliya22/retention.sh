@@ -7,7 +7,7 @@ export interface BillDetail {
   id: string;
   billNumber: string;
   amount: number | null;
-  /** BusinessCustomer slugId for /customers/[id] link */
+  /** BusinessCustomer slugId for /customers/[slugId] link */
   businessCustomerId: string;
   customerName: string;
   customerPhone: string | null;

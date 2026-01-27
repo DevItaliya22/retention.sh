@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 
 export interface Customer {
-  /** BusinessCustomer slugId – use for /customers/[id] links */
+  /** BusinessCustomer slugId – use for /customers/[slugId] links */
   id: string;
   slugId: string;
   customerId: string;
