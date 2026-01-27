@@ -1,4 +1,5 @@
-import { BillsPageClient } from "@/components/bills/BillsPageClient";
+import { BillsTable } from "@/components/bills/BillsTable";
+import { BillsTableSkeleton } from "@/components/bills/BillsTableSkeleton";
 import { PageLayout, ScaffoldContainer } from "@/components/layouts";
 import { generateRouteMetadata } from "@/lib/utils/route-metadata";
 import type { Metadata } from "next";
@@ -15,8 +16,8 @@ export default function BillsPage() {
       scaffoldSectionClassName="h-full w-full pt-2 pb-0"
     >
       <ScaffoldContainer className="h-full w-full max-w-full px-6">
-        <Suspense fallback={<div className="h-96" />}>
-          <BillsPageClient />
+        <Suspense fallback={<BillsTableSkeleton />}>
+          <BillsTable />
         </Suspense>
       </ScaffoldContainer>
     </PageLayout>

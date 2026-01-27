@@ -1,53 +1,21 @@
-import { auth } from "@/lib/auth/auth";
+import { withAdminAuth } from "@/lib/auth/middleware";
 import { customersQuerySchema } from "@/lib/schemas/customer";
-import { sanitizeErrorMessage } from "@/lib/utils/error-handler";
+import {
+  sanitizeErrorMessage,
+  validateSchema,
+} from "@/lib/utils/error-handler";
 import { prisma } from "@reelo/db";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-export async function GET(request: Request) {
+export const GET = withAdminAuth(async (request: NextRequest, context) => {
   try {
-    const session = await auth.api.getSession({
-      headers: request.headers,
-    });
-
-    if (!session || !session.user) {
-      return NextResponse.json(
-        { error: "Unauthorized", items: [], total: 0, perPage: 10 },
-        { status: 401 },
-      );
-    }
-
-    const admin = await prisma.admin.findFirst({
-      where: { userId: session.user.id },
-      include: { business: true },
-    });
-
-    if (!admin || !admin.business) {
-      return NextResponse.json(
-        { error: "Business not found", items: [], total: 0, perPage: 10 },
-        { status: 404 },
-      );
-    }
-
     const { searchParams } = new URL(request.url);
     const queryParams = Object.fromEntries(searchParams.entries());
 
-    let validatedData;
-    try {
-      validatedData = customersQuerySchema.parse(queryParams);
-    } catch (error: any) {
-      if (error.name === "ZodError") {
-        const firstError = error.errors?.[0];
-        const errorMessage = firstError
-          ? `${firstError.path.join(".")}: ${firstError.message}`
-          : "Invalid query parameters";
-        return NextResponse.json(
-          { error: errorMessage, items: [], total: 0, perPage: 10 },
-          { status: 400 },
-        );
-      }
+    const validation = validateSchema(customersQuerySchema, queryParams);
+    if (!validation.success) {
       return NextResponse.json(
-        { error: "Invalid query parameters", items: [], total: 0, perPage: 10 },
+        { error: validation.error, items: [], total: 0, perPage: 10 },
         { status: 400 },
       );
     }
@@ -61,13 +29,13 @@ export async function GET(request: Request) {
       phone,
       dateFrom,
       dateTo,
-    } = validatedData;
+    } = validation.data;
 
     const skip = (page - 1) * perPage;
     const take = perPage;
 
     const where: any = {
-      businessId: admin.business.id,
+      businessId: context.business.id,
     };
 
     if (name || email || phone) {
@@ -191,4 +159,4 @@ export async function GET(request: Request) {
       { status: 500 },
     );
   }
-}
+});

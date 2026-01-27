@@ -1,10 +1,13 @@
-import { getCashierSessionFromHeaders } from "@/lib/auth/cashier-session";
+import { withCashierAuth } from "@/lib/auth/middleware";
 import { APP_CONSTANTS } from "@/lib/constants/app";
 import { createBillApiSchema } from "@/lib/schemas/bill";
-import { sanitizeErrorMessage } from "@/lib/utils/error-handler";
+import {
+  sanitizeErrorMessage,
+  validateSchema,
+} from "@/lib/utils/error-handler";
 import { formatPhoneNumber } from "@/lib/utils/phone";
 import { prisma } from "@reelo/db";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 interface CustomerData {
   phoneNumber: string;
@@ -16,46 +19,6 @@ interface CustomerData {
   state?: string | null;
   country?: string | null;
   postalCode?: string | null;
-}
-
-async function validateCashierAndGetBusiness(
-  request: Request,
-): Promise<
-  | { success: true; businessId: string; error: null; status: null }
-  | { success: false; error: string; status: number; businessId: null }
-> {
-  const cookieHeader = request.headers.get("cookie");
-  const session = await getCashierSessionFromHeaders(cookieHeader);
-
-  if (!session || !session.user) {
-    return {
-      success: false,
-      error: "Unauthorized",
-      status: 401,
-      businessId: null,
-    };
-  }
-
-  const cashier = await prisma.cashier.findFirst({
-    where: { userId: session.user.id },
-    select: { businessId: true },
-  });
-
-  if (!cashier || !cashier.businessId) {
-    return {
-      success: false,
-      error: "Cashier not found",
-      status: 404,
-      businessId: null,
-    };
-  }
-
-  return {
-    success: true,
-    businessId: cashier.businessId,
-    error: null,
-    status: null,
-  };
 }
 
 async function findOrCreateCustomer(data: CustomerData) {
@@ -177,45 +140,24 @@ async function updateCustomerInfo(
   }
 }
 
-export async function POST(request: Request) {
+export const POST = withCashierAuth(async (request: NextRequest, context) => {
   try {
-    const validation = await validateCashierAndGetBusiness(request);
-
-    if (!validation.success || !validation.businessId) {
-      return NextResponse.json(
-        { error: validation.error || "Business not found", bill: null },
-        { status: validation.status || 401 },
-      );
-    }
-
-    const businessId = validation.businessId;
+    const businessId = context.business.id;
 
     const body = await request.json();
 
-    let validatedData;
-    try {
-      validatedData = createBillApiSchema.parse({
-        ...body,
-        businessId,
-      });
-    } catch (error: any) {
-      if (error.name === "ZodError") {
-        const firstError = error.errors?.[0];
-        const errorMessage = firstError
-          ? `${firstError.path.join(".")}: ${firstError.message}`
-          : "Invalid input data";
-        return NextResponse.json(
-          { error: errorMessage, bill: null },
-          { status: 400 },
-        );
-      }
+    const validation = validateSchema(createBillApiSchema, {
+      ...body,
+      businessId,
+    });
+    if (!validation.success) {
       return NextResponse.json(
-        { error: "Invalid input data", bill: null },
+        { error: validation.error, bill: null },
         { status: 400 },
       );
     }
 
-    const { billNumber, phoneNumber, amount, ...customerData } = validatedData;
+    const { billNumber, phoneNumber, amount, ...customerData } = validation.data;
 
     if (!phoneNumber || phoneNumber.trim() === "") {
       return NextResponse.json(
@@ -279,4 +221,4 @@ export async function POST(request: Request) {
       { status: 500 },
     );
   }
-}
+});

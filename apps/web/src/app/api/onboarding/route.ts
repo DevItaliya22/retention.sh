@@ -3,7 +3,10 @@ import {
   type WelcomeFormValues,
   welcomeFormSchema,
 } from "@/lib/schemas/onboarding";
-import { sanitizeErrorMessage } from "@/lib/utils/error-handler";
+import {
+  sanitizeErrorMessage,
+  validateSchema,
+} from "@/lib/utils/error-handler";
 import { prisma } from "@reelo/db";
 import { NextResponse } from "next/server";
 
@@ -21,7 +24,15 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const validatedData = welcomeFormSchema.parse(body) as WelcomeFormValues;
+
+    const validation = validateSchema(welcomeFormSchema, body);
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: validation.error, success: false },
+        { status: 400 },
+      );
+    }
+    const validatedData = validation.data as WelcomeFormValues;
     const userId = session.user.id;
 
     const existingBusiness = await prisma.business.findUnique({
@@ -112,19 +123,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error("Onboarding error:", error);
-
-    if (error.name === "ZodError") {
-      const zodErrors = error.errors || [];
-      const firstError = zodErrors[0];
-      const errorMessage = firstError
-        ? `${firstError.path.join(".")}: ${firstError.message}`
-        : "Invalid form data";
-
-      return NextResponse.json(
-        { error: errorMessage, success: false },
-        { status: 400 },
-      );
-    }
 
     return NextResponse.json(
       {

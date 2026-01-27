@@ -1,72 +1,35 @@
-import { auth } from "@/lib/auth/auth";
+import { withAdminAuth } from "@/lib/auth/middleware";
 import {
   cashiersQuerySchema,
   createCashierSchema,
 } from "@/lib/schemas/cashier";
-import { sanitizeErrorMessage } from "@/lib/utils/error-handler";
+import {
+  sanitizeErrorMessage,
+  validateSchema,
+} from "@/lib/utils/error-handler";
 import { prisma } from "@reelo/db";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-export async function GET(request: Request) {
+export const GET = withAdminAuth(async (request: NextRequest, context) => {
   try {
-    const session = await auth.api.getSession({
-      headers: request.headers,
-    });
-
-    if (!session || !session.user) {
-      return NextResponse.json(
-        { error: "Unauthorized", cashiers: [], total: 0, perPage: 10 },
-        { status: 401 },
-      );
-    }
-
-    const admin = await prisma.admin.findFirst({
-      where: { userId: session.user.id },
-      include: { business: true },
-    });
-
-    if (!admin || !admin.business) {
-      return NextResponse.json(
-        { error: "Business not found", cashiers: [], total: 0, perPage: 10 },
-        { status: 404 },
-      );
-    }
-
     const { searchParams } = new URL(request.url);
     const queryParams = Object.fromEntries(searchParams.entries());
 
-    let validatedData;
-    try {
-      validatedData = cashiersQuerySchema.parse(queryParams);
-    } catch (error: any) {
-      if (error.name === "ZodError") {
-        const firstError = error.errors?.[0];
-        const errorMessage = firstError
-          ? `${firstError.path.join(".")}: ${firstError.message}`
-          : "Invalid query parameters";
-        return NextResponse.json(
-          { error: errorMessage, cashiers: [], total: 0, perPage: 10 },
-          { status: 400 },
-        );
-      }
+    const validation = validateSchema(cashiersQuerySchema, queryParams);
+    if (!validation.success) {
       return NextResponse.json(
-        {
-          error: "Invalid query parameters",
-          cashiers: [],
-          total: 0,
-          perPage: 10,
-        },
+        { error: validation.error, cashiers: [], total: 0, perPage: 10 },
         { status: 400 },
       );
     }
 
-    const { page = 1, perPage = 10, sort, name, email } = validatedData;
+    const { page = 1, perPage = 10, sort, name, email } = validation.data;
 
     const skip = (page - 1) * perPage;
     const take = perPage;
 
     const where: any = {
-      businessId: admin.business.id,
+      businessId: context.business.id,
     };
 
     const userFilters: any = {};
@@ -154,61 +117,26 @@ export async function GET(request: Request) {
       { status: 500 },
     );
   }
-}
+});
 
-export async function POST(request: Request) {
+export const POST = withAdminAuth(async (request: NextRequest, context) => {
   try {
-    const session = await auth.api.getSession({
-      headers: request.headers,
-    });
-
-    if (!session || !session.user) {
-      return NextResponse.json(
-        { error: "Unauthorized", cashier: null },
-        { status: 401 },
-      );
-    }
-
-    const admin = await prisma.admin.findFirst({
-      where: { userId: session.user.id },
-      include: { business: true },
-    });
-
-    if (!admin || !admin.business) {
-      return NextResponse.json(
-        { error: "Business not found", cashier: null },
-        { status: 404 },
-      );
-    }
-
     const body = await request.json();
 
-    let validatedData;
-    try {
-      validatedData = createCashierSchema.parse(body);
-    } catch (error: any) {
-      if (error.name === "ZodError") {
-        const firstError = error.errors?.[0];
-        const errorMessage = firstError
-          ? `${firstError.path.join(".")}: ${firstError.message}`
-          : "Invalid input data";
-        return NextResponse.json(
-          { error: errorMessage, cashier: null },
-          { status: 400 },
-        );
-      }
+    const validation = validateSchema(createCashierSchema, body);
+    if (!validation.success) {
       return NextResponse.json(
-        { error: "Invalid input data", cashier: null },
+        { error: validation.error, cashier: null },
         { status: 400 },
       );
     }
 
-    const { name, email, password, cashierLinkSlug } = validatedData;
+    const { name, email, password, cashierLinkSlug } = validation.data;
 
     const existingCashierSlug = await prisma.cashier.findFirst({
       where: {
         cashierLinkSlug,
-        businessId: admin.business.id,
+        businessId: context.business.id,
       },
     });
 
@@ -245,7 +173,7 @@ export async function POST(request: Request) {
       const cashier = await tx.cashier.create({
         data: {
           userId: cashierUser.id,
-          businessId: admin.business.id,
+          businessId: context.business.id,
           cashierLinkSlug,
           password,
         },
@@ -287,4 +215,4 @@ export async function POST(request: Request) {
       { status: 500 },
     );
   }
-}
+});

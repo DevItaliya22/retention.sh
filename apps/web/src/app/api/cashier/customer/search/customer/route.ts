@@ -1,73 +1,42 @@
-import { getCashierSessionFromHeaders } from "@/lib/auth/cashier-session";
+import { withCashierAuth } from "@/lib/auth/middleware";
 import { searchBusinessCustomerSchema } from "@/lib/schemas/bill";
-import { sanitizeErrorMessage } from "@/lib/utils/error-handler";
+import {
+  sanitizeErrorMessage,
+  validateSchema,
+} from "@/lib/utils/error-handler";
 import { formatPhoneNumberForSearch } from "@/lib/utils/phone";
 import { prisma } from "@reelo/db";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-export async function GET(request: Request) {
+export const GET = withCashierAuth(async (request: NextRequest, context) => {
   try {
-    const cookieHeader = request.headers.get("cookie");
-    const session = await getCashierSessionFromHeaders(cookieHeader);
-
-    if (!session || !session.user) {
-      return NextResponse.json(
-        { error: "Unauthorized", customers: [] },
-        { status: 401 },
-      );
-    }
-
-    const cashier = await prisma.cashier.findFirst({
-      where: { userId: session.user.id },
-      select: { businessId: true },
-    });
-
-    if (!cashier) {
-      return NextResponse.json(
-        { error: "Cashier not found", customers: [] },
-        { status: 404 },
-      );
-    }
-
     const { searchParams } = new URL(request.url);
     const phone = searchParams.get("phone");
-    const businessId = searchParams.get("businessId") || cashier.businessId;
+    const businessId = searchParams.get("businessId") || context.business.id;
 
-    let validatedData;
-    try {
-      validatedData = searchBusinessCustomerSchema.parse({
-        phone: phone || "",
-        businessId,
-      });
-    } catch (error: any) {
-      if (error.name === "ZodError") {
-        const firstError = error.errors?.[0];
-        const errorMessage = firstError
-          ? `${firstError.path.join(".")}: ${firstError.message}`
-          : "Invalid input data";
-        return NextResponse.json(
-          { error: errorMessage, customers: [] },
-          { status: 400 },
-        );
-      }
+    const validation = validateSchema(searchBusinessCustomerSchema, {
+      phone: phone || "",
+      businessId,
+    });
+    if (!validation.success) {
       return NextResponse.json(
-        { error: "Invalid input data", customers: [] },
+        { error: validation.error, customers: [] },
         { status: 400 },
       );
     }
 
-    if (validatedData.phone.length < 4) {
+    if (validation.data.phone.length < 4) {
       return NextResponse.json(
         { error: "Phone number must be at least 4 digits", customers: [] },
         { status: 400 },
       );
     }
 
-    const formattedPhone = formatPhoneNumberForSearch(validatedData.phone);
+    const formattedPhone = formatPhoneNumberForSearch(validation.data.phone);
 
     const businessCustomers = await prisma.businessCustomer.findMany({
       where: {
-        businessId: validatedData.businessId,
+        businessId: validation.data.businessId,
         customer: {
           user: {
             phoneNumber: {
@@ -127,4 +96,4 @@ export async function GET(request: Request) {
       { status: 500 },
     );
   }
-}
+});

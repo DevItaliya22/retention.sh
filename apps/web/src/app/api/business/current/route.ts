@@ -1,38 +1,26 @@
-import { auth } from "@/lib/auth/auth";
+import { withAdminAuth } from "@/lib/auth/middleware";
 import { updateBusinessSchema } from "@/lib/schemas/business";
-import { sanitizeErrorMessage } from "@/lib/utils/error-handler";
+import {
+  sanitizeErrorMessage,
+  validateSchema,
+} from "@/lib/utils/error-handler";
 import { prisma } from "@reelo/db";
 import { NextResponse } from "next/server";
 
-export async function GET(request: Request) {
+export const GET = withAdminAuth(async (request, context) => {
   try {
-    const session = await auth.api.getSession({
-      headers: request.headers,
-    });
-
-    if (!session || !session.user) {
-      return NextResponse.json(
-        { business: null, error: "Unauthorized" },
-        { status: 401 },
-      );
-    }
-
-    const admin = await prisma.admin.findFirst({
-      where: { userId: session.user.id },
+    const business = await prisma.business.findUnique({
+      where: { id: context.business.id },
       include: {
-        business: {
-          include: {
-            defaultBranding: true,
-          },
-        },
+        defaultBranding: true,
       },
     });
 
-    if (!admin || !admin.business) {
+    if (!business) {
       return NextResponse.json({ business: null });
     }
 
-    return NextResponse.json({ business: admin.business });
+    return NextResponse.json({ business });
   } catch (error: any) {
     console.error("Failed to fetch current business:", error);
     return NextResponse.json(
@@ -45,62 +33,22 @@ export async function GET(request: Request) {
       { status: 500 },
     );
   }
-}
+});
 
-export async function PUT(request: Request) {
+export const PUT = withAdminAuth(async (request, context) => {
   try {
-    const session = await auth.api.getSession({
-      headers: request.headers,
-    });
-
-    if (!session || !session.user) {
-      return NextResponse.json(
-        { business: null, error: "Unauthorized" },
-        { status: 401 },
-      );
-    }
-
     const body = await request.json();
 
-    let validatedData;
-    try {
-      validatedData = updateBusinessSchema.parse(body);
-    } catch (error: any) {
-      if (error.name === "ZodError") {
-        const firstError = error.errors?.[0];
-        const errorMessage = firstError
-          ? `${firstError.path.join(".")}: ${firstError.message}`
-          : "Invalid input data";
-        return NextResponse.json(
-          { business: null, error: errorMessage },
-          { status: 400 },
-        );
-      }
+    const validation = validateSchema(updateBusinessSchema, body);
+    if (!validation.success) {
       return NextResponse.json(
-        { business: null, error: "Invalid input data" },
+        { business: null, error: validation.error },
         { status: 400 },
       );
     }
+    const validatedData = validation.data;
 
-    const admin = await prisma.admin.findFirst({
-      where: { userId: session.user.id },
-      include: {
-        business: {
-          include: {
-            defaultBranding: true,
-          },
-        },
-      },
-    });
-
-    if (!admin || !admin.business) {
-      return NextResponse.json(
-        { business: null, error: "Business not found" },
-        { status: 404 },
-      );
-    }
-
-    const businessId = admin.business.id;
+    const businessId = context.business.id;
 
     const updated = await prisma.business.update({
       where: { id: businessId },
@@ -152,4 +100,4 @@ export async function PUT(request: Request) {
       { status: 500 },
     );
   }
-}
+});

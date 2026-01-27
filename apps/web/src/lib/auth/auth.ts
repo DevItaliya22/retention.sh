@@ -3,6 +3,7 @@ import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { APIError, createAuthMiddleware } from "better-auth/api";
 import { magicLink } from "better-auth/plugins";
+import { COOKIE_PREFIX } from "../utils/cookie";
 
 export const auth = betterAuth({
   database: prismaAdapter(prisma, {
@@ -61,7 +62,7 @@ export const auth = betterAuth({
   },
   advanced: {
     useSecureCookies: process.env.NODE_ENV === "production",
-    cookiePrefix: "reelo",
+    cookiePrefix: COOKIE_PREFIX,
     ipAddress: {
       ipAddressHeaders: ["x-forwarded-for", "x-real-ip", "cf-connecting-ip"],
       disableIpTracking: false,

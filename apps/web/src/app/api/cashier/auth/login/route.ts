@@ -1,6 +1,10 @@
 import { validateCashierLogin } from "@/lib/auth/auth";
 import { cashierLoginSchema } from "@/lib/schemas/auth";
-import { sanitizeErrorMessage } from "@/lib/utils/error-handler";
+import { SESSION_COOKIE_NAME } from "@/lib/utils/cookie";
+import {
+  sanitizeErrorMessage,
+  validateSchema,
+} from "@/lib/utils/error-handler";
 import { prisma } from "@reelo/db";
 import { randomBytes } from "crypto";
 import { NextResponse } from "next/server";
@@ -29,43 +33,31 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
 
-    let validatedData;
-    try {
-      validatedData = cashierLoginSchema.parse(body);
-    } catch (error: any) {
-      if (error.name === "ZodError") {
-        const firstError = error.errors?.[0];
-        const errorMessage = firstError
-          ? `${firstError.path.join(".")}: ${firstError.message}`
-          : "Invalid input data";
-        return NextResponse.json(
-          { error: errorMessage, session: null },
-          { status: 400 },
-        );
-      }
+    const schemaValidation = validateSchema(cashierLoginSchema, body);
+    if (!schemaValidation.success) {
       return NextResponse.json(
-        { error: "Invalid input data", session: null },
+        { error: schemaValidation.error, session: null },
         { status: 400 },
       );
     }
 
-    const { businessSlug, cashierSlug, email, password } = validatedData;
+    const { businessSlug, cashierSlug, email, password } = schemaValidation.data;
 
-    const validation = await validateCashierLogin({
+    const loginValidation = await validateCashierLogin({
       businessSlug,
       cashierSlug,
       email,
       password,
     });
 
-    if (!validation.success || !validation.cashier) {
+    if (!loginValidation.success || !loginValidation.cashier) {
       return NextResponse.json(
         { error: "Invalid credentials", session: null },
         { status: 401 },
       );
     }
 
-    const { cashier } = validation;
+    const { cashier } = loginValidation;
 
     const user = await prisma.user.findUnique({
       where: { id: cashier.userId },
@@ -116,10 +108,9 @@ export async function POST(request: Request) {
       },
     });
 
-    const cookieName = "reelo.session.token";
     const isSecure = isSecureContext(request);
 
-    response.cookies.set(cookieName, token, {
+    response.cookies.set(SESSION_COOKIE_NAME, token, {
       httpOnly: true,
       secure: isSecure,
       sameSite: "strict",

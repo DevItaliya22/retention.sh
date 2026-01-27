@@ -1,6 +1,6 @@
 "use client";
 
-import type { Bill } from "@/hooks/bills/useBillsQuery";
+import { useBillsQuery, type Bill } from "@/hooks/bills/useBillsQuery";
 import {
   Button,
   DataTable,
@@ -14,19 +14,25 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { Eye } from "lucide-react";
 import { useMemo } from "react";
 
-interface BillsTableProps {
-  bills: Bill[];
-  total: number;
-  perPage: number;
-  isLoading?: boolean;
-}
+export function BillsTable() {
+  const { data, isLoading, isError, error } = useBillsQuery();
 
-export function BillsTable({
-  bills,
-  total,
-  perPage,
-  isLoading = false,
-}: BillsTableProps) {
+  if (isError) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12">
+        <p className="text-destructive text-sm font-medium">
+          Failed to load bills
+        </p>
+        <p className="text-muted-foreground mt-1 text-sm">
+          {error?.message || "Please try again later"}
+        </p>
+      </div>
+    );
+  }
+
+  const bills = data?.bills ?? [];
+  const total = data?.total ?? 0;
+  const perPage = data?.perPage ?? 10;
   const pageCount = Math.max(1, Math.ceil(total / perPage));
   const isEmpty = !isLoading && bills.length === 0;
 

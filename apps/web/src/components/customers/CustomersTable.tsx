@@ -1,6 +1,6 @@
 "use client";
 
-import type { Customer } from "@/hooks/customers/useCustomersQuery";
+import { useCustomersQuery, type Customer } from "@/hooks/customers/useCustomersQuery";
 import {
   DataTable,
   DataTableColumnHeader,
@@ -12,19 +12,25 @@ import { useDataTable } from "@reelo/ui/hooks";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useMemo } from "react";
 
-interface CustomersTableProps {
-  customers: Customer[];
-  total: number;
-  perPage: number;
-  isLoading?: boolean;
-}
+export function CustomersTable() {
+  const { data, isLoading, isError, error } = useCustomersQuery();
 
-export function CustomersTable({
-  customers,
-  total,
-  perPage,
-  isLoading = false,
-}: CustomersTableProps) {
+  if (isError) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12">
+        <p className="text-destructive text-sm font-medium">
+          Failed to load customers
+        </p>
+        <p className="text-muted-foreground mt-1 text-sm">
+          {error?.message || "Please try again later"}
+        </p>
+      </div>
+    );
+  }
+
+  const customers = data?.items ?? [];
+  const total = data?.total ?? 0;
+  const perPage = data?.perPage ?? 10;
   const pageCount = Math.max(1, Math.ceil(total / perPage));
   const isEmpty = !isLoading && customers.length === 0;
 

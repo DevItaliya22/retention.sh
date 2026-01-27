@@ -1,4 +1,5 @@
 import { getCashierSessionFromHeaders } from "@/lib/auth/cashier-session";
+import { COOKIE_PREFIX } from "@/lib/utils/cookie";
 import { parseCashierRoute } from "@/lib/utils/cashier-routes";
 import { getSessionCookie } from "better-auth/cookies";
 import { NextRequest, NextResponse } from "next/server";
@@ -15,7 +16,7 @@ const AuthRoutes = ["/login"];
 
 const protectedCashierRoutes = ["/home"];
 
-const publicCashierRoutes = ["/", "/no-session"];
+const publicCashierRoutes = ["/"];
 
 export async function proxy(req: NextRequest) {
   const { nextUrl } = req;
@@ -23,7 +24,7 @@ export async function proxy(req: NextRequest) {
   const pathname = nextUrl.pathname;
 
   const sessionCookie = getSessionCookie(req, {
-    cookiePrefix: "reelo",
+    cookiePrefix: COOKIE_PREFIX,
   });
 
   const cashierRoute = parseCashierRoute(pathname);
@@ -38,10 +39,7 @@ export async function proxy(req: NextRequest) {
     if (isProtectedRoute) {
       if (!cashierSession || cashierSession.user.role !== "CASHIER") {
         return NextResponse.redirect(
-          new URL(
-            `/cashier/${businessSlug}/${cashierSlug}/no-session`,
-            req.url,
-          ),
+          new URL(`/cashier/${businessSlug}/${cashierSlug}/`, req.url),
         );
       }
     }

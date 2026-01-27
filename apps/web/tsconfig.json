@@ -1,7 +1,7 @@
 {
   "extends": "@reelo/typescript-config/nextjs.json",
   "compilerOptions": {
-    "baseUrl": ".",
+    // "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
       "@reelo/ui/*": ["../../packages/ui/src/*"]

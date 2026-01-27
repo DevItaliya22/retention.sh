@@ -1,3 +1,34 @@
+import { ZodError, type ZodSchema } from "zod";
+
+/**
+ * Result type for Zod validation
+ */
+export type ValidationResult<T> =
+  | { success: true; data: T }
+  | { success: false; error: string };
+
+/**
+ * Validates data against a Zod schema and returns a typed result
+ */
+export function validateSchema<T>(
+  schema: ZodSchema<T>,
+  data: unknown,
+): ValidationResult<T> {
+  try {
+    const validatedData = schema.parse(data);
+    return { success: true, data: validatedData };
+  } catch (error) {
+    if (error instanceof ZodError) {
+      const firstError = error.issues?.[0];
+      const errorMessage = firstError
+        ? `${firstError.path.join(".")}: ${firstError.message}`
+        : "Invalid input data";
+      return { success: false, error: errorMessage };
+    }
+    return { success: false, error: "Invalid input data" };
+  }
+}
+
 /**
  * Sanitizes error messages to prevent exposing sensitive information
  * like database errors, stack traces, or internal details

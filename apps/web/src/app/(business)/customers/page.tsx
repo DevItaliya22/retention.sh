@@ -1,4 +1,4 @@
-import { CustomersPageClient } from "@/components/customers/CustomersPageClient";
+import { CustomersTable } from "@/components/customers/CustomersTable";
 import { PageLayout, ScaffoldContainer } from "@/components/layouts";
 import { generateRouteMetadata } from "@/lib/utils/route-metadata";
 import type { Metadata } from "next";
@@ -16,7 +16,7 @@ export default function CustomersPage() {
     >
       <ScaffoldContainer className="h-full w-full max-w-full px-6">
         <Suspense fallback={<div className="h-96" />}>
-          <CustomersPageClient />
+          <CustomersTable />
         </Suspense>
       </ScaffoldContainer>
     </PageLayout>

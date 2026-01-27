@@ -1,3 +1,4 @@
+import { SESSION_COOKIE_NAME } from "@/lib/utils/cookie";
 import { prisma } from "@reelo/db";
 import { NextResponse } from "next/server";
 
@@ -6,7 +7,7 @@ export async function POST(request: Request) {
     const cookieHeader = request.headers.get("cookie") || "";
     const sessionToken = cookieHeader
       .split(";")
-      .find((c) => c.trim().startsWith("reelo.session.token="))
+      .find((c) => c.trim().startsWith(`${SESSION_COOKIE_NAME}=`))
       ?.split("=")[1];
 
     if (sessionToken) {
@@ -17,7 +18,7 @@ export async function POST(request: Request) {
 
     const response = NextResponse.json({ success: true });
 
-    response.cookies.delete("reelo.session.token");
+    response.cookies.delete(SESSION_COOKIE_NAME);
 
     return response;
   } catch (error: any) {
