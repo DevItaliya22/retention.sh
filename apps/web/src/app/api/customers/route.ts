@@ -130,7 +130,9 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
     ]);
 
     const formattedCustomers = businessCustomers.map((bc) => ({
-      id: bc.customer.id,
+      id: bc.slugId,
+      slugId: bc.slugId,
+      customerId: bc.customer.id,
       name: bc.customer.user.name,
       email: bc.customer.email,
       phone: bc.customer.user.phoneNumber,

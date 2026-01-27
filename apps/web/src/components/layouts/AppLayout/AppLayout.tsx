@@ -1,4 +1,5 @@
 "use client";
+import { BreadcrumbOverrideProvider } from "@/lib/contexts/breadcrumb-override";
 import { PropsWithChildren } from "react";
 
 import { SidebarInset, SidebarProvider } from "@reelo/ui/components/sidebar";
@@ -7,8 +8,9 @@ import { MainHeader } from "./components/main-header";
 
 const AppLayout = ({ children }: PropsWithChildren) => {
   return (
-    <div>
-      <SidebarProvider className="flex h-screen flex-col">
+    <BreadcrumbOverrideProvider>
+      <div>
+        <SidebarProvider className="flex h-screen flex-col">
         <div className="flex h-screen w-screen flex-col">
           {/* Main Content Area */}
           <div className="h-100svh flex flex-1 grow overflow-y-auto">
@@ -26,6 +28,7 @@ const AppLayout = ({ children }: PropsWithChildren) => {
         </div>
       </SidebarProvider>
     </div>
+    </BreadcrumbOverrideProvider>
   );
 };
 

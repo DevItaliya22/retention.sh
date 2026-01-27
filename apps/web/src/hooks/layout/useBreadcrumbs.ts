@@ -1,5 +1,6 @@
 "use client";
 
+import { useBreadcrumbOverride } from "@/lib/contexts/breadcrumb-override";
 import {
   type BreadcrumbConfig,
   parseBreadcrumbPath,
@@ -9,6 +10,7 @@ import { useMemo } from "react";
 
 export function useBreadcrumbs(): BreadcrumbConfig {
   const pathname = usePathname();
+  const override = useBreadcrumbOverride();
 
   const { filter, slug } = useMemo(
     () => parseBreadcrumbPath(pathname),
@@ -32,6 +34,16 @@ export function useBreadcrumbs(): BreadcrumbConfig {
     }
 
     const items: BreadcrumbConfig["items"] = [];
+
+    // Handle bills routes
+    if (pathname === "/bills") {
+      items.push({ label: "Bills", isActive: true });
+    } else if (pathname.startsWith("/bills/") && pathname !== "/bills") {
+      const billSegmentLabel =
+        override?.segmentLabel ?? "Bill details";
+      items.push({ label: "Bills", href: "/bills" });
+      items.push({ label: billSegmentLabel, isActive: true });
+    }
 
     // Handle organization routes
     if (pathname.startsWith("/organization/") && slug) {
@@ -98,5 +110,5 @@ export function useBreadcrumbs(): BreadcrumbConfig {
       items,
       shouldShow: items.length > 0,
     };
-  }, [pathname, slug, filter]);
+  }, [pathname, slug, filter, override?.segmentLabel]);
 }

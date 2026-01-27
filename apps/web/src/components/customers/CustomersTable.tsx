@@ -38,6 +38,8 @@ export function CustomersTable() {
     if (isLoading && customers.length === 0) {
       return Array.from({ length: perPage }, (_, i) => ({
         id: `skeleton-${i}`,
+        slugId: "",
+        customerId: "",
         name: "",
         email: "",
         phone: null,
@@ -50,6 +52,8 @@ export function CustomersTable() {
       return [
         {
           id: "empty-state",
+          slugId: "",
+          customerId: "",
           name: "",
           email: "",
           phone: null,

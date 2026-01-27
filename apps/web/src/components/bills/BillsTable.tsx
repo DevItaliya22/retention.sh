@@ -2,16 +2,18 @@
 
 import { useBillsQuery, type Bill } from "@/hooks/bills/useBillsQuery";
 import {
-  Button,
+  buttonVariants,
   DataTable,
   DataTableColumnHeader,
   DataTableToolbar,
   DateDisplay,
   Skeleton,
 } from "@reelo/ui/components";
+import { cn } from "@reelo/ui/lib/utils";
 import { useDataTable } from "@reelo/ui/hooks";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Eye } from "lucide-react";
+import Link from "next/link";
 import { useMemo } from "react";
 
 export function BillsTable() {
@@ -239,15 +241,16 @@ export function BillsTable() {
           }
           return (
             <div className="flex justify-end">
-              <Button
-                variant="ghost"
-                size="xs"
-                icon={<Eye className="h-4 w-4" />}
-                onClick={() => {
-                  console.log("View bill:", bill.id);
-                }}
-                className="h-8 w-8 p-0"
-              />
+              <Link
+                href={`/bills/${bill.id}`}
+                aria-label={`View bill ${bill.billNumber}`}
+                className={cn(
+                  buttonVariants({ variant: "ghost", size: "xs" }),
+                  "h-8 w-8 p-0",
+                )}
+              >
+                <Eye className="h-4 w-4" />
+              </Link>
             </div>
           );
         },

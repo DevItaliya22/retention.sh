@@ -25,6 +25,8 @@ model Customer {
 
 // This is bussiness customer relation , all the data related to customer for that particular bussiness will come in this thing
 model BusinessCustomer {
+  slugId String @unique @default(uuid()) // this id will be used for the slug in the url and for the api endpoints 
+
   businessId String
   business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
 
@@ -62,6 +64,7 @@ model BusinessCustomer {
   @@index([referralSlug])
   @@index([referredByBusinessId, referredByCustomerId])
   @@index([currentTierId])
+  @@index([slugId])
   @@index([customerId])
   @@map("business_customer")
 }

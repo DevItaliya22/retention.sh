@@ -5,7 +5,10 @@ import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 
 export interface Customer {
+  /** BusinessCustomer slugId – use for /customers/[id] links */
   id: string;
+  slugId: string;
+  customerId: string;
   name: string;
   email: string;
   phone: string | null;

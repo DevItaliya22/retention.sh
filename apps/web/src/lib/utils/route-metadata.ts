@@ -51,6 +51,10 @@ const ROUTE_METADATA_MAP: Record<string, RouteMetadataConfig> = {
     title: "Bills",
     description: "View and manage all bills for your business",
   },
+  "/bills/[id]": {
+    title: "Bill details",
+    description: "View bill details and customer information",
+  },
   "/customers": {
     title: "Customers",
     description: "View and manage all customers for your business",
@@ -118,6 +122,11 @@ function getRoutePattern(
   const filteredSegments = segments.filter(
     (seg) => !seg.startsWith("(") && !seg.endsWith(")"),
   );
+
+  // Handle bills detail
+  if (filteredSegments[0] === "bills" && filteredSegments.length === 2) {
+    return "/bills/[id]";
+  }
 
   // Handle cashier portal routes
   if (filteredSegments[0] === "cashier" && filteredSegments.length >= 3) {
