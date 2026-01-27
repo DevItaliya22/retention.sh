@@ -1,6 +1,6 @@
 import { getCashierSessionFromHeaders } from "@/lib/auth/cashier-session";
-import { COOKIE_PREFIX } from "@/lib/utils/cookie";
 import { parseCashierRoute } from "@/lib/utils/cashier-routes";
+import { COOKIE_PREFIX } from "@/lib/utils/cookie";
 import { getSessionCookie } from "better-auth/cookies";
 import { NextRequest, NextResponse } from "next/server";
 

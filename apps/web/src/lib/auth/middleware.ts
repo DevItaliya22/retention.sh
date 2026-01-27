@@ -80,19 +80,34 @@ export interface CustomerAuthContext {
   };
 }
 
-export type WithAdminAuthHandler<T extends Record<string, string | string[]> = Record<string, string | string[]>> = (
+export type WithAdminAuthHandler<
+  T extends Record<string, string | string[]> = Record<
+    string,
+    string | string[]
+  >,
+> = (
   request: NextRequest,
   context: AdminAuthContext,
   params: T,
 ) => Promise<NextResponse>;
 
-export type WithCashierAuthHandler<T extends Record<string, string | string[]> = Record<string, string | string[]>> = (
+export type WithCashierAuthHandler<
+  T extends Record<string, string | string[]> = Record<
+    string,
+    string | string[]
+  >,
+> = (
   request: NextRequest,
   context: CashierAuthContext,
   params: T,
 ) => Promise<NextResponse>;
 
-export type WithCustomerAuthHandler<T extends Record<string, string | string[]> = Record<string, string | string[]>> = (
+export type WithCustomerAuthHandler<
+  T extends Record<string, string | string[]> = Record<
+    string,
+    string | string[]
+  >,
+> = (
   request: NextRequest,
   context: CustomerAuthContext,
   params: T,

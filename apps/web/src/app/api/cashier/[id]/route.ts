@@ -92,7 +92,8 @@ export const PUT = withAdminAuth<{ id: string }>(
           password?: string;
         } = {};
 
-        if (cashierLinkSlug) cashierUpdateData.cashierLinkSlug = cashierLinkSlug;
+        if (cashierLinkSlug)
+          cashierUpdateData.cashierLinkSlug = cashierLinkSlug;
         if (password) cashierUpdateData.password = password;
 
         const updatedCashier = await tx.cashier.update({
@@ -114,29 +115,30 @@ export const PUT = withAdminAuth<{ id: string }>(
       });
 
       return NextResponse.json({
-      cashier: {
-        id: result.id,
-        userId: result.userId,
-        name: result.user.name,
-        email: result.user.email,
-        cashierLinkSlug: result.cashierLinkSlug,
-        createdAt: result.createdAt,
-        updatedAt: result.updatedAt,
-      },
-    });
-  } catch (error: any) {
-    console.error("Failed to update cashier:", error);
-    return NextResponse.json(
-      {
-        error:
-          sanitizeErrorMessage(error) ||
-          "Failed to update cashier. Please try again.",
-        cashier: null,
-      },
-      { status: 500 },
-    );
-  }
-});
+        cashier: {
+          id: result.id,
+          userId: result.userId,
+          name: result.user.name,
+          email: result.user.email,
+          cashierLinkSlug: result.cashierLinkSlug,
+          createdAt: result.createdAt,
+          updatedAt: result.updatedAt,
+        },
+      });
+    } catch (error: any) {
+      console.error("Failed to update cashier:", error);
+      return NextResponse.json(
+        {
+          error:
+            sanitizeErrorMessage(error) ||
+            "Failed to update cashier. Please try again.",
+          cashier: null,
+        },
+        { status: 500 },
+      );
+    }
+  },
+);
 
 export const DELETE = withAdminAuth<{ id: string }>(
   async (request: NextRequest, context, params) => {

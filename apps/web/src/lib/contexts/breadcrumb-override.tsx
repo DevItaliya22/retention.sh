@@ -16,7 +16,11 @@ interface BreadcrumbOverrideContextValue {
 const BreadcrumbOverrideContext =
   createContext<BreadcrumbOverrideContextValue | null>(null);
 
-export function BreadcrumbOverrideProvider({ children }: { children: ReactNode }) {
+export function BreadcrumbOverrideProvider({
+  children,
+}: {
+  children: ReactNode;
+}) {
   const [segmentLabel, setSegmentLabel] = useState<string | null>(null);
   const setLabel = useCallback((label: string | null) => {
     setSegmentLabel(label);

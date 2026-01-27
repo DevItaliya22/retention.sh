@@ -41,7 +41,8 @@ export async function POST(request: Request) {
       );
     }
 
-    const { businessSlug, cashierSlug, email, password } = schemaValidation.data;
+    const { businessSlug, cashierSlug, email, password } =
+      schemaValidation.data;
 
     const loginValidation = await validateCashierLogin({
       businessSlug,

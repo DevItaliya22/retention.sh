@@ -1,6 +1,9 @@
 "use client";
 
-import { useCustomersQuery, type Customer } from "@/hooks/customers/useCustomersQuery";
+import {
+  useCustomersQuery,
+  type Customer,
+} from "@/hooks/customers/useCustomersQuery";
 import {
   DataTable,
   DataTableColumnHeader,

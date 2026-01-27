@@ -4,12 +4,12 @@ import type { Metadata } from "next";
 
 import "./globals.css";
 
-import { Plus_Jakarta_Sans } from 'next/font/google';
+import { Plus_Jakarta_Sans } from "next/font/google";
 
 const plusJakarta = Plus_Jakarta_Sans({
-  variable: '--font-plus-jakarta',
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
+  variable: "--font-plus-jakarta",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
 });
 export const metadata: Metadata = {
   title: {
@@ -119,9 +119,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body
-        className={`${plusJakarta.variable} antialiased`}
-      >
+      <body className={`${plusJakarta.variable} antialiased`}>
         <Header />
         <main className="pt-16">{children}</main>
         <FooterSection />

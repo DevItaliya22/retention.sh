@@ -430,8 +430,8 @@ function DataTableFilterItem<TData>({
               className="w-32 justify-between rounded font-normal"
             >
               <span className="truncate">
-                {columns.find((column) => column.id === filter.id)
-                  ?.columnDef.meta?.label ?? "Select field"}
+                {columns.find((column) => column.id === filter.id)?.columnDef
+                  .meta?.label ?? "Select field"}
               </span>
               <ChevronsUpDown className="opacity-50" />
             </Button>

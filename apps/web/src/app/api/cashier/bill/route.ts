@@ -157,7 +157,8 @@ export const POST = withCashierAuth(async (request: NextRequest, context) => {
       );
     }
 
-    const { billNumber, phoneNumber, amount, ...customerData } = validation.data;
+    const { billNumber, phoneNumber, amount, ...customerData } =
+      validation.data;
 
     if (!phoneNumber || phoneNumber.trim() === "") {
       return NextResponse.json(

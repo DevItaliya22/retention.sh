@@ -9,7 +9,7 @@ export default function Pricing() {
         <div className="mb-12 text-center">
           <Logo className="mx-auto mb-6" />
           <h1 className="text-3xl font-semibold sm:text-4xl lg:text-5xl">
-          Plans built to boost your business's growth
+            Plans built to boost your business's growth
           </h1>
           <p className="text-muted-foreground mt-4 text-base sm:text-lg">
             Choose the plan that fits your needs. Start free and scale as you

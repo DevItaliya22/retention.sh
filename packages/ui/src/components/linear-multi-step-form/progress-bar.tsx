@@ -15,17 +15,17 @@ export function ProgressBar({
 }) {
   return (
     <div className={cn("w-full", className)}>
-      <div className="flex items-center gap-2 mb-2">
-        <span className="text-sm font-medium text-muted-foreground">
+      <div className="mb-2 flex items-center gap-2">
+        <span className="text-muted-foreground text-sm font-medium">
           Step {currentStepIndex + 1} of {totalSteps}
         </span>
-        <span className="text-sm text-muted-foreground ml-auto">
+        <span className="text-muted-foreground ml-auto text-sm">
           {Math.round(progress)}%
         </span>
       </div>
-      <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+      <div className="bg-muted h-2 w-full overflow-hidden rounded-full">
         <div
-          className="h-full bg-primary transition-all duration-300 ease-out"
+          className="bg-primary h-full transition-all duration-300 ease-out"
           style={{ width: `${progress}%` }}
         />
       </div>

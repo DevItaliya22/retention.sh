@@ -106,36 +106,38 @@ export function TagMultiSelect({
           className="h-auto min-h-9 w-full justify-start px-2.5 py-1.5 whitespace-normal"
           disabled={disabled}
           textWrapperClassName="w-full"
-        >{selectedOptions.length === 0 ? (
-              <span className="text-foreground-lighter">{placeholder}</span>
-            ) : (
-              <div className="flex w-full flex-wrap gap-1.5">
-                {selectedOptions.map((option) => (
-                  <Badge
-                    key={option.id}
-                    variant="outline"
-                    className="border-strong shrink-0 gap-1.5"
-                    style={
-                      option.color
-                        ? {
-                            backgroundColor: `${option.color}15`,
-                            borderColor: option.color,
-                            color: option.color,
-                          }
-                        : undefined
-                    }
-                  >
-                    {option.color && (
-                      <div
-                        className="size-2 shrink-0 rounded-full"
-                        style={{ backgroundColor: option.color }}
-                      />
-                    )}
-                    <span>{option.name}</span>
-                  </Badge>
-                ))}
-              </div>
-            )}</Button>
+        >
+          {selectedOptions.length === 0 ? (
+            <span className="text-foreground-lighter">{placeholder}</span>
+          ) : (
+            <div className="flex w-full flex-wrap gap-1.5">
+              {selectedOptions.map((option) => (
+                <Badge
+                  key={option.id}
+                  variant="outline"
+                  className="border-strong shrink-0 gap-1.5"
+                  style={
+                    option.color
+                      ? {
+                          backgroundColor: `${option.color}15`,
+                          borderColor: option.color,
+                          color: option.color,
+                        }
+                      : undefined
+                  }
+                >
+                  {option.color && (
+                    <div
+                      className="size-2 shrink-0 rounded-full"
+                      style={{ backgroundColor: option.color }}
+                    />
+                  )}
+                  <span>{option.name}</span>
+                </Badge>
+              ))}
+            </div>
+          )}
+        </Button>
       </FacetedTrigger>
       <FacetedContent className="w-full">
         <Command shouldFilter={false}>

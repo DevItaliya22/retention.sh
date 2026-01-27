@@ -462,7 +462,13 @@ export function useLinearMultiStepForm<TValues extends AnyValues>(args: {
         values: values as any,
       }) ?? false
     );
-  }, [config, currentStep.id, currentStepIndex, isCurrentStepSchemaValid, values]);
+  }, [
+    config,
+    currentStep.id,
+    currentStepIndex,
+    isCurrentStepSchemaValid,
+    values,
+  ]);
 
   const isPrevDisabled = React.useMemo(() => {
     const defaultDisable =
@@ -477,7 +483,13 @@ export function useLinearMultiStepForm<TValues extends AnyValues>(args: {
         values: values as any,
       }) ?? false
     );
-  }, [config, currentStep.id, currentStepIndex, isCurrentStepSchemaValid, values]);
+  }, [
+    config,
+    currentStep.id,
+    currentStepIndex,
+    isCurrentStepSchemaValid,
+    values,
+  ]);
 
   return {
     storageKey,

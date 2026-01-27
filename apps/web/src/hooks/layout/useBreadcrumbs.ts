@@ -39,8 +39,7 @@ export function useBreadcrumbs(): BreadcrumbConfig {
     if (pathname === "/bills") {
       items.push({ label: "Bills", isActive: true });
     } else if (pathname.startsWith("/bills/") && pathname !== "/bills") {
-      const billSegmentLabel =
-        override?.segmentLabel ?? "Bill details";
+      const billSegmentLabel = override?.segmentLabel ?? "Bill details";
       items.push({ label: "Bills", href: "/bills" });
       items.push({ label: billSegmentLabel, isActive: true });
     }

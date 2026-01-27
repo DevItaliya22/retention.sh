@@ -1,5 +1,5 @@
-import type { z } from "zod";
 import type React from "react";
+import type { z } from "zod";
 
 export type LinearMultiStepFormId = string;
 export type LinearMultiStepFormStepId = string;
@@ -43,7 +43,9 @@ export type NavigationArgs = {
   isNextDisabled: boolean;
   isPrevDisabled: boolean;
   progress: number;
-  getStepStatus: (stepIndex: number) => "complete" | "current" | "pending" | "invalid";
+  getStepStatus: (
+    stepIndex: number,
+  ) => "complete" | "current" | "pending" | "invalid";
   getStepError: (stepIndex: number) => string | null;
   isStepRequired: (stepIndex: number) => boolean;
   isStepAccessible: (stepIndex: number) => boolean;

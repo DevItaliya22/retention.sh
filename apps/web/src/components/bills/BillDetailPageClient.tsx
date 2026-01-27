@@ -12,9 +12,9 @@ import {
   Skeleton,
 } from "@reelo/ui/components";
 import { cn } from "@reelo/ui/lib/utils";
+import { User } from "lucide-react";
 import Link from "next/link";
 import { useEffect } from "react";
-import { User } from "lucide-react";
 
 interface BillDetailPageClientProps {
   billId: string;

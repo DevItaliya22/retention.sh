@@ -1,6 +1,6 @@
+import { SESSION_COOKIE_NAME } from "@/lib/utils/cookie";
 import { prisma } from "@reelo/db";
 import { headers } from "next/headers";
-import { SESSION_COOKIE_NAME } from "@/lib/utils/cookie";
 
 export type CashierSessionData = {
   user: { id: string; name: string; email: string | null; role: string };
