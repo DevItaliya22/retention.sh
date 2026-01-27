@@ -10,11 +10,15 @@
     "format:check": "prettier --check \"**/*.{ts,tsx,md}\"",
     "prepare": "husky"
   },
+  "lint-staged": {
+    "*.{ts,tsx,md}": "prettier --write"
+  },
   "devDependencies": {
     "@reelo/eslint-config": "workspace:*",
     "@reelo/typescript-config": "workspace:*",
     "eslint": "^9.39.2",
     "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
     "prettier": "^3.7.4",
     "prettier-plugin-organize-imports": "^4.3.0",
     "prettier-plugin-tailwindcss": "^0.7.2",
