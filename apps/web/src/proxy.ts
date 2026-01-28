@@ -50,7 +50,8 @@ export async function proxy(req: NextRequest) {
   const isProtected =
     protectedAdminRoutes.includes(pathname) ||
     pathname.startsWith("/bills/") ||
-    pathname.startsWith("/customers/");
+    pathname.startsWith("/customers/") ||
+    pathname.startsWith("/settings");
 
   if (!sessionCookie && isProtected) {
     return NextResponse.redirect(new URL("/login", req.url));

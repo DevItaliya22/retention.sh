@@ -72,6 +72,14 @@ const ROUTE_METADATA_MAP: Record<string, RouteMetadataConfig> = {
     title: "Cashier Settings",
     description: "Manage cashier accounts and permissions for your business",
   },
+  "/settings/sku": {
+    title: "SKU Settings",
+    description: "Manage products (SKUs) and categories for your business",
+  },
+  "/settings/sku/categories": {
+    title: "Categories",
+    description: "Manage product categories for your business",
+  },
   "/cashier/[businessSlug]/[cashierSlug]": {
     title: (segments) => `Cashier Login - ${formatSlug(segments[1])}`,
     description: "Sign in to your cashier account",

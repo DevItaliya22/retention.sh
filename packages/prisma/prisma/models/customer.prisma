@@ -47,6 +47,10 @@ model BusinessCustomer {
   // Referral logs (for tracking/rewards) - business-specific
   referralLogs ReferralLog[]
 
+  tags          String[]
+  isBlocked     Boolean  @default(false)
+  blockedReason String?
+
   pointsBalance     Int                 @default(0)
   pointTransactions PointsTransaction[]
 

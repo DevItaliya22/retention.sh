@@ -49,6 +49,9 @@ CREATE TYPE "TransactionSource" AS ENUM ('BILL', 'FEEDBACK', 'SCRATCH_CARD', 'CA
 -- CreateEnum
 CREATE TYPE "WalletType" AS ENUM ('POINTS', 'STORE_CREDIT');
 
+-- CreateEnum
+CREATE TYPE "Role" AS ENUM ('CUSTOMER', 'ADMIN', 'CASHIER');
+
 -- CreateTable
 CREATE TABLE "bill" (
     "id" TEXT NOT NULL,
@@ -85,9 +88,13 @@ CREATE TABLE "branding" (
 CREATE TABLE "business" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
-    "pointsName" TEXT NOT NULL DEFAULT 'Points',
-    "currencySymbol" TEXT NOT NULL DEFAULT '₹',
-    "currencyCode" TEXT NOT NULL DEFAULT 'INR',
+    "slug" TEXT NOT NULL,
+    "defaultPointsName" TEXT NOT NULL DEFAULT 'Points',
+    "defaultCurrencySymbol" TEXT NOT NULL DEFAULT '₹',
+    "defaultCurrencyCode" TEXT NOT NULL DEFAULT 'INR',
+    "referralEnabled" BOOLEAN NOT NULL DEFAULT false,
+    "referralRewardPoints" INTEGER NOT NULL DEFAULT 0,
+    "referedBonusPoints" INTEGER NOT NULL DEFAULT 0,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -95,41 +102,46 @@ CREATE TABLE "business" (
 );
 
 -- CreateTable
-CREATE TABLE "admin" (
+CREATE TABLE "category" (
     "id" TEXT NOT NULL,
-    "userId" TEXT NOT NULL,
     "businessId" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "description" TEXT,
+    "sortOrder" INTEGER NOT NULL DEFAULT 0,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "admin_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "category_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "cashier" (
+CREATE TABLE "sku" (
     "id" TEXT NOT NULL,
-    "userId" TEXT NOT NULL,
-    "cashierLinkSlug" TEXT NOT NULL,
-    "password" TEXT NOT NULL,
     "businessId" TEXT NOT NULL,
+    "categoryId" TEXT,
+    "sku" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "description" TEXT,
+    "price" DOUBLE PRECISION,
+    "unit" TEXT,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "cashier_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "sku_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "customer" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
+    "email" TEXT NOT NULL,
     "addressLine1" TEXT,
     "addressLine2" TEXT,
     "city" TEXT,
     "state" TEXT,
     "country" TEXT,
     "postalCode" TEXT,
-    "referralSlug" TEXT NOT NULL,
-    "referredById" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -138,10 +150,16 @@ CREATE TABLE "customer" (
 
 -- CreateTable
 CREATE TABLE "business_customer" (
+    "slugId" TEXT NOT NULL,
     "businessId" TEXT NOT NULL,
     "customerId" TEXT NOT NULL,
-    "currentpoints" INTEGER NOT NULL DEFAULT 0,
-    "storeCredit" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "referralSlug" TEXT NOT NULL,
+    "referredByBusinessId" TEXT,
+    "referredByCustomerId" TEXT,
+    "tags" TEXT[],
+    "isBlocked" BOOLEAN NOT NULL DEFAULT false,
+    "blockedReason" TEXT,
+    "pointsBalance" INTEGER NOT NULL DEFAULT 0,
     "currentTierId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -152,7 +170,6 @@ CREATE TABLE "business_customer" (
 -- CreateTable
 CREATE TABLE "feedback_config" (
     "id" TEXT NOT NULL,
-    "businessId" TEXT NOT NULL,
     "brandingId" TEXT,
     "positiveFollowUp" TEXT,
     "negativeFollowUp" TEXT,
@@ -245,7 +262,6 @@ CREATE TABLE "loyalty" (
     "whatsappEnabled" BOOLEAN NOT NULL DEFAULT false,
     "emailEnabled" BOOLEAN NOT NULL DEFAULT false,
     "smsEnabled" BOOLEAN NOT NULL DEFAULT false,
-    "customerNumbers" TEXT[],
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -267,29 +283,16 @@ CREATE TABLE "loyalty_tier" (
 );
 
 -- CreateTable
-CREATE TABLE "loyalty_bonus" (
+CREATE TABLE "points_transaction" (
     "id" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
-    "description" TEXT,
-    "bonusPoints" INTEGER NOT NULL,
-    "loyaltyId" TEXT NOT NULL,
+    "businessId" TEXT NOT NULL,
+    "customerId" TEXT NOT NULL,
+    "amount" INTEGER NOT NULL,
+    "type" "TransactionType" NOT NULL,
+    "source" "TransactionSource" NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "loyalty_bonus_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "loyalty_message" (
-    "id" TEXT NOT NULL,
-    "messageType" "LoyaltyMessageType" NOT NULL,
-    "content" TEXT NOT NULL,
-    "isActive" BOOLEAN NOT NULL DEFAULT true,
-    "loyaltyId" TEXT NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "loyalty_message_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "points_transaction_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -410,11 +413,13 @@ CREATE TABLE "qr_action" (
 -- CreateTable
 CREATE TABLE "referral_log" (
     "id" TEXT NOT NULL,
-    "referrerId" TEXT NOT NULL,
+    "slug" TEXT NOT NULL,
+    "referrerBusinessId" TEXT NOT NULL,
+    "referrerCustomerId" TEXT NOT NULL,
     "newCustomerPhone" TEXT NOT NULL,
     "newCustomerName" TEXT,
-    "rewardGiven" BOOLEAN NOT NULL DEFAULT false,
-    "rewardDetails" TEXT,
+    "becameCustomer" BOOLEAN NOT NULL DEFAULT false,
+    "rewardPoints" INTEGER NOT NULL DEFAULT 0,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "referral_log_pkey" PRIMARY KEY ("id")
@@ -423,15 +428,10 @@ CREATE TABLE "referral_log" (
 -- CreateTable
 CREATE TABLE "scratch_card" (
     "id" TEXT NOT NULL,
-    "title" TEXT NOT NULL,
-    "description" TEXT,
     "slug" TEXT NOT NULL,
     "brandingId" TEXT,
     "targetGroup" "CustomerTargetGroup" NOT NULL DEFAULT 'NEW_AND_EXISTING',
     "allowMultipleRedemptions" BOOLEAN NOT NULL DEFAULT false,
-    "redirectUrl" TEXT,
-    "onlineReviewPlatform" "OnlineReviewPlatform",
-    "reviewPlatformUrl" TEXT,
     "businessId" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -461,14 +461,27 @@ CREATE TABLE "scratch_card_benefit" (
 CREATE TABLE "scratch_card_response" (
     "id" TEXT NOT NULL,
     "scratchCardId" TEXT NOT NULL,
+    "benefitId" TEXT,
     "businessId" TEXT NOT NULL,
     "customerId" TEXT NOT NULL,
     "billId" TEXT,
-    "benefitId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "scratch_card_response_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "scratch_card_action" (
+    "id" TEXT NOT NULL,
+    "platform" TEXT NOT NULL,
+    "label" TEXT NOT NULL,
+    "url" TEXT NOT NULL,
+    "scratchCardId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "scratch_card_action_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -496,8 +509,33 @@ CREATE TABLE "user" (
     "image" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
+    "role" "Role" NOT NULL DEFAULT 'CUSTOMER',
 
     CONSTRAINT "user_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "admin" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "businessId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "admin_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "cashier" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "cashierLinkSlug" TEXT NOT NULL,
+    "password" TEXT NOT NULL,
+    "businessId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "cashier_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -510,6 +548,7 @@ CREATE TABLE "session" (
     "ipAddress" TEXT,
     "userAgent" TEXT,
     "userId" TEXT NOT NULL,
+    "role" TEXT,
 
     CONSTRAINT "session_pkey" PRIMARY KEY ("id")
 );
@@ -545,6 +584,14 @@ CREATE TABLE "verification" (
     CONSTRAINT "verification_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "_BillToSku" (
+    "A" TEXT NOT NULL,
+    "B" TEXT NOT NULL,
+
+    CONSTRAINT "_BillToSku_AB_pkey" PRIMARY KEY ("A","B")
+);
+
 -- CreateIndex
 CREATE INDEX "bill_businessId_idx" ON "bill"("businessId");
 
@@ -558,52 +605,52 @@ CREATE UNIQUE INDEX "bill_businessId_billNumber_key" ON "bill"("businessId", "bi
 CREATE UNIQUE INDEX "branding_businessId_key" ON "branding"("businessId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "admin_userId_key" ON "admin"("userId");
+CREATE UNIQUE INDEX "business_slug_key" ON "business"("slug");
 
 -- CreateIndex
-CREATE INDEX "admin_userId_idx" ON "admin"("userId");
+CREATE INDEX "business_id_idx" ON "business"("id");
 
 -- CreateIndex
-CREATE INDEX "admin_businessId_idx" ON "admin"("businessId");
+CREATE INDEX "business_slug_idx" ON "business"("slug");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "cashier_userId_key" ON "cashier"("userId");
+CREATE INDEX "category_businessId_idx" ON "category"("businessId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "cashier_cashierLinkSlug_key" ON "cashier"("cashierLinkSlug");
+CREATE INDEX "sku_businessId_idx" ON "sku"("businessId");
 
 -- CreateIndex
-CREATE INDEX "cashier_userId_idx" ON "cashier"("userId");
+CREATE INDEX "sku_categoryId_idx" ON "sku"("categoryId");
 
 -- CreateIndex
-CREATE INDEX "cashier_businessId_idx" ON "cashier"("businessId");
+CREATE UNIQUE INDEX "sku_businessId_sku_key" ON "sku"("businessId", "sku");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "customer_userId_key" ON "customer"("userId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "customer_referralSlug_key" ON "customer"("referralSlug");
+CREATE UNIQUE INDEX "business_customer_slugId_key" ON "business_customer"("slugId");
 
 -- CreateIndex
-CREATE INDEX "customer_referralSlug_idx" ON "customer"("referralSlug");
+CREATE UNIQUE INDEX "business_customer_referralSlug_key" ON "business_customer"("referralSlug");
 
 -- CreateIndex
-CREATE INDEX "customer_referredById_idx" ON "customer"("referredById");
+CREATE INDEX "business_customer_referralSlug_idx" ON "business_customer"("referralSlug");
+
+-- CreateIndex
+CREATE INDEX "business_customer_referredByBusinessId_referredByCustomerId_idx" ON "business_customer"("referredByBusinessId", "referredByCustomerId");
 
 -- CreateIndex
 CREATE INDEX "business_customer_currentTierId_idx" ON "business_customer"("currentTierId");
 
 -- CreateIndex
+CREATE INDEX "business_customer_slugId_idx" ON "business_customer"("slugId");
+
+-- CreateIndex
 CREATE INDEX "business_customer_customerId_idx" ON "business_customer"("customerId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "feedback_config_businessId_key" ON "feedback_config"("businessId");
-
--- CreateIndex
 CREATE UNIQUE INDEX "feedback_config_brandingId_key" ON "feedback_config"("brandingId");
-
--- CreateIndex
-CREATE INDEX "feedback_config_businessId_idx" ON "feedback_config"("businessId");
 
 -- CreateIndex
 CREATE INDEX "feedback_question_configId_idx" ON "feedback_question"("configId");
@@ -633,10 +680,13 @@ CREATE INDEX "loyalty_businessId_idx" ON "loyalty"("businessId");
 CREATE INDEX "loyalty_tier_loyaltyId_idx" ON "loyalty_tier"("loyaltyId");
 
 -- CreateIndex
-CREATE INDEX "loyalty_bonus_loyaltyId_idx" ON "loyalty_bonus"("loyaltyId");
+CREATE INDEX "points_transaction_businessId_customerId_idx" ON "points_transaction"("businessId", "customerId");
 
 -- CreateIndex
-CREATE INDEX "loyalty_message_loyaltyId_idx" ON "loyalty_message"("loyaltyId");
+CREATE INDEX "points_transaction_source_idx" ON "points_transaction"("source");
+
+-- CreateIndex
+CREATE INDEX "points_transaction_type_idx" ON "points_transaction"("type");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "membership_brandingId_key" ON "membership"("brandingId");
@@ -675,13 +725,25 @@ CREATE INDEX "qr_benefit_qrId_idx" ON "qr_benefit"("qrId");
 CREATE INDEX "qr_action_qrId_idx" ON "qr_action"("qrId");
 
 -- CreateIndex
-CREATE INDEX "referral_log_referrerId_idx" ON "referral_log"("referrerId");
+CREATE UNIQUE INDEX "referral_log_slug_key" ON "referral_log"("slug");
+
+-- CreateIndex
+CREATE INDEX "referral_log_slug_idx" ON "referral_log"("slug");
+
+-- CreateIndex
+CREATE INDEX "referral_log_referrerBusinessId_referrerCustomerId_idx" ON "referral_log"("referrerBusinessId", "referrerCustomerId");
+
+-- CreateIndex
+CREATE INDEX "referral_log_becameCustomer_idx" ON "referral_log"("becameCustomer");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "scratch_card_slug_key" ON "scratch_card"("slug");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "scratch_card_brandingId_key" ON "scratch_card"("brandingId");
+
+-- CreateIndex
+CREATE INDEX "scratch_card_slug_idx" ON "scratch_card"("slug");
 
 -- CreateIndex
 CREATE INDEX "scratch_card_businessId_idx" ON "scratch_card"("businessId");
@@ -700,6 +762,9 @@ CREATE INDEX "scratch_card_response_billId_idx" ON "scratch_card_response"("bill
 
 -- CreateIndex
 CREATE UNIQUE INDEX "scratch_card_response_scratchCardId_businessId_customerId_b_key" ON "scratch_card_response"("scratchCardId", "businessId", "customerId", "billId");
+
+-- CreateIndex
+CREATE INDEX "scratch_card_action_scratchCardId_idx" ON "scratch_card_action"("scratchCardId");
 
 -- CreateIndex
 CREATE INDEX "terms_and_conditions_loyaltyId_idx" ON "terms_and_conditions"("loyaltyId");
@@ -732,6 +797,27 @@ CREATE UNIQUE INDEX "user_email_key" ON "user"("email");
 CREATE UNIQUE INDEX "user_phoneNumber_key" ON "user"("phoneNumber");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "admin_userId_key" ON "admin"("userId");
+
+-- CreateIndex
+CREATE INDEX "admin_userId_idx" ON "admin"("userId");
+
+-- CreateIndex
+CREATE INDEX "admin_businessId_idx" ON "admin"("businessId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "cashier_userId_key" ON "cashier"("userId");
+
+-- CreateIndex
+CREATE INDEX "cashier_userId_idx" ON "cashier"("userId");
+
+-- CreateIndex
+CREATE INDEX "cashier_businessId_idx" ON "cashier"("businessId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "cashier_cashierLinkSlug_businessId_key" ON "cashier"("cashierLinkSlug", "businessId");
+
+-- CreateIndex
 CREATE INDEX "session_userId_idx" ON "session"("userId");
 
 -- CreateIndex
@@ -743,6 +829,9 @@ CREATE INDEX "account_userId_idx" ON "account"("userId");
 -- CreateIndex
 CREATE INDEX "verification_identifier_idx" ON "verification"("identifier");
 
+-- CreateIndex
+CREATE INDEX "_BillToSku_B_index" ON "_BillToSku"("B");
+
 -- AddForeignKey
 ALTER TABLE "bill" ADD CONSTRAINT "bill_businessId_customerId_fkey" FOREIGN KEY ("businessId", "customerId") REFERENCES "business_customer"("businessId", "customerId") ON DELETE CASCADE ON UPDATE CASCADE;
 
@@ -750,22 +839,16 @@ ALTER TABLE "bill" ADD CONSTRAINT "bill_businessId_customerId_fkey" FOREIGN KEY 
 ALTER TABLE "branding" ADD CONSTRAINT "branding_businessId_fkey" FOREIGN KEY ("businessId") REFERENCES "business"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "admin" ADD CONSTRAINT "admin_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "category" ADD CONSTRAINT "category_businessId_fkey" FOREIGN KEY ("businessId") REFERENCES "business"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "admin" ADD CONSTRAINT "admin_businessId_fkey" FOREIGN KEY ("businessId") REFERENCES "business"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "sku" ADD CONSTRAINT "sku_businessId_fkey" FOREIGN KEY ("businessId") REFERENCES "business"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "cashier" ADD CONSTRAINT "cashier_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "cashier" ADD CONSTRAINT "cashier_businessId_fkey" FOREIGN KEY ("businessId") REFERENCES "business"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "sku" ADD CONSTRAINT "sku_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "category"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "customer" ADD CONSTRAINT "customer_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "customer" ADD CONSTRAINT "customer_referredById_fkey" FOREIGN KEY ("referredById") REFERENCES "customer"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "business_customer" ADD CONSTRAINT "business_customer_businessId_fkey" FOREIGN KEY ("businessId") REFERENCES "business"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -774,10 +857,10 @@ ALTER TABLE "business_customer" ADD CONSTRAINT "business_customer_businessId_fke
 ALTER TABLE "business_customer" ADD CONSTRAINT "business_customer_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "customer"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "business_customer" ADD CONSTRAINT "business_customer_currentTierId_fkey" FOREIGN KEY ("currentTierId") REFERENCES "loyalty_tier"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "business_customer" ADD CONSTRAINT "business_customer_referredByBusinessId_referredByCustomerI_fkey" FOREIGN KEY ("referredByBusinessId", "referredByCustomerId") REFERENCES "business_customer"("businessId", "customerId") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "feedback_config" ADD CONSTRAINT "feedback_config_businessId_fkey" FOREIGN KEY ("businessId") REFERENCES "business"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "business_customer" ADD CONSTRAINT "business_customer_currentTierId_fkey" FOREIGN KEY ("currentTierId") REFERENCES "loyalty_tier"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "feedback_config" ADD CONSTRAINT "feedback_branding_fkey" FOREIGN KEY ("brandingId") REFERENCES "branding"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -807,10 +890,7 @@ ALTER TABLE "loyalty" ADD CONSTRAINT "loyalty_branding_fkey" FOREIGN KEY ("brand
 ALTER TABLE "loyalty_tier" ADD CONSTRAINT "loyalty_tier_loyaltyId_fkey" FOREIGN KEY ("loyaltyId") REFERENCES "loyalty"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "loyalty_bonus" ADD CONSTRAINT "loyalty_bonus_loyaltyId_fkey" FOREIGN KEY ("loyaltyId") REFERENCES "loyalty"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "loyalty_message" ADD CONSTRAINT "loyalty_message_loyaltyId_fkey" FOREIGN KEY ("loyaltyId") REFERENCES "loyalty"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "points_transaction" ADD CONSTRAINT "points_transaction_businessId_customerId_fkey" FOREIGN KEY ("businessId", "customerId") REFERENCES "business_customer"("businessId", "customerId") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "membership" ADD CONSTRAINT "membership_businessId_fkey" FOREIGN KEY ("businessId") REFERENCES "business"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -843,7 +923,7 @@ ALTER TABLE "qr_benefit" ADD CONSTRAINT "qr_benefit_qrId_fkey" FOREIGN KEY ("qrI
 ALTER TABLE "qr_action" ADD CONSTRAINT "qr_action_qrId_fkey" FOREIGN KEY ("qrId") REFERENCES "qr"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "referral_log" ADD CONSTRAINT "referral_log_referrerId_fkey" FOREIGN KEY ("referrerId") REFERENCES "customer"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "referral_log" ADD CONSTRAINT "referral_log_referrerBusinessId_referrerCustomerId_fkey" FOREIGN KEY ("referrerBusinessId", "referrerCustomerId") REFERENCES "business_customer"("businessId", "customerId") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "scratch_card" ADD CONSTRAINT "scratch_card_brandingId_fkey" FOREIGN KEY ("brandingId") REFERENCES "branding"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -858,13 +938,16 @@ ALTER TABLE "scratch_card_benefit" ADD CONSTRAINT "scratch_card_benefit_scratchC
 ALTER TABLE "scratch_card_response" ADD CONSTRAINT "scratch_card_response_scratchCardId_fkey" FOREIGN KEY ("scratchCardId") REFERENCES "scratch_card"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "scratch_card_response" ADD CONSTRAINT "scratch_card_response_benefitId_fkey" FOREIGN KEY ("benefitId") REFERENCES "scratch_card_benefit"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "scratch_card_response" ADD CONSTRAINT "scratch_card_response_businessId_customerId_fkey" FOREIGN KEY ("businessId", "customerId") REFERENCES "business_customer"("businessId", "customerId") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "scratch_card_response" ADD CONSTRAINT "scratch_card_response_billId_fkey" FOREIGN KEY ("billId") REFERENCES "bill"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "scratch_card_response" ADD CONSTRAINT "scratch_card_response_benefitId_fkey" FOREIGN KEY ("benefitId") REFERENCES "scratch_card_benefit"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "scratch_card_action" ADD CONSTRAINT "scratch_card_action_scratchCardId_fkey" FOREIGN KEY ("scratchCardId") REFERENCES "scratch_card"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "terms_and_conditions" ADD CONSTRAINT "terms_and_conditions_loyaltyId_fkey" FOREIGN KEY ("loyaltyId") REFERENCES "loyalty"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -879,7 +962,25 @@ ALTER TABLE "terms_and_conditions" ADD CONSTRAINT "terms_and_conditions_qrId_fke
 ALTER TABLE "terms_and_conditions" ADD CONSTRAINT "terms_and_conditions_loyaltyTierId_fkey" FOREIGN KEY ("loyaltyTierId") REFERENCES "loyalty_tier"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "admin" ADD CONSTRAINT "admin_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "admin" ADD CONSTRAINT "admin_businessId_fkey" FOREIGN KEY ("businessId") REFERENCES "business"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "cashier" ADD CONSTRAINT "cashier_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "cashier" ADD CONSTRAINT "cashier_businessId_fkey" FOREIGN KEY ("businessId") REFERENCES "business"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "session" ADD CONSTRAINT "session_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "account" ADD CONSTRAINT "account_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "_BillToSku" ADD CONSTRAINT "_BillToSku_A_fkey" FOREIGN KEY ("A") REFERENCES "bill"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "_BillToSku" ADD CONSTRAINT "_BillToSku_B_fkey" FOREIGN KEY ("B") REFERENCES "sku"("id") ON DELETE CASCADE ON UPDATE CASCADE;

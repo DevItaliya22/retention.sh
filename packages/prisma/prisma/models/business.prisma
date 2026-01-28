@@ -25,10 +25,62 @@ model Business {
   qrs          Qr[]
   scratchCards ScratchCard[]
 
+  categories Category[]
+  skus       Sku[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([id])
   @@index([slug])
   @@map("business")
+}
+
+// Product/service category for a business (e.g. "Beverages", "Apparel")
+model Category {
+  id String @id @default(uuid())
+
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  name        String
+  description String?
+  sortOrder   Int     @default(0) // display order
+
+  skus Sku[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([businessId])
+  @@map("category")
+}
+
+// SKU / item the business sells to customers
+model Sku {
+  id String @id @default(uuid())
+
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  sku         String // stock-keeping unit code, unique per business (e.g. "COKE-330")
+  name        String
+  description String?
+  price       Float? // unit price
+  unit        String? // e.g. "piece", "kg", "liter"
+  isActive    Boolean @default(true)
+
+  // All bills this SKU has been used in
+  bills Bill[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([businessId, sku])
+  @@index([businessId])
+  @@index([categoryId])
+  @@map("sku")
 }

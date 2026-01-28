@@ -11,6 +11,9 @@ model Bill {
   // Relation to scratch cards
   scratchCardResponses ScratchCardResponse[]
 
+  // SKUs on this bill (one bill can have multiple SKUs)
+  skus Sku[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

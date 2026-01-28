@@ -1,24 +1,36 @@
+"use client";
+
 import { PageLayout, ScaffoldContainer } from "@/components/layouts";
-import { Settings, Users } from "lucide-react";
+import { Package, Settings, Users } from "lucide-react";
+import { usePathname } from "next/navigation";
 import { ReactNode } from "react";
 
 interface SettingsLayoutProps {
   children: ReactNode;
 }
 
-export default async function SettingsLayout({
-  children,
-}: SettingsLayoutProps) {
+export default function SettingsLayout({ children }: SettingsLayoutProps) {
+  const pathname = usePathname();
+
   const navigationItems = [
     {
       label: "General",
       href: `/settings`,
       icon: <Settings className="h-4 w-4" />,
+      active: pathname === "/settings",
     },
     {
       label: "Cashier",
       href: `/settings/cashier`,
       icon: <Users className="h-4 w-4" />,
+      active: pathname === "/settings/cashier",
+    },
+    {
+      label: "SKU",
+      href: `/settings/sku`,
+      icon: <Package className="h-4 w-4" />,
+      active:
+        pathname === "/settings/sku" || pathname === "/settings/sku/categories",
     },
   ];
 

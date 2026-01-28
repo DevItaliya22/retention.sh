@@ -2,11 +2,11 @@
 
 import { useSessionContext } from "@/hooks/misc/useSessionContext";
 import { motion } from "framer-motion";
-import { FileText, Inbox, Settings, Users } from "lucide-react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import * as React from "react";
-
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@reelo/ui/components";
 import {
   Sidebar,
   SidebarContent,
@@ -15,10 +15,25 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarRail,
   SidebarHeader as UISidebarHeader,
   useSidebar,
 } from "@reelo/ui/components/sidebar";
+import {
+  ChevronRight,
+  FileText,
+  Inbox,
+  Layers,
+  Package,
+  Settings,
+  Users,
+} from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import * as React from "react";
 import { SidebarHeader } from "./sidebar-header";
 import { UserSidebarFooter } from "./UserSidebarFooter";
 
@@ -97,18 +112,72 @@ export function SimpleSidebar({
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={pathname === "/settings"}
-                    tooltip="Settings"
-                  >
-                    <Link href="/settings">
-                      <Settings className="h-4 w-4" />
-                      <span className="sidebar-text">Settings</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+                <Collapsible
+                  asChild
+                  defaultOpen={
+                    pathname === "/settings" ||
+                    pathname.startsWith("/settings/")
+                  }
+                  className="group/collapsible"
+                >
+                  <SidebarMenuItem>
+                    <CollapsibleTrigger asChild>
+                      <SidebarMenuButton
+                        isActive={
+                          pathname === "/settings" ||
+                          pathname.startsWith("/settings/")
+                        }
+                        tooltip="Settings"
+                      >
+                        <Settings className="h-4 w-4" />
+                        <span className="sidebar-text">Settings</span>
+                        <ChevronRight className="ml-auto size-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                      </SidebarMenuButton>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <SidebarMenuSub>
+                        <SidebarMenuSubItem>
+                          <SidebarMenuSubButton
+                            asChild
+                            isActive={pathname === "/settings"}
+                          >
+                            <Link href="/settings">General</Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                        <SidebarMenuSubItem>
+                          <SidebarMenuSubButton
+                            asChild
+                            isActive={pathname === "/settings/cashier"}
+                          >
+                            <Link href="/settings/cashier">Cashier</Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                        <SidebarMenuSubItem>
+                          <SidebarMenuSubButton
+                            asChild
+                            isActive={pathname === "/settings/sku"}
+                          >
+                            <Link href="/settings/sku">
+                              {/* <Package className="h-4 w-4" /> */}
+                              SKU
+                            </Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                        <SidebarMenuSubItem>
+                          <SidebarMenuSubButton
+                            asChild
+                            isActive={pathname === "/settings/sku/categories"}
+                          >
+                            <Link href="/settings/sku/categories">
+                              {/* <Layers className="h-4 w-4" /> */}
+                              Categories
+                            </Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      </SidebarMenuSub>
+                    </CollapsibleContent>
+                  </SidebarMenuItem>
+                </Collapsible>
               </SidebarMenu>
             </SidebarGroup>
           </motion.div>
