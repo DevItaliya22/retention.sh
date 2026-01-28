@@ -11,8 +11,7 @@ model Bill {
   // Relation to scratch cards
   scratchCardResponses ScratchCardResponse[]
 
-  // SKUs on this bill (one bill can have multiple SKUs)
-  skus Sku[]
+  lineItems BillLineItem[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -21,4 +20,25 @@ model Bill {
   @@index([businessId])
   @@index([customerId])
   @@map("bill")
+}
+
+model BillLineItem {
+  id String @id @default(uuid())
+
+  billId String
+  bill   Bill   @relation(fields: [billId], references: [id], onDelete: Cascade)
+
+  skuId String
+  sku   Sku    @relation(fields: [skuId], references: [id], onDelete: Cascade)
+
+  qty       Int    @default(1)
+  unitPrice Float? // price at time of purchase (optional; can use sku.price)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([billId, skuId])
+  @@index([billId])
+  @@index([skuId])
+  @@map("bill_line_item")
 }

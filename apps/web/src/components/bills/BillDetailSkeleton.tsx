@@ -77,6 +77,29 @@ export function BillDetailSkeleton() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Line items skeleton */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Skeleton className="size-4 rounded" />
+            Line items
+          </CardTitle>
+          <CardDescription>SKUs and quantities on this bill</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2 rounded-md border p-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex items-center gap-4">
+                <Skeleton className="h-8 w-24" />
+                <Skeleton className="h-8 w-32" />
+                <Skeleton className="h-8 w-16" />
+                <Skeleton className="h-8 w-20" />
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

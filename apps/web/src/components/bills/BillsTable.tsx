@@ -47,6 +47,7 @@ export function BillsTable() {
         customerName: "",
         customerPhone: null,
         customerEmail: "",
+        lineItems: [],
         createdAt: "",
         updatedAt: "",
       })) as Bill[];
@@ -60,6 +61,7 @@ export function BillsTable() {
           customerName: "",
           customerPhone: null,
           customerEmail: "",
+          lineItems: [],
           createdAt: "",
           updatedAt: "",
         },
@@ -137,6 +139,40 @@ export function BillsTable() {
           placeholder: "Filter by customer name...",
           maxLength: 255,
         },
+      },
+      {
+        id: "items",
+        accessorKey: "lineItems",
+        size: 100,
+        minSize: 80,
+        maxSize: 120,
+        header: () => (
+          <div className="text-center">
+            <span>Items</span>
+          </div>
+        ),
+        cell: ({ row }) => {
+          const bill = row.original;
+          if (bill.id === "empty-state") {
+            return null;
+          }
+          if (isLoading && bill.id.startsWith("skeleton-")) {
+            return (
+              <div className="flex justify-center">
+                <Skeleton className="h-4 w-8" />
+              </div>
+            );
+          }
+          const count = bill.lineItems?.length ?? 0;
+          const totalQty =
+            bill.lineItems?.reduce((s, li) => s + li.qty, 0) ?? 0;
+          return (
+            <div className="flex justify-center text-muted-foreground text-sm tabular-nums">
+              {count === 0 ? "—" : totalQty}
+            </div>
+          );
+        },
+        enableSorting: false,
       },
       {
         id: "amount",

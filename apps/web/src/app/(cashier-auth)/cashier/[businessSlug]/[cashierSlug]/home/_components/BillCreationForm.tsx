@@ -1,7 +1,9 @@
 "use client";
 
 import { useBillCreation } from "@/hooks/cashier/useBillCreation";
+import { useCashierSkusQuery } from "@/hooks/cashier/useCashierSkusQuery";
 import { billFormSchema } from "@/lib/schemas/bill";
+import type { BillLineItemInput } from "@/lib/schemas/bill";
 import { getErrorMessageFromResponse } from "@/lib/utils/error-handler";
 import {
   Button,
@@ -13,11 +15,22 @@ import {
   Input,
   Label,
   PhoneInput,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@reelo/ui/components";
-import { CheckCircle2, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { CheckCircle2, Plus, Trash2, X } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useCashierContext } from "../_context/CashierContext";
+
+interface LineItemRow {
+  skuId: string;
+  qty: string;
+  unitPrice: string;
+}
 
 export function BillCreationForm() {
   const { business } = useCashierContext();
@@ -35,6 +48,9 @@ export function BillCreationForm() {
     resetMutation,
   } = useBillCreation(business.id);
 
+  const { data: skusData } = useCashierSkusQuery();
+  const skuOptions = skusData?.items ?? [];
+
   const [billNumber, setBillNumber] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [name, setName] = useState("");
@@ -48,9 +64,45 @@ export function BillCreationForm() {
   const [amount, setAmount] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lineItems, setLineItems] = useState<LineItemRow[]>([]);
 
   const suggestionsRef = useRef<HTMLDivElement>(null);
   const phoneInputRef = useRef<HTMLDivElement>(null);
+
+  const handleReset = useCallback(() => {
+    setBillNumber("");
+    setPhoneNumber("");
+    setName("");
+    setEmail("");
+    setAddressLine1("");
+    setAddressLine2("");
+    setCity("");
+    setState("");
+    setCountry("");
+    setPostalCode("");
+    setAmount("");
+    setLineItems([]);
+    clearSelectedCustomer();
+    setError(null);
+    setShowSuggestions(false);
+  }, [clearSelectedCustomer]);
+
+  const addLineItem = useCallback(() => {
+    setLineItems((prev) => [...prev, { skuId: "", qty: "1", unitPrice: "" }]);
+  }, []);
+
+  const removeLineItem = useCallback((index: number) => {
+    setLineItems((prev) => prev.filter((_, i) => i !== index));
+  }, []);
+
+  const updateLineItem = useCallback(
+    (index: number, field: keyof LineItemRow, value: string) => {
+      setLineItems((prev) =>
+        prev.map((row, i) => (i === index ? { ...row, [field]: value } : row)),
+      );
+    },
+    [],
+  );
 
   useEffect(() => {
     if (phoneNumber.length >= 4) {
@@ -80,7 +132,7 @@ export function BillCreationForm() {
       handleReset();
       resetMutation();
     }
-  }, [createSuccess, resetMutation]);
+  }, [createSuccess, resetMutation, handleReset]);
 
   useEffect(() => {
     if (createError) {
@@ -111,26 +163,32 @@ export function BillCreationForm() {
     };
   }, []);
 
-  const handleReset = () => {
-    setBillNumber("");
-    setPhoneNumber("");
-    setName("");
-    setEmail("");
-    setAddressLine1("");
-    setAddressLine2("");
-    setCity("");
-    setState("");
-    setCountry("");
-    setPostalCode("");
-    setAmount("");
-    clearSelectedCustomer();
-    setError(null);
-    setShowSuggestions(false);
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    // Parse and merge by skuId (DB allows one row per SKU per bill)
+    const bySku = new Map<string, { qty: number; unitPrice?: number }>();
+    for (const row of lineItems) {
+      if (!row.skuId.trim()) continue;
+      const qty = parseInt(row.qty, 10);
+      if (Number.isNaN(qty) || qty < 1) continue;
+      const rawPrice = row.unitPrice.trim();
+      const unitPrice =
+        rawPrice && !Number.isNaN(parseFloat(rawPrice))
+          ? parseFloat(rawPrice)
+          : undefined;
+      const existing = bySku.get(row.skuId);
+      if (existing) {
+        existing.qty += qty;
+        if (unitPrice != null) existing.unitPrice = unitPrice;
+      } else {
+        bySku.set(row.skuId, { qty, unitPrice });
+      }
+    }
+    const parsedLineItems: BillLineItemInput[] = Array.from(
+      bySku.entries(),
+    ).map(([skuId, { qty, unitPrice }]) => ({ skuId, qty, unitPrice }));
 
     try {
       const validationResult = billFormSchema.safeParse({
@@ -145,6 +203,7 @@ export function BillCreationForm() {
         country: country || null,
         postalCode: postalCode || null,
         amount: amount ? parseFloat(amount) : null,
+        lineItems: parsedLineItems.length > 0 ? parsedLineItems : undefined,
       });
 
       if (!validationResult.success) {
@@ -373,6 +432,112 @@ export function BillCreationForm() {
                 disabled={isCreating}
               />
             </div>
+          </div>
+
+          {/* Line items */}
+          <div className="space-y-3 rounded-lg border p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-base">Line items</Label>
+                <p className="text-muted-foreground text-sm">
+                  Optional: add SKUs and quantities for this bill
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={addLineItem}
+                disabled={isCreating || skuOptions.length === 0}
+                className="gap-2"
+              >
+                <Plus className="size-4" />
+                Add item
+              </Button>
+            </div>
+            {skuOptions.length === 0 && (
+              <p className="text-muted-foreground text-sm">
+                No SKUs set up yet. Add SKUs in Settings to use line items.
+              </p>
+            )}
+            {lineItems.length > 0 && (
+              <div className="space-y-3">
+                {lineItems.map((row, index) => (
+                  <div
+                    key={index}
+                    className="flex flex-wrap items-end gap-3 rounded-md border bg-muted/30 p-3"
+                  >
+                    <div className="min-w-[180px] flex-1 space-y-2">
+                      <Label className="text-xs">SKU</Label>
+                      <Select
+                        value={row.skuId || "__none__"}
+                        onValueChange={(v) =>
+                          updateLineItem(
+                            index,
+                            "skuId",
+                            v === "__none__" ? "" : v,
+                          )
+                        }
+                        disabled={isCreating}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select SKU" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">Select SKU</SelectItem>
+                          {skuOptions.map((s) => (
+                            <SelectItem key={s.id} value={s.id}>
+                              {s.sku} — {s.name}
+                              {s.price != null
+                                ? ` (₹${s.price.toFixed(2)})`
+                                : ""}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="w-24 space-y-2">
+                      <Label className="text-xs">Qty</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        value={row.qty}
+                        onChange={(e) =>
+                          updateLineItem(index, "qty", e.target.value)
+                        }
+                        disabled={isCreating}
+                        placeholder="1"
+                      />
+                    </div>
+                    <div className="w-28 space-y-2">
+                      <Label className="text-xs">Unit price (opt)</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min={0}
+                        value={row.unitPrice}
+                        onChange={(e) =>
+                          updateLineItem(index, "unitPrice", e.target.value)
+                        }
+                        disabled={isCreating}
+                        placeholder="—"
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeLineItem(index)}
+                      disabled={isCreating}
+                      aria-label="Remove line item"
+                      className="shrink-0 text-muted-foreground hover:text-destructive"
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="flex gap-2 pt-4">

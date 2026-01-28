@@ -157,8 +157,13 @@ export const POST = withCashierAuth(async (request: NextRequest, context) => {
       );
     }
 
-    const { billNumber, phoneNumber, amount, ...customerData } =
-      validation.data;
+    const {
+      billNumber,
+      phoneNumber,
+      amount,
+      lineItems = [],
+      ...customerData
+    } = validation.data;
 
     if (!phoneNumber || phoneNumber.trim() === "") {
       return NextResponse.json(
@@ -195,7 +200,19 @@ export const POST = withCashierAuth(async (request: NextRequest, context) => {
         amount: amount ?? null,
         businessId,
         customerId: customer.id,
-      } as any,
+        lineItems:
+          lineItems.length > 0
+            ? {
+                create: lineItems.map(
+                  (li: { skuId: string; qty: number; unitPrice?: number }) => ({
+                    skuId: li.skuId,
+                    qty: li.qty,
+                    unitPrice: li.unitPrice ?? undefined,
+                  }),
+                ),
+              }
+            : undefined,
+      },
     });
 
     return NextResponse.json({ bill });

@@ -129,6 +129,19 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
               },
             },
           },
+          lineItems: {
+            include: {
+              sku: {
+                select: {
+                  id: true,
+                  sku: true,
+                  name: true,
+                  price: true,
+                  unit: true,
+                },
+              },
+            },
+          },
         },
       }),
       prisma.bill.count({ where }),
@@ -141,6 +154,19 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
       customerName: bill.businessCustomer.customer.user.name,
       customerPhone: bill.businessCustomer.customer.user.phoneNumber,
       customerEmail: bill.businessCustomer.customer.email,
+      lineItems: bill.lineItems.map((li) => ({
+        id: li.id,
+        skuId: li.skuId,
+        qty: li.qty,
+        unitPrice: li.unitPrice,
+        sku: {
+          id: li.sku.id,
+          sku: li.sku.sku,
+          name: li.sku.name,
+          price: li.sku.price,
+          unit: li.sku.unit,
+        },
+      })),
       createdAt: bill.createdAt.toISOString(),
       updatedAt: bill.updatedAt.toISOString(),
     }));

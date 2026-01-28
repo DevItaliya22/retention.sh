@@ -48,6 +48,21 @@ export const GET = withAdminAuth<{ slugId: string }>(
           bills: {
             orderBy: { createdAt: "desc" },
             take: 50,
+            include: {
+              lineItems: {
+                include: {
+                  sku: {
+                    select: {
+                      id: true,
+                      sku: true,
+                      name: true,
+                      price: true,
+                      unit: true,
+                    },
+                  },
+                },
+              },
+            },
           },
         },
       });
@@ -73,6 +88,19 @@ export const GET = withAdminAuth<{ slugId: string }>(
           id: b.id,
           billNumber: b.billNumber,
           amount: b.amount,
+          lineItems: b.lineItems.map((li) => ({
+            id: li.id,
+            skuId: li.skuId,
+            qty: li.qty,
+            unitPrice: li.unitPrice,
+            sku: {
+              id: li.sku.id,
+              sku: li.sku.sku,
+              name: li.sku.name,
+              price: li.sku.price,
+              unit: li.sku.unit,
+            },
+          })),
           createdAt: b.createdAt.toISOString(),
         })),
       };

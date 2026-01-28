@@ -73,8 +73,7 @@ model Sku {
   unit        String? // e.g. "piece", "kg", "liter"
   isActive    Boolean @default(true)
 
-  // All bills this SKU has been used in
-  bills Bill[]
+  billLineItems BillLineItem[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

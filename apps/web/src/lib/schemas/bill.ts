@@ -20,6 +20,17 @@ export const amountSchema = z
   .optional()
   .nullable();
 
+/** Single line item: SKU + quantity (optional unit price at time of purchase) */
+export const billLineItemSchema = z.object({
+  skuId: z.string().uuid("Invalid SKU ID"),
+  qty: z.coerce.number().int().min(1, "Quantity must be at least 1"),
+  unitPrice: z.number().min(0).optional(),
+});
+
+export const billLineItemsSchema = z.array(billLineItemSchema);
+
+export type BillLineItemInput = z.infer<typeof billLineItemSchema>;
+
 export const billFormSchema = z.object({
   billNumber: billNumberSchema,
   phoneNumber: phoneNumberSchema,
@@ -62,6 +73,7 @@ export const billFormSchema = z.object({
     .optional()
     .nullable(),
   amount: amountSchema,
+  lineItems: billLineItemsSchema.optional(),
 });
 
 export const createBillApiSchema = billFormSchema.extend({

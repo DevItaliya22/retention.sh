@@ -13,7 +13,15 @@ import {
   Skeleton,
 } from "@reelo/ui/components";
 import { cn } from "@reelo/ui/lib/utils";
-import { CalendarDays, Mail, Phone, Receipt, User } from "lucide-react";
+import type { BillLineItemResponse } from "@/hooks/bills/useBillQuery";
+import {
+  CalendarDays,
+  Mail,
+  Package,
+  Phone,
+  Receipt,
+  User,
+} from "lucide-react";
 import Link from "next/link";
 import { useEffect } from "react";
 
@@ -157,7 +165,6 @@ export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
           </CardContent>
         </Card>
 
-        {/* Customer */}
         <Card>
           <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-4 pb-2">
             <div>
@@ -224,6 +231,72 @@ export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
           </CardContent>
         </Card>
       </div>
+
+      {/* Line items — full width below grid */}
+      {(bill?.lineItems?.length ?? 0) > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Package className="size-4 text-muted-foreground" />
+              Line items
+            </CardTitle>
+            <CardDescription>SKUs and quantities on this bill</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto rounded-md border">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-muted/50">
+                    <th className="px-4 py-3 text-left font-medium">
+                      SKU / Name
+                    </th>
+                    <th className="px-4 py-3 text-right font-medium">Qty</th>
+                    <th className="px-4 py-3 text-right font-medium">
+                      Unit price
+                    </th>
+                    <th className="px-4 py-3 text-right font-medium">
+                      Line total
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bill?.lineItems?.map((li: BillLineItemResponse) => {
+                    const price = li.unitPrice ?? li.sku.price ?? 0;
+                    const lineTotal = li.qty * price;
+                    return (
+                      <tr key={li.id} className="border-b last:border-b-0">
+                        <td className="px-4 py-3">
+                          <div className="font-mono text-muted-foreground text-xs">
+                            {li.sku.sku}
+                          </div>
+                          <div className="font-medium">{li.sku.name}</div>
+                        </td>
+                        <td className="px-4 py-3 text-right tabular-nums">
+                          {li.qty}
+                        </td>
+                        <td className="px-4 py-3 text-right tabular-nums">
+                          ₹
+                          {price.toLocaleString("en-IN", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </td>
+                        <td className="px-4 py-3 text-right font-medium tabular-nums">
+                          ₹
+                          {lineTotal.toLocaleString("en-IN", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

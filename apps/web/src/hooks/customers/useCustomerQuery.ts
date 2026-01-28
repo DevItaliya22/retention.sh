@@ -3,10 +3,27 @@
 import { fetcher } from "@/lib/fetcher";
 import { useQuery } from "@tanstack/react-query";
 
+export interface CustomerBillLineItemSku {
+  id: string;
+  sku: string;
+  name: string;
+  price: number | null;
+  unit: string | null;
+}
+
+export interface CustomerBillLineItem {
+  id: string;
+  skuId: string;
+  qty: number;
+  unitPrice: number | null;
+  sku: CustomerBillLineItemSku;
+}
+
 export interface CustomerBillSummary {
   id: string;
   billNumber: string;
   amount: number | null;
+  lineItems?: CustomerBillLineItem[];
   createdAt: string;
 }
 
