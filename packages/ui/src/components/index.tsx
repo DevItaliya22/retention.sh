@@ -49,6 +49,7 @@ export * from "./scroll-area";
 export * from "./search-box";
 export * from "./search-box-persisted";
 export * from "./select";
+export * from "./sheet-viewer";
 export * from "./separator";
 export * from "./sheet";
 export * from "./sidebar";

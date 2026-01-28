@@ -1,6 +1,7 @@
 export * from "./use-badge-overflow";
 export * from "./use-callback-ref";
 export * from "./use-data-grid";
+export * from "./use-fullscreen";
 export * from "./use-data-table";
 export * from "./use-debounced-callback";
 export * from "./use-keyboard-shortcut";
