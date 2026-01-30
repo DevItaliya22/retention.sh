@@ -21,12 +21,14 @@ interface DeleteCategoryButtonProps {
   categoryId: string;
   categoryName: string;
   skuCount: number;
+  subcategoryCount?: number;
 }
 
 export function DeleteCategoryButton({
   categoryId,
   categoryName,
   skuCount,
+  subcategoryCount = 0,
 }: DeleteCategoryButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
   const { delete: deleteCategory } = useManageCategory();
@@ -55,6 +57,13 @@ export function DeleteCategoryButton({
             <AlertDialogTitle>Delete Category</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to delete &quot;{categoryName}&quot;?
+              {subcategoryCount > 0 && (
+                <span className="mt-1 block">
+                  This will also delete {subcategoryCount} subcategory
+                  {subcategoryCount === 1 ? "" : "ies"} and uncategorize their
+                  SKUs.
+                </span>
+              )}
               {skuCount > 0 && (
                 <span className="mt-1 block">
                   {skuCount} SKU(s) in this category will be uncategorized.

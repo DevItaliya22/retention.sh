@@ -1,6 +1,8 @@
 "use client";
 
+import { useCategoriesListQuery } from "@/hooks/category/useCategoriesListQuery";
 import { useManageCategory } from "@/hooks/category/useManageCategory";
+import { getCategoryOptionsWithDepth } from "@/lib/category-tree";
 import { createCategorySchema } from "@/lib/schemas/sku";
 import { getErrorMessageFromResponse } from "@/lib/utils/error-handler";
 import {
@@ -18,9 +20,15 @@ import {
   FormLabel,
   FormMessage,
   Input,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@reelo/ui/components";
 import { DialogSection } from "@reelo/ui/components";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -30,10 +38,19 @@ type AddCategoryFormValues = z.input<typeof createCategorySchema>;
 interface AddCategoryModalProps {
   isOpen: boolean;
   onClose: () => void;
+  /** When opening "Add subcategory", pre-select this parent. */
+  defaultParentId?: string | null;
 }
 
-export function AddCategoryModal({ isOpen, onClose }: AddCategoryModalProps) {
+export function AddCategoryModal({
+  isOpen,
+  onClose,
+  defaultParentId = null,
+}: AddCategoryModalProps) {
   const { create } = useManageCategory();
+  const { data: categoriesData } = useCategoriesListQuery();
+  const items = categoriesData?.items ?? [];
+  const parentOptions = getCategoryOptionsWithDepth(items);
 
   const form = useForm<AddCategoryFormValues>({
     resolver: zodResolver(createCategorySchema),
@@ -41,8 +58,15 @@ export function AddCategoryModal({ isOpen, onClose }: AddCategoryModalProps) {
       name: "",
       description: "",
       sortOrder: 0,
+      parentId: null,
     },
   });
+
+  useEffect(() => {
+    if (isOpen) {
+      form.setValue("parentId", defaultParentId ?? null);
+    }
+  }, [isOpen, defaultParentId, form]);
 
   const handleSubmit = (data: AddCategoryFormValues) => {
     create.mutate(
@@ -50,6 +74,7 @@ export function AddCategoryModal({ isOpen, onClose }: AddCategoryModalProps) {
         ...data,
         description: data.description || null,
         sortOrder: data.sortOrder ?? 0,
+        parentId: data.parentId ?? null,
       },
       {
         onSuccess: (res) => {
@@ -85,6 +110,46 @@ export function AddCategoryModal({ isOpen, onClose }: AddCategoryModalProps) {
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)}>
             <DialogSection padding="medium" className="space-y-4">
+              <FormField
+                control={form.control}
+                name="parentId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Parent category (optional)</FormLabel>
+                    <Select
+                      onValueChange={(v) =>
+                        field.onChange(v === "__none__" ? null : v)
+                      }
+                      value={field.value ?? "__none__"}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Top-level category" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="__none__">
+                          None (top-level)
+                        </SelectItem>
+                        {parentOptions.map((opt) => (
+                          <SelectItem key={opt.id} value={opt.id}>
+                            <span
+                              style={{
+                                marginLeft: opt.depth * 16,
+                                display: "inline-block",
+                              }}
+                            >
+                              {opt.depth > 0 ? "↳ " : ""}
+                              {opt.name}
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <FormField
                 control={form.control}
                 name="name"

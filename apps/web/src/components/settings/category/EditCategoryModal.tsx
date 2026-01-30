@@ -1,7 +1,12 @@
 "use client";
 
+import { useCategoriesListQuery } from "@/hooks/category/useCategoriesListQuery";
 import { useManageCategory } from "@/hooks/category/useManageCategory";
 import type { CategoryItem } from "@/hooks/category/useCategoriesQuery";
+import {
+  getCategoryOptionsWithDepth,
+  getDescendantIds,
+} from "@/lib/category-tree";
 import { updateCategorySchema } from "@/lib/schemas/sku";
 import { getErrorMessageFromResponse } from "@/lib/utils/error-handler";
 import {
@@ -19,10 +24,15 @@ import {
   FormLabel,
   FormMessage,
   Input,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@reelo/ui/components";
 import { DialogSection } from "@reelo/ui/components";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -41,6 +51,13 @@ export function EditCategoryModal({
   category,
 }: EditCategoryModalProps) {
   const { update } = useManageCategory();
+  const { data: categoriesData } = useCategoriesListQuery();
+  const items = categoriesData?.items ?? [];
+  const excludeIds = useMemo(
+    () => [category.id, ...getDescendantIds(items, category.id)],
+    [items, category.id],
+  );
+  const parentOptions = getCategoryOptionsWithDepth(items, excludeIds);
 
   const form = useForm<EditCategoryFormValues>({
     resolver: zodResolver(updateCategorySchema),
@@ -48,6 +65,7 @@ export function EditCategoryModal({
       name: "",
       description: "",
       sortOrder: 0,
+      parentId: null,
     },
   });
 
@@ -57,9 +75,18 @@ export function EditCategoryModal({
         name: category.name,
         description: category.description ?? "",
         sortOrder: category.sortOrder,
+        parentId: category.parentId ?? null,
       });
     }
-  }, [isOpen, category.id, form]);
+  }, [
+    isOpen,
+    category.id,
+    category.name,
+    category.description,
+    category.sortOrder,
+    category.parentId,
+    form,
+  ]);
 
   const handleSubmit = (data: EditCategoryFormValues) => {
     update.mutate(
@@ -68,6 +95,7 @@ export function EditCategoryModal({
         data: {
           ...data,
           description: data.description || null,
+          parentId: data.parentId ?? null,
         },
       },
       {
@@ -103,6 +131,46 @@ export function EditCategoryModal({
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)}>
             <DialogSection padding="medium" className="space-y-4">
+              <FormField
+                control={form.control}
+                name="parentId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Parent category (optional)</FormLabel>
+                    <Select
+                      onValueChange={(v) =>
+                        field.onChange(v === "__none__" ? null : v)
+                      }
+                      value={field.value ?? "__none__"}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Top-level category" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="__none__">
+                          None (top-level)
+                        </SelectItem>
+                        {parentOptions.map((opt) => (
+                          <SelectItem key={opt.id} value={opt.id}>
+                            <span
+                              style={{
+                                marginLeft: opt.depth * 16,
+                                display: "inline-block",
+                              }}
+                            >
+                              {opt.depth > 0 ? "↳ " : ""}
+                              {opt.name}
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <FormField
                 control={form.control}
                 name="name"

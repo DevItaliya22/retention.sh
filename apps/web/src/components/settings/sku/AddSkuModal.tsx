@@ -209,7 +209,9 @@ export function AddSkuModal({ isOpen, onClose }: AddSkuModalProps) {
                         <SelectItem value="__none__">None</SelectItem>
                         {categories.map((c) => (
                           <SelectItem key={c.id} value={c.id}>
-                            {c.name}
+                            {c.parentName
+                              ? `${c.parentName} › ${c.name}`
+                              : c.name}
                           </SelectItem>
                         ))}
                       </SelectContent>

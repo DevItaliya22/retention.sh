@@ -37,11 +37,17 @@ model Business {
 }
 
 // Product/service category for a business (e.g. "Beverages", "Apparel")
+// Can have subcategories; SKU links to categoryId only (category or subcategory) for filters/display
 model Category {
   id String @id @default(uuid())
 
   businessId String
   business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  // Subcategories: null parentId = top-level category
+  parentId      String?
+  parent        Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  subcategories Category[] @relation("CategoryHierarchy")
 
   name        String
   description String?
@@ -53,6 +59,7 @@ model Category {
   updatedAt DateTime @updatedAt
 
   @@index([businessId])
+  @@index([parentId])
   @@map("category")
 }
 

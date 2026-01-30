@@ -6,10 +6,13 @@ import { useSearchParams } from "next/navigation";
 
 export interface CategoryItem {
   id: string;
+  parentId: string | null;
+  parentName: string | null;
   name: string;
   description: string | null;
   sortOrder: number;
   skuCount: number;
+  subcategoryCount: number;
   createdAt: string;
   updatedAt: string;
 }

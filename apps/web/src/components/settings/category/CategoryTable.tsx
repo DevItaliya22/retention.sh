@@ -34,10 +34,13 @@ export function CategoryTable({
     if (isLoading && categories.length === 0) {
       return Array.from({ length: perPage }, (_, i) => ({
         id: `skeleton-${i}`,
+        parentId: null,
+        parentName: null,
         name: "",
         description: null,
         sortOrder: 0,
         skuCount: 0,
+        subcategoryCount: 0,
         createdAt: "",
         updatedAt: "",
       })) as CategoryItem[];
@@ -46,10 +49,13 @@ export function CategoryTable({
       return [
         {
           id: "empty-state",
+          parentId: null,
+          parentName: null,
           name: "",
           description: null,
           sortOrder: 0,
           skuCount: 0,
+          subcategoryCount: 0,
           createdAt: "",
           updatedAt: "",
         },
@@ -72,7 +78,27 @@ export function CategoryTable({
           if (isLoading && item.id.startsWith("skeleton-")) {
             return <Skeleton className="h-4 w-32" />;
           }
-          return <div className="font-medium">{item.name}</div>;
+          const isSubcategory = !!item.parentId;
+          return (
+            <div
+              className={
+                isSubcategory ? "flex items-center gap-2 pl-6" : "font-medium"
+              }
+            >
+              {isSubcategory && (
+                <span className="text-muted-foreground text-xs">↳</span>
+              )}
+              <span
+                className={
+                  isSubcategory
+                    ? "text-muted-foreground font-normal"
+                    : "font-medium"
+                }
+              >
+                {item.name}
+              </span>
+            </div>
+          );
         },
         enableColumnFilter: true,
         enableSorting: true,
@@ -189,6 +215,7 @@ export function CategoryTable({
                 categoryId={item.id}
                 categoryName={item.name}
                 skuCount={item.skuCount}
+                subcategoryCount={item.subcategoryCount}
               />
             </div>
           );

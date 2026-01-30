@@ -69,12 +69,14 @@ export const createCategorySchema = z.object({
   name: nameSchema,
   description: descriptionSchema,
   sortOrder: z.number().int().min(0).default(0).optional(),
+  parentId: z.string().uuid().optional().nullable(),
 });
 
 export const updateCategorySchema = z.object({
   name: nameSchema.optional(),
   description: descriptionSchema,
   sortOrder: z.number().int().min(0).optional(),
+  parentId: z.string().uuid().optional().nullable(),
 });
 
 export const categoriesQuerySchema = z.object({
@@ -82,6 +84,15 @@ export const categoriesQuerySchema = z.object({
   perPage: z.coerce.number().int().min(1).max(500).default(10).optional(),
   sort: z.string().max(100).optional(),
   name: z.string().max(255).trim().optional(),
+  parentId: z
+    .string()
+    .optional()
+    .transform((v) => (v === "" || v === "null" ? undefined : v)),
+  /** When true, return all categories for the business (no pagination). Use for tree/list UI. */
+  all: z
+    .string()
+    .optional()
+    .transform((v) => v === "true" || v === "1"),
 });
 
 export type CreateSkuInput = z.infer<typeof createSkuSchema>;

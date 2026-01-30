@@ -14,8 +14,7 @@ export interface CategoriesListResponse {
 export function useCategoriesListQuery() {
   return useQuery<CategoriesListResponse, Error>({
     queryKey: ["categories", "list"],
-    queryFn: () =>
-      fetcher<CategoriesListResponse>("/api/categories?perPage=500"),
+    queryFn: () => fetcher<CategoriesListResponse>("/api/categories?all=true"),
     staleTime: 30000,
   });
 }

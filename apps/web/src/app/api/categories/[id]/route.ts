@@ -35,7 +35,14 @@ export const PUT = withAdminAuth<{ id: string }>(
         );
       }
 
-      const { name, description, sortOrder } = validation.data;
+      const { name, description, sortOrder, parentId } = validation.data;
+
+      if (parentId !== undefined && parentId === id) {
+        return NextResponse.json(
+          { error: "Category cannot be its own parent", item: null },
+          { status: 400 },
+        );
+      }
 
       const updated = await prisma.category.update({
         where: { id },
@@ -43,19 +50,35 @@ export const PUT = withAdminAuth<{ id: string }>(
           ...(name !== undefined && { name }),
           ...(description !== undefined && { description }),
           ...(sortOrder !== undefined && { sortOrder }),
+          ...(parentId !== undefined && { parentId: parentId ?? null }),
         },
         include: {
           _count: { select: { skus: true } },
         },
       });
 
+      let parentName: string | null = null;
+      if (updated.parentId) {
+        const parent = await prisma.category.findUnique({
+          where: { id: updated.parentId },
+          select: { name: true },
+        });
+        parentName = parent?.name ?? null;
+      }
+      const subcategoryCount = await prisma.category.count({
+        where: { parentId: id },
+      });
+
       return NextResponse.json({
         item: {
           id: updated.id,
+          parentId: updated.parentId,
+          parentName,
           name: updated.name,
           description: updated.description,
           sortOrder: updated.sortOrder,
           skuCount: updated._count.skus,
+          subcategoryCount,
           createdAt: updated.createdAt.toISOString(),
           updatedAt: updated.updatedAt.toISOString(),
         },

@@ -26,6 +26,13 @@ enum QrBenefitType {
   LOYALTY_BONUS
 }
 
+enum ReferalBenefitType {
+  CASH_DISCOUNT
+  PERCENTAGE_DISCOUNT
+  FREE_ITEM
+  LOYALTY_BONUS
+}
+
 enum MembershipStatus {
   DRAFT
   ACTIVE
