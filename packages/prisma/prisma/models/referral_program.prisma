@@ -1,0 +1,68 @@
+model ReferralProgram {
+  id String @id @default(uuid())
+
+  businessId String   @unique
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  // Program Settings
+  isEnabled Boolean @default(false)
+
+  // New Customer Benefits (Step 1)
+  newCustomerBenefitType          ReferalBenefitType
+  newCustomerBenefitValue         Int // discount amount or points
+  newCustomerBenefitExpiresInDays Int?
+
+  // Existing Customer Benefits (Step 2)
+  existingCustomerBenefitType          ReferalBenefitType
+  existingCustomerBenefitValue         Int
+  existingCustomerBenefitExpiresInDays Int?
+
+  // Reminder Settings
+  sendReminderToCustomer Boolean @default(false)
+
+  // Information Sections (Array of JSON)
+  informationSections Json // [{ title: string, content: string }]
+
+  // Branding
+  branding Json? // { logo?: string, themeColor?: string, ... }
+
+  // Terms & Conditions (point-wise, via relation)
+  termsAndConditionsNewCustomer      TermsAndConditions[] @relation("ReferralTermsNewCustomer")
+  termsAndConditionsExistingCustomer TermsAndConditions[] @relation("ReferralTermsExistingCustomer")
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([businessId])
+  @@map("referral_program")
+}
+
+model ReferralLog {
+  id String @id @default(uuid())
+
+  // Slug used as URL for this referral
+  slug String @unique
+
+  // The business customer who made the referral (business-specific)
+  referrerBusinessId String
+  referrerCustomerId String
+  referrer           BusinessCustomer @relation(fields: [referrerBusinessId, referrerCustomerId], references: [businessId, customerId], onDelete: Cascade)
+
+  // The referred person's details , this will do 2 things , if in customer table there is no customer wiht ths numver then create a new customer also and if there is a customer with this number then use that customer -> then it will add that customer to the business customer table also , but if he is alreayd there in business customer table then we wont give referal points 
+  newCustomerPhone String
+  newCustomerName  String?
+
+  // Status: true when the referred person becomes a customer
+  becameCustomer Boolean @default(false)
+
+  // Reward points (not yet given)
+  rewardPoints Int @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@index([slug])
+  @@index([referrerBusinessId, referrerCustomerId])
+  @@index([becameCustomer])
+  @@map("referral_log")
+}

@@ -1,7 +1,7 @@
 "use client";
 
 import { PageLayout, ScaffoldContainer } from "@/components/layouts";
-import { Package, Settings, Users } from "lucide-react";
+import { Gift, Package, Settings, Users } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { ReactNode } from "react";
 
@@ -31,6 +31,12 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
       icon: <Package className="h-4 w-4" />,
       active:
         pathname === "/settings/sku" || pathname === "/settings/sku/categories",
+    },
+    {
+      label: "Referral",
+      href: `/settings/referral`,
+      icon: <Gift className="h-4 w-4" />,
+      active: pathname === "/settings/referral",
     },
   ];
 

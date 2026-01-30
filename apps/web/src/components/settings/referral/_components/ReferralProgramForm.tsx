@@ -1,0 +1,194 @@
+"use client";
+
+import { useCreateReferralProgram } from "@/hooks/referral/useReferralProgram";
+import { useCurrentBusiness } from "@/hooks/business/useCurrentBusiness";
+import {
+  Card,
+  CardContent,
+  FormNavigation,
+  LinearMultiStepForm,
+  type LinearMultiStepFormConfig,
+} from "@reelo/ui/components";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { getErrorMessageFromResponse } from "@/lib/utils/error-handler";
+import {
+  referralProgramStep1Schema,
+  referralProgramStep2Schema,
+  referralProgramStep3Schema,
+  type ReferralProgramFormValues,
+} from "@/lib/schemas/referral-form";
+import { ReferralProgramStep2 } from "./ReferralProgramStep2";
+import { ReferralProgramStep1 } from "./ReferralProgramStep1";
+import { ReferralProgramStep3 } from "./ReferralProgramStep3";
+
+interface ReferralProgramFormProps {
+  initialData: any;
+}
+
+export function ReferralProgramForm({ initialData }: ReferralProgramFormProps) {
+  const queryClient = useQueryClient();
+  const { data: businessData } = useCurrentBusiness();
+  const { mutateAsync: createReferralProgram } = useCreateReferralProgram();
+
+  // Check if loyalty exists - we'll need to fetch it separately or include it in the query
+  const hasLoyalty = true; // TODO: Add proper loyalty check
+
+  const config: LinearMultiStepFormConfig<ReferralProgramFormValues> = {
+    id: "referral-program-form",
+    title: "Set up Referral Program",
+    onSubmit: async ({ values }) => {
+      try {
+        const result = await createReferralProgram({
+          newCustomerBenefitType: values.newCustomerBenefitType,
+          newCustomerBenefitValue: values.newCustomerBenefitValue,
+          newCustomerBenefitExpiresInDays:
+            values.newCustomerBenefitExpiresInDays || null,
+          existingCustomerBenefitType: values.existingCustomerBenefitType,
+          existingCustomerBenefitValue: values.existingCustomerBenefitValue,
+          existingCustomerBenefitExpiresInDays:
+            values.existingCustomerBenefitExpiresInDays || null,
+          sendReminderToCustomer: values.sendReminderToCustomer,
+          informationSections: values.informationSections,
+          branding: values.branding,
+          termsAndConditionsNewCustomer:
+            (values.termsAndConditionsNewCustomer ?? []).filter(
+              (s) => s.trim().length > 0,
+            ) || null,
+          termsAndConditionsExistingCustomer:
+            (values.termsAndConditionsExistingCustomer ?? []).filter(
+              (s) => s.trim().length > 0,
+            ) || null,
+        });
+
+        if (result.referralProgram) {
+          toast.success("Referral program created successfully!");
+          queryClient.invalidateQueries({ queryKey: ["referralProgram"] });
+          return undefined;
+        } else {
+          throw new Error(result.error || "Failed to create referral program");
+        }
+      } catch (error: any) {
+        const errorMessage = getErrorMessageFromResponse(
+          error,
+          "Failed to create referral program. Please try again.",
+        );
+        toast.error(errorMessage);
+        throw error;
+      }
+    },
+    disableNext: ({ stepId, values }) => {
+      if (stepId === "step-1" && !hasLoyalty) {
+        return true; // Disable if loyalty is not enabled
+      }
+      return false;
+    },
+    steps: [
+      {
+        id: "step-1",
+        title: "How It Works",
+        fields: [
+          "newCustomerBenefitType",
+          "newCustomerBenefitValue",
+          "newCustomerBenefitExpiresInDays",
+          "informationSections",
+          "sendReminderToCustomer",
+        ],
+        schema: referralProgramStep1Schema,
+        Component: ReferralProgramStep1,
+      },
+      {
+        id: "step-2",
+        title: "Existing Customer Benefits",
+        fields: [
+          "existingCustomerBenefitType",
+          "existingCustomerBenefitValue",
+          "existingCustomerBenefitExpiresInDays",
+          "termsAndConditionsNewCustomer",
+          "termsAndConditionsExistingCustomer",
+        ],
+        schema: referralProgramStep2Schema,
+        Component: ReferralProgramStep2,
+      },
+      {
+        id: "step-3",
+        title: "Branding & Review",
+        fields: ["branding"],
+        schema: referralProgramStep3Schema,
+        Component: ReferralProgramStep3,
+      },
+    ],
+  };
+
+  const defaultValues: Partial<ReferralProgramFormValues> = initialData
+    ? {
+        newCustomerBenefitType: initialData.newCustomerBenefitType,
+        newCustomerBenefitValue: initialData.newCustomerBenefitValue,
+        newCustomerBenefitExpiresInDays:
+          initialData.newCustomerBenefitExpiresInDays,
+        existingCustomerBenefitType: initialData.existingCustomerBenefitType,
+        existingCustomerBenefitValue: initialData.existingCustomerBenefitValue,
+        existingCustomerBenefitExpiresInDays:
+          initialData.existingCustomerBenefitExpiresInDays,
+        sendReminderToCustomer: initialData.sendReminderToCustomer,
+        informationSections: initialData.informationSections || [],
+        branding: initialData.branding,
+        termsAndConditionsNewCustomer: Array.isArray(
+          initialData.termsAndConditionsNewCustomer,
+        )
+          ? initialData.termsAndConditionsNewCustomer.map(
+              (t: { id: string; content: string } | string) =>
+                typeof t === "string" ? t : t.content,
+            )
+          : [],
+        termsAndConditionsExistingCustomer: Array.isArray(
+          initialData.termsAndConditionsExistingCustomer,
+        )
+          ? initialData.termsAndConditionsExistingCustomer.map(
+              (t: { id: string; content: string } | string) =>
+                typeof t === "string" ? t : t.content,
+            )
+          : [],
+      }
+    : {
+        newCustomerBenefitType: "LOYALTY_BONUS",
+        newCustomerBenefitValue: 100,
+        existingCustomerBenefitType: "LOYALTY_BONUS",
+        existingCustomerBenefitValue: 50,
+        sendReminderToCustomer: false,
+        informationSections: [],
+        branding: null,
+        termsAndConditionsNewCustomer: [],
+        termsAndConditionsExistingCustomer: [],
+      };
+
+  if (!hasLoyalty) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <div className="text-center space-y-2">
+            <h3 className="text-lg font-semibold">Loyalty Program Required</h3>
+            <p className="text-muted-foreground">
+              You need to enable a loyalty program before setting up referrals.
+              Please configure your loyalty program first.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="bg-card border-border shadow-xl">
+      <CardContent className="p-8">
+        <LinearMultiStepForm<ReferralProgramFormValues>
+          config={config}
+          initialValues={defaultValues}
+          navigationPosition="footer"
+          NavigationComponent={FormNavigation}
+          progressType="bar"
+        />
+      </CardContent>
+    </Card>
+  );
+}

@@ -45,6 +45,39 @@ export const GET = withAdminAuth<{ slugId: string }>(
               },
             },
           },
+          referredBy: {
+            include: {
+              customer: {
+                include: {
+                  user: {
+                    select: { name: true },
+                  },
+                },
+              },
+            },
+          },
+          referrals: {
+            include: {
+              customer: {
+                include: {
+                  user: {
+                    select: { name: true },
+                  },
+                },
+              },
+            },
+          },
+          referralLogs: {
+            orderBy: { createdAt: "desc" },
+            take: 20,
+            select: {
+              id: true,
+              newCustomerName: true,
+              newCustomerPhone: true,
+              becameCustomer: true,
+              createdAt: true,
+            },
+          },
           bills: {
             orderBy: { createdAt: "desc" },
             take: 50,
@@ -84,6 +117,26 @@ export const GET = withAdminAuth<{ slugId: string }>(
         pointsBalance: businessCustomer.pointsBalance,
         createdAt: businessCustomer.createdAt.toISOString(),
         updatedAt: businessCustomer.updatedAt.toISOString(),
+        businessSlug: context.business.slug,
+        referralSlug: businessCustomer.referralSlug,
+        referralEnabled: context.business.referralEnabled ?? false,
+        referredBy: businessCustomer.referredBy
+          ? {
+              name: businessCustomer.referredBy.customer.user.name,
+              slugId: businessCustomer.referredBy.slugId,
+            }
+          : null,
+        referrals: businessCustomer.referrals.map((r) => ({
+          name: r.customer.user.name,
+          slugId: r.slugId,
+        })),
+        referralLogs: businessCustomer.referralLogs.map((log) => ({
+          id: log.id,
+          newCustomerName: log.newCustomerName,
+          newCustomerPhone: log.newCustomerPhone,
+          becameCustomer: log.becameCustomer,
+          createdAt: log.createdAt.toISOString(),
+        })),
         bills: businessCustomer.bills.map((b) => ({
           id: b.id,
           billNumber: b.billNumber,

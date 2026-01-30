@@ -496,3 +496,6 @@ if (item.id.startsWith("skeleton-")) return <Skeleton className="h-4 w-32" />;
 5. **Static content stays visible during loading** - Only skeleton dynamic content
 6. **Consistent response shapes** - Include empty data on errors
 7. **Index files for clean imports** - Avoid deep import paths
+
+
+Also make sure dont make new new hooks for same service multiple times , one hook with multipl functions is OK , also one file with a hook and multiple function is also OK , mainly file should be single for hook for  a service not multiple ,like there can be sitution like some is available on admin side and some on cahsier or customer side then make new file for that hooks otherwise let in one file of hook

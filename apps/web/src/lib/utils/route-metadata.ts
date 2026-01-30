@@ -80,6 +80,10 @@ const ROUTE_METADATA_MAP: Record<string, RouteMetadataConfig> = {
     title: "Categories",
     description: "Manage product categories for your business",
   },
+  "/settings/referral": {
+    title: "Referral Settings",
+    description: "Configure your referral program and rewards",
+  },
   "/cashier/[businessSlug]/[cashierSlug]": {
     title: (segments) => `Cashier Login - ${formatSlug(segments[1])}`,
     description: "Sign in to your cashier account",

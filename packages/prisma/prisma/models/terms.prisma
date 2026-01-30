@@ -15,6 +15,12 @@ model TermsAndConditions {
   loyaltyTierId String?
   loyaltyTier   LoyaltyTier? @relation(fields: [loyaltyTierId], references: [id], onDelete: Cascade)
 
+  referralProgramNewCustomerId String?
+  referralProgramNewCustomer   ReferralProgram? @relation("ReferralTermsNewCustomer", fields: [referralProgramNewCustomerId], references: [id], onDelete: Cascade)
+
+  referralProgramExistingCustomerId String?
+  referralProgramExistingCustomer   ReferralProgram? @relation("ReferralTermsExistingCustomer", fields: [referralProgramExistingCustomerId], references: [id], onDelete: Cascade)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -22,8 +28,12 @@ model TermsAndConditions {
   @@unique([content, loyaltyId])
   @@unique([content, membershipId])
   @@unique([content, qrId])
+  @@unique([content, referralProgramNewCustomerId])
+  @@unique([content, referralProgramExistingCustomerId])
   @@index([loyaltyId])
   @@index([membershipId])
   @@index([qrId])
+  @@index([referralProgramNewCustomerId])
+  @@index([referralProgramExistingCustomerId])
   @@map("terms_and_conditions")
 }

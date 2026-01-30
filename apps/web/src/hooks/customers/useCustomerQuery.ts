@@ -27,6 +27,14 @@ export interface CustomerBillSummary {
   createdAt: string;
 }
 
+export interface ReferralLogSummary {
+  id: string;
+  newCustomerName: string | null;
+  newCustomerPhone: string;
+  becameCustomer: boolean;
+  createdAt: string;
+}
+
 export interface CustomerDetail {
   id: string;
   slugId: string;
@@ -37,6 +45,12 @@ export interface CustomerDetail {
   pointsBalance: number;
   createdAt: string;
   updatedAt: string;
+  businessSlug?: string;
+  referralSlug?: string;
+  referralEnabled?: boolean;
+  referredBy?: { name: string; slugId: string } | null;
+  referrals?: { name: string; slugId: string }[];
+  referralLogs?: ReferralLogSummary[];
   bills: CustomerBillSummary[];
 }
 

@@ -11,19 +11,16 @@ model Business {
   // Referral settings -> to enable this , business should have a loyatly first
   referralEnabled Boolean @default(false)
 
-  // this will be loyalty points for now
-  referralRewardPoints Int @default(0)
-  referedBonusPoints   Int @default(0)
-
   // Relations
   admins    Admin[]
   cashiers  Cashier[]
   customers BusinessCustomer[]
 
-  memberships  Membership[]
-  loyalty      Loyalty?
-  qrs          Qr[]
-  scratchCards ScratchCard[]
+  memberships     Membership[]
+  loyalty         Loyalty?
+  qrs             Qr[]
+  scratchCards    ScratchCard[]
+  referralProgram ReferralProgram?
 
   categories Category[]
   skus       Sku[]

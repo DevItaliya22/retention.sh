@@ -6,6 +6,7 @@ import {
   Avatar,
   AvatarFallback,
   Badge,
+  Button,
   buttonVariants,
   Card,
   CardContent,
@@ -24,15 +25,20 @@ import {
 import { cn } from "@reelo/ui/lib/utils";
 import {
   CalendarDays,
+  Copy,
   Eye,
   Gift,
+  Link2,
   Mail,
   Phone,
   Receipt,
   User,
+  UserPlus,
+  Users,
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect } from "react";
+import { toast } from "sonner";
 
 interface CustomerDetailPageClientProps {
   slugId: string;
@@ -225,6 +231,121 @@ export function CustomerDetailPageClient({
           </CardContent>
         </Card>
       </div>
+
+      {/* Referral link (when referral is enabled) */}
+      {customer?.referralEnabled &&
+        customer?.businessSlug &&
+        customer?.referralSlug && (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Link2 className="size-4 text-muted-foreground" />
+                Referral link
+              </CardTitle>
+              <CardDescription>
+                Share this link with friends so they can join and you both get
+                rewards
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {isLoading && !customer ? (
+                <Skeleton className="h-10 w-full" />
+              ) : (
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 truncate rounded-md border bg-muted/50 px-3 py-2 text-sm font-mono">
+                    {typeof window !== "undefined"
+                      ? `${window.location.origin}/referral/${customer.businessSlug}/${customer.referralSlug}`
+                      : `/referral/${customer.businessSlug}/${customer.referralSlug}`}
+                  </code>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="shrink-0"
+                    onClick={() => {
+                      const url =
+                        typeof window !== "undefined"
+                          ? `${window.location.origin}/referral/${customer.businessSlug}/${customer.referralSlug}`
+                          : "";
+                      if (url && navigator.clipboard?.writeText) {
+                        navigator.clipboard.writeText(url);
+                        toast.success("Link copied to clipboard");
+                      }
+                    }}
+                    aria-label="Copy referral link"
+                  >
+                    <Copy className="size-4" />
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+      {/* Referral success: referred by + people they referred */}
+      {(customer?.referredBy ||
+        (customer?.referralLogs && customer.referralLogs.length > 0)) && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Users className="size-4 text-muted-foreground" />
+              Referral details
+            </CardTitle>
+            <CardDescription>
+              Who referred this customer and who they have referred
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {customer?.referredBy && (
+              <div className="space-y-1">
+                <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  Referred by
+                </p>
+                <Link
+                  href={`/customers/${customer.referredBy.slugId}`}
+                  className={cn(
+                    buttonVariants({ variant: "ghost", size: "sm" }),
+                    "h-auto justify-start gap-2 font-medium",
+                  )}
+                >
+                  <UserPlus className="size-4 text-muted-foreground" />
+                  {customer.referredBy.name}
+                </Link>
+              </div>
+            )}
+            {customer?.referralLogs && customer.referralLogs.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  People they referred ({customer.referralLogs.length})
+                </p>
+                <ul className="space-y-2 rounded-lg border bg-muted/20 p-3">
+                  {customer.referralLogs.map((log) => (
+                    <li
+                      key={log.id}
+                      className="flex flex-wrap items-center justify-between gap-2 text-sm"
+                    >
+                      <span className="font-medium">
+                        {log.newCustomerName || "—"}
+                      </span>
+                      <span className="text-muted-foreground font-mono text-xs">
+                        {log.newCustomerPhone}
+                      </span>
+                      {log.becameCustomer && (
+                        <Badge variant="secondary" size="xs">
+                          Claimed
+                        </Badge>
+                      )}
+                      <span className="w-full text-xs text-muted-foreground">
+                        <DateDisplay date={log.createdAt} />
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Bills */}
       <Card>

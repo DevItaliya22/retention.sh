@@ -30,6 +30,7 @@ export interface AdminAuthContext {
     id: string;
     name: string;
     slug: string;
+    referralEnabled: boolean;
   };
 }
 
@@ -149,6 +150,7 @@ export function withAdminAuth<T extends Record<string, string | string[]>>(
               id: true,
               name: true,
               slug: true,
+              referralEnabled: true,
             },
           },
         },
@@ -183,6 +185,7 @@ export function withAdminAuth<T extends Record<string, string | string[]>>(
           id: admin.business.id,
           name: admin.business.name,
           slug: admin.business.slug,
+          referralEnabled: admin.business.referralEnabled ?? false,
         },
       };
 
