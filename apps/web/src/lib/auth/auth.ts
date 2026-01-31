@@ -211,6 +211,13 @@ export async function validateCashierLogin(params: {
       };
     }
 
+    if (!cashier.isActive) {
+      return {
+        success: false,
+        error: "This cashier account is inactive. Contact your administrator.",
+      };
+    }
+
     if (cashier.user.email !== email) {
       return {
         success: false,

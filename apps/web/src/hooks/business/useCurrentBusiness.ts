@@ -21,6 +21,8 @@ export interface CurrentBusiness {
   defaultCurrencySymbol: string;
   defaultCurrencyCode: string;
   defaultBranding?: CurrentBusinessBranding | null;
+  referralEnabled: boolean;
+  referralProgram?: { id: string } | null;
 }
 
 export interface CurrentBusinessResponse {
@@ -49,6 +51,7 @@ export interface UpdateBusinessInput {
   defaultPointsName?: string;
   defaultCurrencySymbol?: string;
   defaultCurrencyCode?: string;
+  referralEnabled?: boolean;
   defaultBranding?: UpdateBusinessBrandingInput;
 }
 

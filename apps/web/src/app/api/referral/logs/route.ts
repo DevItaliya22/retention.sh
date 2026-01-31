@@ -39,6 +39,17 @@ async function getSlugByPhone(
 
 export const GET = withAdminAuth(async (request: NextRequest, context) => {
   try {
+    if (!context.business.referralEnabled) {
+      return NextResponse.json(
+        {
+          items: [],
+          total: 0,
+          error: "Referral is not enabled. Enable it in Settings → General.",
+        },
+        { status: 403 },
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const validation = validateSchema(
       referralQuerySchema,

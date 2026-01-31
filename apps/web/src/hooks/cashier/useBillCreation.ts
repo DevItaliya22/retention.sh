@@ -3,7 +3,7 @@
 import { fetcher } from "@/lib/fetcher";
 import { BillFormInput } from "@/lib/schemas/bill";
 import { useDebouncedCallback } from "@reelo/ui/hooks";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo, useState } from "react";
 
 export interface Customer {
@@ -40,6 +40,7 @@ export interface CreateBillResponse {
 }
 
 export function useBillCreation(businessId: string) {
+  const queryClient = useQueryClient();
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
     null,
   );
@@ -138,6 +139,9 @@ export function useBillCreation(businessId: string) {
         method: "POST",
         body: JSON.stringify(input),
       });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["cashier"] });
     },
   });
 

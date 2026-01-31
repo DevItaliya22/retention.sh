@@ -127,10 +127,7 @@ export function SimpleSidebar({
                 </SidebarMenuItem>
                 <Collapsible
                   asChild
-                  defaultOpen={
-                    pathname === "/settings" ||
-                    pathname.startsWith("/settings/")
-                  }
+                  defaultOpen={true}
                   className="group/collapsible"
                 >
                   <SidebarMenuItem>

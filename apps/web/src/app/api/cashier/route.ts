@@ -23,7 +23,14 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
       );
     }
 
-    const { page = 1, perPage = 10, sort, name, email } = validation.data;
+    const {
+      page = 1,
+      perPage = 10,
+      sort,
+      name,
+      email,
+      isActive,
+    } = validation.data;
 
     const skip = (page - 1) * perPage;
     const take = perPage;
@@ -31,6 +38,9 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
     const where: any = {
       businessId: context.business.id,
     };
+
+    if (isActive === "true") where.isActive = true;
+    if (isActive === "false") where.isActive = false;
 
     const userFilters: any = {};
     if (name) {
@@ -93,6 +103,7 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
       name: cashier.user.name,
       email: cashier.user.email,
       cashierLinkSlug: cashier.cashierLinkSlug,
+      isActive: cashier.isActive,
       createdAt: cashier.createdAt.toISOString(),
       updatedAt: cashier.updatedAt.toISOString(),
     }));
@@ -176,6 +187,7 @@ export const POST = withAdminAuth(async (request: NextRequest, context) => {
           businessId: context.business.id,
           cashierLinkSlug,
           password,
+          isActive: true,
         },
         include: {
           user: {

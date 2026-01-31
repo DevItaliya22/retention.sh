@@ -3,10 +3,15 @@ model Bill {
 
   billNumber String
   amount     Float?
+  notes      String? // Optional notes on the bill
 
   businessId       String
   customerId       String
   businessCustomer BusinessCustomer @relation(fields: [businessId, customerId], references: [businessId, customerId], onDelete: Cascade)
+
+  // Optional: which cashier created this bill
+  cashierId String?
+  cashier   Cashier? @relation(fields: [cashierId], references: [id], onDelete: SetNull)
 
   // Relation to scratch cards
   scratchCardResponses ScratchCardResponse[]
@@ -19,6 +24,7 @@ model Bill {
   @@unique([businessId, billNumber])
   @@index([businessId])
   @@index([customerId])
+  @@index([cashierId])
   @@map("bill")
 }
 

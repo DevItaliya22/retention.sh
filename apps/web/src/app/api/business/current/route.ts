@@ -13,6 +13,7 @@ export const GET = withAdminAuth(async (request, context) => {
       where: { id: context.business.id },
       include: {
         defaultBranding: true,
+        referralProgram: { select: { id: true } },
       },
     });
 
@@ -57,6 +58,7 @@ export const PUT = withAdminAuth(async (request, context) => {
         defaultPointsName: validatedData.defaultPointsName ?? undefined,
         defaultCurrencySymbol: validatedData.defaultCurrencySymbol ?? undefined,
         defaultCurrencyCode: validatedData.defaultCurrencyCode ?? undefined,
+        referralEnabled: validatedData.referralEnabled ?? undefined,
         defaultBranding: validatedData.defaultBranding
           ? {
               upsert: {
@@ -84,6 +86,7 @@ export const PUT = withAdminAuth(async (request, context) => {
       },
       include: {
         defaultBranding: true,
+        referralProgram: { select: { id: true } },
       },
     });
 

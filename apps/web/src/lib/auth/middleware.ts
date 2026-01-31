@@ -248,6 +248,17 @@ export function withCashierAuth<T extends Record<string, string | string[]>>(
         );
       }
 
+      if (!cashier.isActive) {
+        return NextResponse.json(
+          {
+            error: "FORBIDDEN",
+            message:
+              "This cashier account is inactive. Contact your administrator.",
+          },
+          { status: 403 },
+        );
+      }
+
       const context: CashierAuthContext = {
         user: {
           id: session.user.id,

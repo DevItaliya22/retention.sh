@@ -19,6 +19,7 @@ export const updateCashierSchema = z.object({
   email: emailSchema,
   password: optionalPasswordSchema,
   cashierLinkSlug: slugSchema,
+  isActive: z.boolean().optional(),
 });
 
 export const cashiersQuerySchema = z.object({
@@ -27,6 +28,7 @@ export const cashiersQuerySchema = z.object({
   sort: z.string().max(100, "Sort parameter is too long").optional(),
   name: z.string().max(255, "Name filter is too long").trim().optional(),
   email: z.string().max(254, "Email filter is too long").trim().optional(),
+  isActive: z.enum(["true", "false"]).optional(),
 });
 
 export type CreateCashierInput = z.infer<typeof createCashierSchema>;

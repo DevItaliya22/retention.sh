@@ -4,6 +4,17 @@ import { SettingsFieldGroup } from "@/components/common/settings/SettingsFieldGr
 import { PageLayout, ScaffoldContainer } from "@/components/layouts";
 import type { CurrentBusiness } from "@/hooks/business/useCurrentBusiness";
 import { useUpdateBusiness } from "@/hooks/business/useCurrentBusiness";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Switch,
+} from "@reelo/ui/components";
+import Link from "next/link";
+import { useTransition } from "react";
+import { toast } from "sonner";
 
 interface BusinessExistingSettingsProps {
   business: CurrentBusiness;
@@ -13,6 +24,18 @@ export function BusinessExistingSettings({
   business,
 }: BusinessExistingSettingsProps) {
   const { mutateAsync: updateBusiness } = useUpdateBusiness();
+  const [referralPending, startReferralTransition] = useTransition();
+
+  const handleReferralEnabledChange = (enabled: boolean) => {
+    startReferralTransition(async () => {
+      try {
+        await updateBusiness({ referralEnabled: enabled });
+        toast.success("Settings updated successfully");
+      } catch (error: any) {
+        toast.error(error?.message || "Failed to update");
+      }
+    });
+  };
 
   const handleUpdateBasicInfo = async (values: Record<string, string>) => {
     try {
@@ -98,7 +121,7 @@ export function BusinessExistingSettings({
   return (
     <PageLayout
       size="default"
-      scaffoldSectionClassName="h-full w-full pt-2 pb-0"
+      scaffoldSectionClassName="h-full w-full pt-2 pb-16"
     >
       <ScaffoldContainer>
         <div className="space-y-6">
@@ -211,6 +234,43 @@ export function BusinessExistingSettings({
             }}
             onSubmit={handleUpdateBranding}
           />
+
+          <Card className="gap-0 p-0!">
+            <CardHeader className="flex flex-col gap-0 border-b py-2!">
+              <CardTitle className="text-base font-medium">Referral</CardTitle>
+              <CardDescription className="text-xs">
+                Enable referral program for your business (requires loyalty to
+                be set up first)
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-2 px-6 py-4">
+              <div className="flex flex-row items-center justify-between">
+                <span className="text-sm">Referral enabled</span>
+                <Switch
+                  checked={business.referralEnabled ?? false}
+                  onCheckedChange={handleReferralEnabledChange}
+                  disabled={referralPending}
+                />
+              </div>
+              {!business.referralEnabled && (
+                <p className="text-muted-foreground text-xs">
+                  {business.referralProgram ? (
+                    "Already setup but it's off."
+                  ) : (
+                    <>
+                      Not set up yet.{" "}
+                      <Link
+                        href="/settings/referral"
+                        className="text-primary underline underline-offset-2 hover:no-underline"
+                      >
+                        Set up referral
+                      </Link>
+                    </>
+                  )}
+                </p>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </ScaffoldContainer>
     </PageLayout>

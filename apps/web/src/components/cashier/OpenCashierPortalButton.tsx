@@ -2,7 +2,6 @@
 
 import { Button } from "@reelo/ui/components";
 import { ExternalLink } from "lucide-react";
-import { useRouter } from "next/navigation";
 
 import { useCurrentBusiness } from "@/hooks/business/useCurrentBusiness";
 import type { Cashier } from "@/hooks/cashier/useManageCashier";
@@ -14,15 +13,16 @@ interface OpenCashierPortalButtonProps {
 export function OpenCashierPortalButton({
   cashier,
 }: OpenCashierPortalButtonProps) {
-  const router = useRouter();
   const { data: businessData } = useCurrentBusiness();
 
   const handleOpenPortal = () => {
     if (!businessData?.business?.slug) {
       return;
     }
-    router.push(
+    window.open(
       `/cashier/${businessData.business.slug}/${cashier.cashierLinkSlug}`,
+      "_blank",
+      "noopener,noreferrer",
     );
   };
 

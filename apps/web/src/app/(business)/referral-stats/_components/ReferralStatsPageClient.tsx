@@ -9,8 +9,8 @@ import { Suspense } from "react";
 
 function ReferralStatsContent() {
   const router = useRouter();
-  const { data, isLoading } = useReferralStatsQuery();
-  const referralEnabled = data?.referralEnabled ?? false;
+  const { data, isLoading, isError } = useReferralStatsQuery();
+  const referralEnabled = !isError && (data?.referralEnabled ?? false);
 
   if (isLoading && data == null) {
     return (
@@ -42,8 +42,8 @@ function ReferralStatsContent() {
 
 export function ReferralStatsPageClient() {
   const router = useRouter();
-  const { data } = useReferralStatsQuery();
-  const referralEnabled = data?.referralEnabled ?? false;
+  const { data, isError } = useReferralStatsQuery();
+  const referralEnabled = !isError && (data?.referralEnabled ?? false);
 
   return (
     <PageLayout

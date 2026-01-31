@@ -46,15 +46,17 @@ export async function POST(request: NextRequest) {
     const businessId = referrer.businessId;
     const business = referrer.business;
 
-    // Check if referral is enabled on business and program
-    if (
-      !business.referralEnabled ||
-      !business.referralProgram ||
-      !business.referralProgram.isEnabled
-    ) {
+    // Check if referral is enabled on business and program (reject immediately when off)
+    if (!business.referralEnabled) {
+      return NextResponse.json(
+        { success: false, error: "Referral is not enabled for this business" },
+        { status: 403 },
+      );
+    }
+    if (!business.referralProgram || !business.referralProgram.isEnabled) {
       return NextResponse.json(
         { success: false, error: "Referral program is not enabled" },
-        { status: 400 },
+        { status: 403 },
       );
     }
 

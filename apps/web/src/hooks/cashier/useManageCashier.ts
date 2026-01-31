@@ -9,6 +9,7 @@ export interface Cashier {
   name: string;
   email: string | null;
   cashierLinkSlug: string;
+  isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -20,6 +21,27 @@ export interface CashiersResponse {
 
 export interface CashierResponse {
   cashier: Cashier | null;
+  error?: string;
+}
+
+export interface CashierDetailResponse {
+  cashier: {
+    id: string;
+    userId: string;
+    name: string;
+    email: string | null;
+    cashierLinkSlug: string;
+    password: string;
+    isActive: boolean;
+    createdAt: string;
+    updatedAt: string;
+    recentBills: Array<{
+      id: string;
+      billNumber: string;
+      amount: number | null;
+      createdAt: string;
+    }>;
+  } | null;
   error?: string;
 }
 
@@ -35,6 +57,15 @@ export interface UpdateCashierInput {
   email?: string;
   password?: string;
   cashierLinkSlug?: string;
+  isActive?: boolean;
+}
+
+export function useCashierDetail(cashierId: string | null) {
+  return useQuery<CashierDetailResponse, Error>({
+    queryKey: ["cashier", "detail", cashierId],
+    queryFn: () => fetcher<CashierDetailResponse>(`/api/cashier/${cashierId}`),
+    enabled: !!cashierId,
+  });
 }
 
 export function useManageCashier(emailFilter?: string) {
@@ -80,6 +111,7 @@ export function useManageCashier(emailFilter?: string) {
           name: newCashier.name,
           email: newCashier.email,
           cashierLinkSlug: newCashier.cashierLinkSlug,
+          isActive: true,
           createdAt: new Date(),
           updatedAt: new Date(),
         };
@@ -139,6 +171,9 @@ export function useManageCashier(emailFilter?: string) {
                     ...(data.cashierLinkSlug && {
                       cashierLinkSlug: data.cashierLinkSlug,
                     }),
+                    ...(typeof data.isActive === "boolean" && {
+                      isActive: data.isActive,
+                    }),
                     updatedAt: new Date(),
                   }
                 : cashier,
@@ -163,6 +198,7 @@ export function useManageCashier(emailFilter?: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cashiers"] });
+      queryClient.invalidateQueries({ queryKey: ["cashier"] });
     },
   });
 

@@ -161,6 +161,7 @@ export const POST = withCashierAuth(async (request: NextRequest, context) => {
       billNumber,
       phoneNumber,
       amount,
+      notes,
       lineItems = [],
       ...customerData
     } = validation.data;
@@ -198,8 +199,10 @@ export const POST = withCashierAuth(async (request: NextRequest, context) => {
       data: {
         billNumber,
         amount: amount ?? null,
+        notes: notes ?? null,
         businessId,
         customerId: customer.id,
+        cashierId: context.cashier.id,
         lineItems:
           lineItems.length > 0
             ? {

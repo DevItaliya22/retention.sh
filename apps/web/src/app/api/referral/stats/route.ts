@@ -19,13 +19,17 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
     const referralEnabled = context.business.referralEnabled ?? false;
 
     if (!referralEnabled) {
-      return NextResponse.json({
-        referralEnabled: false,
-        items: [],
-        total: 0,
-        page: 1,
-        perPage: 10,
-      });
+      return NextResponse.json(
+        {
+          referralEnabled: false,
+          error: "Referral is not enabled. Enable it in Settings → General.",
+          items: [],
+          total: 0,
+          page: 1,
+          perPage: 10,
+        },
+        { status: 403 },
+      );
     }
 
     const { searchParams } = new URL(request.url);

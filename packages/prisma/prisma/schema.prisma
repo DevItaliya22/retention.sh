@@ -73,10 +73,13 @@ model Cashier {
 
   cashierLinkSlug String 
   password        String
+  isActive        Boolean @default(true)
 
   // Cashier must belong to a Business
   businessId String
   business   Business @relation(fields: [businessId], references: [id])
+
+  bills Bill[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

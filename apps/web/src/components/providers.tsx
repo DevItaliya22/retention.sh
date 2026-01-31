@@ -35,7 +35,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
             <Toaster
               theme={theme as "light" | "dark" | "system"}
               visibleToasts={5}
-              position="bottom-right"
+              position="top-right"
               gap={12}
               expand={true}
               // richColors

@@ -3,6 +3,7 @@
 import type { Cashier } from "@/hooks/cashier/useCashiersQuery";
 import type { Cashier as ManageCashier } from "@/hooks/cashier/useManageCashier";
 import {
+  Badge,
   DataTable,
   DataTableColumnHeader,
   DataTableToolbar,
@@ -11,7 +12,10 @@ import {
 } from "@reelo/ui/components";
 import { useDataTable } from "@reelo/ui/hooks";
 import type { ColumnDef } from "@tanstack/react-table";
-import { useMemo } from "react";
+import { Eye } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Button } from "@reelo/ui/components";
+import { CashierDetailSheet } from "./CashierDetailSheet";
 import { DeleteCashierButton } from "./DeleteCashierButton";
 import { EditCashierButton } from "./EditCashierButton";
 import { OpenCashierPortalButton } from "./OpenCashierPortalButton";
@@ -29,6 +33,9 @@ export function CashierTable({
   perPage,
   isLoading = false,
 }: CashierTableProps) {
+  const [detailCashierId, setDetailCashierId] = useState<string | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+
   const pageCount = Math.max(1, Math.ceil(total / perPage));
   const isEmpty = !isLoading && cashiers.length === 0;
 
@@ -40,6 +47,7 @@ export function CashierTable({
         name: "",
         email: null,
         cashierLinkSlug: "",
+        isActive: true,
         createdAt: "",
         updatedAt: "",
       })) as Cashier[];
@@ -52,6 +60,7 @@ export function CashierTable({
           name: "",
           email: null,
           cashierLinkSlug: "",
+          isActive: true,
           createdAt: "",
           updatedAt: "",
         },
@@ -131,6 +140,44 @@ export function CashierTable({
         },
       },
       {
+        id: "isActive",
+        accessorKey: "isActive",
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} label="Status" />
+        ),
+        cell: ({ row }) => {
+          const cashier = row.original;
+          if (cashier.id === "empty-state") {
+            return null;
+          }
+          if (isLoading && cashier.id.startsWith("skeleton-")) {
+            return <Skeleton className="h-5 w-16" />;
+          }
+          return (
+            <Badge
+              variant={cashier.isActive ? "default" : "secondary"}
+              className={
+                cashier.isActive
+                  ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
+                  : "bg-destructive/15 text-destructive"
+              }
+            >
+              {cashier.isActive ? "Active" : "Inactive"}
+            </Badge>
+          );
+        },
+        enableColumnFilter: true,
+        meta: {
+          label: "Status",
+          variant: "select" as const,
+          placeholder: "Filter by status...",
+          options: [
+            { label: "Active", value: "true" },
+            { label: "Inactive", value: "false" },
+          ],
+        },
+      },
+      {
         id: "createdAt",
         accessorKey: "createdAt",
         header: ({ column }) => (
@@ -180,11 +227,25 @@ export function CashierTable({
           }
           const cashierForButtons: ManageCashier = {
             ...cashier,
+            isActive: cashier.isActive ?? true,
             createdAt: new Date(cashier.createdAt),
             updatedAt: new Date(cashier.updatedAt),
           };
           return (
             <div className="flex justify-end gap-1">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => {
+                  setDetailCashierId(cashier.id);
+                  setDetailOpen(true);
+                }}
+                aria-label="View cashier details"
+              >
+                <Eye className="h-4 w-4" />
+              </Button>
               <OpenCashierPortalButton cashier={cashierForButtons} />
               <EditCashierButton cashier={cashierForButtons} />
               <DeleteCashierButton cashierId={cashier.id} />
@@ -222,25 +283,32 @@ export function CashierTable({
   });
 
   return (
-    <DataTable
-      table={table}
-      renderRowFooter={(row) => {
-        if (isEmpty && row.original.id === "empty-state") {
-          return (
-            <div className="flex flex-col items-center justify-center px-4 py-12">
-              <p className="text-muted-foreground text-sm font-medium">
-                No cashiers found
-              </p>
-              <p className="text-muted-foreground mt-1 text-xs">
-                Try adjusting your filters or add a new cashier
-              </p>
-            </div>
-          );
-        }
-        return null;
-      }}
-    >
-      <DataTableToolbar table={table} />
-    </DataTable>
+    <>
+      <DataTable
+        table={table}
+        renderRowFooter={(row) => {
+          if (isEmpty && row.original.id === "empty-state") {
+            return (
+              <div className="flex flex-col items-center justify-center px-4 py-12">
+                <p className="text-muted-foreground text-sm font-medium">
+                  No cashiers found
+                </p>
+                <p className="text-muted-foreground mt-1 text-xs">
+                  Try adjusting your filters or add a new cashier
+                </p>
+              </div>
+            );
+          }
+          return null;
+        }}
+      >
+        <DataTableToolbar table={table} />
+      </DataTable>
+      <CashierDetailSheet
+        cashierId={detailCashierId}
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+      />
+    </>
   );
 }

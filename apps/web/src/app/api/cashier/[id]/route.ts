@@ -7,6 +7,78 @@ import {
 import { prisma } from "@reelo/db";
 import { NextRequest, NextResponse } from "next/server";
 
+export const GET = withAdminAuth<{ id: string }>(
+  async (request: NextRequest, context, params) => {
+    try {
+      const { id } = params;
+
+      const cashier = await prisma.cashier.findFirst({
+        where: {
+          id,
+          businessId: context.business.id,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+          bills: {
+            take: 3,
+            orderBy: { createdAt: "desc" },
+            select: {
+              id: true,
+              billNumber: true,
+              amount: true,
+              createdAt: true,
+            },
+          },
+        },
+      });
+
+      if (!cashier) {
+        return NextResponse.json(
+          { error: "Cashier not found", cashier: null },
+          { status: 404 },
+        );
+      }
+
+      return NextResponse.json({
+        cashier: {
+          id: cashier.id,
+          userId: cashier.userId,
+          name: cashier.user.name,
+          email: cashier.user.email,
+          cashierLinkSlug: cashier.cashierLinkSlug,
+          password: cashier.password,
+          isActive: cashier.isActive,
+          createdAt: cashier.createdAt.toISOString(),
+          updatedAt: cashier.updatedAt.toISOString(),
+          recentBills: cashier.bills.map((b) => ({
+            id: b.id,
+            billNumber: b.billNumber,
+            amount: b.amount,
+            createdAt: b.createdAt.toISOString(),
+          })),
+        },
+      });
+    } catch (error: any) {
+      console.error("Failed to fetch cashier:", error);
+      return NextResponse.json(
+        {
+          error:
+            sanitizeErrorMessage(error) ||
+            "Failed to fetch cashier. Please try again.",
+          cashier: null,
+        },
+        { status: 500 },
+      );
+    }
+  },
+);
+
 export const PUT = withAdminAuth<{ id: string }>(
   async (request: NextRequest, context, params) => {
     try {
@@ -37,7 +109,8 @@ export const PUT = withAdminAuth<{ id: string }>(
         );
       }
 
-      const { name, email, password, cashierLinkSlug } = validation.data;
+      const { name, email, password, cashierLinkSlug, isActive } =
+        validation.data;
 
       if (cashierLinkSlug && cashierLinkSlug !== cashier.cashierLinkSlug) {
         const existingCashierSlug = await prisma.cashier.findFirst({
@@ -90,11 +163,14 @@ export const PUT = withAdminAuth<{ id: string }>(
         const cashierUpdateData: {
           cashierLinkSlug?: string;
           password?: string;
+          isActive?: boolean;
         } = {};
 
         if (cashierLinkSlug)
           cashierUpdateData.cashierLinkSlug = cashierLinkSlug;
         if (password) cashierUpdateData.password = password;
+        if (typeof isActive === "boolean")
+          cashierUpdateData.isActive = isActive;
 
         const updatedCashier = await tx.cashier.update({
           where: { id },
@@ -121,6 +197,7 @@ export const PUT = withAdminAuth<{ id: string }>(
           name: result.user.name,
           email: result.user.email,
           cashierLinkSlug: result.cashierLinkSlug,
+          isActive: result.isActive,
           createdAt: result.createdAt,
           updatedAt: result.updatedAt,
         },

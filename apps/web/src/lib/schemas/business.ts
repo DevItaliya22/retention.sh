@@ -14,6 +14,7 @@ export const updateBusinessSchema = z.object({
   defaultPointsName: pointsNameSchema.optional(),
   defaultCurrencySymbol: currencySymbolSchema.optional(),
   defaultCurrencyCode: currencyCodeSchema.optional(),
+  referralEnabled: z.boolean().optional(),
   defaultBranding: z
     .object({
       logo: urlSchema,

@@ -20,6 +20,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Textarea,
 } from "@reelo/ui/components";
 import { CheckCircle2, Plus, Trash2, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -62,6 +63,7 @@ export function BillCreationForm() {
   const [country, setCountry] = useState("");
   const [postalCode, setPostalCode] = useState("");
   const [amount, setAmount] = useState("");
+  const [notes, setNotes] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lineItems, setLineItems] = useState<LineItemRow[]>([]);
@@ -81,6 +83,7 @@ export function BillCreationForm() {
     setCountry("");
     setPostalCode("");
     setAmount("");
+    setNotes("");
     setLineItems([]);
     clearSelectedCustomer();
     setError(null);
@@ -203,6 +206,7 @@ export function BillCreationForm() {
         country: country || null,
         postalCode: postalCode || null,
         amount: amount ? parseFloat(amount) : null,
+        notes: notes.trim() || undefined,
         lineItems: parsedLineItems.length > 0 ? parsedLineItems : undefined,
       });
 
@@ -432,6 +436,19 @@ export function BillCreationForm() {
                 disabled={isCreating}
               />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="notes">Notes (optional)</Label>
+            <Textarea
+              id="notes"
+              placeholder="Any notes for this bill"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              disabled={isCreating}
+              rows={3}
+              className="resize-none"
+            />
           </div>
 
           {/* Line items */}

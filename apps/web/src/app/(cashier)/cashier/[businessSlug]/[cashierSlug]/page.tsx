@@ -63,6 +63,21 @@ export default async function CashierLoginPage({
     );
   }
 
+  if (!cashier.isActive) {
+    return (
+      <div className="bg-background flex min-h-screen items-center justify-center p-4">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="bg-primary/20 absolute -top-40 -right-40 h-80 w-80 rounded-full blur-3xl" />
+          <div className="bg-secondary/20 absolute -bottom-40 -left-40 h-80 w-80 rounded-full blur-3xl" />
+        </div>
+        <CashierErrorPage
+          title="Cashier Inactive"
+          message="This cashier account is inactive. Contact your administrator to restore access."
+        />
+      </div>
+    );
+  }
+
   const session = await getCashierSession();
 
   if (session?.user) {

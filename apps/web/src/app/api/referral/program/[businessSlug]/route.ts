@@ -29,6 +29,16 @@ export async function GET(
       );
     }
 
+    if (!business.referralEnabled) {
+      return NextResponse.json(
+        {
+          referralProgram: null,
+          error: "Referral is not enabled for this business",
+        },
+        { status: 404 },
+      );
+    }
+
     if (!business.referralProgram || !business.referralProgram.isEnabled) {
       return NextResponse.json(
         { referralProgram: null, error: "Referral program not enabled" },

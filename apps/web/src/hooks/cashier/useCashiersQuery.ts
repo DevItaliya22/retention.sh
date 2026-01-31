@@ -10,6 +10,7 @@ export interface Cashier {
   name: string;
   email: string | null;
   cashierLinkSlug: string;
+  isActive: boolean;
   createdAt: string;
   updatedAt: string;
 }

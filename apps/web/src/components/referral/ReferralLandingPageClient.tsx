@@ -14,7 +14,7 @@ export function ReferralLandingPageClient({
   businessSlug,
   referralSlug,
 }: ReferralLandingPageClientProps) {
-  const { data, isLoading } = usePublicReferralProgram(businessSlug);
+  const { data, isLoading, isError } = usePublicReferralProgram(businessSlug);
 
   const referralLink = useMemo(() => {
     if (typeof window !== "undefined") {
@@ -53,7 +53,7 @@ export function ReferralLandingPageClient({
     );
   }
 
-  if (!data?.referralProgram || !data?.business) {
+  if (isError || !data?.referralProgram || !data?.business) {
     return (
       <div className="flex min-h-screen items-center justify-center p-4">
         <Card className="w-full max-w-2xl">
