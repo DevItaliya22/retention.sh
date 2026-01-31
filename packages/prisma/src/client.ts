@@ -17,6 +17,27 @@ export const prisma =
   globalForPrisma.prisma ||
   new PrismaClient({
     adapter,
+    log: [
+      {
+        emit: "event",
+        level: "query",
+      },
+    ],
   });
+
+const dim = "\x1b[2m";
+const green = "\x1b[32m";
+const yellow = "\x1b[33m";
+const reset = "\x1b[0m";
+const cyan = "\x1b[36m";
+
+// @ts-ignore
+prisma.$on("query", (e: any) => {
+  if (process.env.NODE_ENV !== "production") return;
+  console.log(
+    `${cyan}Query:${reset} ${dim}${e.query}${reset}\n` +
+      `${green}Duration:${reset} ${yellow}${e.duration.toFixed(2)}ms${reset}`,
+  );
+});
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;

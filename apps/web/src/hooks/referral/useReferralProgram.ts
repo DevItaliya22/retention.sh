@@ -2,10 +2,27 @@
 
 import { fetcher } from "@/lib/fetcher";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useSearchParams } from "next/navigation";
 import {
   CreateReferralProgramInput,
   UpdateReferralProgramInput,
 } from "@/lib/schemas/referral";
+
+export interface ReferralStatRow {
+  id: string;
+  referrerName: string;
+  referrerSlugId: string;
+  referredCount: number;
+}
+
+export interface ReferralStatsResponse {
+  referralEnabled: boolean;
+  items: ReferralStatRow[];
+  total: number;
+  page: number;
+  perPage: number;
+  error?: string;
+}
 
 export interface ReferralProgram {
   id: string;
@@ -36,6 +53,23 @@ export interface ReferralProgram {
 export interface ReferralProgramResponse {
   referralProgram: ReferralProgram | null;
   error?: string;
+}
+
+export function useReferralStatsQuery() {
+  const searchParams = useSearchParams();
+  const queryString = searchParams.toString();
+
+  return useQuery<ReferralStatsResponse, Error>({
+    queryKey: ["referralStats", queryString],
+    queryFn: () => {
+      const url = queryString
+        ? `/api/referral/stats?${queryString}`
+        : "/api/referral/stats";
+      return fetcher<ReferralStatsResponse>(url);
+    },
+    placeholderData: (prev) => prev,
+    staleTime: 5000,
+  });
 }
 
 export function useReferralProgram() {

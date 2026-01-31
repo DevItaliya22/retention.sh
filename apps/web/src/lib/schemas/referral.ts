@@ -99,6 +99,16 @@ export const referralQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1).optional(),
   perPage: z.coerce.number().int().min(1).max(100).default(10).optional(),
   sort: z.string().max(100).optional(),
+  referrerSlugId: z.string().min(1).optional(),
 });
 
 export type ReferralQueryInput = z.infer<typeof referralQuerySchema>;
+
+// Referral stats (who referred, how many)
+export const referralStatsQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1).optional(),
+  perPage: z.coerce.number().int().min(1).max(100).default(10).optional(),
+  sort: z.string().max(100).optional(),
+});
+
+export type ReferralStatsQueryInput = z.infer<typeof referralStatsQuerySchema>;

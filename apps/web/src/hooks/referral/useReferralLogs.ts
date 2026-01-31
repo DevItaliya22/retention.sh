@@ -7,15 +7,17 @@ import { ReferralQueryInput } from "@/lib/schemas/referral";
 
 export interface ReferralLog {
   id: string;
-  slug: string;
-  referrerBusinessId: string;
-  referrerCustomerId: string;
   newCustomerPhone: string;
   newCustomerName: string | null;
   becameCustomer: boolean;
-  rewardPoints: number;
-  createdAt: Date;
-  referrer: {
+  referredCustomerSlugId?: string | null;
+  /** Present only when not filtering by referrerSlugId */
+  slug?: string;
+  referrerBusinessId?: string;
+  referrerCustomerId?: string;
+  rewardPoints?: number;
+  createdAt?: string;
+  referrer?: {
     customer: {
       user: {
         name: string;
@@ -42,6 +44,19 @@ export function useReferralLogs() {
     queryFn: () =>
       fetcher<ReferralLogsResponse>(`/api/referral/logs?${queryString}`),
     placeholderData: (prev) => prev,
+    staleTime: 5000,
+  });
+}
+
+/** Fetch referral logs for a specific referrer (e.g. for expanded row). */
+export function useReferralLogsByReferrer(referrerSlugId: string | null) {
+  return useQuery<ReferralLogsResponse, Error>({
+    queryKey: ["referralLogsByReferrer", referrerSlugId],
+    queryFn: () =>
+      fetcher<ReferralLogsResponse>(
+        `/api/referral/logs?referrerSlugId=${encodeURIComponent(referrerSlugId!)}&perPage=100`,
+      ),
+    enabled: !!referrerSlugId,
     staleTime: 5000,
   });
 }

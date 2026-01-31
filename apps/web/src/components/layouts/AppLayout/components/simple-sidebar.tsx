@@ -25,6 +25,7 @@ import {
 import {
   ChevronRight,
   FileText,
+  Gift,
   Inbox,
   Layers,
   Package,
@@ -112,6 +113,18 @@ export function SimpleSidebar({
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname === "/referral-stats"}
+                    tooltip="Referral stats"
+                  >
+                    <Link href="/referral-stats">
+                      <Gift className="h-4 w-4" />
+                      <span className="sidebar-text">Referral stats</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
                 <Collapsible
                   asChild
                   defaultOpen={
@@ -171,6 +184,17 @@ export function SimpleSidebar({
                             <Link href="/settings/sku/categories">
                               {/* <Layers className="h-4 w-4" /> */}
                               Categories
+                            </Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                        <SidebarMenuSubItem>
+                          <SidebarMenuSubButton
+                            asChild
+                            isActive={pathname === "/settings/referral"}
+                          >
+                            <Link href="/settings/referral">
+                              {/* <Layers className="h-4 w-4" /> */}
+                              Referral
                             </Link>
                           </SidebarMenuSubButton>
                         </SidebarMenuSubItem>

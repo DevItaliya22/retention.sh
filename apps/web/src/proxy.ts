@@ -10,6 +10,7 @@ const protectedAdminRoutes = [
   "/welcome",
   "/bills",
   "/customers",
+  "/referral-stats",
 ];
 
 const AuthRoutes = ["/login"];
