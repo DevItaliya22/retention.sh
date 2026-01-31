@@ -62,7 +62,7 @@ export async function POST(request: Request) {
 
     const user = await prisma.user.findUnique({
       where: { id: cashier.userId },
-      select: { id: true, name: true, email: true, role: true },
+      select: { id: true, name: true, role: true },
     });
 
     if (!user) {
@@ -93,12 +93,13 @@ export async function POST(request: Request) {
       },
     });
 
+    // Use cashier.email (login email, unique per business) for session display
     const response = NextResponse.json({
       session: {
         user: {
           id: user.id,
           name: user.name,
-          email: user.email,
+          email: cashier.user.email,
           role: "CASHIER",
         },
         session: {

@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client"
   output   = "../generated/prisma"
@@ -17,7 +11,7 @@ model User {
   id   String @id @default(uuid())
   name String
 
-  // Email for Admin/Cashier (email IDP auth) ( this will be used for admin and cashier only , we will not use it for the customer , the email will be number@dy.com in user table for just sake of making user and identification purpose )
+  // Email-based auth (admin only). Customers use phone. Placeholder emails (e.g. number@dy.com) used when creating users without a real email.Cashir use email in their own table
   email         String?
   emailVerified Boolean @default(false)
 
@@ -29,7 +23,7 @@ model User {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
+ 
   sessions Session[]
   accounts Account[]
 
@@ -72,7 +66,7 @@ model Cashier {
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Login email; unique only within this business (same email allowed across businesses)
-  // email           String
+  email           String
   cashierLinkSlug String
   password        String
   isActive        Boolean @default(true)
@@ -87,7 +81,7 @@ model Cashier {
   updatedAt DateTime @updatedAt
 
   @@unique([cashierLinkSlug, businessId])
-  // @@unique([businessId, email])
+  @@unique([businessId, email])
   @@index([userId])
   @@index([businessId])
   @@map("cashier")

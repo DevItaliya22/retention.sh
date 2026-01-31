@@ -218,7 +218,8 @@ export async function validateCashierLogin(params: {
       };
     }
 
-    if (cashier.user.email !== email) {
+    // Validate email against Cashier.email (unique per business)
+    if (cashier.email !== email) {
       return {
         success: false,
         error: "Invalid email for this cashier",
@@ -241,7 +242,7 @@ export async function validateCashierLogin(params: {
         cashierLinkSlug: cashier.cashierLinkSlug,
         user: {
           id: cashier.user.id,
-          email: cashier.user.email,
+          email: cashier.email,
           name: cashier.user.name,
         },
       },

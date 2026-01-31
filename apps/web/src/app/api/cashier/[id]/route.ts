@@ -50,7 +50,7 @@ export const GET = withAdminAuth<{ id: string }>(
           id: cashier.id,
           userId: cashier.userId,
           name: cashier.user.name,
-          email: cashier.user.email,
+          email: cashier.email,
           cashierLinkSlug: cashier.cashierLinkSlug,
           password: cashier.password,
           isActive: cashier.isActive,
@@ -131,43 +131,45 @@ export const PUT = withAdminAuth<{ id: string }>(
         }
       }
 
-      if (email && email !== cashier.user.email) {
-        const existingUser = await prisma.user.findUnique({
-          where: { email },
+      if (email && email !== cashier.email) {
+        const existingCashierEmail = await prisma.cashier.findFirst({
+          where: {
+            businessId: context.business.id,
+            email,
+            id: { not: id },
+          },
         });
 
-        if (existingUser && existingUser.id !== cashier.userId) {
+        if (existingCashierEmail) {
           return NextResponse.json(
-            { error: "User with this email already exists", cashier: null },
+            {
+              error:
+                "A cashier with this email already exists in this business",
+              cashier: null,
+            },
             { status: 400 },
           );
         }
       }
 
       const result = await prisma.$transaction(async (tx) => {
-        const updateData: {
-          name?: string;
-          email?: string;
-        } = {};
-
-        if (name) updateData.name = name;
-        if (email) updateData.email = email;
-
-        if (Object.keys(updateData).length > 0) {
+        if (name) {
           await tx.user.update({
             where: { id: cashier.userId },
-            data: updateData,
+            data: { name },
           });
         }
 
         const cashierUpdateData: {
           cashierLinkSlug?: string;
+          email?: string;
           password?: string;
           isActive?: boolean;
         } = {};
 
         if (cashierLinkSlug)
           cashierUpdateData.cashierLinkSlug = cashierLinkSlug;
+        if (email) cashierUpdateData.email = email;
         if (password) cashierUpdateData.password = password;
         if (typeof isActive === "boolean")
           cashierUpdateData.isActive = isActive;
@@ -180,7 +182,6 @@ export const PUT = withAdminAuth<{ id: string }>(
               select: {
                 id: true,
                 name: true,
-                email: true,
                 createdAt: true,
               },
             },
@@ -195,7 +196,7 @@ export const PUT = withAdminAuth<{ id: string }>(
           id: result.id,
           userId: result.userId,
           name: result.user.name,
-          email: result.user.email,
+          email: result.email,
           cashierLinkSlug: result.cashierLinkSlug,
           isActive: result.isActive,
           createdAt: result.createdAt,

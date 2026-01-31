@@ -95,25 +95,33 @@ export async function POST(request: Request) {
           throw new Error("Cashier link slug already exists.");
         }
 
-        let cashierUser = await tx.user.findUnique({
-          where: { email: validatedData.cashierEmail },
+        const existingCashierEmail = await tx.cashier.findFirst({
+          where: {
+            businessId: business.id,
+            email: validatedData.cashierEmail,
+          },
         });
 
-        if (!cashierUser) {
-          cashierUser = await tx.user.create({
-            data: {
-              name: validatedData.cashierName || "Cashier",
-              email: validatedData.cashierEmail,
-              role: "CASHIER",
-            },
-          });
+        if (existingCashierEmail) {
+          throw new Error(
+            "A cashier with this email already exists in this business.",
+          );
         }
+
+        const cashierUser = await tx.user.create({
+          data: {
+            name: validatedData.cashierName || "Cashier",
+            email: null,
+            role: "CASHIER",
+          },
+        });
 
         await tx.cashier.create({
           data: {
             userId: cashierUser.id,
             businessId: business.id,
             cashierLinkSlug: validatedData.cashierLinkSlug,
+            email: validatedData.cashierEmail,
             password: validatedData.cashierPassword,
           },
         });

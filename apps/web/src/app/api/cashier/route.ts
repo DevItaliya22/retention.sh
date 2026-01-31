@@ -42,32 +42,21 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
     if (isActive === "true") where.isActive = true;
     if (isActive === "false") where.isActive = false;
 
-    const userFilters: any = {};
     if (name) {
-      userFilters.name = {
-        contains: name,
-        mode: "insensitive",
-      };
+      where.user = { name: { contains: name, mode: "insensitive" as const } };
     }
     if (email) {
-      userFilters.email = {
-        contains: email,
-        mode: "insensitive",
-      };
-    }
-
-    if (Object.keys(userFilters).length > 0) {
-      where.user = userFilters;
+      where.email = { contains: email, mode: "insensitive" as const };
     }
 
     const orderBy: any = {};
     if (sort) {
       const [field, direction] = sort.split(":");
       const sortDirection = direction === "desc" ? "desc" : "asc";
-      if (field === "name" || field === "email") {
-        orderBy.user = {
-          [field]: sortDirection,
-        };
+      if (field === "name") {
+        orderBy.user = { name: sortDirection };
+      } else if (field === "email") {
+        orderBy.email = sortDirection;
       } else if (field === "createdAt") {
         orderBy.createdAt = sortDirection;
       } else {
@@ -101,7 +90,7 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
       id: cashier.id,
       userId: cashier.userId,
       name: cashier.user.name,
-      email: cashier.user.email,
+      email: cashier.email,
       cashierLinkSlug: cashier.cashierLinkSlug,
       isActive: cashier.isActive,
       createdAt: cashier.createdAt.toISOString(),
@@ -161,13 +150,19 @@ export const POST = withAdminAuth(async (request: NextRequest, context) => {
       );
     }
 
-    const existingUser = await prisma.user.findUnique({
-      where: { email },
+    const existingCashierEmail = await prisma.cashier.findFirst({
+      where: {
+        businessId: context.business.id,
+        email,
+      },
     });
 
-    if (existingUser) {
+    if (existingCashierEmail) {
       return NextResponse.json(
-        { error: "User with this email already exists", cashier: null },
+        {
+          error: "A cashier with this email already exists in this business",
+          cashier: null,
+        },
         { status: 400 },
       );
     }
@@ -176,7 +171,7 @@ export const POST = withAdminAuth(async (request: NextRequest, context) => {
       const cashierUser = await tx.user.create({
         data: {
           name,
-          email,
+          email: null,
           role: "CASHIER",
         },
       });
@@ -186,6 +181,7 @@ export const POST = withAdminAuth(async (request: NextRequest, context) => {
           userId: cashierUser.id,
           businessId: context.business.id,
           cashierLinkSlug,
+          email,
           password,
           isActive: true,
         },
@@ -194,7 +190,6 @@ export const POST = withAdminAuth(async (request: NextRequest, context) => {
             select: {
               id: true,
               name: true,
-              email: true,
               createdAt: true,
             },
           },
@@ -209,7 +204,7 @@ export const POST = withAdminAuth(async (request: NextRequest, context) => {
         id: result.id,
         userId: result.userId,
         name: result.user.name,
-        email: result.user.email,
+        email: result.email,
         cashierLinkSlug: result.cashierLinkSlug,
         createdAt: result.createdAt,
         updatedAt: result.updatedAt,

@@ -44,11 +44,18 @@ export async function getCashierSession() {
     return null;
   }
 
+  // Cashiers store login email on Cashier, not User
+  const cashier = await prisma.cashier.findUnique({
+    where: { userId: sessionRecord.userId },
+    select: { email: true },
+  });
+  const displayEmail = cashier?.email ?? sessionRecord.user.email;
+
   return {
     user: {
       id: sessionRecord.user.id,
       name: sessionRecord.user.name,
-      email: sessionRecord.user.email,
+      email: displayEmail,
       role: role,
     },
     session: {
@@ -100,11 +107,18 @@ export async function getCashierSessionFromHeaders(
     return null;
   }
 
+  // Cashiers store login email on Cashier, not User
+  const cashier = await prisma.cashier.findUnique({
+    where: { userId: sessionRecord.userId },
+    select: { email: true },
+  });
+  const displayEmail = cashier?.email ?? sessionRecord.user.email;
+
   return {
     user: {
       id: sessionRecord.user.id,
       name: sessionRecord.user.name,
-      email: sessionRecord.user.email,
+      email: displayEmail,
       role: role,
     },
     session: {
