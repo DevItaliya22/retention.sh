@@ -11,6 +11,9 @@ CREATE TYPE "BenefitAppliesTo" AS ENUM ('ENTIRE_PURCHASE', 'SPECIFIC_ITEMS');
 CREATE TYPE "QrBenefitType" AS ENUM ('CASH_DISCOUNT', 'PERCENTAGE_DISCOUNT', 'FREE_ITEM', 'LOYALTY_BONUS');
 
 -- CreateEnum
+CREATE TYPE "ReferalBenefitType" AS ENUM ('CASH_DISCOUNT', 'PERCENTAGE_DISCOUNT', 'FREE_ITEM', 'LOYALTY_BONUS');
+
+-- CreateEnum
 CREATE TYPE "MembershipStatus" AS ENUM ('DRAFT', 'ACTIVE', 'INACTIVE');
 
 -- CreateEnum
@@ -66,6 +69,19 @@ CREATE TABLE "bill" (
 );
 
 -- CreateTable
+CREATE TABLE "bill_line_item" (
+    "id" TEXT NOT NULL,
+    "billId" TEXT NOT NULL,
+    "skuId" TEXT NOT NULL,
+    "qty" INTEGER NOT NULL DEFAULT 1,
+    "unitPrice" DOUBLE PRECISION,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "bill_line_item_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "branding" (
     "id" TEXT NOT NULL,
     "logo" TEXT,
@@ -93,8 +109,6 @@ CREATE TABLE "business" (
     "defaultCurrencySymbol" TEXT NOT NULL DEFAULT '₹',
     "defaultCurrencyCode" TEXT NOT NULL DEFAULT 'INR',
     "referralEnabled" BOOLEAN NOT NULL DEFAULT false,
-    "referralRewardPoints" INTEGER NOT NULL DEFAULT 0,
-    "referedBonusPoints" INTEGER NOT NULL DEFAULT 0,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -105,6 +119,7 @@ CREATE TABLE "business" (
 CREATE TABLE "category" (
     "id" TEXT NOT NULL,
     "businessId" TEXT NOT NULL,
+    "parentId" TEXT,
     "name" TEXT NOT NULL,
     "description" TEXT,
     "sortOrder" INTEGER NOT NULL DEFAULT 0,
@@ -411,6 +426,26 @@ CREATE TABLE "qr_action" (
 );
 
 -- CreateTable
+CREATE TABLE "referral_program" (
+    "id" TEXT NOT NULL,
+    "businessId" TEXT NOT NULL,
+    "isEnabled" BOOLEAN NOT NULL DEFAULT false,
+    "newCustomerBenefitType" "ReferalBenefitType" NOT NULL,
+    "newCustomerBenefitValue" INTEGER NOT NULL,
+    "newCustomerBenefitExpiresInDays" INTEGER,
+    "existingCustomerBenefitType" "ReferalBenefitType" NOT NULL,
+    "existingCustomerBenefitValue" INTEGER NOT NULL,
+    "existingCustomerBenefitExpiresInDays" INTEGER,
+    "sendReminderToCustomer" BOOLEAN NOT NULL DEFAULT false,
+    "informationSections" JSONB NOT NULL,
+    "branding" JSONB,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "referral_program_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "referral_log" (
     "id" TEXT NOT NULL,
     "slug" TEXT NOT NULL,
@@ -492,6 +527,8 @@ CREATE TABLE "terms_and_conditions" (
     "membershipId" TEXT,
     "qrId" TEXT,
     "loyaltyTierId" TEXT,
+    "referralProgramNewCustomerId" TEXT,
+    "referralProgramExistingCustomerId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -584,14 +621,6 @@ CREATE TABLE "verification" (
     CONSTRAINT "verification_pkey" PRIMARY KEY ("id")
 );
 
--- CreateTable
-CREATE TABLE "_BillToSku" (
-    "A" TEXT NOT NULL,
-    "B" TEXT NOT NULL,
-
-    CONSTRAINT "_BillToSku_AB_pkey" PRIMARY KEY ("A","B")
-);
-
 -- CreateIndex
 CREATE INDEX "bill_businessId_idx" ON "bill"("businessId");
 
@@ -600,6 +629,15 @@ CREATE INDEX "bill_customerId_idx" ON "bill"("customerId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "bill_businessId_billNumber_key" ON "bill"("businessId", "billNumber");
+
+-- CreateIndex
+CREATE INDEX "bill_line_item_billId_idx" ON "bill_line_item"("billId");
+
+-- CreateIndex
+CREATE INDEX "bill_line_item_skuId_idx" ON "bill_line_item"("skuId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "bill_line_item_billId_skuId_key" ON "bill_line_item"("billId", "skuId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "branding_businessId_key" ON "branding"("businessId");
@@ -615,6 +653,9 @@ CREATE INDEX "business_slug_idx" ON "business"("slug");
 
 -- CreateIndex
 CREATE INDEX "category_businessId_idx" ON "category"("businessId");
+
+-- CreateIndex
+CREATE INDEX "category_parentId_idx" ON "category"("parentId");
 
 -- CreateIndex
 CREATE INDEX "sku_businessId_idx" ON "sku"("businessId");
@@ -725,6 +766,12 @@ CREATE INDEX "qr_benefit_qrId_idx" ON "qr_benefit"("qrId");
 CREATE INDEX "qr_action_qrId_idx" ON "qr_action"("qrId");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "referral_program_businessId_key" ON "referral_program"("businessId");
+
+-- CreateIndex
+CREATE INDEX "referral_program_businessId_idx" ON "referral_program"("businessId");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "referral_log_slug_key" ON "referral_log"("slug");
 
 -- CreateIndex
@@ -776,6 +823,12 @@ CREATE INDEX "terms_and_conditions_membershipId_idx" ON "terms_and_conditions"("
 CREATE INDEX "terms_and_conditions_qrId_idx" ON "terms_and_conditions"("qrId");
 
 -- CreateIndex
+CREATE INDEX "terms_and_conditions_referralProgramNewCustomerId_idx" ON "terms_and_conditions"("referralProgramNewCustomerId");
+
+-- CreateIndex
+CREATE INDEX "terms_and_conditions_referralProgramExistingCustomerId_idx" ON "terms_and_conditions"("referralProgramExistingCustomerId");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "terms_and_conditions_content_loyaltyId_key" ON "terms_and_conditions"("content", "loyaltyId");
 
 -- CreateIndex
@@ -783,6 +836,12 @@ CREATE UNIQUE INDEX "terms_and_conditions_content_membershipId_key" ON "terms_an
 
 -- CreateIndex
 CREATE UNIQUE INDEX "terms_and_conditions_content_qrId_key" ON "terms_and_conditions"("content", "qrId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "terms_and_conditions_content_referralProgramNewCustomerId_key" ON "terms_and_conditions"("content", "referralProgramNewCustomerId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "terms_and_conditions_content_referralProgramExistingCustome_key" ON "terms_and_conditions"("content", "referralProgramExistingCustomerId");
 
 -- CreateIndex
 CREATE INDEX "user_email_idx" ON "user"("email");
@@ -829,17 +888,23 @@ CREATE INDEX "account_userId_idx" ON "account"("userId");
 -- CreateIndex
 CREATE INDEX "verification_identifier_idx" ON "verification"("identifier");
 
--- CreateIndex
-CREATE INDEX "_BillToSku_B_index" ON "_BillToSku"("B");
-
 -- AddForeignKey
 ALTER TABLE "bill" ADD CONSTRAINT "bill_businessId_customerId_fkey" FOREIGN KEY ("businessId", "customerId") REFERENCES "business_customer"("businessId", "customerId") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "bill_line_item" ADD CONSTRAINT "bill_line_item_billId_fkey" FOREIGN KEY ("billId") REFERENCES "bill"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "bill_line_item" ADD CONSTRAINT "bill_line_item_skuId_fkey" FOREIGN KEY ("skuId") REFERENCES "sku"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "branding" ADD CONSTRAINT "branding_businessId_fkey" FOREIGN KEY ("businessId") REFERENCES "business"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "category" ADD CONSTRAINT "category_businessId_fkey" FOREIGN KEY ("businessId") REFERENCES "business"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "category" ADD CONSTRAINT "category_parentId_fkey" FOREIGN KEY ("parentId") REFERENCES "category"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "sku" ADD CONSTRAINT "sku_businessId_fkey" FOREIGN KEY ("businessId") REFERENCES "business"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -923,6 +988,9 @@ ALTER TABLE "qr_benefit" ADD CONSTRAINT "qr_benefit_qrId_fkey" FOREIGN KEY ("qrI
 ALTER TABLE "qr_action" ADD CONSTRAINT "qr_action_qrId_fkey" FOREIGN KEY ("qrId") REFERENCES "qr"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "referral_program" ADD CONSTRAINT "referral_program_businessId_fkey" FOREIGN KEY ("businessId") REFERENCES "business"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "referral_log" ADD CONSTRAINT "referral_log_referrerBusinessId_referrerCustomerId_fkey" FOREIGN KEY ("referrerBusinessId", "referrerCustomerId") REFERENCES "business_customer"("businessId", "customerId") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -962,6 +1030,12 @@ ALTER TABLE "terms_and_conditions" ADD CONSTRAINT "terms_and_conditions_qrId_fke
 ALTER TABLE "terms_and_conditions" ADD CONSTRAINT "terms_and_conditions_loyaltyTierId_fkey" FOREIGN KEY ("loyaltyTierId") REFERENCES "loyalty_tier"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "terms_and_conditions" ADD CONSTRAINT "terms_and_conditions_referralProgramNewCustomerId_fkey" FOREIGN KEY ("referralProgramNewCustomerId") REFERENCES "referral_program"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "terms_and_conditions" ADD CONSTRAINT "terms_and_conditions_referralProgramExistingCustomerId_fkey" FOREIGN KEY ("referralProgramExistingCustomerId") REFERENCES "referral_program"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "admin" ADD CONSTRAINT "admin_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -978,9 +1052,3 @@ ALTER TABLE "session" ADD CONSTRAINT "session_userId_fkey" FOREIGN KEY ("userId"
 
 -- AddForeignKey
 ALTER TABLE "account" ADD CONSTRAINT "account_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "_BillToSku" ADD CONSTRAINT "_BillToSku_A_fkey" FOREIGN KEY ("A") REFERENCES "bill"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "_BillToSku" ADD CONSTRAINT "_BillToSku_B_fkey" FOREIGN KEY ("B") REFERENCES "sku"("id") ON DELETE CASCADE ON UPDATE CASCADE;

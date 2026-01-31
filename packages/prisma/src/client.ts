@@ -34,10 +34,14 @@ const cyan = "\x1b[36m";
 // @ts-ignore
 prisma.$on("query", (e: any) => {
   if (process.env.NODE_ENV !== "production") return;
-  console.log(
-    `${cyan}Query:${reset} ${dim}${e.query}${reset}\n` +
+  if (process.env.SHOW_QUERIES === "true") {
+    console.log(`${cyan}Query:${reset} ${dim}${e.query}${reset}`);
+  }
+  if (process.env.SHOW_DELAYS === "true") {
+    console.log(
       `${green}Duration:${reset} ${yellow}${e.duration.toFixed(2)}ms${reset}`,
-  );
+    );
+  }
 });
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
