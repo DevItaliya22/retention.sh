@@ -20,7 +20,7 @@ export interface CashierSkusResponse {
 export function useCashierSkusQuery(enabled = true) {
   return useQuery<CashierSkusResponse, Error>({
     queryKey: ["cashier", "skus"],
-    queryFn: () => fetcher<CashierSkusResponse>("/api/cashier/sku?perPage=500"),
+    queryFn: () => fetcher<CashierSkusResponse>("/api/cashier/sku"),
     enabled,
     staleTime: 60_000,
   });

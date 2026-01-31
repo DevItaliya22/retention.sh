@@ -55,20 +55,19 @@ function CategoryRow({
         <Folder className="h-4 w-4 shrink-0 text-muted-foreground" />
       )}
       <span className="min-w-0 flex-1 truncate font-medium">{node.name}</span>
-      {(node.skuCount > 0 || node.subcategoryCount > 0) && (
-        <span className="shrink-0 text-xs text-muted-foreground">
-          {node.skuCount > 0 && (
-            <span className="rounded bg-muted px-1.5 py-0.5">
-              {node.skuCount} SKU{node.skuCount !== 1 ? "s" : ""}
-            </span>
-          )}
-          {node.subcategoryCount > 0 && (
-            <span className="ml-1 rounded bg-muted px-1.5 py-0.5">
-              {node.subcategoryCount} sub
-            </span>
-          )}
+      <span className="shrink-0 text-xs text-muted-foreground">
+        <span className="rounded bg-muted px-1.5 py-0.5" title="Display order">
+          #{node.sortOrder}
         </span>
-      )}
+        <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5">
+          {node.skuCount} SKU{node.skuCount !== 1 ? "s" : ""}
+        </span>
+        {node.subcategoryCount > 0 && (
+          <span className="ml-1 rounded bg-muted px-1.5 py-0.5">
+            {node.subcategoryCount} sub
+          </span>
+        )}
+      </span>
       <div
         className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 [.group:focus-within_&]:opacity-100"
         onClick={(e) => e.stopPropagation()}

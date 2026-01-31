@@ -58,6 +58,23 @@ export function getDescendantIds(
 }
 
 /**
+ * Next display order for a category at a given level.
+ * Top-level: parentId = null → max(sortOrder of root categories) + 1.
+ * Under a parent: max(sortOrder of siblings under that parent) + 1.
+ */
+export function getNextSortOrder(
+  items: CategoryItem[],
+  parentId: string | null,
+): number {
+  const siblings = items.filter(
+    (c) => (c.parentId ?? null) === (parentId ?? null),
+  );
+  if (siblings.length === 0) return 1;
+  const maxOrder = Math.max(...siblings.map((c) => c.sortOrder));
+  return maxOrder + 1;
+}
+
+/**
  * Flat list of categories with depth (0 = root) for parent selector UI.
  */
 export interface CategoryOption {

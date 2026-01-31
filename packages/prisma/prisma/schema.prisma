@@ -71,7 +71,9 @@ model Cashier {
   userId String @unique
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  cashierLinkSlug String 
+  // Login email; unique only within this business (same email allowed across businesses)
+  // email           String
+  cashierLinkSlug String
   password        String
   isActive        Boolean @default(true)
 
@@ -84,9 +86,10 @@ model Cashier {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@unique([cashierLinkSlug, businessId])
+  // @@unique([businessId, email])
   @@index([userId])
   @@index([businessId])
-  @@unique([cashierLinkSlug,businessId])
   @@map("cashier")
 }
 

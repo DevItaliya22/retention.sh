@@ -195,6 +195,33 @@ export const POST = withCashierAuth(async (request: NextRequest, context) => {
       await updateCustomerInfo(customer.id, customerData);
     }
 
+    // Only active SKUs are allowed in billing
+    if (lineItems.length > 0) {
+      const skuIds = [
+        ...new Set(lineItems.map((li: { skuId: string }) => li.skuId)),
+      ];
+      const validSkus = await prisma.sku.findMany({
+        where: {
+          id: { in: skuIds },
+          businessId,
+          isActive: true,
+        },
+        select: { id: true },
+      });
+      const validIds = new Set(validSkus.map((s) => s.id));
+      const invalidId = skuIds.find((id) => !validIds.has(id));
+      if (invalidId) {
+        return NextResponse.json(
+          {
+            error:
+              "One or more line items use an inactive or invalid SKU. Only active SKUs can be added to a bill.",
+            bill: null,
+          },
+          { status: 400 },
+        );
+      }
+    }
+
     const bill = await prisma.bill.create({
       data: {
         billNumber,

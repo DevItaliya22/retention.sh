@@ -2,7 +2,10 @@
 
 import { useCategoriesListQuery } from "@/hooks/category/useCategoriesListQuery";
 import { useManageCategory } from "@/hooks/category/useManageCategory";
-import { getCategoryOptionsWithDepth } from "@/lib/category-tree";
+import {
+  getCategoryOptionsWithDepth,
+  getNextSortOrder,
+} from "@/lib/category-tree";
 import { createCategorySchema } from "@/lib/schemas/sku";
 import { getErrorMessageFromResponse } from "@/lib/utils/error-handler";
 import {
@@ -64,9 +67,11 @@ export function AddCategoryModal({
 
   useEffect(() => {
     if (isOpen) {
-      form.setValue("parentId", defaultParentId ?? null);
+      const parentId = defaultParentId ?? null;
+      form.setValue("parentId", parentId);
+      form.setValue("sortOrder", getNextSortOrder(items, parentId));
     }
-  }, [isOpen, defaultParentId, form]);
+  }, [isOpen, defaultParentId, items, form]);
 
   const handleSubmit = (data: AddCategoryFormValues) => {
     create.mutate(
@@ -117,9 +122,14 @@ export function AddCategoryModal({
                   <FormItem>
                     <FormLabel>Parent category (optional)</FormLabel>
                     <Select
-                      onValueChange={(v) =>
-                        field.onChange(v === "__none__" ? null : v)
-                      }
+                      onValueChange={(v) => {
+                        const parentId = v === "__none__" ? null : v;
+                        field.onChange(parentId);
+                        form.setValue(
+                          "sortOrder",
+                          getNextSortOrder(items, parentId),
+                        );
+                      }}
                       value={field.value ?? "__none__"}
                     >
                       <FormControl>

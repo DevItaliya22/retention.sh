@@ -6,6 +6,7 @@ import type { CategoryItem } from "@/hooks/category/useCategoriesQuery";
 import {
   getCategoryOptionsWithDepth,
   getDescendantIds,
+  getNextSortOrder,
 } from "@/lib/category-tree";
 import { updateCategorySchema } from "@/lib/schemas/sku";
 import { getErrorMessageFromResponse } from "@/lib/utils/error-handler";
@@ -138,9 +139,14 @@ export function EditCategoryModal({
                   <FormItem>
                     <FormLabel>Parent category (optional)</FormLabel>
                     <Select
-                      onValueChange={(v) =>
-                        field.onChange(v === "__none__" ? null : v)
-                      }
+                      onValueChange={(v) => {
+                        const parentId = v === "__none__" ? null : v;
+                        field.onChange(parentId);
+                        form.setValue(
+                          "sortOrder",
+                          getNextSortOrder(items, parentId),
+                        );
+                      }}
                       value={field.value ?? "__none__"}
                     >
                       <FormControl>
