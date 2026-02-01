@@ -4,12 +4,12 @@ import {
   sanitizeErrorMessage,
   validateSchema,
 } from "@/lib/utils/error-handler";
-import { prisma } from "@reelo/db";
+import { db } from "@reelo/db";
 import { NextResponse } from "next/server";
 
 export const GET = withAdminAuth(async (request, context) => {
   try {
-    const business = await prisma.business.findUnique({
+    const business = await db.business.findUnique({
       where: { id: context.business.id },
       include: {
         defaultBranding: true,
@@ -51,7 +51,7 @@ export const PUT = withAdminAuth(async (request, context) => {
 
     const businessId = context.business.id;
 
-    const updated = await prisma.business.update({
+    const updated = await db.business.update({
       where: { id: businessId },
       data: {
         name: validatedData.name ?? undefined,

@@ -3,7 +3,7 @@ import {
   sanitizeErrorMessage,
   validateSchema,
 } from "@/lib/utils/error-handler";
-import { prisma } from "@reelo/db";
+import { db } from "@reelo/db";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
@@ -14,7 +14,7 @@ export async function GET(
     const { businessSlug } = await params;
 
     // Find business by slug
-    const business = await prisma.business.findUnique({
+    const business = await db.business.findUnique({
       where: { slug: businessSlug },
       include: {
         referralProgram: true,

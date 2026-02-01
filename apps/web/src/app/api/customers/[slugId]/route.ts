@@ -4,7 +4,7 @@ import {
   sanitizeErrorMessage,
   validateSchema,
 } from "@/lib/utils/error-handler";
-import { prisma } from "@reelo/db";
+import { db } from "@reelo/db";
 import { NextRequest, NextResponse } from "next/server";
 
 /**
@@ -28,7 +28,7 @@ export const GET = withAdminAuth<{ slugId: string }>(
 
       const { slugId } = validation.data;
 
-      const businessCustomer = await prisma.businessCustomer.findFirst({
+      const businessCustomer = await db.businessCustomer.findFirst({
         where: {
           slugId,
           businessId: context.business.id,

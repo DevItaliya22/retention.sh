@@ -1,4 +1,4 @@
-import { prisma } from "@reelo/db";
+import { db } from "@reelo/db";
 import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
@@ -9,7 +9,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ available: false }, { status: 400 });
   }
 
-  const existingBusiness = await prisma.business.findUnique({
+  const existingBusiness = await db.business.findUnique({
     where: { slug },
     select: { id: true },
   });

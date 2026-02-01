@@ -3,7 +3,7 @@ import {
   sanitizeErrorMessage,
   validateSchema,
 } from "@/lib/utils/error-handler";
-import { prisma } from "@reelo/db";
+import { db } from "@reelo/db";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -24,7 +24,7 @@ export const GET = withCashierAuth<{ id: string }>(
 
       const { id } = validation.data;
 
-      const bill = await prisma.bill.findFirst({
+      const bill = await db.bill.findFirst({
         where: {
           id,
           businessId: context.business.id,

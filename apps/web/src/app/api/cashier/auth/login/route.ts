@@ -5,7 +5,7 @@ import {
   sanitizeErrorMessage,
   validateSchema,
 } from "@/lib/utils/error-handler";
-import { prisma } from "@reelo/db";
+import { db } from "@reelo/db";
 import { randomBytes } from "crypto";
 import { NextResponse } from "next/server";
 
@@ -60,7 +60,7 @@ export async function POST(request: Request) {
 
     const { cashier } = loginValidation;
 
-    const user = await prisma.user.findUnique({
+    const user = await db.user.findUnique({
       where: { id: cashier.userId },
       select: { id: true, name: true, role: true },
     });
@@ -81,7 +81,7 @@ export async function POST(request: Request) {
     const token = randomBytes(32).toString("hex");
     const sessionId = crypto.randomUUID();
 
-    const session = await prisma.session.create({
+    const session = await db.session.create({
       data: {
         id: sessionId,
         userId: user.id,

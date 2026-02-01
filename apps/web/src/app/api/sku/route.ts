@@ -4,7 +4,7 @@ import {
   sanitizeErrorMessage,
   validateSchema,
 } from "@/lib/utils/error-handler";
-import { prisma } from "@reelo/db";
+import { db } from "@reelo/db";
 import { NextRequest, NextResponse } from "next/server";
 
 export const GET = withAdminAuth(async (request: NextRequest, context) => {
@@ -76,7 +76,7 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
     }
 
     const [skus, total] = await Promise.all([
-      prisma.sku.findMany({
+      db.sku.findMany({
         where,
         skip,
         take,
@@ -87,7 +87,7 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
           },
         },
       }),
-      prisma.sku.count({ where }),
+      db.sku.count({ where }),
     ]);
 
     const items = skus.map((s) => ({
@@ -150,7 +150,7 @@ export const POST = withAdminAuth(async (request: NextRequest, context) => {
       isActive,
     } = validation.data;
 
-    const existing = await prisma.sku.findFirst({
+    const existing = await db.sku.findFirst({
       where: {
         businessId: context.business.id,
         sku: skuCode,
@@ -165,7 +165,7 @@ export const POST = withAdminAuth(async (request: NextRequest, context) => {
     }
 
     if (categoryId) {
-      const category = await prisma.category.findFirst({
+      const category = await db.category.findFirst({
         where: {
           id: categoryId,
           businessId: context.business.id,
@@ -179,7 +179,7 @@ export const POST = withAdminAuth(async (request: NextRequest, context) => {
       }
     }
 
-    const created = await prisma.sku.create({
+    const created = await db.sku.create({
       data: {
         businessId: context.business.id,
         sku: skuCode,

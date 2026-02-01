@@ -4,7 +4,7 @@ import {
   validateSchema,
 } from "@/lib/utils/error-handler";
 import { formatPhoneNumber } from "@/lib/utils/phone";
-import { prisma } from "@reelo/db";
+import { db } from "@reelo/db";
 import { NextRequest, NextResponse } from "next/server";
 import { claimReferralSchema } from "@/lib/schemas/referral";
 
@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     const formattedPhone = formatPhoneNumber(phoneNumber);
 
     // Find referrer by BusinessCustomer.referralSlug (unique) – this is the share link slug
-    const referrer = await prisma.businessCustomer.findUnique({
+    const referrer = await db.businessCustomer.findUnique({
       where: { referralSlug },
       include: {
         business: {
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if customer already exists in this business
-    const existingBusinessCustomer = await prisma.businessCustomer.findFirst({
+    const existingBusinessCustomer = await db.businessCustomer.findFirst({
       where: {
         businessId,
         customer: {
@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Use transaction to ensure atomicity
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await db.$transaction(async (tx) => {
       // Find or create user
       let user = await tx.user.findUnique({
         where: { phoneNumber: formattedPhone },

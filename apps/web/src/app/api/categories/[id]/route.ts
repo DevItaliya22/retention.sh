@@ -4,7 +4,7 @@ import {
   sanitizeErrorMessage,
   validateSchema,
 } from "@/lib/utils/error-handler";
-import { prisma } from "@reelo/db";
+import { db } from "@reelo/db";
 import { NextRequest, NextResponse } from "next/server";
 
 export const PUT = withAdminAuth<{ id: string }>(
@@ -12,7 +12,7 @@ export const PUT = withAdminAuth<{ id: string }>(
     try {
       const { id } = await params;
 
-      const existing = await prisma.category.findFirst({
+      const existing = await db.category.findFirst({
         where: {
           id,
           businessId: context.business.id,
@@ -44,7 +44,7 @@ export const PUT = withAdminAuth<{ id: string }>(
         );
       }
 
-      const updated = await prisma.category.update({
+      const updated = await db.category.update({
         where: { id },
         data: {
           ...(name !== undefined && { name }),
@@ -59,13 +59,13 @@ export const PUT = withAdminAuth<{ id: string }>(
 
       let parentName: string | null = null;
       if (updated.parentId) {
-        const parent = await prisma.category.findUnique({
+        const parent = await db.category.findUnique({
           where: { id: updated.parentId },
           select: { name: true },
         });
         parentName = parent?.name ?? null;
       }
-      const subcategoryCount = await prisma.category.count({
+      const subcategoryCount = await db.category.count({
         where: { parentId: id },
       });
 
@@ -103,7 +103,7 @@ export const DELETE = withAdminAuth<{ id: string }>(
     try {
       const { id } = await params;
 
-      const existing = await prisma.category.findFirst({
+      const existing = await db.category.findFirst({
         where: {
           id,
           businessId: context.business.id,
@@ -117,11 +117,11 @@ export const DELETE = withAdminAuth<{ id: string }>(
         );
       }
 
-      await prisma.category.update({
+      await db.category.update({
         where: { id },
         data: { skus: { set: [] } },
       });
-      await prisma.category.delete({
+      await db.category.delete({
         where: { id },
       });
 

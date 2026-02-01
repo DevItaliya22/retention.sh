@@ -6,7 +6,7 @@ import {
   validateSchema,
 } from "@/lib/utils/error-handler";
 import { formatPhoneNumber } from "@/lib/utils/phone";
-import { prisma } from "@reelo/db";
+import { db } from "@reelo/db";
 import { NextRequest, NextResponse } from "next/server";
 
 interface CustomerData {
@@ -25,13 +25,13 @@ async function findOrCreateCustomer(data: CustomerData) {
   const formattedPhone = formatPhoneNumber(data.phoneNumber);
   const tempEmail = `${formattedPhone}@${APP_CONSTANTS.CUSTOMER_EMAIL_DOMAIN}`;
 
-  let user = await prisma.user.findUnique({
+  let user = await db.user.findUnique({
     where: { phoneNumber: formattedPhone },
     include: { customer: true },
   });
 
   if (!user) {
-    user = await prisma.user.create({
+    user = await db.user.create({
       data: {
         name: data.name || "Customer",
         phoneNumber: formattedPhone,
@@ -49,7 +49,7 @@ async function findOrCreateCustomer(data: CustomerData) {
   if (!customer) {
     const customerEmail =
       data.email && data.email.trim() ? data.email : tempEmail;
-    customer = await prisma.customer.create({
+    customer = await db.customer.create({
       data: {
         userId: user.id,
         email: customerEmail,
@@ -70,7 +70,7 @@ async function linkCustomerToBusiness(
   customerId: string,
   businessId: string,
 ): Promise<void> {
-  const existing = await prisma.businessCustomer.findUnique({
+  const existing = await db.businessCustomer.findUnique({
     where: {
       businessId_customerId: {
         businessId,
@@ -80,7 +80,7 @@ async function linkCustomerToBusiness(
   });
 
   if (!existing) {
-    await prisma.businessCustomer.create({
+    await db.businessCustomer.create({
       data: {
         businessId,
         customerId,
@@ -96,13 +96,13 @@ async function updateCustomerInfo(
   const updateData: any = {};
 
   if (data.name !== undefined) {
-    const customer = await prisma.customer.findUnique({
+    const customer = await db.customer.findUnique({
       where: { id: customerId },
       include: { user: true },
     });
 
     if (customer && data.name) {
-      await prisma.user.update({
+      await db.user.update({
         where: { id: customer.userId },
         data: { name: data.name },
       });
@@ -133,7 +133,7 @@ async function updateCustomerInfo(
   }
 
   if (Object.keys(updateData).length > 0) {
-    await prisma.customer.update({
+    await db.customer.update({
       where: { id: customerId },
       data: updateData,
     });
@@ -200,7 +200,7 @@ export const POST = withCashierAuth(async (request: NextRequest, context) => {
       const skuIds = [
         ...new Set(lineItems.map((li: { skuId: string }) => li.skuId)),
       ];
-      const validSkus = await prisma.sku.findMany({
+      const validSkus = await db.sku.findMany({
         where: {
           id: { in: skuIds },
           businessId,
@@ -222,7 +222,7 @@ export const POST = withCashierAuth(async (request: NextRequest, context) => {
       }
     }
 
-    const bill = await prisma.bill.create({
+    const bill = await db.bill.create({
       data: {
         billNumber,
         amount: amount ?? null,

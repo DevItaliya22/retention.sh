@@ -1,5 +1,5 @@
 import { SESSION_COOKIE_NAME } from "@/lib/utils/cookie";
-import { prisma } from "@reelo/db";
+import { db } from "@reelo/db";
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
@@ -11,7 +11,7 @@ export async function POST(request: Request) {
       ?.split("=")[1];
 
     if (sessionToken) {
-      await prisma.session.deleteMany({
+      await db.session.deleteMany({
         where: { token: sessionToken },
       });
     }

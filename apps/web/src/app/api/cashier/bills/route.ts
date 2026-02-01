@@ -3,7 +3,7 @@ import {
   sanitizeErrorMessage,
   validateSchema,
 } from "@/lib/utils/error-handler";
-import { prisma } from "@reelo/db";
+import { db } from "@reelo/db";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -35,7 +35,7 @@ export const GET = withCashierAuth(async (request: NextRequest, context) => {
     };
 
     const [bills, total] = await Promise.all([
-      prisma.bill.findMany({
+      db.bill.findMany({
         where,
         skip,
         take,
@@ -58,7 +58,7 @@ export const GET = withCashierAuth(async (request: NextRequest, context) => {
           },
         },
       }),
-      prisma.bill.count({ where }),
+      db.bill.count({ where }),
     ]);
 
     const formattedBills = bills.map((bill) => ({

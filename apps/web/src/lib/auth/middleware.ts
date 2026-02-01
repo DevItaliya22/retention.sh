@@ -1,4 +1,4 @@
-import { prisma } from "@reelo/db";
+import { db } from "@reelo/db";
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "./auth";
 import {
@@ -142,7 +142,7 @@ export function withAdminAuth<T extends Record<string, string | string[]>>(
         );
       }
 
-      const admin = await prisma.admin.findFirst({
+      const admin = await db.admin.findFirst({
         where: { userId: session.user.id },
         include: {
           business: {
@@ -228,7 +228,7 @@ export function withCashierAuth<T extends Record<string, string | string[]>>(
         );
       }
 
-      const cashier = await prisma.cashier.findFirst({
+      const cashier = await db.cashier.findFirst({
         where: { userId: session.user.id },
         include: {
           business: {
@@ -324,12 +324,12 @@ export function withCustomerAuth<T extends Record<string, string | string[]>>(
         );
       }
 
-      const user = await prisma.user.findUnique({
+      const user = await db.user.findUnique({
         where: { id: session.user.id },
         select: { phoneNumber: true },
       });
 
-      const customer = await prisma.customer.findUnique({
+      const customer = await db.customer.findUnique({
         where: { userId: session.user.id },
       });
 

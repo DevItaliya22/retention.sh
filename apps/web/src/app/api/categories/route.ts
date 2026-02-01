@@ -4,7 +4,7 @@ import {
   sanitizeErrorMessage,
   validateSchema,
 } from "@/lib/utils/error-handler";
-import { prisma } from "@reelo/db";
+import { db } from "@reelo/db";
 import { NextRequest, NextResponse } from "next/server";
 
 export const GET = withAdminAuth(async (request: NextRequest, context) => {
@@ -66,7 +66,7 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
       orderBy = [{ sortOrder: "asc" }, { createdAt: "desc" }];
     }
 
-    const allCategories = await prisma.category.findMany({
+    const allCategories = await db.category.findMany({
       where,
       orderBy,
       include: {
@@ -83,7 +83,7 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
     ];
     const parentNames = new Map<string, string>();
     if (parentIds.length > 0) {
-      const parents = await prisma.category.findMany({
+      const parents = await db.category.findMany({
         where: { id: { in: parentIds } },
         select: { id: true, name: true },
       });
@@ -185,7 +185,7 @@ export const POST = withAdminAuth(async (request: NextRequest, context) => {
 
     const { name, description, sortOrder, parentId } = validation.data;
 
-    const created = await prisma.category.create({
+    const created = await db.category.create({
       data: {
         businessId: context.business.id,
         name,

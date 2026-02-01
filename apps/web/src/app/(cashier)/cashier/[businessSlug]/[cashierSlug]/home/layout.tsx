@@ -1,5 +1,5 @@
 import { getCashierSession } from "@/lib/auth/cashier-session";
-import { prisma } from "@reelo/db";
+import { db } from "@reelo/db";
 import { redirect } from "next/navigation";
 import { CashierProvider } from "./_context/CashierProvider";
 
@@ -23,7 +23,7 @@ export default async function CashierHomeLayout({
     redirect(`/cashier/${businessSlug}/${cashierSlug}`);
   }
 
-  const business = await prisma.business.findUnique({
+  const business = await db.business.findUnique({
     where: { slug: businessSlug },
     select: { id: true, name: true },
   });
@@ -41,7 +41,7 @@ export default async function CashierHomeLayout({
     );
   }
 
-  const cashier = await prisma.cashier.findFirst({
+  const cashier = await db.cashier.findFirst({
     where: {
       cashierLinkSlug: cashierSlug,
       businessId: business.id,

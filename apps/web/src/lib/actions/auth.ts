@@ -1,7 +1,7 @@
 "use server";
 
 import { auth } from "@/lib/auth/auth";
-import { prisma } from "@reelo/db";
+import { db } from "@reelo/db";
 import { headers } from "next/headers";
 
 export async function checkAdminHasBusiness() {
@@ -13,7 +13,7 @@ export async function checkAdminHasBusiness() {
     return { hasBusiness: false };
   }
 
-  const admin = await prisma.admin.findUnique({
+  const admin = await db.admin.findUnique({
     where: { userId: session.user.id },
   });
 

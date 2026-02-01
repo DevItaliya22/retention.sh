@@ -7,7 +7,7 @@ import {
   sanitizeErrorMessage,
   validateSchema,
 } from "@/lib/utils/error-handler";
-import { prisma } from "@reelo/db";
+import { db } from "@reelo/db";
 import { NextRequest, NextResponse } from "next/server";
 
 export const GET = withAdminAuth(async (request: NextRequest, context) => {
@@ -67,7 +67,7 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
     }
 
     const [cashiers, total] = await Promise.all([
-      prisma.cashier.findMany({
+      db.cashier.findMany({
         where,
         skip,
         take,
@@ -83,7 +83,7 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
           },
         },
       }),
-      prisma.cashier.count({ where }),
+      db.cashier.count({ where }),
     ]);
 
     const formattedCashiers = cashiers.map((cashier) => ({
@@ -133,7 +133,7 @@ export const POST = withAdminAuth(async (request: NextRequest, context) => {
 
     const { name, email, password, cashierLinkSlug } = validation.data;
 
-    const existingCashierSlug = await prisma.cashier.findFirst({
+    const existingCashierSlug = await db.cashier.findFirst({
       where: {
         cashierLinkSlug,
         businessId: context.business.id,
@@ -150,7 +150,7 @@ export const POST = withAdminAuth(async (request: NextRequest, context) => {
       );
     }
 
-    const existingCashierEmail = await prisma.cashier.findFirst({
+    const existingCashierEmail = await db.cashier.findFirst({
       where: {
         businessId: context.business.id,
         email,
@@ -167,7 +167,7 @@ export const POST = withAdminAuth(async (request: NextRequest, context) => {
       );
     }
 
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await db.$transaction(async (tx) => {
       const cashierUser = await tx.user.create({
         data: {
           name,

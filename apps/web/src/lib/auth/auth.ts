@@ -1,4 +1,4 @@
-import { prisma } from "@reelo/db";
+import { db } from "@reelo/db";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { APIError, createAuthMiddleware } from "better-auth/api";
@@ -6,7 +6,7 @@ import { magicLink } from "better-auth/plugins";
 import { COOKIE_PREFIX } from "../utils/cookie";
 
 export const auth = betterAuth({
-  database: prismaAdapter(prisma, {
+  database: prismaAdapter(db, {
     provider: "postgresql",
   }),
   emailAndPassword: {
@@ -93,7 +93,7 @@ export const auth = betterAuth({
         return;
       }
 
-      const user = await prisma.user.findUnique({
+      const user = await db.user.findUnique({
         where: { email },
         select: { role: true },
       });
@@ -130,12 +130,12 @@ export const auth = betterAuth({
           userAgent?: string | null;
           role?: string | null;
         }) => {
-          const user = await prisma.user.findUnique({
+          const user = await db.user.findUnique({
             where: { id: session.userId },
             select: { role: true },
           });
 
-          const cashier = await prisma.cashier.findUnique({
+          const cashier = await db.cashier.findUnique({
             where: { userId: session.userId },
             select: { id: true },
           });
@@ -177,7 +177,7 @@ export async function validateCashierLogin(params: {
   try {
     const { businessSlug, cashierSlug, email, password } = params;
 
-    const business = await prisma.business.findUnique({
+    const business = await db.business.findUnique({
       where: { slug: businessSlug },
     });
 
@@ -188,7 +188,7 @@ export async function validateCashierLogin(params: {
       };
     }
 
-    const cashier = await prisma.cashier.findFirst({
+    const cashier = await db.cashier.findFirst({
       where: {
         cashierLinkSlug: cashierSlug,
         businessId: business.id,

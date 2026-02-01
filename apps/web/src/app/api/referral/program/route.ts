@@ -7,12 +7,12 @@ import {
   sanitizeErrorMessage,
   validateSchema,
 } from "@/lib/utils/error-handler";
-import { prisma } from "@reelo/db";
+import { db } from "@reelo/db";
 import { NextResponse } from "next/server";
 
 export const GET = withAdminAuth(async (request, context) => {
   try {
-    const referralProgram = await prisma.referralProgram.findUnique({
+    const referralProgram = await db.referralProgram.findUnique({
       where: { businessId: context.business.id },
       include: {
         termsAndConditionsNewCustomer: { orderBy: { createdAt: "asc" } },
@@ -73,7 +73,7 @@ export const POST = withAdminAuth(async (request, context) => {
     // Use try-catch to handle cases where schema might not be fully migrated
     let hasLoyalty = false;
     try {
-      const business = await prisma.business.findUnique({
+      const business = await db.business.findUnique({
         where: { id: businessId },
         select: {
           id: true,
@@ -106,7 +106,7 @@ export const POST = withAdminAuth(async (request, context) => {
     // }
 
     // Upsert referral program (without terms; we sync terms below)
-    const referralProgram = await prisma.referralProgram.upsert({
+    const referralProgram = await db.referralProgram.upsert({
       where: { businessId },
       create: {
         businessId,
@@ -146,15 +146,15 @@ export const POST = withAdminAuth(async (request, context) => {
     const existingTerms =
       validatedData.termsAndConditionsExistingCustomer ?? [];
 
-    await prisma.$transaction([
-      prisma.termsAndConditions.deleteMany({
+    await db.$transaction([
+      db.termsAndConditions.deleteMany({
         where: { referralProgramNewCustomerId: referralProgram.id },
       }),
-      prisma.termsAndConditions.deleteMany({
+      db.termsAndConditions.deleteMany({
         where: { referralProgramExistingCustomerId: referralProgram.id },
       }),
       ...newTerms.map((content) =>
-        prisma.termsAndConditions.create({
+        db.termsAndConditions.create({
           data: {
             content,
             referralProgramNewCustomerId: referralProgram.id,
@@ -162,7 +162,7 @@ export const POST = withAdminAuth(async (request, context) => {
         }),
       ),
       ...existingTerms.map((content) =>
-        prisma.termsAndConditions.create({
+        db.termsAndConditions.create({
           data: {
             content,
             referralProgramExistingCustomerId: referralProgram.id,
@@ -172,13 +172,13 @@ export const POST = withAdminAuth(async (request, context) => {
     ]);
 
     // Update business referralEnabled flag
-    await prisma.business.update({
+    await db.business.update({
       where: { id: businessId },
       data: { referralEnabled: true },
     });
 
     // Refetch with terms included
-    const updated = await prisma.referralProgram.findUnique({
+    const updated = await db.referralProgram.findUnique({
       where: { businessId },
       include: {
         termsAndConditionsNewCustomer: { orderBy: { createdAt: "asc" } },
@@ -231,7 +231,7 @@ export const PUT = withAdminAuth(async (request, context) => {
 
     const businessId = context.business.id;
 
-    const existing = await prisma.referralProgram.findUnique({
+    const existing = await db.referralProgram.findUnique({
       where: { businessId },
     });
 
@@ -270,19 +270,19 @@ export const PUT = withAdminAuth(async (request, context) => {
     if (validatedData.branding !== undefined)
       updateData.branding = validatedData.branding;
 
-    const referralProgram = await prisma.referralProgram.update({
+    const referralProgram = await db.referralProgram.update({
       where: { businessId },
       data: updateData as any,
     });
 
     // Sync terms when provided
     if (validatedData.termsAndConditionsNewCustomer !== undefined) {
-      await prisma.termsAndConditions.deleteMany({
+      await db.termsAndConditions.deleteMany({
         where: { referralProgramNewCustomerId: referralProgram.id },
       });
       const newTerms = validatedData.termsAndConditionsNewCustomer ?? [];
       for (const content of newTerms) {
-        await prisma.termsAndConditions.create({
+        await db.termsAndConditions.create({
           data: {
             content,
             referralProgramNewCustomerId: referralProgram.id,
@@ -291,13 +291,13 @@ export const PUT = withAdminAuth(async (request, context) => {
       }
     }
     if (validatedData.termsAndConditionsExistingCustomer !== undefined) {
-      await prisma.termsAndConditions.deleteMany({
+      await db.termsAndConditions.deleteMany({
         where: { referralProgramExistingCustomerId: referralProgram.id },
       });
       const existingTerms =
         validatedData.termsAndConditionsExistingCustomer ?? [];
       for (const content of existingTerms) {
-        await prisma.termsAndConditions.create({
+        await db.termsAndConditions.create({
           data: {
             content,
             referralProgramExistingCustomerId: referralProgram.id,
@@ -307,7 +307,7 @@ export const PUT = withAdminAuth(async (request, context) => {
     }
 
     // Refetch with terms
-    const updated = await prisma.referralProgram.findUnique({
+    const updated = await db.referralProgram.findUnique({
       where: { businessId },
       include: {
         termsAndConditionsNewCustomer: { orderBy: { createdAt: "asc" } },

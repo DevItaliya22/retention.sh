@@ -1,5 +1,5 @@
 import { SESSION_COOKIE_NAME } from "@/lib/utils/cookie";
-import { prisma } from "@reelo/db";
+import { db } from "@reelo/db";
 import { headers } from "next/headers";
 
 export type CashierSessionData = {
@@ -20,7 +20,7 @@ export async function getCashierSession() {
     return null;
   }
 
-  const sessionRecord = await prisma.session.findUnique({
+  const sessionRecord = await db.session.findUnique({
     where: { token: sessionToken },
     include: {
       user: {
@@ -45,7 +45,7 @@ export async function getCashierSession() {
   }
 
   // Cashiers store login email on Cashier, not User
-  const cashier = await prisma.cashier.findUnique({
+  const cashier = await db.cashier.findUnique({
     where: { userId: sessionRecord.userId },
     select: { email: true },
   });
@@ -83,7 +83,7 @@ export async function getCashierSessionFromHeaders(
     return null;
   }
 
-  const sessionRecord = await prisma.session.findUnique({
+  const sessionRecord = await db.session.findUnique({
     where: { token: sessionToken },
     include: {
       user: {
@@ -108,7 +108,7 @@ export async function getCashierSessionFromHeaders(
   }
 
   // Cashiers store login email on Cashier, not User
-  const cashier = await prisma.cashier.findUnique({
+  const cashier = await db.cashier.findUnique({
     where: { userId: sessionRecord.userId },
     select: { email: true },
   });

@@ -11,10 +11,10 @@ const pool = new Pool({
 
 const adapter = new PrismaPg(pool);
 
-const globalForPrisma = global as unknown as { prisma: PrismaClient };
+const globalForDb = global as unknown as { db: PrismaClient };
 
-export const prisma =
-  globalForPrisma.prisma ||
+export const db =
+  globalForDb.db ||
   new PrismaClient({
     adapter,
     log: [
@@ -32,7 +32,7 @@ const reset = "\x1b[0m";
 const cyan = "\x1b[36m";
 
 // @ts-ignore
-prisma.$on("query", (e: any) => {
+db.$on("query", (e: any) => {
   if (process.env.NODE_ENV !== "production") return;
   if (process.env.SHOW_QUERIES === "true") {
     console.log(`${cyan}Query:${reset} ${dim}${e.query}${reset}`);
@@ -44,4 +44,4 @@ prisma.$on("query", (e: any) => {
   }
 });
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+if (process.env.NODE_ENV !== "production") globalForDb.db = db;

@@ -4,7 +4,7 @@ import {
   sanitizeErrorMessage,
   validateSchema,
 } from "@/lib/utils/error-handler";
-import { prisma } from "@reelo/db";
+import { db } from "@reelo/db";
 import { NextRequest, NextResponse } from "next/server";
 
 export interface ReferralStatRow {
@@ -55,7 +55,7 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
     const skip = (page - 1) * perPage;
     const take = perPage;
 
-    const grouped = await prisma.referralLog.groupBy({
+    const grouped = await db.referralLog.groupBy({
       by: ["referrerBusinessId", "referrerCustomerId"],
       _count: { id: true },
       where: { referrerBusinessId: businessId },
@@ -82,7 +82,7 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
       customerId: g.referrerCustomerId,
     }));
 
-    const referrers = await prisma.businessCustomer.findMany({
+    const referrers = await db.businessCustomer.findMany({
       where: {
         OR: referrerPairs,
       },

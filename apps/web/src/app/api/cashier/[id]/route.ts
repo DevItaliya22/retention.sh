@@ -4,7 +4,7 @@ import {
   sanitizeErrorMessage,
   validateSchema,
 } from "@/lib/utils/error-handler";
-import { prisma } from "@reelo/db";
+import { db } from "@reelo/db";
 import { NextRequest, NextResponse } from "next/server";
 
 export const GET = withAdminAuth<{ id: string }>(
@@ -12,7 +12,7 @@ export const GET = withAdminAuth<{ id: string }>(
     try {
       const { id } = params;
 
-      const cashier = await prisma.cashier.findFirst({
+      const cashier = await db.cashier.findFirst({
         where: {
           id,
           businessId: context.business.id,
@@ -84,7 +84,7 @@ export const PUT = withAdminAuth<{ id: string }>(
     try {
       const { id } = params;
 
-      const cashier = await prisma.cashier.findFirst({
+      const cashier = await db.cashier.findFirst({
         where: {
           id,
           businessId: context.business.id,
@@ -113,7 +113,7 @@ export const PUT = withAdminAuth<{ id: string }>(
         validation.data;
 
       if (cashierLinkSlug && cashierLinkSlug !== cashier.cashierLinkSlug) {
-        const existingCashierSlug = await prisma.cashier.findFirst({
+        const existingCashierSlug = await db.cashier.findFirst({
           where: {
             cashierLinkSlug,
             businessId: context.business.id,
@@ -132,7 +132,7 @@ export const PUT = withAdminAuth<{ id: string }>(
       }
 
       if (email && email !== cashier.email) {
-        const existingCashierEmail = await prisma.cashier.findFirst({
+        const existingCashierEmail = await db.cashier.findFirst({
           where: {
             businessId: context.business.id,
             email,
@@ -152,7 +152,7 @@ export const PUT = withAdminAuth<{ id: string }>(
         }
       }
 
-      const result = await prisma.$transaction(async (tx) => {
+      const result = await db.$transaction(async (tx) => {
         if (name) {
           await tx.user.update({
             where: { id: cashier.userId },
@@ -223,7 +223,7 @@ export const DELETE = withAdminAuth<{ id: string }>(
     try {
       const { id } = params;
 
-      const cashier = await prisma.cashier.findFirst({
+      const cashier = await db.cashier.findFirst({
         where: {
           id,
           businessId: context.business.id,
@@ -237,7 +237,7 @@ export const DELETE = withAdminAuth<{ id: string }>(
         );
       }
 
-      await prisma.$transaction(async (tx) => {
+      await db.$transaction(async (tx) => {
         await tx.cashier.delete({
           where: { id },
         });

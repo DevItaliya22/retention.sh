@@ -4,7 +4,7 @@ import {
   sanitizeErrorMessage,
   validateSchema,
 } from "@/lib/utils/error-handler";
-import { prisma } from "@reelo/db";
+import { db } from "@reelo/db";
 import { NextRequest, NextResponse } from "next/server";
 
 export const PUT = withAdminAuth<{ id: string }>(
@@ -12,7 +12,7 @@ export const PUT = withAdminAuth<{ id: string }>(
     try {
       const { id } = await params;
 
-      const existing = await prisma.sku.findFirst({
+      const existing = await db.sku.findFirst({
         where: {
           id,
           businessId: context.business.id,
@@ -46,7 +46,7 @@ export const PUT = withAdminAuth<{ id: string }>(
       } = validation.data;
 
       if (skuCode && skuCode !== existing.sku) {
-        const duplicate = await prisma.sku.findFirst({
+        const duplicate = await db.sku.findFirst({
           where: {
             businessId: context.business.id,
             sku: skuCode,
@@ -61,7 +61,7 @@ export const PUT = withAdminAuth<{ id: string }>(
       }
 
       if (categoryId !== undefined && categoryId !== null) {
-        const category = await prisma.category.findFirst({
+        const category = await db.category.findFirst({
           where: {
             id: categoryId,
             businessId: context.business.id,
@@ -75,7 +75,7 @@ export const PUT = withAdminAuth<{ id: string }>(
         }
       }
 
-      const updated = await prisma.sku.update({
+      const updated = await db.sku.update({
         where: { id },
         data: {
           ...(skuCode !== undefined && { sku: skuCode }),
@@ -126,7 +126,7 @@ export const DELETE = withAdminAuth<{ id: string }>(
     try {
       const { id } = await params;
 
-      const existing = await prisma.sku.findFirst({
+      const existing = await db.sku.findFirst({
         where: {
           id,
           businessId: context.business.id,
@@ -140,7 +140,7 @@ export const DELETE = withAdminAuth<{ id: string }>(
         );
       }
 
-      await prisma.sku.delete({
+      await db.sku.delete({
         where: { id },
       });
 

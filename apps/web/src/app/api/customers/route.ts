@@ -4,7 +4,7 @@ import {
   sanitizeErrorMessage,
   validateSchema,
 } from "@/lib/utils/error-handler";
-import { prisma } from "@reelo/db";
+import { db } from "@reelo/db";
 import { NextRequest, NextResponse } from "next/server";
 
 export const GET = withAdminAuth(async (request: NextRequest, context) => {
@@ -107,7 +107,7 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
     }
 
     const [businessCustomers, total] = await Promise.all([
-      prisma.businessCustomer.findMany({
+      db.businessCustomer.findMany({
         where,
         skip,
         take,
@@ -126,7 +126,7 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
           },
         },
       }),
-      prisma.businessCustomer.count({ where }),
+      db.businessCustomer.count({ where }),
     ]);
 
     const formattedCustomers = businessCustomers.map((bc) => ({

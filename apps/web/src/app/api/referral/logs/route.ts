@@ -4,7 +4,7 @@ import {
   sanitizeErrorMessage,
   validateSchema,
 } from "@/lib/utils/error-handler";
-import { prisma } from "@reelo/db";
+import { db } from "@reelo/db";
 import { NextRequest, NextResponse } from "next/server";
 
 /** Resolve referredCustomerSlugId for phones in one query (businessId + phones). */
@@ -13,7 +13,7 @@ async function getSlugByPhone(
   phones: string[],
 ): Promise<Map<string, string>> {
   if (phones.length === 0) return new Map();
-  const rows = await prisma.businessCustomer.findMany({
+  const rows = await db.businessCustomer.findMany({
     where: {
       businessId,
       customer: {
@@ -67,7 +67,7 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
 
     let referrerCustomerId: string | undefined;
     if (referrerSlugId) {
-      const referrer = await prisma.businessCustomer.findFirst({
+      const referrer = await db.businessCustomer.findFirst({
         where: { slugId: referrerSlugId, businessId },
         select: { customerId: true },
       });
@@ -86,7 +86,7 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
 
     const [rawItems, total] = await Promise.all([
       referrerSlugId
-        ? prisma.referralLog.findMany({
+        ? db.referralLog.findMany({
             where,
             orderBy,
             skip,
@@ -98,7 +98,7 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
               becameCustomer: true,
             },
           })
-        : prisma.referralLog.findMany({
+        : db.referralLog.findMany({
             where,
             orderBy,
             skip,
@@ -115,7 +115,7 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
               },
             },
           }),
-      prisma.referralLog.count({ where }),
+      db.referralLog.count({ where }),
     ]);
 
     const phonesToResolve = [

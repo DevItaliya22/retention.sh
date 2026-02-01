@@ -3,7 +3,7 @@ import {
   sanitizeErrorMessage,
   validateSchema,
 } from "@/lib/utils/error-handler";
-import { prisma } from "@reelo/db";
+import { db } from "@reelo/db";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -34,7 +34,7 @@ export const GET = withCashierAuth(async (request: NextRequest, context) => {
 
     const { perPage = 500, isActive = true } = validation.data;
 
-    const skus = await prisma.sku.findMany({
+    const skus = await db.sku.findMany({
       where: {
         businessId: context.business.id,
         isActive,

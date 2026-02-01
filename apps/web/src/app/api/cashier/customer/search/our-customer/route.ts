@@ -5,7 +5,7 @@ import {
   validateSchema,
 } from "@/lib/utils/error-handler";
 import { formatPhoneNumberForSearch } from "@/lib/utils/phone";
-import { prisma } from "@reelo/db";
+import { db } from "@reelo/db";
 import { NextRequest, NextResponse } from "next/server";
 
 export const GET = withCashierAuth(async (request: NextRequest, context) => {
@@ -34,7 +34,7 @@ export const GET = withCashierAuth(async (request: NextRequest, context) => {
 
     const formattedPhone = formatPhoneNumberForSearch(validation.data.phone);
 
-    const customers = await prisma.customer.findMany({
+    const customers = await db.customer.findMany({
       where: {
         user: {
           phoneNumber: {

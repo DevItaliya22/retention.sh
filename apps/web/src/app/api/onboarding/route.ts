@@ -7,7 +7,7 @@ import {
   sanitizeErrorMessage,
   validateSchema,
 } from "@/lib/utils/error-handler";
-import { prisma } from "@reelo/db";
+import { db } from "@reelo/db";
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
@@ -35,7 +35,7 @@ export async function POST(request: Request) {
     const validatedData = validation.data as WelcomeFormValues;
     const userId = session.user.id;
 
-    const existingBusiness = await prisma.business.findUnique({
+    const existingBusiness = await db.business.findUnique({
       where: { slug: validatedData.businessSlug },
     });
 
@@ -49,7 +49,7 @@ export async function POST(request: Request) {
       );
     }
 
-    await prisma.$transaction(async (tx) => {
+    await db.$transaction(async (tx) => {
       const business = await tx.business.create({
         data: {
           name: validatedData.businessName,

@@ -1,6 +1,6 @@
 import { getCashierSession } from "@/lib/auth/cashier-session";
 import { generateRouteMetadata } from "@/lib/utils/route-metadata";
-import { prisma } from "@reelo/db";
+import { db } from "@reelo/db";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { CashierErrorPage } from "./_components/CashierErrorPage";
@@ -25,7 +25,7 @@ export default async function CashierLoginPage({
 }: CashierLoginPageProps) {
   const { businessSlug, cashierSlug } = await params;
 
-  const business = await prisma.business.findUnique({
+  const business = await db.business.findUnique({
     where: { slug: businessSlug },
     select: { id: true, name: true },
   });
@@ -39,7 +39,7 @@ export default async function CashierLoginPage({
     );
   }
 
-  const cashier = await prisma.cashier.findFirst({
+  const cashier = await db.cashier.findFirst({
     where: {
       cashierLinkSlug: cashierSlug,
       businessId: business.id,
@@ -81,7 +81,7 @@ export default async function CashierLoginPage({
   const session = await getCashierSession();
 
   if (session?.user) {
-    const userCashier = await prisma.cashier.findFirst({
+    const userCashier = await db.cashier.findFirst({
       where: {
         userId: session.user.id,
         businessId: business.id,
