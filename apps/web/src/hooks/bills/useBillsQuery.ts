@@ -1,6 +1,10 @@
 "use client";
 
 import { fetcher } from "@/lib/fetcher";
+import {
+  buildApiParams,
+  getDataTableConfig,
+} from "@/lib/utils/data-table-params";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 
@@ -42,10 +46,16 @@ export interface BillsResponse {
 
 export function useBillsQuery() {
   const searchParams = useSearchParams();
-  const queryString = searchParams.toString();
+  const config = getDataTableConfig("bills");
+  const apiParams = buildApiParams(
+    searchParams,
+    config.prefix,
+    config.filterKeys,
+  );
+  const queryString = apiParams.toString();
 
   return useQuery<BillsResponse, Error>({
-    queryKey: ["bills", queryString],
+    queryKey: ["bills", searchParams.toString()],
     queryFn: () => {
       const url = queryString ? `/api/bills?${queryString}` : "/api/bills";
       return fetcher<BillsResponse>(url);

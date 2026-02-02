@@ -95,9 +95,19 @@ export const categoriesQuerySchema = z.object({
     .transform((v) => v === "true" || v === "1"),
 });
 
+export const skuImportSchema = z.object({
+  items: z.array(createSkuSchema),
+});
+
+export const categoryImportSchema = z.object({
+  items: z.array(createCategorySchema),
+});
+
 export type CreateSkuInput = z.infer<typeof createSkuSchema>;
+export type SkuImportInput = z.infer<typeof skuImportSchema>;
 export type UpdateSkuInput = z.infer<typeof updateSkuSchema>;
 export type SkusQueryInput = z.infer<typeof skusQuerySchema>;
 export type CreateCategoryInput = z.infer<typeof createCategorySchema>;
+export type CategoryImportInput = z.infer<typeof categoryImportSchema>;
 export type UpdateCategoryInput = z.infer<typeof updateCategorySchema>;
 export type CategoriesQueryInput = z.infer<typeof categoriesQuerySchema>;

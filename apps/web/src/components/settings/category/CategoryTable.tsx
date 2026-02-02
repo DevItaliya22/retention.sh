@@ -1,6 +1,7 @@
 "use client";
 
 import type { CategoryItem } from "@/hooks/category/useCategoriesQuery";
+import { getDataTableConfig } from "@/lib/utils/data-table-params";
 import {
   DataTable,
   DataTableColumnHeader,
@@ -237,12 +238,7 @@ export function CategoryTable({
       sorting: [{ id: "sortOrder", desc: false }],
       columnPinning: { right: ["actions"] },
     },
-    queryKeys: {
-      page: "categoriesPage",
-      perPage: "categoriesPerPage",
-      sort: "categoriesSort",
-      filters: "categoriesFilters",
-    },
+    prefix: getDataTableConfig("categories").prefix,
   });
 
   return (

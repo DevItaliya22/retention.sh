@@ -29,7 +29,11 @@ import {
 } from "nuqs";
 import * as React from "react";
 import { getSortingStateParser } from "../lib/parsers";
-import { ExtendedColumnSort, QueryKeys } from "../types/data-table";
+import {
+  ExtendedColumnSort,
+  queryKeysFromPrefix,
+  QueryKeys,
+} from "../types/data-table";
 import { useDebouncedCallback } from "./use-debounced-callback";
 
 const PAGE_KEY = "page";
@@ -56,6 +60,8 @@ interface UseDataTableProps<TData>
   initialState?: Omit<Partial<TableState>, "sorting"> & {
     sorting?: ExtendedColumnSort<TData>[];
   };
+  /** When set, URL keys become prefix+Key (e.g. prefix "skus" → skusPage, skusPerPage). Use when 2+ tables share the same route. */
+  prefix?: string;
   queryKeys?: Partial<QueryKeys>;
   history?: "push" | "replace";
   debounceMs?: number;
@@ -76,6 +82,7 @@ export function useDataTable<TData>(props: UseDataTableProps<TData>) {
     columns,
     pageCount = -1,
     initialState,
+    prefix,
     queryKeys,
     history = "replace",
     debounceMs = DEBOUNCE_MS,
@@ -91,11 +98,20 @@ export function useDataTable<TData>(props: UseDataTableProps<TData>) {
     disableUrlSync = false,
     ...tableProps
   } = props;
-  const pageKey = queryKeys?.page ?? PAGE_KEY;
-  const perPageKey = queryKeys?.perPage ?? PER_PAGE_KEY;
-  const sortKey = queryKeys?.sort ?? SORT_KEY;
-  const filtersKey = queryKeys?.filters ?? FILTERS_KEY;
-  const joinOperatorKey = queryKeys?.joinOperator ?? JOIN_OPERATOR_KEY;
+  const resolvedKeys: QueryKeys = prefix
+    ? queryKeysFromPrefix(prefix)
+    : {
+        page: queryKeys?.page ?? PAGE_KEY,
+        perPage: queryKeys?.perPage ?? PER_PAGE_KEY,
+        sort: queryKeys?.sort ?? SORT_KEY,
+        filters: queryKeys?.filters ?? FILTERS_KEY,
+        joinOperator: queryKeys?.joinOperator ?? JOIN_OPERATOR_KEY,
+      };
+  const pageKey = resolvedKeys.page;
+  const perPageKey = resolvedKeys.perPage;
+  const sortKey = resolvedKeys.sort;
+  const filtersKey = resolvedKeys.filters;
+  const joinOperatorKey = resolvedKeys.joinOperator;
 
   const queryStateOptions = React.useMemo<
     Omit<UseQueryStateOptions<string>, "parse">

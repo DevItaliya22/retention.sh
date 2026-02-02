@@ -1,6 +1,10 @@
 "use client";
 
 import { fetcher } from "@/lib/fetcher";
+import {
+  buildApiParams,
+  getDataTableConfig,
+} from "@/lib/utils/data-table-params";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 
@@ -27,10 +31,16 @@ export interface CustomersResponse {
 
 export function useCustomersQuery() {
   const searchParams = useSearchParams();
-  const queryString = searchParams.toString();
+  const config = getDataTableConfig("customers");
+  const apiParams = buildApiParams(
+    searchParams,
+    config.prefix,
+    config.filterKeys,
+  );
+  const queryString = apiParams.toString();
 
   return useQuery<CustomersResponse, Error>({
-    queryKey: ["customers", queryString],
+    queryKey: ["customers", searchParams.toString()],
     queryFn: () => {
       const url = queryString
         ? `/api/customers?${queryString}`

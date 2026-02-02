@@ -4,6 +4,7 @@ import {
   useCustomersQuery,
   type Customer,
 } from "@/hooks/customers/useCustomersQuery";
+import { getDataTableConfig } from "@/lib/utils/data-table-params";
 import {
   buttonVariants,
   DataTable,
@@ -288,12 +289,7 @@ export function CustomersTable() {
       sorting: [{ id: "createdAt", desc: true }],
       columnPinning: { right: ["actions"] },
     },
-    queryKeys: {
-      page: "customersPage",
-      perPage: "customersPerPage",
-      sort: "customersSort",
-      filters: "customersFilters",
-    },
+    prefix: getDataTableConfig("customers").prefix,
   });
 
   return (

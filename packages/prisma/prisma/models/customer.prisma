@@ -72,3 +72,4 @@ model BusinessCustomer {
   @@index([customerId])
   @@map("business_customer")
 }
+

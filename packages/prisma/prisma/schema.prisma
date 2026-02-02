@@ -28,7 +28,6 @@ model User {
   accounts Account[]
 
   // Relations to role-specific models
-
   role     Role      @default(CUSTOMER)
   customer Customer?
   admin    Admin?

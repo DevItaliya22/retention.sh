@@ -1,8 +1,19 @@
 "use client";
 
 import { fetcher } from "@/lib/fetcher";
-import type { CreateSkuInput, UpdateSkuInput } from "@/lib/schemas/sku";
+import type {
+  CreateSkuInput,
+  SkuImportInput,
+  UpdateSkuInput,
+} from "@/lib/schemas/sku";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+
+export interface SkuImportResponse {
+  created: number;
+  failed: number;
+  errors: { row: number; sku: string; message: string }[];
+  error?: string;
+}
 
 export interface SkuItem {
   id: string;
@@ -35,6 +46,7 @@ export function useManageSku() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["skus"] });
+      queryClient.invalidateQueries({ queryKey: ["categories"] });
     },
   });
 
@@ -51,6 +63,7 @@ export function useManageSku() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["skus"] });
+      queryClient.invalidateQueries({ queryKey: ["categories"] });
     },
   });
 
@@ -66,6 +79,20 @@ export function useManageSku() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["skus"] });
+      queryClient.invalidateQueries({ queryKey: ["categories"] });
+    },
+  });
+
+  const importSkus = useMutation<SkuImportResponse, Error, SkuImportInput>({
+    mutationFn: async (input) => {
+      return fetcher<SkuImportResponse>("/api/sku/import", {
+        method: "POST",
+        body: JSON.stringify(input),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["skus"] });
+      queryClient.invalidateQueries({ queryKey: ["categories"] });
     },
   });
 
@@ -90,6 +117,13 @@ export function useManageSku() {
       isPending: remove.isPending,
       isError: remove.isError,
       error: remove.error,
+    },
+    import: {
+      mutate: importSkus.mutate,
+      mutateAsync: importSkus.mutateAsync,
+      isPending: importSkus.isPending,
+      isError: importSkus.isError,
+      error: importSkus.error,
     },
   };
 }

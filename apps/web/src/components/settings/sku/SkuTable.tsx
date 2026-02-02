@@ -1,6 +1,7 @@
 "use client";
 
 import type { SkuItem } from "@/hooks/sku/useSkusQuery";
+import { getDataTableConfig } from "@/lib/utils/data-table-params";
 import {
   DataTable,
   DataTableColumnHeader,
@@ -258,12 +259,7 @@ export function SkuTable({
       sorting: [{ id: "createdAt", desc: true }],
       columnPinning: { right: ["actions"] },
     },
-    queryKeys: {
-      page: "skusPage",
-      perPage: "skusPerPage",
-      sort: "skusSort",
-      filters: "skusFilters",
-    },
+    prefix: getDataTableConfig("skus").prefix,
   });
 
   return (

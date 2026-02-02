@@ -2,8 +2,10 @@
 
 import {
   COLUMN_MAPPING_SKIP,
+  createAutoMapping,
   getMappingForBackend,
   isMappingValid,
+  normalizeHeadersForSelect,
   parseCsvHeaders,
   type ColumnMapping,
   type ColumnMappingConfig,
@@ -20,15 +22,6 @@ import { useCallback, useState } from "react";
 import * as XLSX from "xlsx";
 
 const SKIP_LABEL = "— Skip";
-
-/** Radix Select reserves empty string for clearing; normalize empty headers to a non-empty placeholder. */
-function normalizeHeadersForSelect(headers: string[]): string[] {
-  return headers.map((h, i) =>
-    h === "" || h.trim() === ""
-      ? `__empty_${i}`
-      : h.trim().replace(/^\uFEFF/, ""),
-  );
-}
 
 export type FileLoadedPayload =
   | { type: "csv"; text: string }
@@ -83,6 +76,7 @@ export function CsvHeaderMapping({
           if (!worksheet) {
             setUserHeaders([]);
             setMapping({});
+            onMappingChange?.({});
             onFileLoaded?.({ type: "excel", rows: [] });
             return;
           }
@@ -97,8 +91,13 @@ export function CsvHeaderMapping({
           const rawFirst = rows[0] ?? [];
           const headers = normalizeHeadersForSelect(rawFirst);
           const rowsWithNormalizedHeader = [headers, ...rows.slice(1)];
+
+          // Auto-map headers that match
+          const autoMapping = createAutoMapping(headers, config);
+
           setUserHeaders(headers);
-          setMapping({});
+          setMapping(autoMapping);
+          onMappingChange?.(autoMapping);
           onFileLoaded?.({ type: "excel", rows: rowsWithNormalizedHeader });
         };
         reader.readAsArrayBuffer(file);
@@ -108,15 +107,20 @@ export function CsvHeaderMapping({
           const text = reader.result as string;
           const rawHeaders = parseCsvHeaders(text);
           const headers = normalizeHeadersForSelect(rawHeaders);
+
+          // Auto-map headers that match
+          const autoMapping = createAutoMapping(headers, config);
+
           setUserHeaders(headers);
-          setMapping({});
+          setMapping(autoMapping);
+          onMappingChange?.(autoMapping);
           onFileLoaded?.({ type: "csv", text });
         };
         reader.readAsText(file);
       }
       e.target.value = "";
     },
-    [onFileLoaded],
+    [config, onFileLoaded, onMappingChange],
   );
 
   const setMappingForColumn = useCallback(

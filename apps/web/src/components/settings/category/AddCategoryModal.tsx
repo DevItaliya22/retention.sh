@@ -5,7 +5,7 @@ import { useManageCategory } from "@/hooks/category/useManageCategory";
 import {
   getCategoryOptionsWithDepth,
   getNextSortOrder,
-} from "@/lib/category-tree";
+} from "@/lib/utils/category-tree";
 import { createCategorySchema } from "@/lib/schemas/sku";
 import { getErrorMessageFromResponse } from "@/lib/utils/error-handler";
 import {

@@ -1,6 +1,10 @@
 "use client";
 
 import { fetcher } from "@/lib/fetcher";
+import {
+  buildApiParams,
+  getDataTableConfig,
+} from "@/lib/utils/data-table-params";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 
@@ -25,10 +29,16 @@ export interface CashiersResponse {
 
 export function useCashiersQuery() {
   const searchParams = useSearchParams();
-  const queryString = searchParams.toString();
+  const config = getDataTableConfig("cashiers");
+  const apiParams = buildApiParams(
+    searchParams,
+    config.prefix,
+    config.filterKeys,
+  );
+  const queryString = apiParams.toString();
 
   return useQuery<CashiersResponse, Error>({
-    queryKey: ["cashiers", queryString],
+    queryKey: ["cashiers", searchParams.toString()],
     queryFn: () => {
       const url = queryString ? `/api/cashier?${queryString}` : "/api/cashier";
       return fetcher<CashiersResponse>(url);

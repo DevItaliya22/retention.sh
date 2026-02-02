@@ -1,8 +1,8 @@
 "use client";
 
 import { useCategoriesListQuery } from "@/hooks/category/useCategoriesListQuery";
-import { buildCategoryTree } from "@/lib/category-tree";
-import type { CategoryTreeNode } from "@/lib/category-tree";
+import { buildCategoryTree } from "@/lib/utils/category-tree";
+import type { CategoryTreeNode } from "@/lib/utils/category-tree";
 import {
   Button,
   Card,

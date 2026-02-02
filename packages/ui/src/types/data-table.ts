@@ -35,6 +35,17 @@ export interface QueryKeys {
   joinOperator: string;
 }
 
+/** Derive URL query keys from a prefix so multiple tables on the same route don't conflict. */
+export function queryKeysFromPrefix(prefix: string): QueryKeys {
+  return {
+    page: `${prefix}Page`,
+    perPage: `${prefix}PerPage`,
+    sort: `${prefix}Sort`,
+    filters: `${prefix}Filters`,
+    joinOperator: `${prefix}JoinOperator`,
+  };
+}
+
 export interface Option {
   label: string;
   value: string;

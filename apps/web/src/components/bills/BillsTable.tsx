@@ -1,6 +1,7 @@
 "use client";
 
 import { useBillsQuery, type Bill } from "@/hooks/bills/useBillsQuery";
+import { getDataTableConfig } from "@/lib/utils/data-table-params";
 import {
   buttonVariants,
   DataTable,
@@ -312,12 +313,7 @@ export function BillsTable() {
         right: ["actions"],
       },
     },
-    queryKeys: {
-      page: "billsPage",
-      perPage: "billsPerPage",
-      sort: "billsSort",
-      filters: "billsFilters",
-    },
+    prefix: getDataTableConfig("bills").prefix,
   });
 
   return (

@@ -10,11 +10,11 @@ import {
 } from "@/hooks/referral/useReferralProgram";
 import {
   Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
   Skeleton,
 } from "@reelo/ui/components";
 import { useRouter } from "next/navigation";
@@ -47,10 +47,10 @@ export function ReferralSettingsPageClient() {
     );
   }
 
-  const subtitle = !hasProgram
-    ? "Set up your referral program to reward customers"
-    : !referralEnabled
-      ? "Referral is set up but turned off. Enable it in General settings to use it."
+  const subtitle = !referralEnabled
+    ? "Referral is disabled for this business"
+    : !hasProgram
+      ? "Set up your referral program to reward customers"
       : "View and edit your referral program settings";
 
   return (
@@ -61,42 +61,26 @@ export function ReferralSettingsPageClient() {
       scaffoldSectionClassName="h-full w-full pt-2 pb-0"
     >
       <ScaffoldContainer>
-        {!hasProgram ? (
-          <>
-            <Card className="mb-6 border-dashed">
-              <CardHeader>
-                <CardTitle className="text-base">
-                  Your referral is not yet set up
-                </CardTitle>
-                <CardDescription>
-                  Create your referral program below. After setup, turn it on in
-                  Settings → General.
-                </CardDescription>
-              </CardHeader>
-            </Card>
-            <ReferralProgramForm initialData={null} />
-          </>
-        ) : !referralEnabled ? (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">
-                Referral is set up but it&apos;s off
-              </CardTitle>
-              <CardDescription>
-                Your referral program is configured but not enabled. Turn on
-                &quot;Referral enabled&quot; in General settings for customers
-                to use referral links.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+        {!referralEnabled ? (
+          <Empty className="min-h-[200px]">
+            <EmptyHeader>
+              <EmptyTitle>Enable it in General settings first</EmptyTitle>
+              <EmptyDescription>
+                Turn on &quot;Referral enabled&quot; to set up or use the
+                referral program.
+              </EmptyDescription>
+            </EmptyHeader>
+            <EmptyContent>
               <Button
                 variant="default"
                 onClick={() => router.push("/settings")}
               >
                 Go to General settings
               </Button>
-            </CardContent>
-          </Card>
+            </EmptyContent>
+          </Empty>
+        ) : !hasProgram ? (
+          <ReferralProgramForm initialData={null} />
         ) : (
           <ReferralExistingSettings
             referralProgram={programData!.referralProgram as ReferralProgram}

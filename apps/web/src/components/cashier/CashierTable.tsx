@@ -2,6 +2,7 @@
 
 import type { Cashier } from "@/hooks/cashier/useCashiersQuery";
 import type { Cashier as ManageCashier } from "@/hooks/cashier/useManageCashier";
+import { getDataTableConfig } from "@/lib/utils/data-table-params";
 import {
   Badge,
   DataTable,
@@ -274,12 +275,7 @@ export function CashierTable({
         right: ["actions"],
       },
     },
-    queryKeys: {
-      page: "cashiersPage",
-      perPage: "cashiersPerPage",
-      sort: "cashiersSort",
-      filters: "cashiersFilters",
-    },
+    prefix: getDataTableConfig("cashiers").prefix,
   });
 
   return (

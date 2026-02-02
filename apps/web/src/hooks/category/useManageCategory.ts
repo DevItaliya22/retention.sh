@@ -2,10 +2,18 @@
 
 import { fetcher } from "@/lib/fetcher";
 import type {
+  CategoryImportInput,
   CreateCategoryInput,
   UpdateCategoryInput,
 } from "@/lib/schemas/sku";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+
+export interface CategoryImportResponse {
+  created: number;
+  failed: number;
+  errors: { row: number; name: string; message: string }[];
+  error?: string;
+}
 
 export interface CategoryItem {
   id: string;
@@ -75,6 +83,23 @@ export function useManageCategory() {
     },
   });
 
+  const importCategories = useMutation<
+    CategoryImportResponse,
+    Error,
+    CategoryImportInput
+  >({
+    mutationFn: async (input) => {
+      return fetcher<CategoryImportResponse>("/api/categories/import", {
+        method: "POST",
+        body: JSON.stringify(input),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["categories"] });
+      queryClient.invalidateQueries({ queryKey: ["skus"] });
+    },
+  });
+
   return {
     create: {
       mutate: create.mutate,
@@ -96,6 +121,13 @@ export function useManageCategory() {
       isPending: remove.isPending,
       isError: remove.isError,
       error: remove.error,
+    },
+    import: {
+      mutate: importCategories.mutate,
+      mutateAsync: importCategories.mutateAsync,
+      isPending: importCategories.isPending,
+      isError: importCategories.isError,
+      error: importCategories.error,
     },
   };
 }

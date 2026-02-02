@@ -5,6 +5,7 @@ import {
   useReferralStatsQuery,
 } from "@/hooks/referral/useReferralProgram";
 import { useReferralLogsByReferrer } from "@/hooks/referral/useReferralLogs";
+import { getDataTableConfig } from "@/lib/utils/data-table-params";
 import {
   Badge,
   buttonVariants,
@@ -315,12 +316,7 @@ export function ReferralStatsTable() {
       sorting: [{ id: "referredCount", desc: true }],
       columnPinning: { left: ["expand"], right: ["actions"] },
     },
-    queryKeys: {
-      page: "referralStatsPage",
-      perPage: "referralStatsPerPage",
-      sort: "referralStatsSort",
-      filters: "referralStatsFilters",
-    },
+    prefix: getDataTableConfig("referralStats").prefix,
   });
 
   return (

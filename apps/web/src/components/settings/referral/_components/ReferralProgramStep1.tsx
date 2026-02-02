@@ -137,15 +137,15 @@ export function ReferralProgramStep1() {
       </div>
 
       <div className="space-y-4">
-        <div>
+        {/* <div>
           <h3 className="text-lg font-semibold">How It Works</h3>
           <p className="text-muted-foreground text-sm">
             Explain to customers how the referral program works
           </p>
-        </div>
+        </div> */}
 
         <div className="space-y-4">
-          <div className="text-sm text-muted-foreground space-y-2">
+          {/* <div className="text-sm text-muted-foreground space-y-2">
             <p>
               • Firstly, your customers get a referral message after their
               purchase (right now we don't have a message sending system)
@@ -158,7 +158,7 @@ export function ReferralProgramStep1() {
               • Customers can share their referral link with friends to earn
               rewards
             </p>
-          </div>
+          </div> */}
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">

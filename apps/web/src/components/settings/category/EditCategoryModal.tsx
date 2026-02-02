@@ -7,7 +7,7 @@ import {
   getCategoryOptionsWithDepth,
   getDescendantIds,
   getNextSortOrder,
-} from "@/lib/category-tree";
+} from "@/lib/utils/category-tree";
 import { updateCategorySchema } from "@/lib/schemas/sku";
 import { getErrorMessageFromResponse } from "@/lib/utils/error-handler";
 import {

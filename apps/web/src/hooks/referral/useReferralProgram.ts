@@ -1,6 +1,10 @@
 "use client";
 
 import { fetcher } from "@/lib/fetcher";
+import {
+  buildApiParams,
+  getDataTableConfig,
+} from "@/lib/utils/data-table-params";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import {
@@ -57,10 +61,16 @@ export interface ReferralProgramResponse {
 
 export function useReferralStatsQuery() {
   const searchParams = useSearchParams();
-  const queryString = searchParams.toString();
+  const config = getDataTableConfig("referralStats");
+  const apiParams = buildApiParams(
+    searchParams,
+    config.prefix,
+    config.filterKeys,
+  );
+  const queryString = apiParams.toString();
 
   return useQuery<ReferralStatsResponse, Error>({
-    queryKey: ["referralStats", queryString],
+    queryKey: ["referralStats", searchParams.toString()],
     queryFn: () => {
       const url = queryString
         ? `/api/referral/stats?${queryString}`
