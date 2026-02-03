@@ -26,6 +26,9 @@ interface DataTableProps<TData> extends React.ComponentProps<"div"> {
   enableReorder?: boolean;
   onReorder?: (sourceIndex: number, destinationIndex: number) => void;
   tableType?: string; // Identifier to isolate drag/drop to same table type
+  scrollMode?: "table" | "page";
+  tableMaxHeight?: string;
+  tableContainerClassName?: string;
   // Expandable row props
   enableExpanding?: boolean;
   expandedRows?: Set<string>;
@@ -43,6 +46,9 @@ export function DataTable<TData>({
   enableReorder = false,
   onReorder,
   tableType,
+  scrollMode = "page",
+  tableMaxHeight = "70vh",
+  tableContainerClassName,
   enableExpanding = false,
   expandedRows: controlledExpandedRows,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -58,6 +64,7 @@ export function DataTable<TData>({
   const expandedRows = isControlled
     ? controlledExpandedRows
     : internalExpandedRows;
+  const isTableScroll = scrollMode === "table";
 
   const getRowIdentifier = React.useCallback(
     (row: Row<TData>): string => {
@@ -74,7 +81,14 @@ export function DataTable<TData>({
       {...props}
     >
       {children}
-      <div className="overflow-hidden rounded-md border">
+      <div
+        className={cn(
+          "rounded-md border",
+          isTableScroll ? "overflow-auto" : "overflow-hidden",
+          tableContainerClassName,
+        )}
+        style={isTableScroll ? { maxHeight: tableMaxHeight } : undefined}
+      >
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -227,7 +241,9 @@ export function DataTable<TData>({
         </Table>
       </div>
       <div className="flex flex-col gap-2.5">
-        {table.getPageCount() > 1 && <DataTablePagination table={table} />}
+        {table.getFilteredRowModel().rows.length > 0 && (
+          <DataTablePagination table={table} />
+        )}
         {actionBar &&
           table.getFilteredSelectedRowModel().rows.length > 0 &&
           actionBar}
