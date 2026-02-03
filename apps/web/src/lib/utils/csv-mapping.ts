@@ -283,6 +283,28 @@ const HEADER_ALIASES: Record<string, string[]> = {
     "position",
     "rank",
   ],
+
+  // Bill fields
+  billnumber: [
+    "billnumber",
+    "bill_number",
+    "billno",
+    "bill_no",
+    "invoice",
+    "invoicenumber",
+    "invoice_number",
+    "invoiceno",
+    "invoice_no",
+  ],
+  amount: [
+    "amount",
+    "total",
+    "totalamount",
+    "total_amount",
+    "billamount",
+    "bill_amount",
+  ],
+  notes: ["notes", "note", "remarks", "comment", "comments", "memo"],
 };
 
 /**
