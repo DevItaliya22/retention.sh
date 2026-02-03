@@ -123,6 +123,12 @@ export const billsQuerySchema = z.object({
   amountMax: z.coerce.number().optional(),
 });
 
+export const billImportItemSchema = billFormSchema;
+
+export const billImportSchema = z.object({
+  items: z.array(billImportItemSchema),
+});
+
 export type BillFormInput = z.infer<typeof billFormSchema>;
 export type CreateBillApiInput = z.infer<typeof createBillApiSchema>;
 export type SearchBusinessCustomerInput = z.infer<
@@ -130,3 +136,4 @@ export type SearchBusinessCustomerInput = z.infer<
 >;
 export type SearchUserCustomerInput = z.infer<typeof searchUserCustomerSchema>;
 export type BillsQueryInput = z.infer<typeof billsQuerySchema>;
+export type BillImportInput = z.infer<typeof billImportSchema>;
