@@ -8,10 +8,12 @@ import {
   DataTableToolbar,
   DateDisplay,
   Skeleton,
+  Switch,
+  InfoTooltip,
 } from "@reelo/ui/components";
 import { useDataTable } from "@reelo/ui/hooks";
 import type { ColumnDef } from "@tanstack/react-table";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { EditSkuButton } from "./EditSkuButton";
 import { DeleteSkuButton } from "./DeleteSkuButton";
 
@@ -30,6 +32,7 @@ export function SkuTable({
 }: SkuTableProps) {
   const pageCount = Math.max(1, Math.ceil(total / perPage));
   const isEmpty = !isLoading && skus.length === 0;
+  const [scrollMode, setScrollMode] = useState<"table" | "page">("table");
 
   const displaySkus = useMemo(() => {
     if (isLoading && skus.length === 0) {
@@ -265,6 +268,8 @@ export function SkuTable({
   return (
     <DataTable
       table={table}
+      scrollMode={scrollMode}
+      tableMaxHeight="70vh"
       renderRowFooter={(row) => {
         if (isEmpty && row.original.id === "empty-state") {
           return (
@@ -281,7 +286,21 @@ export function SkuTable({
         return null;
       }}
     >
-      <DataTableToolbar table={table} />
+      <DataTableToolbar table={table}>
+        <div className="flex items-center gap-2">
+          <span className="text-muted-foreground text-xs">
+            Scroll inside table
+          </span>
+          <Switch
+            checked={scrollMode === "table"}
+            onCheckedChange={(checked) =>
+              setScrollMode(checked ? "table" : "page")
+            }
+            aria-label="Toggle table internal scroll"
+          />
+          <InfoTooltip content="For convenience, enable table scroll to reach pagination faster without scrolling the whole page." />
+        </div>
+      </DataTableToolbar>
     </DataTable>
   );
 }
