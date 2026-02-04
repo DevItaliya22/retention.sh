@@ -89,10 +89,11 @@ export function ReferralLandingPageClient({
             <div>
               <h2 className="text-xl font-semibold mb-2">What You Get</h2>
               <p className="text-muted-foreground">
-                {referralProgram.newCustomerBenefitValue}{" "}
-                {referralProgram.newCustomerBenefitType === "LOYALTY_BONUS"
+                {referralProgram.existingCustomerBenefitValue}{" "}
+                {referralProgram.existingCustomerBenefitType === "LOYALTY_BONUS"
                   ? business.defaultPointsName
-                  : referralProgram.newCustomerBenefitType === "CASH_DISCOUNT"
+                  : referralProgram.existingCustomerBenefitType ===
+                      "CASH_DISCOUNT"
                     ? business.defaultCurrencySymbol
                     : ""}
               </p>
@@ -103,11 +104,10 @@ export function ReferralLandingPageClient({
                 What Your Friend Gets
               </h2>
               <p className="text-muted-foreground">
-                {referralProgram.existingCustomerBenefitValue}{" "}
-                {referralProgram.existingCustomerBenefitType === "LOYALTY_BONUS"
+                {referralProgram.newCustomerBenefitValue}{" "}
+                {referralProgram.newCustomerBenefitType === "LOYALTY_BONUS"
                   ? business.defaultPointsName
-                  : referralProgram.existingCustomerBenefitType ===
-                      "CASH_DISCOUNT"
+                  : referralProgram.newCustomerBenefitType === "CASH_DISCOUNT"
                     ? business.defaultCurrencySymbol
                     : ""}
               </p>

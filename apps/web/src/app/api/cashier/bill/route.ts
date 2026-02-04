@@ -1,5 +1,6 @@
 import { withCashierAuth } from "@/lib/auth/middleware";
 import { APP_CONSTANTS } from "@/lib/constants/app";
+import { applyLoyaltyForBill } from "@/lib/loyalty";
 import { createBillApiSchema } from "@/lib/schemas/bill";
 import {
   sanitizeErrorMessage,
@@ -161,6 +162,7 @@ export const POST = withCashierAuth(async (request: NextRequest, context) => {
       billNumber,
       phoneNumber,
       amount,
+      redeemPoints,
       notes,
       lineItems = [],
       ...customerData
@@ -222,32 +224,66 @@ export const POST = withCashierAuth(async (request: NextRequest, context) => {
       }
     }
 
-    const bill = await db.bill.create({
-      data: {
-        billNumber,
-        amount: amount ?? null,
-        notes: notes ?? null,
+    const billAmount = amount ?? 0;
+
+    const result = await db.$transaction(async (tx) => {
+      const bill = await tx.bill.create({
+        data: {
+          billNumber,
+          amount: amount ?? null,
+          notes: notes ?? null,
+          businessId,
+          customerId: customer.id,
+          cashierId: context.cashier.id,
+          lineItems:
+            lineItems.length > 0
+              ? {
+                  create: lineItems.map(
+                    (li: {
+                      skuId: string;
+                      qty: number;
+                      unitPrice?: number;
+                    }) => ({
+                      skuId: li.skuId,
+                      qty: li.qty,
+                      unitPrice: li.unitPrice ?? undefined,
+                    }),
+                  ),
+                }
+              : undefined,
+        },
+      });
+
+      const loyalty = await applyLoyaltyForBill(tx, {
         businessId,
         customerId: customer.id,
-        cashierId: context.cashier.id,
-        lineItems:
-          lineItems.length > 0
-            ? {
-                create: lineItems.map(
-                  (li: { skuId: string; qty: number; unitPrice?: number }) => ({
-                    skuId: li.skuId,
-                    qty: li.qty,
-                    unitPrice: li.unitPrice ?? undefined,
-                  }),
-                ),
-              }
-            : undefined,
-      },
+        billId: bill.id,
+        billAmount,
+        redeemPointsRequested: redeemPoints ?? null,
+      });
+
+      const updatedBill = await tx.bill.update({
+        where: { id: bill.id },
+        data: {
+          finalAmount: amount == null ? null : loyalty.finalAmount,
+          loyaltyPointsEarned: loyalty.earnedPoints,
+          loyaltyPointsRedeemed: loyalty.redeemedPoints,
+        },
+      });
+
+      return { bill: updatedBill, loyalty };
     });
 
-    return NextResponse.json({ bill });
+    return NextResponse.json(result);
   } catch (error: any) {
     console.error("Failed to create bill:", error);
+
+    if (error?.message === "Insufficient points for redemption") {
+      return NextResponse.json(
+        { error: "Insufficient points for redemption", bill: null },
+        { status: 400 },
+      );
+    }
 
     if (error.code === "P2002") {
       return NextResponse.json(

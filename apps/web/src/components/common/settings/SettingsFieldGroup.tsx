@@ -16,6 +16,7 @@ import {
   FormLabel,
   FormMessage,
   Input,
+  Textarea,
 } from "@reelo/ui/components";
 import { useTransition } from "react";
 import { useForm } from "react-hook-form";
@@ -28,7 +29,8 @@ interface FieldDefinition {
   placeholder?: string;
   helpText?: string;
   disabled?: boolean;
-  type?: "text" | "textarea";
+  optional?: boolean;
+  type?: "text" | "textarea" | "number";
 }
 
 interface SettingsFieldGroupProps {
@@ -54,10 +56,10 @@ export function SettingsFieldGroup({
   const schema = z.object(
     fields.reduce(
       (acc, field) => {
-        if (!field.disabled) {
-          acc[field.name] = z.string().min(1, `${field.label} is required`);
-        } else {
+        if (field.disabled || field.optional) {
           acc[field.name] = z.string().optional();
+        } else {
+          acc[field.name] = z.string().min(1, `${field.label} is required`);
         }
         return acc;
       },

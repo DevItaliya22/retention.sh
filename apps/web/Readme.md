@@ -24,3 +24,5 @@ QR
 Feedback
 Tier
 Membership
+
+right now in loyalty , there is swapping in giving the points (IMP)
