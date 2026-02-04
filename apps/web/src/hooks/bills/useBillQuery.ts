@@ -23,6 +23,9 @@ export interface BillDetail {
   id: string;
   billNumber: string;
   amount: number | null;
+  finalAmount?: number | null;
+  loyaltyPointsEarned?: number;
+  loyaltyPointsRedeemed?: number;
   /** BusinessCustomer slugId for /customers/[slugId] link */
   businessCustomerId: string;
   customerName: string;

@@ -232,6 +232,58 @@ export function CustomerDetailPageClient({
         </Card>
       </div>
 
+      {/* Loyalty link (when customer has phone and business slug) */}
+      {customer?.phone &&
+        customer?.businessSlug &&
+        !isLoading &&
+        (() => {
+          const phone = customer.phone ?? "";
+          const businessSlug = customer.businessSlug ?? "";
+          const loyaltyUrl =
+            typeof window !== "undefined"
+              ? `${window.location.origin}/loyalty/login?phone=${encodeURIComponent(phone)}&business=${encodeURIComponent(businessSlug)}`
+              : `/loyalty/login?phone=${encodeURIComponent(phone)}&business=${encodeURIComponent(businessSlug)}`;
+          return (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Link2 className="size-4 text-muted-foreground" />
+                  Loyalty link
+                </CardTitle>
+                <CardDescription>
+                  Share this link so the customer can view their loyalty points
+                  and history
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 truncate rounded-md border bg-muted/50 px-3 py-2 text-sm font-mono">
+                    {loyaltyUrl}
+                  </code>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="shrink-0"
+                    onClick={() => {
+                      if (
+                        typeof window !== "undefined" &&
+                        navigator.clipboard?.writeText
+                      ) {
+                        navigator.clipboard.writeText(loyaltyUrl);
+                        toast.success("Link copied to clipboard");
+                      }
+                    }}
+                    aria-label="Copy loyalty link"
+                  >
+                    <Copy className="size-4" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })()}
+
       {/* Referral link (when referral is enabled) */}
       {customer?.referralEnabled &&
         customer?.businessSlug &&

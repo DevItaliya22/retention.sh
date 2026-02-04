@@ -175,7 +175,7 @@ export function CustomersTable() {
         maxSize: 200,
         header: ({ column }) => (
           <div className="flex w-full justify-end">
-            <DataTableColumnHeader column={column} label="Points" />
+            <DataTableColumnHeader column={column} label="Loyalty points" />
           </div>
         ),
         cell: ({ row }) => {

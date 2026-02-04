@@ -74,6 +74,7 @@ export const billFormSchema = z.object({
     .nullable(),
   amount: amountSchema,
   lineItems: billLineItemsSchema.optional(),
+  redeemPoints: z.coerce.number().int().min(0).optional(),
   notes: z
     .string()
     .max(2000, "Notes are too long (max 2000 characters)")

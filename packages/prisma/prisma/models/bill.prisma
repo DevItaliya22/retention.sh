@@ -4,6 +4,9 @@ model Bill {
   billNumber String
   amount     Float?
   notes      String? // Optional notes on the bill
+  finalAmount Float? // Amount after applying loyalty redemption (if any)
+  loyaltyPointsEarned Int @default(0)
+  loyaltyPointsRedeemed Int @default(0)
 
   businessId       String
   customerId       String
