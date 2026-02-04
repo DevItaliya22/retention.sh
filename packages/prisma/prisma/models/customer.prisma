@@ -53,6 +53,7 @@ model BusinessCustomer {
 
   pointsBalance     Int                 @default(0)
   pointTransactions PointsTransaction[]
+  pointsBuckets     PointsBucket[]
 
   feedbackResponses    FeedbackResponse[]
   scratchCardResponses ScratchCardResponse[]
@@ -72,4 +73,3 @@ model BusinessCustomer {
   @@index([customerId])
   @@map("business_customer")
 }
-

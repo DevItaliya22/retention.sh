@@ -1,7 +1,7 @@
 "use client";
 
 import { PageLayout, ScaffoldContainer } from "@/components/layouts";
-import { Gift, Package, Settings, Users } from "lucide-react";
+import { Award, Gift, Package, Settings, Users } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { ReactNode } from "react";
 
@@ -37,6 +37,12 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
       href: `/settings/referral`,
       icon: <Gift className="h-4 w-4" />,
       active: pathname === "/settings/referral",
+    },
+    {
+      label: "Loyalty",
+      href: `/settings/loyalty`,
+      icon: <Award className="h-4 w-4" />,
+      active: pathname === "/settings/loyalty",
     },
   ];
 

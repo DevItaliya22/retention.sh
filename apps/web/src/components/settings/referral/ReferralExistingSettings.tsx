@@ -383,7 +383,7 @@ function NewCustomerBenefitsCard({
               )}
             />
           </CardContent>
-          <CardFooter className="px-6 py-2">
+          <CardFooter className="flex justify-end border-t px-6 py-4">
             <Button
               type="submit"
               disabled={isPending || !form.formState.isDirty}
@@ -536,7 +536,7 @@ function ExistingCustomerBenefitsCard({
               )}
             />
           </CardContent>
-          <CardFooter className="px-6 py-2">
+          <CardFooter className="flex justify-end border-t px-6 py-4">
             <Button
               type="submit"
               disabled={isPending || !form.formState.isDirty}
@@ -676,7 +676,7 @@ function InformationSectionsCard({
               Add section
             </Button>
           </CardContent>
-          <CardFooter className="px-6 py-2">
+          <CardFooter className="flex justify-end border-t px-6 py-4">
             <Button
               type="submit"
               disabled={isPending || !form.formState.isDirty}
@@ -793,7 +793,7 @@ function TermsCard({
               Add point
             </Button>
           </CardContent>
-          <CardFooter className="px-6 py-2">
+          <CardFooter className="flex justify-end border-t px-6 py-4">
             <Button
               type="submit"
               disabled={isPending || !form.formState.isDirty}

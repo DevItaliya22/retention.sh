@@ -28,6 +28,9 @@ export interface Bill {
   id: string;
   billNumber: string;
   amount: number | null;
+  finalAmount?: number | null;
+  loyaltyPointsEarned?: number;
+  loyaltyPointsRedeemed?: number;
   customerName: string;
   customerPhone: string | null;
   customerEmail: string;
