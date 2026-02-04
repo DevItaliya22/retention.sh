@@ -1,6 +1,7 @@
 "use client";
 
 import { useBillCreation } from "@/hooks/cashier/useBillCreation";
+import { useLoyaltyPreview } from "@/hooks/cashier/useLoyaltyPreview";
 import { useCashierSkusQuery } from "@/hooks/cashier/useCashierSkusQuery";
 import { billFormSchema } from "@/lib/schemas/bill";
 import type { BillLineItemInput } from "@/lib/schemas/bill";
@@ -12,6 +13,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  DateDisplay,
   Input,
   Label,
   PhoneInput,
@@ -64,6 +66,7 @@ export function BillCreationForm() {
   const [postalCode, setPostalCode] = useState("");
   const [amount, setAmount] = useState("");
   const [notes, setNotes] = useState("");
+  const [redeemPoints, setRedeemPoints] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lineItems, setLineItems] = useState<LineItemRow[]>([]);
@@ -85,6 +88,7 @@ export function BillCreationForm() {
     setAmount("");
     setNotes("");
     setLineItems([]);
+    setRedeemPoints("");
     clearSelectedCustomer();
     setError(null);
     setShowSuggestions(false);
@@ -128,6 +132,18 @@ export function BillCreationForm() {
       setPostalCode(selectedCustomer.postalCode || "");
     }
   }, [selectedCustomer]);
+
+  const billAmountNumber = amount ? parseFloat(amount) : 0;
+  const loyaltyPreviewQuery = useLoyaltyPreview({
+    businessId: business.id,
+    phone: phoneNumber,
+    billAmount: billAmountNumber || 0,
+  });
+
+  const loyaltyPreview = loyaltyPreviewQuery.data?.preview;
+  const redeemablePoints = loyaltyPreview?.redeemablePoints ?? 0;
+  const earnablePoints = loyaltyPreview?.earnablePoints ?? 0;
+  const pointsBalance = loyaltyPreview?.pointsBalance ?? 0;
 
   useEffect(() => {
     if (createSuccess) {
@@ -206,6 +222,7 @@ export function BillCreationForm() {
         country: country || null,
         postalCode: postalCode || null,
         amount: amount ? parseFloat(amount) : null,
+        redeemPoints: redeemPoints ? parseInt(redeemPoints, 10) : undefined,
         notes: notes.trim() || undefined,
         lineItems: parsedLineItems.length > 0 ? parsedLineItems : undefined,
       });
@@ -213,6 +230,14 @@ export function BillCreationForm() {
       if (!validationResult.success) {
         const firstError = validationResult.error.issues[0];
         const errorMessage = firstError?.message || "Invalid input";
+        setError(errorMessage);
+        toast.error(errorMessage);
+        return;
+      }
+
+      const redeemValue = redeemPoints ? parseInt(redeemPoints, 10) : 0;
+      if (redeemValue > 0 && redeemValue > redeemablePoints) {
+        const errorMessage = `Cannot redeem more than ${redeemablePoints} points.`;
         setError(errorMessage);
         toast.error(errorMessage);
         return;
@@ -269,6 +294,54 @@ export function BillCreationForm() {
                 onChange={(e) => setAmount(e.target.value)}
                 disabled={isCreating}
               />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 rounded-lg border p-4 md:grid-cols-2">
+            <div className="space-y-1">
+              <p className="text-sm font-medium">Loyalty Preview</p>
+              <p className="text-xs text-muted-foreground">
+                Points balance: {pointsBalance}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Earnable points: {earnablePoints}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Redeemable points: {redeemablePoints}
+              </p>
+              {loyaltyPreview?.expiringBuckets?.length ? (
+                <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+                  <p>Expiring soon:</p>
+                  {loyaltyPreview.expiringBuckets.map((bucket) => (
+                    <p key={bucket.id}>
+                      {bucket.remainingAmount} pts on{" "}
+                      <DateDisplay date={bucket.expiresAt} />
+                    </p>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="redeemPoints">Redeem Points</Label>
+              <Input
+                id="redeemPoints"
+                type="number"
+                min={0}
+                max={redeemablePoints}
+                placeholder="0"
+                value={redeemPoints}
+                onChange={(e) => setRedeemPoints(e.target.value)}
+                disabled={isCreating}
+              />
+              {billAmountNumber > 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  Payable amount:{" "}
+                  {Math.max(
+                    0,
+                    billAmountNumber - (parseInt(redeemPoints, 10) || 0),
+                  )}
+                </p>
+              ) : null}
             </div>
           </div>
 

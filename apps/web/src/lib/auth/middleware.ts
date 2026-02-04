@@ -5,6 +5,7 @@ import {
   getCashierSessionFromHeaders,
   type CashierSessionData,
 } from "./cashier-session";
+import { getCustomerSessionFromHeaders } from "./customer-session";
 
 type Session = Awaited<ReturnType<typeof auth.api.getSession>>;
 
@@ -306,9 +307,9 @@ export function withCustomerAuth<T extends Record<string, string | string[]>>(
     try {
       const resolvedParams = await params;
 
-      const session = (await auth.api.getSession({
-        headers: request.headers,
-      })) as Session | null;
+      const session = await getCustomerSessionFromHeaders(
+        request.headers.get("cookie"),
+      );
 
       if (!session || !session.user) {
         return NextResponse.json(
@@ -349,10 +350,10 @@ export function withCustomerAuth<T extends Record<string, string | string[]>>(
           role: session.user.role || "CUSTOMER",
         },
         session: {
-          id: session.session?.id || "",
-          token: session.session?.token || "",
-          expiresAt: session.session?.expiresAt || new Date(),
-          role: session.session?.role || session.user.role || "CUSTOMER",
+          id: session.session.id || "",
+          token: session.session.token || "",
+          expiresAt: session.session.expiresAt || new Date(),
+          role: session.session.role || session.user.role || "CUSTOMER",
         },
         customer: {
           id: customer.id,
