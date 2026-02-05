@@ -23,7 +23,7 @@ export const baseBusinessSchema = {
 };
 
 export const baseCashierSchema = {
-  cashierName: nameSchema.optional(),
+  cashierName: nameSchema.optional().or(z.literal("")),
   cashierEmail: emailSchema.optional().or(z.literal("")),
   cashierLinkSlug: slugSchema.optional().or(z.literal("")),
 };

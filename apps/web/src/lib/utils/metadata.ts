@@ -40,7 +40,7 @@ export function constructMetadata({
   url,
   canonicalUrl,
   noIndex = false,
-  manifest = "/site.webmanifest",
+  // manifest = "/site.webmanifest",
   keywords,
   authors,
   verification,
@@ -167,9 +167,9 @@ export function constructMetadata({
             },
           },
         }),
-    ...(manifest && {
-      manifest,
-    }),
+    // ...(manifest && {
+    //   manifest,
+    // }),
     ...(verification && {
       verification: {
         ...(verification.google && { google: verification.google }),

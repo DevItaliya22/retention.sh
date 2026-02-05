@@ -20,7 +20,7 @@ export function CashierLogoutButton({
   const handleLogout = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch("/api/cashier/auth/logout", {
+      const response = await fetch("/api/auth/cashier/logout", {
         method: "POST",
       });
 

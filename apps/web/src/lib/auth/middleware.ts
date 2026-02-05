@@ -35,6 +35,14 @@ export interface AdminAuthContext {
   };
 }
 
+/** Same as AdminAuthContext but admin/business may be null (user not yet onboarded). */
+export interface AdminAuthContextOptionalBusiness {
+  user: AdminAuthContext["user"];
+  session: AdminAuthContext["session"];
+  admin: AdminAuthContext["admin"] | null;
+  business: AdminAuthContext["business"] | null;
+}
+
 export interface CashierAuthContext {
   user: {
     id: string;
@@ -90,6 +98,17 @@ export type WithAdminAuthHandler<
 > = (
   request: NextRequest,
   context: AdminAuthContext,
+  params: T,
+) => Promise<NextResponse>;
+
+export type WithAdminAuthOptionalBusinessHandler<
+  T extends Record<string, string | string[]> = Record<
+    string,
+    string | string[]
+  >,
+> = (
+  request: NextRequest,
+  context: AdminAuthContextOptionalBusiness,
   params: T,
 ) => Promise<NextResponse>;
 
@@ -193,6 +212,96 @@ export function withAdminAuth<T extends Record<string, string | string[]>>(
       return await handler(request, context, resolvedParams as T);
     } catch (error) {
       console.error("Admin auth middleware error:", error);
+      return NextResponse.json(
+        { error: "INTERNAL_ERROR", message: "An error occurred" },
+        { status: 500 },
+      );
+    }
+  };
+}
+
+/**
+ * Like withAdminAuth but allows admin with no business (e.g. not yet onboarded).
+ * Use for routes that must return { business: null } when admin has no business (e.g. GET /api/business/current).
+ */
+export function withAdminAuthOptionalBusiness<
+  T extends Record<string, string | string[]>,
+>(
+  handler: WithAdminAuthOptionalBusinessHandler<T>,
+): (
+  request: NextRequest,
+  { params }: { params: Promise<Record<string, string | string[]>> },
+) => Promise<NextResponse> {
+  return async (request: NextRequest, { params }) => {
+    try {
+      const resolvedParams = await params;
+
+      const session = (await auth.api.getSession({
+        headers: request.headers,
+      })) as Session | null;
+
+      if (!session || !session.user) {
+        return NextResponse.json(
+          { error: "UNAUTHORIZED", message: "Authentication required" },
+          { status: 401 },
+        );
+      }
+
+      if (session.user.role !== "ADMIN") {
+        return NextResponse.json(
+          { error: "FORBIDDEN", message: "Admin access required" },
+          { status: 403 },
+        );
+      }
+
+      const admin = await db.admin.findFirst({
+        where: { userId: session.user.id },
+        include: {
+          business: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              referralEnabled: true,
+            },
+          },
+        },
+      });
+
+      const context: AdminAuthContextOptionalBusiness = {
+        user: {
+          id: session.user.id,
+          name: session.user.name,
+          email: session.user.email,
+          role: session.user.role || "ADMIN",
+        },
+        session: {
+          id: session.session?.id || "",
+          token: session.session?.token || "",
+          expiresAt: session.session?.expiresAt || new Date(),
+          role: session.session?.role || session.user.role || "ADMIN",
+        },
+        admin: admin
+          ? {
+              id: admin.id,
+              userId: admin.userId,
+              businessId: admin.businessId,
+            }
+          : null,
+        business:
+          admin?.business != null
+            ? {
+                id: admin.business.id,
+                name: admin.business.name,
+                slug: admin.business.slug,
+                referralEnabled: admin.business.referralEnabled ?? false,
+              }
+            : null,
+      };
+
+      return await handler(request, context, resolvedParams as T);
+    } catch (error) {
+      console.error("Admin auth (optional business) middleware error:", error);
       return NextResponse.json(
         { error: "INTERNAL_ERROR", message: "An error occurred" },
         { status: 500 },

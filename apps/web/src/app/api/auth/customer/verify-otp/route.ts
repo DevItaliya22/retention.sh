@@ -1,34 +1,15 @@
 import { APP_CONSTANTS } from "@/lib/constants/app";
 import { verifyOtpSchema } from "@/lib/schemas/customer-auth";
-import { SESSION_COOKIE_NAME } from "@/lib/utils/cookie";
+import { CUSTOMER_SESSION_COOKIE_NAME } from "@/lib/utils/cookie";
 import {
   sanitizeErrorMessage,
   validateSchema,
 } from "@/lib/utils/error-handler";
 import { formatPhoneNumber } from "@/lib/utils/phone";
+import { getIpAddress, isSecureContext } from "@/lib/utils/request";
 import { db } from "@reelo/db";
 import { randomBytes } from "crypto";
 import { NextResponse } from "next/server";
-
-function getIpAddress(request: Request): string | null {
-  const headers = request.headers;
-  const ipHeaders = ["x-forwarded-for", "x-real-ip", "cf-connecting-ip"];
-
-  for (const header of ipHeaders) {
-    const value = headers.get(header);
-    if (value) {
-      const ip = value.split(",")[0]?.trim();
-      if (ip) return ip;
-    }
-  }
-
-  return null;
-}
-
-function isSecureContext(request: Request): boolean {
-  const url = new URL(request.url);
-  return url.protocol === "https:" || process.env.NODE_ENV === "production";
-}
 
 export async function POST(request: Request) {
   try {
@@ -102,7 +83,7 @@ export async function POST(request: Request) {
     const userAgent = request.headers.get("user-agent") || null;
 
     const expiresAt = new Date();
-    expiresAt.setTime(expiresAt.getTime() + 60 * 60 * 24 * 1000);
+    expiresAt.setTime(expiresAt.getTime() + 60 * 60 * 24 * 1000); // 24 hours
 
     const token = randomBytes(32).toString("hex");
     const sessionId = crypto.randomUUID();
@@ -135,11 +116,9 @@ export async function POST(request: Request) {
       },
     });
 
-    const isSecure = isSecureContext(request);
-
-    response.cookies.set(SESSION_COOKIE_NAME, token, {
+    response.cookies.set(CUSTOMER_SESSION_COOKIE_NAME, token, {
       httpOnly: true,
-      secure: isSecure,
+      secure: isSecureContext(),
       sameSite: "strict",
       path: "/",
       maxAge: 60 * 60 * 24,
@@ -147,7 +126,7 @@ export async function POST(request: Request) {
     });
 
     return response;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Failed to verify OTP:", error);
     return NextResponse.json(
       {

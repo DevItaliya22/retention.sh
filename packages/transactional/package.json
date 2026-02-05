@@ -1,0 +1,23 @@
+{
+	"name": "@reelo/transactional",
+	"version": "1.0.0",
+	"private": true,
+	"scripts": {
+		"dev": "email dev -p 3001",
+		"export": "email export" 
+	},
+  "exports": {
+   ".":"./src/index.ts"
+  },
+	"dependencies": {
+		"@react-email/components": "^1.0.7",
+		"react": "^19.2.4",
+		"react-dom": "^19.2.4"
+	},
+	"devDependencies": {
+		"@react-email/preview-server": "^5.2.6",
+		"@types/react": "^19.2.3",
+		"@types/react-dom": "^19.2.2",
+		"react-email": "^5.2.6"
+	}
+}

@@ -3,9 +3,21 @@ import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { APIError, createAuthMiddleware } from "better-auth/api";
 import { magicLink } from "better-auth/plugins";
-import { COOKIE_PREFIX } from "../utils/cookie";
+import { sendMagicLink } from "../email";
+import { ADMIN_COOKIE_PREFIX } from "../utils/cookie";
 
+/**
+ * Better Auth configuration for ADMIN users.
+ *
+ * This handles:
+ * - Email/password authentication
+ * - Magic link authentication
+ * - Session management with role-based access
+ *
+ * API endpoint: /api/auth/admin/*
+ */
 export const auth = betterAuth({
+  basePath: "/api/auth/admin",
   database: prismaAdapter(db, {
     provider: "postgresql",
   }),
@@ -25,19 +37,16 @@ export const auth = betterAuth({
     max: 100, // 100 requests per minute (global fallback)
     storage: "memory",
     customRules: {
-      // Magic link sending
       "/sign-in/magic-link": {
-        window: 10, // 10 seconds
+        window: 10,
         max: 3,
       },
-      // Magic link verification
       "/magic-link/verify": {
-        window: 10, // 10 seconds
+        window: 10,
         max: 3,
       },
-      // Social sign-in attempts
       "/sign-in/social": {
-        window: 60 * 60 * 24, // 1 day
+        window: 60 * 60 * 24,
         max: 10,
       },
     },
@@ -61,8 +70,8 @@ export const auth = betterAuth({
     },
   },
   advanced: {
-    useSecureCookies: process.env.NODE_ENV === "production",
-    cookiePrefix: COOKIE_PREFIX,
+    useSecureCookies: false,
+    cookiePrefix: ADMIN_COOKIE_PREFIX,
     ipAddress: {
       ipAddressHeaders: ["x-forwarded-for", "x-real-ip", "cf-connecting-ip"],
       disableIpTracking: false,
@@ -70,8 +79,8 @@ export const auth = betterAuth({
   },
   plugins: [
     magicLink({
-      sendMagicLink: async ({ email, token, url }, ctx) => {
-        console.log("Magic link:", { email, token, url });
+      sendMagicLink: async ({ email, url }) => {
+        await sendMagicLink({ email, url });
       },
     }),
   ],
@@ -155,103 +164,3 @@ export const auth = betterAuth({
     },
   },
 });
-
-export interface CashierLoginData {
-  id: string;
-  userId: string;
-  businessId: string;
-  cashierLinkSlug: string;
-  user: {
-    id: string;
-    email: string | null;
-    name: string;
-  };
-}
-
-export async function validateCashierLogin(params: {
-  businessSlug: string;
-  cashierSlug: string;
-  email: string;
-  password: string;
-}): Promise<{ success: boolean; error?: string; cashier?: CashierLoginData }> {
-  try {
-    const { businessSlug, cashierSlug, email, password } = params;
-
-    const business = await db.business.findUnique({
-      where: { slug: businessSlug },
-    });
-
-    if (!business) {
-      return {
-        success: false,
-        error: "Business not found",
-      };
-    }
-
-    const cashier = await db.cashier.findFirst({
-      where: {
-        cashierLinkSlug: cashierSlug,
-        businessId: business.id,
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            name: true,
-          },
-        },
-      },
-    });
-
-    if (!cashier) {
-      return {
-        success: false,
-        error: "Cashier not found in this business",
-      };
-    }
-
-    if (!cashier.isActive) {
-      return {
-        success: false,
-        error: "This cashier account is inactive. Contact your administrator.",
-      };
-    }
-
-    // Validate email against Cashier.email (unique per business)
-    if (cashier.email !== email) {
-      return {
-        success: false,
-        error: "Invalid email for this cashier",
-      };
-    }
-
-    if (cashier.password !== password) {
-      return {
-        success: false,
-        error: "Invalid password",
-      };
-    }
-
-    return {
-      success: true,
-      cashier: {
-        id: cashier.id,
-        userId: cashier.userId,
-        businessId: cashier.businessId,
-        cashierLinkSlug: cashier.cashierLinkSlug,
-        user: {
-          id: cashier.user.id,
-          email: cashier.email,
-          name: cashier.user.name,
-        },
-      },
-    };
-  } catch (error: any) {
-    console.error("Failed to validate cashier login:", error);
-    return {
-      success: false,
-      error: error.message || "Failed to validate cashier login",
-    };
-  }
-}

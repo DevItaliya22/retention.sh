@@ -19,6 +19,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@reelo/ui/components";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -134,8 +135,7 @@ export function LoginPageClient() {
         toast.error(errorMsg);
       } else {
         setMagicLinkSent(true);
-        const successMsg =
-          "Magic link sent! Check your email (and console logs for the link).";
+        const successMsg = "Magic link sent! Check your email to sign in.";
         setSuccess(successMsg);
         toast.success("Magic link sent! Check your email.");
       }
@@ -249,8 +249,7 @@ export function LoginPageClient() {
                       Magic link sent to <strong>{magicLinkEmail}</strong>
                     </p>
                     <p className="text-muted-foreground text-xs">
-                      Check your email inbox and click the link to sign in. Also
-                      check your server console logs for the magic link URL.
+                      Check your email inbox and click the link to sign in.
                     </p>
                   </div>
                   <Button
@@ -287,6 +286,16 @@ export function LoginPageClient() {
               )}
             </TabsContent>
           </Tabs>
+
+          <p className="text-muted-foreground mt-6 border-t pt-6 text-center text-sm">
+            Don&apos;t have an account?{" "}
+            <Link
+              href="/register"
+              className="text-primary font-medium hover:underline"
+            >
+              Sign up
+            </Link>
+          </p>
         </CardContent>
       </Card>
     </div>

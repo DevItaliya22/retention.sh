@@ -12,6 +12,15 @@ export async function fetcher<T = unknown>(
     },
   });
 
+  if (response.status === 401 && typeof window !== "undefined") {
+    try {
+      await fetch("/api/auth/revoke", { method: "POST" });
+    } finally {
+      window.location.href = "/login";
+    }
+    throw new Error("Session expired or invalid. Please sign in again.");
+  }
+
   if (!response.ok) {
     const errorMessage = await handleApiError(
       response,

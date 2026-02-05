@@ -40,14 +40,17 @@ export async function POST(request: Request) {
       },
     });
 
-    console.log("Customer OTP:", {
-      phoneNumber: formattedPhone,
-      otp,
-      expiresAt,
-    });
+    // In DEV, log OTP. In PROD, send via SMS (TODO: implement SMS sending)
+    if (process.env.NODE_ENV !== "production") {
+      console.log("[auth] Customer OTP (dev only):", {
+        phoneNumber: formattedPhone,
+        otp,
+        expiresAt,
+      });
+    }
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Failed to request OTP:", error);
     return NextResponse.json(
       {

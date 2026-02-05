@@ -48,8 +48,11 @@ export function SessionProvider({
 
   const signOut = useMemo(() => {
     return async () => {
-      await authClient.signOut();
-      window.location.href = "/login";
+      try {
+        await fetch("/api/auth/revoke", { method: "POST" });
+      } finally {
+        window.location.href = "/login";
+      }
     };
   }, []);
 
