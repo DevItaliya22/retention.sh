@@ -35,7 +35,7 @@ export function LoyaltyLoginPageClient() {
     setIsLoading(true);
     try {
       const response = await fetcher<{ success: boolean; error?: string }>(
-        "/api/customer/auth/request-otp",
+        "/api/auth/customer/request-otp",
         {
           method: "POST",
           body: JSON.stringify({ phoneNumber }),
@@ -60,7 +60,7 @@ export function LoyaltyLoginPageClient() {
     setIsLoading(true);
     try {
       const response = await fetcher<{ session: unknown; error?: string }>(
-        "/api/customer/auth/verify-otp",
+        "/api/auth/customer/verify-otp",
         {
           method: "POST",
           body: JSON.stringify({ phoneNumber, otp }),

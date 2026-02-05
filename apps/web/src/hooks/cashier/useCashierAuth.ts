@@ -35,7 +35,7 @@ export function useCashierLogin() {
 
   return useMutation<CashierLoginResponse, Error, CashierLoginInput>({
     mutationFn: async (input: CashierLoginInput) => {
-      return fetcher<CashierLoginResponse>("/api/cashier/auth/login", {
+      return fetcher<CashierLoginResponse>("/api/auth/cashier/login", {
         method: "POST",
         body: JSON.stringify(input),
       });

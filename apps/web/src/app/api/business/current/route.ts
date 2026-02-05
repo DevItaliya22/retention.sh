@@ -1,4 +1,7 @@
-import { withAdminAuth } from "@/lib/auth/middleware";
+import {
+  withAdminAuth,
+  withAdminAuthOptionalBusiness,
+} from "@/lib/auth/middleware";
 import { updateBusinessSchema } from "@/lib/schemas/business";
 import {
   sanitizeErrorMessage,
@@ -7,8 +10,13 @@ import {
 import { db } from "@reelo/db";
 import { NextResponse } from "next/server";
 
-export const GET = withAdminAuth(async (request, context) => {
+/** GET returns current business or null when admin has no business (onboarding). */
+export const GET = withAdminAuthOptionalBusiness(async (request, context) => {
   try {
+    if (!context.business) {
+      return NextResponse.json({ business: null });
+    }
+
     const business = await db.business.findUnique({
       where: { id: context.business.id },
       include: {
