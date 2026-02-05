@@ -44,9 +44,10 @@ const protectedCashierSubPaths = ["/home"];
 
 /**
  * Customer routes that require CUSTOMER session
- * Note: /loyalty/login is public, /loyalty and /loyalty/[businessSlug] require session
+ * - /loyalty is allowed (list when session, or "use business link" when not)
+ * - /loyalty/[businessSlug]/login is public
+ * - /loyalty/[businessSlug] (detail) requires session → redirect to .../login
  */
-const protectedCustomerRoutes = ["/loyalty"];
 
 // =============================================================================
 // PROXY FUNCTION
@@ -103,36 +104,57 @@ export async function proxy(req: NextRequest) {
   // CUSTOMER ROUTE PROTECTION
   // ---------------------------------------------------------------------------
   if (pathname.startsWith("/loyalty")) {
-    // /loyalty/login is public
+    // Legacy: /loyalty/login → redirect to /loyalty or /loyalty/[business]/login
     if (pathname === "/loyalty/login") {
+      const business = nextUrl.searchParams.get("business");
+      const target = business
+        ? `/loyalty/${encodeURIComponent(business)}/login`
+        : "/loyalty";
+      const redirectUrl = new URL(target, req.url);
+      if (business) {
+        nextUrl.searchParams.forEach((v, k) => {
+          if (k !== "business") redirectUrl.searchParams.set(k, v);
+        });
+      }
+      return NextResponse.redirect(redirectUrl);
+    }
+
+    // /loyalty/[businessSlug]/login: if already logged in, redirect to dashboard
+    const loginMatch = pathname.match(/^\/loyalty\/([^/]+)\/login$/);
+    if (loginMatch) {
+      const cookieHeader = req.headers.get("cookie");
+      const customerSession = await getCustomerSessionFromHeaders(cookieHeader);
+      if (customerSession && customerSession.user.role === "CUSTOMER") {
+        return NextResponse.redirect(
+          new URL(`/loyalty/${loginMatch[1]}`, req.url),
+        );
+      }
       return NextResponse.next();
     }
 
-    // Other loyalty routes require customer session
-    const cookieHeader = req.headers.get("cookie");
-    const customerSession = await getCustomerSessionFromHeaders(cookieHeader);
+    // /loyalty/[businessSlug] (detail) requires customer session
+    const detailMatch = pathname.match(/^\/loyalty\/([^/]+)$/);
+    if (detailMatch) {
+      const cookieHeader = req.headers.get("cookie");
+      const customerSession = await getCustomerSessionFromHeaders(cookieHeader);
 
-    if (!customerSession || customerSession.user.role !== "CUSTOMER") {
-      const customerToken = req.cookies.get(
-        CUSTOMER_SESSION_COOKIE_NAME,
-      )?.value;
-      if (customerToken) {
-        await db.session.deleteMany({ where: { token: customerToken } });
-      }
-      const redirectUrl = new URL("/loyalty/login", req.url);
-      if (pathname !== "/loyalty") {
-        const businessMatch = pathname.match(/^\/loyalty\/([^/]+)/);
-        if (businessMatch && businessMatch[1]) {
-          redirectUrl.searchParams.set("business", businessMatch[1]);
+      if (!customerSession || customerSession.user.role !== "CUSTOMER") {
+        const customerToken = req.cookies.get(
+          CUSTOMER_SESSION_COOKIE_NAME,
+        )?.value;
+        if (customerToken) {
+          await db.session.deleteMany({ where: { token: customerToken } });
         }
+        const redirect = NextResponse.redirect(
+          new URL(`/loyalty/${detailMatch[1]}/login`, req.url),
+        );
+        redirect.cookies.set(
+          CUSTOMER_SESSION_COOKIE_NAME,
+          "",
+          CLEAR_SESSION_COOKIE_OPTIONS,
+        );
+        return redirect;
       }
-      const redirect = NextResponse.redirect(redirectUrl);
-      redirect.cookies.set(
-        CUSTOMER_SESSION_COOKIE_NAME,
-        "",
-        CLEAR_SESSION_COOKIE_OPTIONS,
-      );
-      return redirect;
     }
 
     return NextResponse.next();

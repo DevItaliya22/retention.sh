@@ -1,4 +1,8 @@
-import { isReservedSlug } from "@/lib/utils/slug";
+import {
+  isReservedSlug,
+  SLUG_MAX_LENGTH,
+  SLUG_MIN_LENGTH,
+} from "@/lib/utils/slug";
 import { z } from "zod";
 
 // Common field validations with proper length limits
@@ -28,8 +32,8 @@ export const optionalPasswordSchema = z
 
 export const slugSchema = z
   .string()
-  .min(2, "Slug is too short (min 2 characters)")
-  .max(100, "Slug is too long (max 100 characters)")
+  .min(SLUG_MIN_LENGTH, `Slug is too short (min ${SLUG_MIN_LENGTH} characters)`)
+  .max(SLUG_MAX_LENGTH, `Slug is too long (max ${SLUG_MAX_LENGTH} characters)`)
   .regex(
     /^[a-z0-9-]+$/,
     "Slug can only contain lowercase letters, numbers, and hyphens",

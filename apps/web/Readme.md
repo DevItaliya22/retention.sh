@@ -35,4 +35,51 @@ customer login page shouold ve http://localhost:3000/loyalty/login?phone=%2B9199
 
 also in that page when we are gicing wrong OTP it is pushing to /login which is admin login page , we should show only that fucker thi is wrong , and if correct then push to http://localhost:3000/loyalty/flowers-vechu-chu with session , if there is no sesion and someone goes on this page then we will show them ifo about the company
 
-on correct OTP we are going on this page only http://localhost:3000/loyalty/flowers-vechu-chu whihc is cool , and if we chnage session info in cookie then it pushing in this page http://localhost:3000/loyalty/login?business=flowers-vechu-chu which is cool so no need ot wory about that shit , but we can make sure that non session user either gets redirected to login page of the bussiness of we show them the info of this , i think pushing them on login is better
+CAn make a redirect logic hook for each 3 role , this can help i future too maybe , not sure , also have to make al the compoent refactor
+
+analytics
+email
+sms
+whatsapp
+gamification
+billing
+SKU adding
+
+<!--  form https://www.openloyalty.io/  -->
+
+Points
+Tiers
+Games of chance
+Rewards
+Wallets
+Spin the wheel
+Referrals
+Achievements
+Lotteries
+Badges
+Leaderboard
+Scratch & win
+
+https://www.youtube.com/watch?v=691KWbNnZHM&t=383s
+
+priorituy access , extended window support , personal guidance and services , free dibs on new produscts
+
+https://www.unifynd.com/
+https://thriwe.com/
+https://squareup.com/us/en
+https://www.openloyalty.io/
+
+We are a company which works with many B2C and D2C retail stores and brands , we want to handle entire loyalty platform and whataspp marketing for them .
+So we willl send multiple 1000's of whataspp messages every month from a business WP account . Also we dont want to seprate accounts for each userl number , if possible. single account in gupshup should handle multiple WP
+numbers and send msgs seprately from each number using APIS
+
+5. Public / dynamic route params not validated (length/format) (DoS / bad input)
+   Where:
+   apps/web/src/app/api/referral/program/[businessSlug]/route.ts
+   apps/web/src/app/api/public/business/[slug]/register-info/route.ts
+   Similar dynamic segments elsewhere
+   Issue: businessSlug and slug are taken from the URL and used in Prisma (e.g. where: { slug: businessSlug }) without validating length or format. Very long or malformed values could stress the DB or cause unexpected behavior.
+   Fix: Validate dynamic params with Zod (or your existing schema):
+   Use slugSchema (or equivalent) from lib/schemas/common.ts to enforce length and allowed characters.
+   Apply the same pattern to other public or dynamic segments so all route params are validated before use.
+   Summary

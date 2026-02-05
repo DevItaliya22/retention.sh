@@ -1,5 +1,6 @@
 "use client";
 
+import { CustomerLogoutButton } from "@/components/customer/CustomerLogoutButton";
 import { PageLayout, ScaffoldContainer } from "@/components/layouts";
 import { fetcher } from "@/lib/fetcher";
 import {
@@ -46,6 +47,7 @@ export default function LoyaltyListPage() {
       subtitle="Track points across businesses"
       size="default"
       scaffoldSectionClassName="h-full w-full pt-2 pb-0"
+      primaryActions={<CustomerLogoutButton />}
     >
       <ScaffoldContainer>
         <div className="space-y-4">

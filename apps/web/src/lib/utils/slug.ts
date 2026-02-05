@@ -1,5 +1,11 @@
 import slugify from "slugify";
 
+/** Max length for slugs (e.g. business, cashier link). Used by slugSchema and APIs. */
+export const SLUG_MAX_LENGTH = 100;
+
+/** Min length for slugs. */
+export const SLUG_MIN_LENGTH = 2;
+
 // Reserved slugs that cannot be used for workspaces
 export const RESERVED_SLUGS = [
   "cashier",

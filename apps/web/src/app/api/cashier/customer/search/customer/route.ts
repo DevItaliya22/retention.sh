@@ -1,4 +1,5 @@
 import { withCashierAuth } from "@/lib/auth/middleware";
+import { APP_CONSTANTS } from "@/lib/constants/app";
 import { searchBusinessCustomerSchema } from "@/lib/schemas/bill";
 import {
   sanitizeErrorMessage,
@@ -12,7 +13,7 @@ export const GET = withCashierAuth(async (request: NextRequest, context) => {
   try {
     const { searchParams } = new URL(request.url);
     const phone = searchParams.get("phone");
-    const businessId = searchParams.get("businessId") || context.business.id;
+    const businessId = context.business.id;
 
     const validation = validateSchema(searchBusinessCustomerSchema, {
       phone: phone || "",
@@ -25,9 +26,15 @@ export const GET = withCashierAuth(async (request: NextRequest, context) => {
       );
     }
 
-    if (validation.data.phone.length < 4) {
+    if (
+      validation.data.phone.replace(/\D/g, "").length <
+      APP_CONSTANTS.MIN_PHONE_LENGTH_FOR_SEARCH
+    ) {
       return NextResponse.json(
-        { error: "Phone number must be at least 4 digits", customers: [] },
+        {
+          error: `Enter at least ${APP_CONSTANTS.MIN_PHONE_LENGTH_FOR_SEARCH} digits to search`,
+          customers: [],
+        },
         { status: 400 },
       );
     }
@@ -36,7 +43,7 @@ export const GET = withCashierAuth(async (request: NextRequest, context) => {
 
     const businessCustomers = await db.businessCustomer.findMany({
       where: {
-        businessId: validation.data.businessId,
+        businessId,
         customer: {
           user: {
             phoneNumber: {

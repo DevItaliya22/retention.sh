@@ -1,6 +1,7 @@
 "use client";
 
 import { fetcher } from "@/lib/fetcher";
+import { SLUG_MAX_LENGTH, SLUG_MIN_LENGTH } from "@/lib/utils/slug";
 import { useQuery } from "@tanstack/react-query";
 import slugify from "slugify";
 
@@ -15,7 +16,8 @@ export default function useBusinessSlugAvailability(slug: string) {
     trim: true,
   });
   const isValid =
-    normalized.length >= 2 &&
+    normalized.length >= SLUG_MIN_LENGTH &&
+    normalized.length <= SLUG_MAX_LENGTH &&
     /^[a-z0-9-]+$/.test(normalized) &&
     !normalized.startsWith("-");
 

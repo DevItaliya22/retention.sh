@@ -20,6 +20,48 @@ export async function POST(request: Request) {
     }
 
     const formattedPhone = formatPhoneNumber(validation.data.phoneNumber);
+    const businessSlug = validation.data.businessSlug;
+
+    const business = await db.business.findUnique({
+      where: { slug: businessSlug },
+    });
+    if (!business) {
+      return NextResponse.json(
+        { success: false, error: "Business not found" },
+        { status: 404 },
+      );
+    }
+
+    const user = await db.user.findUnique({
+      where: { phoneNumber: formattedPhone },
+      include: { customer: true },
+    });
+    if (!user || !user.customer) {
+      return NextResponse.json({
+        success: false,
+        error:
+          "You are not an existing customer for this business. You can register to become one.",
+        notCustomer: true,
+      });
+    }
+
+    const businessCustomer = await db.businessCustomer.findUnique({
+      where: {
+        businessId_customerId: {
+          businessId: business.id,
+          customerId: user.customer.id,
+        },
+      },
+    });
+    if (!businessCustomer) {
+      return NextResponse.json({
+        success: false,
+        error:
+          "You are not an existing customer for this business. You can register to become one.",
+        notCustomer: true,
+      });
+    }
+
     const otp = randomInt(100000, 999999).toString();
 
     const expiresAt = new Date();

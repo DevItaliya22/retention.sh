@@ -1,5 +1,6 @@
 "use client";
 
+import { CustomerLogoutButton } from "@/components/customer/CustomerLogoutButton";
 import { PageLayout, ScaffoldContainer } from "@/components/layouts";
 import { fetcher } from "@/lib/fetcher";
 import {
@@ -8,6 +9,11 @@ import {
   CardHeader,
   CardTitle,
   DateDisplay,
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
   Skeleton,
   Table,
   TableBody,
@@ -16,6 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from "@reelo/ui/components";
+import { Gift, Receipt } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 
@@ -143,6 +150,9 @@ export default function LoyaltyDetailPage() {
       subtitle={`Points balance: ${loyalty.pointsBalance}`}
       size="default"
       scaffoldSectionClassName="h-full w-full pt-2 pb-0"
+      primaryActions={
+        <CustomerLogoutButton businessSlug={loyalty.business.slug} />
+      }
     >
       <ScaffoldContainer>
         <div className="space-y-6">
@@ -152,9 +162,18 @@ export default function LoyaltyDetailPage() {
             </CardHeader>
             <CardContent>
               {loyalty.buckets.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  No points expiring soon.
-                </p>
+                <Empty className="py-8">
+                  <EmptyHeader>
+                    <EmptyMedia variant="icon">
+                      <Gift className="size-6" />
+                    </EmptyMedia>
+                    <EmptyTitle>No points expiring soon</EmptyTitle>
+                    <EmptyDescription>
+                      Your points are safe. Use them before they expire to get
+                      the most value.
+                    </EmptyDescription>
+                  </EmptyHeader>
+                </Empty>
               ) : (
                 <ul className="space-y-1 text-sm">
                   {loyalty.buckets.map((bucket) => (
@@ -173,28 +192,43 @@ export default function LoyaltyDetailPage() {
               <CardTitle>Recent Transactions</CardTitle>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Source</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loyalty.transactions.map((tx) => (
-                    <TableRow key={tx.id}>
-                      <TableCell>
-                        <DateDisplay date={tx.createdAt} />
-                      </TableCell>
-                      <TableCell>{tx.type}</TableCell>
-                      <TableCell>{tx.amount}</TableCell>
-                      <TableCell>{tx.source}</TableCell>
+              {loyalty.transactions.length === 0 ? (
+                <Empty className="py-8">
+                  <EmptyHeader>
+                    <EmptyMedia variant="icon">
+                      <Receipt className="size-6" />
+                    </EmptyMedia>
+                    <EmptyTitle>No transactions yet</EmptyTitle>
+                    <EmptyDescription>
+                      Your points history will appear here after you earn or
+                      redeem points.
+                    </EmptyDescription>
+                  </EmptyHeader>
+                </Empty>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Source</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {loyalty.transactions.map((tx) => (
+                      <TableRow key={tx.id}>
+                        <TableCell>
+                          <DateDisplay date={tx.createdAt} />
+                        </TableCell>
+                        <TableCell>{tx.type}</TableCell>
+                        <TableCell>{tx.amount}</TableCell>
+                        <TableCell>{tx.source}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         </div>

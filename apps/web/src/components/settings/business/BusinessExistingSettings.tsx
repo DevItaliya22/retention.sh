@@ -68,11 +68,19 @@ export function BusinessExistingSettings({
     values: Record<string, string>,
   ) => {
     try {
+      const registrationBonusPoints =
+        values.registrationBonusPoints !== undefined &&
+        values.registrationBonusPoints !== ""
+          ? Number(values.registrationBonusPoints)
+          : undefined;
       await updateBusiness({
         name: business.name,
         defaultPointsName: values.defaultPointsName,
         defaultCurrencySymbol: values.defaultCurrencySymbol,
         defaultCurrencyCode: values.defaultCurrencyCode,
+        ...(registrationBonusPoints !== undefined
+          ? { registrationBonusPoints }
+          : {}),
         defaultBranding: business.defaultBranding
           ? {
               logo: business.defaultBranding.logo ?? null,
@@ -173,11 +181,21 @@ export function BusinessExistingSettings({
                 placeholder: "e.g., INR",
                 helpText: "Common examples: INR, USD, EUR, GBP",
               },
+              {
+                name: "registrationBonusPoints",
+                label: "Registration bonus points",
+                placeholder: "0",
+                helpText:
+                  "Bonus points given when a customer registers from the loyalty login page. Set to 0 to disable.",
+              },
             ]}
             defaultValues={{
               defaultPointsName: business.defaultPointsName,
               defaultCurrencySymbol: business.defaultCurrencySymbol,
               defaultCurrencyCode: business.defaultCurrencyCode,
+              registrationBonusPoints: String(
+                business.registrationBonusPoints ?? 0,
+              ),
             }}
             onSubmit={handleUpdateCurrencySettings}
           />

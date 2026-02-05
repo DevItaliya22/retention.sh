@@ -1,8 +1,5 @@
 import { db } from "@reelo/db";
-
-// =============================================================================
-// TYPES
-// =============================================================================
+import { verifyPassword } from "@/lib/utils/password";
 
 export interface CashierLoginData {
   id: string;
@@ -29,15 +26,9 @@ export interface ValidateCashierLoginResult {
   cashier?: CashierLoginData;
 }
 
-// =============================================================================
-// VALIDATE CASHIER LOGIN
-// =============================================================================
-
 /**
  * Validates cashier login credentials.
- *
- * NOTE: Currently uses plaintext password comparison.
- * TODO: Implement password hashing with bcrypt/argon2.
+ * Passwords are verified against stored bcrypt hashes.
  *
  * @returns Result object with success status and cashier data or error
  */
@@ -100,8 +91,8 @@ export async function validateCashierLogin(
       };
     }
 
-    // TODO: Replace with bcrypt.compare(password, cashier.passwordHash)
-    if (cashier.password !== password) {
+    const passwordMatch = await verifyPassword(password, cashier.password);
+    if (!passwordMatch) {
       return {
         success: false,
         error: "Invalid credentials",

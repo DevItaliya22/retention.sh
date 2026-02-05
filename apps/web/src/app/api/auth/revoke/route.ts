@@ -8,8 +8,16 @@ import {
 import { db } from "@reelo/db";
 import { getSessionCookie } from "better-auth/cookies";
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 
-type Role = "admin" | "cashier" | "customer" | "all";
+const revokeBodySchema = z.object({
+  role: z
+    .enum(["admin", "cashier", "customer", "all"])
+    .optional()
+    .default("all"),
+});
+
+type Role = z.infer<typeof revokeBodySchema>["role"];
 
 /**
  * Revokes the session for a specific role (or all roles if not specified).
@@ -19,19 +27,9 @@ type Role = "admin" | "cashier" | "customer" | "all";
  * - If role is "all" or not specified, all sessions are revoked (backward compatible)
  */
 export async function POST(request: NextRequest) {
-  let role: Role = "all";
-
-  try {
-    const body = await request.json();
-    if (
-      body.role &&
-      ["admin", "cashier", "customer", "all"].includes(body.role)
-    ) {
-      role = body.role;
-    }
-  } catch {
-    // No body or invalid JSON - default to "all" for backward compatibility
-  }
+  const rawBody = await request.json().catch(() => ({}));
+  const parsed = revokeBodySchema.safeParse(rawBody);
+  const role: Role = parsed.success ? parsed.data.role : "all";
 
   const response = NextResponse.json({ success: true });
 

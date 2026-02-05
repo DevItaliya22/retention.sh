@@ -66,6 +66,8 @@ export const PUT = withAdminAuth(async (request, context) => {
         defaultPointsName: validatedData.defaultPointsName ?? undefined,
         defaultCurrencySymbol: validatedData.defaultCurrencySymbol ?? undefined,
         defaultCurrencyCode: validatedData.defaultCurrencyCode ?? undefined,
+        registrationBonusPoints:
+          validatedData.registrationBonusPoints ?? undefined,
         referralEnabled: validatedData.referralEnabled ?? undefined,
         defaultBranding: validatedData.defaultBranding
           ? {

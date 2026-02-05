@@ -3,10 +3,11 @@ model Business {
   name String
   slug String @unique
 
-  defaultPointsName     String    @default("Points")
-  defaultCurrencySymbol String    @default("₹")
-  defaultCurrencyCode   String    @default("INR")
-  defaultBranding       Branding?
+  defaultPointsName       String    @default("Points")
+  defaultCurrencySymbol   String    @default("₹")
+  defaultCurrencyCode     String    @default("INR")
+  registrationBonusPoints Int       @default(0) // Bonus points when customer registers from loyalty login page
+  defaultBranding         Branding?
 
   // Referral settings -> to enable this , business should have a loyatly first
   referralEnabled Boolean @default(false)
@@ -24,7 +25,6 @@ model Business {
 
   categories Category[]
   skus       Sku[]
-
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
