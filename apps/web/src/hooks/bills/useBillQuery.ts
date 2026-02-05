@@ -19,6 +19,15 @@ export interface BillLineItemResponse {
   sku: BillLineItemSku;
 }
 
+export interface BillLoyaltyLog {
+  id: string;
+  type: string;
+  source: string;
+  amount: number;
+  balanceAfter: number;
+  createdAt: string;
+}
+
 export interface BillDetail {
   id: string;
   billNumber: string;
@@ -34,6 +43,7 @@ export interface BillDetail {
   lineItems: BillLineItemResponse[];
   createdAt: string;
   updatedAt: string;
+  loyaltyLogs?: BillLoyaltyLog[];
 }
 
 export interface BillDetailResponse {

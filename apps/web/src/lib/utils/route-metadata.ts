@@ -67,6 +67,10 @@ const ROUTE_METADATA_MAP: Record<string, RouteMetadataConfig> = {
     title: "Referral stats",
     description: "Who referred and how many people they referred",
   },
+  "/loyalty-stats": {
+    title: "Loyalty stats",
+    description: "Earned and redeemed points by source, customer and bill",
+  },
   "/settings": {
     title: "Settings",
     description:

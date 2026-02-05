@@ -83,3 +83,7 @@ numbers and send msgs seprately from each number using APIS
    Use slugSchema (or equivalent) from lib/schemas/common.ts to enforce length and allowed characters.
    Apply the same pattern to other public or dynamic segments so all route params are validated before use.
    Summary
+
+check this and you will nderstand a need of a variable
+and one more thing , right now in bill creation there is one issue ,
+what is happening is if a bill oof 1000 is created with 10% cashback point , so they will reciece 100 point , now let say user comes next time and make another bill of 1000 then he redeem the 100 points from pre back , so the bill amount should be 1000 but points should only be given on 900 , if admin wants to give to 1000 then its fine usin a var ( make new )

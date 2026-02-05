@@ -28,6 +28,7 @@ const protectedAdminRoutes = [
   "/bills",
   "/customers",
   "/referral-stats",
+  "/loyalty-stats",
 ];
 
 /**

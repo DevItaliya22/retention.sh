@@ -99,6 +99,7 @@ export const POST = withAdminAuth(async (request, context) => {
         businessId,
         brandingId,
         earningPercentage: data.earningPercentage,
+        earnPointsOnPaidAmountOnly: data.earnPointsOnPaidAmountOnly ?? true,
         cashbackInFinalAmount: data.cashbackInFinalAmount ?? false,
         cashbackBranding: data.cashbackBranding ?? null,
         minPurchaseForEarning: data.minPurchaseForEarning ?? 0,
@@ -114,6 +115,7 @@ export const POST = withAdminAuth(async (request, context) => {
       update: {
         ...(brandingId != null && { brandingId }),
         earningPercentage: data.earningPercentage,
+        earnPointsOnPaidAmountOnly: data.earnPointsOnPaidAmountOnly ?? true,
         cashbackInFinalAmount: data.cashbackInFinalAmount ?? false,
         cashbackBranding: data.cashbackBranding ?? null,
         minPurchaseForEarning: data.minPurchaseForEarning ?? 0,
@@ -245,6 +247,7 @@ export const PUT = withAdminAuth(async (request, context) => {
       data: {
         ...(brandingId != null && { brandingId }),
         earningPercentage: data.earningPercentage,
+        earnPointsOnPaidAmountOnly: data.earnPointsOnPaidAmountOnly ?? true,
         cashbackInFinalAmount: data.cashbackInFinalAmount ?? false,
         cashbackBranding: data.cashbackBranding ?? null,
         minPurchaseForEarning: data.minPurchaseForEarning ?? 0,

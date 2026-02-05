@@ -58,6 +58,17 @@ export const GET = withAdminAuth<{ id: string }>(
               },
             },
           },
+          pointsTransactions: {
+            orderBy: { createdAt: "asc" },
+            select: {
+              id: true,
+              type: true,
+              source: true,
+              amount: true,
+              balanceAfter: true,
+              createdAt: true,
+            },
+          },
         },
       });
 
@@ -94,6 +105,14 @@ export const GET = withAdminAuth<{ id: string }>(
         })),
         createdAt: bill.createdAt.toISOString(),
         updatedAt: bill.updatedAt.toISOString(),
+        loyaltyLogs: bill.pointsTransactions.map((log) => ({
+          id: log.id,
+          type: log.type,
+          source: log.source,
+          amount: log.amount,
+          balanceAfter: log.balanceAfter,
+          createdAt: log.createdAt.toISOString(),
+        })),
       };
 
       return NextResponse.json({ bill: formattedBill });
