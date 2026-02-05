@@ -18,6 +18,7 @@ export const loyaltyBrandingSchema = z
 
 export const loyaltySettingsSchema = z.object({
   earningPercentage: z.coerce.number().min(0).max(100),
+  earnPointsOnPaidAmountOnly: z.boolean().optional(),
   cashbackInFinalAmount: z.boolean().optional(),
   cashbackBranding: z.string().max(50).optional().nullable(),
   minPurchaseForEarning: z.coerce.number().min(0).optional(),
@@ -39,5 +40,20 @@ export const loyaltyPreviewSchema = z.object({
   billAmount: z.coerce.number().min(0),
 });
 
+export const loyaltyStatsQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1).optional(),
+  perPage: z.coerce.number().int().min(1).max(100).default(10).optional(),
+  sort: z.string().max(100).optional(),
+  type: z
+    .enum(["EARNED", "REDEEMED", "REFUNDED", "GIFTED", "ADJUSTMENT", "EXPIRED"])
+    .optional(),
+  source: z.string().max(50).trim().optional(),
+  customerName: z.string().max(255).trim().optional(),
+  billNumber: z.string().max(255).trim().optional(),
+  dateFrom: z.string().datetime().optional(),
+  dateTo: z.string().datetime().optional(),
+});
+
 export type LoyaltySettingsInput = z.infer<typeof loyaltySettingsSchema>;
 export type LoyaltyPreviewInput = z.infer<typeof loyaltyPreviewSchema>;
+export type LoyaltyStatsQueryInput = z.infer<typeof loyaltyStatsQuerySchema>;

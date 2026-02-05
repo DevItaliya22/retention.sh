@@ -23,6 +23,7 @@ import {
   useSidebar,
 } from "@reelo/ui/components/sidebar";
 import {
+  Award,
   ChevronRight,
   FileText,
   Gift,
@@ -122,6 +123,18 @@ export function SimpleSidebar({
                     <Link href="/referral-stats">
                       <Gift className="h-4 w-4" />
                       <span className="sidebar-text">Referral stats</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname === "/loyalty-stats"}
+                    tooltip="Loyalty stats"
+                  >
+                    <Link href="/loyalty-stats">
+                      <Award className="h-4 w-4" />
+                      <span className="sidebar-text">Loyalty stats</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

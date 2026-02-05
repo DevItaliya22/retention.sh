@@ -1,12 +1,12 @@
 model Bill {
   id String @id @default(uuid())
 
-  billNumber String
-  amount     Float?
-  notes      String? // Optional notes on the bill
-  finalAmount Float? // Amount after applying loyalty redemption (if any)
-  loyaltyPointsEarned Int @default(0)
-  loyaltyPointsRedeemed Int @default(0)
+  billNumber            String
+  amount                Float?
+  notes                 String? // Optional notes on the bill
+  finalAmount           Float? // Amount after applying loyalty redemption (if any)
+  loyaltyPointsEarned   Int     @default(0)
+  loyaltyPointsRedeemed Int     @default(0)
 
   businessId       String
   customerId       String
@@ -18,6 +18,9 @@ model Bill {
 
   // Relation to scratch cards
   scratchCardResponses ScratchCardResponse[]
+
+  // Loyalty: point transactions (earned/redeemed) linked to this bill
+  pointsTransactions PointsTransaction[]
 
   lineItems BillLineItem[]
 

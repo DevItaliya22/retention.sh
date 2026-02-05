@@ -13,9 +13,13 @@ import {
   Skeleton,
 } from "@reelo/ui/components";
 import { cn } from "@reelo/ui/lib/utils";
-import type { BillLineItemResponse } from "@/hooks/bills/useBillQuery";
+import type {
+  BillLineItemResponse,
+  BillLoyaltyLog,
+} from "@/hooks/bills/useBillQuery";
 import {
   CalendarDays,
+  Gift,
   Mail,
   Package,
   Phone,
@@ -99,6 +103,28 @@ export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
         })}`
       : "—";
 
+  const hasLoyalty =
+    (bill?.loyaltyPointsEarned ?? 0) > 0 ||
+    (bill?.loyaltyPointsRedeemed ?? 0) > 0;
+  const paidAmount =
+    bill?.finalAmount != null ? bill.finalAmount : (bill?.amount ?? null);
+  const paidFormatted =
+    paidAmount != null
+      ? `₹${paidAmount.toLocaleString("en-IN", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })}`
+      : "—";
+  const loyaltyLogs = bill?.loyaltyLogs ?? [];
+  const showLoyaltyLogsTable = loyaltyLogs.length > 0;
+
+  function formatLoyaltyType(type: string) {
+    const t = type as BillLoyaltyLog["type"];
+    if (t === "EARNED") return "Earned";
+    if (t === "REDEEMED") return "Redeemed";
+    return t;
+  }
+
   return (
     <div className="space-y-8">
       {/* Bill header */}
@@ -127,6 +153,51 @@ export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
           </div>
         </CardContent>
       </Card>
+
+      {/* Loyalty summary — only when there is any loyalty on this bill */}
+      {hasLoyalty && !isLoading && bill && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Gift className="size-4 text-muted-foreground" />
+              Loyalty on this bill
+            </CardTitle>
+            <CardDescription>
+              Bill amount, amount paid, points used and earned
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-0">
+            <DetailRow
+              label="Bill amount"
+              value={amountFormatted}
+              icon={Receipt}
+            />
+            <DetailRow
+              label="Amount paid"
+              value={
+                bill.finalAmount != null && bill.finalAmount !== bill.amount
+                  ? paidFormatted
+                  : amountFormatted
+              }
+              icon={Receipt}
+            />
+            {(bill.loyaltyPointsRedeemed ?? 0) > 0 && (
+              <DetailRow
+                label="Points used"
+                value={`${bill.loyaltyPointsRedeemed} pts`}
+                icon={Gift}
+              />
+            )}
+            {(bill.loyaltyPointsEarned ?? 0) > 0 && (
+              <DetailRow
+                label="Points earned"
+                value={`${bill.loyaltyPointsEarned} pts`}
+                icon={Gift}
+              />
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Bill info */}
@@ -291,6 +362,63 @@ export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
                       </tr>
                     );
                   })}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Loyalty logs for this bill — only when there are logs */}
+      {showLoyaltyLogsTable && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Gift className="size-4 text-muted-foreground" />
+              Loyalty logs
+            </CardTitle>
+            <CardDescription>
+              Point transactions linked to this bill
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto rounded-md border">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-muted/50">
+                    <th className="px-4 py-3 text-left font-medium">Type</th>
+                    <th className="px-4 py-3 text-left font-medium">Source</th>
+                    <th className="px-4 py-3 text-right font-medium">Points</th>
+                    <th className="px-4 py-3 text-right font-medium">
+                      Balance after
+                    </th>
+                    <th className="px-4 py-3 text-right font-medium">Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loyaltyLogs.map((log) => (
+                    <tr key={log.id} className="border-b last:border-b-0">
+                      <td className="px-4 py-3 font-medium">
+                        {formatLoyaltyType(log.type)}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {log.source}
+                      </td>
+                      <td className="px-4 py-3 text-right tabular-nums">
+                        {log.type === "REDEEMED" ? "-" : "+"}
+                        {log.amount}
+                      </td>
+                      <td className="px-4 py-3 text-right tabular-nums">
+                        {log.balanceAfter}
+                      </td>
+                      <td className="px-4 py-3 text-right text-muted-foreground">
+                        {new Date(log.createdAt).toLocaleString("en-IN", {
+                          dateStyle: "short",
+                          timeStyle: "short",
+                        })}
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>

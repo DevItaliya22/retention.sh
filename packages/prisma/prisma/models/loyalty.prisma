@@ -10,11 +10,12 @@ model Loyalty {
   branding   Branding? @relation(fields: [brandingId], references: [id], onDelete: SetNull, map: "loyalty_branding_fkey")
 
   // Form STEP 2 - Cashback Settings
-  earningPercentage        Float   @default(0) // Customer earns X%
-  cashbackInFinalAmount    Boolean @default(false) // Cashback available in final amount?
-  cashbackBranding         String? // e.g., "cookies", "chillies"
-  minPurchaseForEarning    Float   @default(0) // Minimum purchase for earning cashback
-  minPurchaseForRedemption Float   @default(0) // Minimum purchase for using loyalty coupon
+  earningPercentage          Float   @default(0) // Customer earns X%
+  earnPointsOnPaidAmountOnly Boolean @default(true) // When redeeming: earn points on amount paid (finalAmount); if false, earn on full bill amount
+  cashbackInFinalAmount      Boolean @default(false) // Cashback available in final amount? means if there is a bill of 1000 and 10% cashback then the customer will receive 100 points now if next time he comes and make another bill of 1000 then he redeem the 100 points from pre back , so the bill amount should be 1000 but points should only be given on 900 , if admin wants to give to 1000 then its this variable shouyld be true 
+  cashbackBranding           String? // e.g., "cookies", "chillies"
+  minPurchaseForEarning      Float   @default(0) // Minimum purchase for earning cashback
+  minPurchaseForRedemption   Float   @default(0) // Minimum purchase for using loyalty coupon
 
   // Form STEP 3 - Limits
   upperLimitBillAmount      Float? // Upper limit on bill amount
@@ -78,15 +79,17 @@ model PointsTransaction {
   customerId       String
   businessCustomer BusinessCustomer @relation(fields: [businessId, customerId], references: [businessId, customerId], onDelete: Cascade)
 
-  amount Int
-  type   TransactionType
-  source TransactionSource
-  sourceId String?
-  expiresAt DateTime?
-  metadata Json?
-  balanceAfter Int @default(0)
+  amount                Int
+  type                  TransactionType
+  source                TransactionSource
+  sourceId              String? // Generic source reference; when source=BILL use billId
+  billId                String? // FK to Bill when source=BILL (earned/redeemed on this bill)
+  bill                  Bill?                        @relation(fields: [billId], references: [id], onDelete: SetNull)
+  expiresAt             DateTime?
+  metadata              Json?
+  balanceAfter          Int                          @default(0)
   redemptionAllocations PointsRedemptionAllocation[]
-  earnedBuckets PointsBucket[]
+  earnedBuckets         PointsBucket[]
 
   createdAt DateTime @default(now())
 
@@ -94,6 +97,7 @@ model PointsTransaction {
   @@index([businessId, customerId, createdAt])
   @@index([source])
   @@index([source, sourceId])
+  @@index([billId])
   @@index([type])
   @@index([expiresAt])
   @@map("points_transaction")
@@ -102,17 +106,17 @@ model PointsTransaction {
 model PointsBucket {
   id String @id @default(uuid())
 
-  businessId String
-  customerId String
+  businessId       String
+  customerId       String
   businessCustomer BusinessCustomer @relation(fields: [businessId, customerId], references: [businessId, customerId], onDelete: Cascade)
 
   earnedTransactionId String
   earnedTransaction   PointsTransaction @relation(fields: [earnedTransactionId], references: [id], onDelete: Cascade)
 
-  originalAmount Int
-  remainingAmount Int
-  expiresAt DateTime
-  status String @default("ACTIVE") // ACTIVE | EXPIRED | CONSUMED
+  originalAmount        Int
+  remainingAmount       Int
+  expiresAt             DateTime
+  status                String                       @default("ACTIVE") // ACTIVE | EXPIRED | CONSUMED
   redemptionAllocations PointsRedemptionAllocation[]
 
   createdAt DateTime @default(now())

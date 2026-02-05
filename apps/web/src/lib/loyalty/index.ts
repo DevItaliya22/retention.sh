@@ -4,6 +4,7 @@ export const DEFAULT_POINT_EXPIRY_DAYS = 180;
 
 export type LoyaltySettingsSnapshot = {
   earningPercentage: number;
+  earnPointsOnPaidAmountOnly: boolean;
   cashbackInFinalAmount: boolean;
   cashbackBranding: string | null;
   minPurchaseForEarning: number;
@@ -100,6 +101,7 @@ export async function getBusinessLoyaltySettings(
 
   const snapshot: LoyaltySettingsSnapshot = {
     earningPercentage: loyalty.earningPercentage,
+    earnPointsOnPaidAmountOnly: loyalty.earnPointsOnPaidAmountOnly,
     cashbackInFinalAmount: loyalty.cashbackInFinalAmount,
     cashbackBranding: loyalty.cashbackBranding ?? null,
     minPurchaseForEarning: loyalty.minPurchaseForEarning,
@@ -283,6 +285,7 @@ export async function applyLoyaltyForBill(
         type: TransactionType.REDEEMED,
         source: TransactionSource.BILL,
         sourceId: billId,
+        billId,
         metadata: {
           billId,
           requested,
@@ -312,7 +315,12 @@ export async function applyLoyaltyForBill(
     finalAmount = Math.max(0, billAmount - redeemedPoints);
   }
 
-  const earnedPoints = calculateEarnedPoints(billAmount, settings);
+  // When earnPointsOnPaidAmountOnly: give points on amount actually paid (after redemption); otherwise on full bill amount
+  const amountForEarning =
+    settings.earnPointsOnPaidAmountOnly && redeemedPoints > 0
+      ? finalAmount
+      : billAmount;
+  const earnedPoints = calculateEarnedPoints(amountForEarning, settings);
 
   if (earnedPoints > 0) {
     const expiryDays = getExpiryDays(settings.pointExpiryDays);
@@ -329,6 +337,7 @@ export async function applyLoyaltyForBill(
         type: TransactionType.EARNED,
         source: TransactionSource.BILL,
         sourceId: billId,
+        billId,
         expiresAt,
         metadata: {
           billId,

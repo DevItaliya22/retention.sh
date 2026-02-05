@@ -36,6 +36,7 @@ import { toast } from "sonner";
 interface LoyaltySettingsResponse {
   loyalty: {
     earningPercentage: number;
+    earnPointsOnPaidAmountOnly?: boolean;
     cashbackInFinalAmount: boolean;
     cashbackBranding: string | null;
     minPurchaseForEarning: number;
@@ -62,6 +63,7 @@ interface LoyaltySettingsResponse {
 
 const defaultValues: LoyaltySettingsInput = {
   earningPercentage: 0,
+  earnPointsOnPaidAmountOnly: true,
   cashbackInFinalAmount: false,
   cashbackBranding: null,
   minPurchaseForEarning: 0,
@@ -115,6 +117,7 @@ export function LoyaltySettingsPageClient() {
     ? {
         ...defaultValues,
         earningPercentage: loyalty.earningPercentage ?? 0,
+        earnPointsOnPaidAmountOnly: loyalty.earnPointsOnPaidAmountOnly ?? true,
         cashbackInFinalAmount: true,
         cashbackBranding: loyalty.cashbackBranding ?? null,
         minPurchaseForEarning: loyalty.minPurchaseForEarning ?? 0,
@@ -179,6 +182,7 @@ export function LoyaltySettingsPageClient() {
 
   const SECTION_EARNING = [
     "earningPercentage",
+    "earnPointsOnPaidAmountOnly",
     "cashbackBranding",
     "minPurchaseForEarning",
     "minPurchaseForRedemption",
@@ -379,6 +383,24 @@ export function LoyaltySettingsPageClient() {
                           v === "" || Number.isNaN(Number(v)) ? 0 : Number(v),
                       })}
                     />
+                  </div>
+                </div>
+                <div className="flex flex-col gap-2 md:grid md:grid-cols-12">
+                  <div className="col-span-4 flex flex-col gap-2">
+                    <LabelWithTooltip tooltip="When ON: if a customer redeems points on a bill, new points are earned only on the amount they actually pay (e.g. bill ₹1000, redeem 100 → pay ₹900 → earn points on ₹900). When OFF: points are earned on the full bill amount (₹1000) even when they redeem.">
+                      Earn points on paid amount only
+                    </LabelWithTooltip>
+                  </div>
+                  <div className="col-span-8 flex items-center gap-2">
+                    <Checkbox
+                      checked={form.watch("earnPointsOnPaidAmountOnly") ?? true}
+                      onCheckedChange={(v) =>
+                        form.setValue("earnPointsOnPaidAmountOnly", !!v)
+                      }
+                    />
+                    <span className="text-sm text-muted-foreground">
+                      On (recommended): earn on amount paid after redemption
+                    </span>
                   </div>
                 </div>
               </CardContent>
