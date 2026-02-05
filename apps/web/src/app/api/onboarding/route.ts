@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth/auth";
+import { withAdminAuthOptionalBusiness } from "@/lib/auth/middleware";
 import {
   type WelcomeFormValues,
   welcomeFormSchema,
@@ -7,139 +7,134 @@ import {
   sanitizeErrorMessage,
   validateSchema,
 } from "@/lib/utils/error-handler";
+import { hashPassword } from "@/lib/utils/password";
 import { db } from "@reelo/db";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-export async function POST(request: Request) {
-  try {
-    const session = await auth.api.getSession({
-      headers: request.headers,
-    });
+export const POST = withAdminAuthOptionalBusiness(
+  async (request: NextRequest, context, _params) => {
+    try {
+      const body = await request.json();
 
-    if (!session || !session.user) {
-      return NextResponse.json(
-        { error: "Unauthorized", success: false },
-        { status: 401 },
-      );
-    }
+      const validation = validateSchema(welcomeFormSchema, body);
+      if (!validation.success) {
+        return NextResponse.json(
+          { error: validation.error, success: false },
+          { status: 400 },
+        );
+      }
+      const validatedData = validation.data as WelcomeFormValues;
+      const userId = context.user.id;
 
-    const body = await request.json();
+      const existingBusiness = await db.business.findUnique({
+        where: { slug: validatedData.businessSlug },
+      });
 
-    const validation = validateSchema(welcomeFormSchema, body);
-    if (!validation.success) {
-      return NextResponse.json(
-        { error: validation.error, success: false },
-        { status: 400 },
-      );
-    }
-    const validatedData = validation.data as WelcomeFormValues;
-    const userId = session.user.id;
+      if (existingBusiness) {
+        return NextResponse.json(
+          {
+            error: "Business slug already exists. Please choose another one.",
+            success: false,
+          },
+          { status: 400 },
+        );
+      }
 
-    const existingBusiness = await db.business.findUnique({
-      where: { slug: validatedData.businessSlug },
-    });
-
-    if (existingBusiness) {
-      return NextResponse.json(
-        {
-          error: "Business slug already exists. Please choose another one.",
-          success: false,
-        },
-        { status: 400 },
-      );
-    }
-
-    await db.$transaction(async (tx) => {
-      const business = await tx.business.create({
-        data: {
-          name: validatedData.businessName,
-          slug: validatedData.businessSlug,
-          defaultPointsName: validatedData.defaultPointsName || "Points",
-          defaultCurrencySymbol: validatedData.defaultCurrencySymbol || "₹",
-          defaultCurrencyCode: validatedData.defaultCurrencyCode || "INR",
-          defaultBranding: {
-            create: {
-              logo: validatedData.logo,
-              themeColor: validatedData.themeColor,
+      await db.$transaction(async (tx) => {
+        const business = await tx.business.create({
+          data: {
+            name: validatedData.businessName,
+            slug: validatedData.businessSlug,
+            defaultPointsName: validatedData.defaultPointsName || "Points",
+            defaultCurrencySymbol: validatedData.defaultCurrencySymbol || "₹",
+            defaultCurrencyCode: validatedData.defaultCurrencyCode || "INR",
+            defaultBranding: {
+              create: {
+                logo: validatedData.logo,
+                themeColor: validatedData.themeColor,
+              },
             },
           },
-        },
-      });
+        });
 
-      await tx.admin.create({
-        data: {
-          userId: userId,
-          businessId: business.id,
-        },
-      });
-
-      await tx.user.update({
-        where: { id: userId },
-        data: { role: "ADMIN" },
-      });
-
-      if (
-        validatedData.createCashier &&
-        validatedData.cashierEmail &&
-        validatedData.cashierPassword &&
-        validatedData.cashierLinkSlug
-      ) {
-        const existingCashierSlug = await tx.cashier.findFirst({
-          where: {
-            cashierLinkSlug: validatedData.cashierLinkSlug,
+        await tx.admin.create({
+          data: {
+            userId: userId,
             businessId: business.id,
           },
         });
 
-        if (existingCashierSlug) {
-          throw new Error("Cashier link slug already exists.");
-        }
-
-        const existingCashierEmail = await tx.cashier.findFirst({
-          where: {
-            businessId: business.id,
-            email: validatedData.cashierEmail,
-          },
+        await tx.user.update({
+          where: { id: userId },
+          data: { role: "ADMIN" },
         });
 
-        if (existingCashierEmail) {
-          throw new Error(
-            "A cashier with this email already exists in this business.",
+        if (
+          validatedData.createCashier &&
+          validatedData.cashierEmail &&
+          validatedData.cashierPassword &&
+          validatedData.cashierLinkSlug
+        ) {
+          const existingCashierSlug = await tx.cashier.findFirst({
+            where: {
+              cashierLinkSlug: validatedData.cashierLinkSlug,
+              businessId: business.id,
+            },
+          });
+
+          if (existingCashierSlug) {
+            throw new Error("Cashier link slug already exists.");
+          }
+
+          const existingCashierEmail = await tx.cashier.findFirst({
+            where: {
+              businessId: business.id,
+              email: validatedData.cashierEmail,
+            },
+          });
+
+          if (existingCashierEmail) {
+            throw new Error(
+              "A cashier with this email already exists in this business.",
+            );
+          }
+
+          const cashierUser = await tx.user.create({
+            data: {
+              name: validatedData.cashierName || "Cashier",
+              email: null,
+              role: "CASHIER",
+            },
+          });
+
+          const cashierPasswordHash = await hashPassword(
+            validatedData.cashierPassword,
           );
+          await tx.cashier.create({
+            data: {
+              userId: cashierUser.id,
+              businessId: business.id,
+              cashierLinkSlug: validatedData.cashierLinkSlug,
+              email: validatedData.cashierEmail,
+              password: cashierPasswordHash,
+            },
+          });
         }
+      });
 
-        const cashierUser = await tx.user.create({
-          data: {
-            name: validatedData.cashierName || "Cashier",
-            email: null,
-            role: "CASHIER",
-          },
-        });
+      return NextResponse.json({ success: true });
+    } catch (error: unknown) {
+      console.error("Onboarding error:", error);
 
-        await tx.cashier.create({
-          data: {
-            userId: cashierUser.id,
-            businessId: business.id,
-            cashierLinkSlug: validatedData.cashierLinkSlug,
-            email: validatedData.cashierEmail,
-            password: validatedData.cashierPassword,
-          },
-        });
-      }
-    });
-
-    return NextResponse.json({ success: true });
-  } catch (error: any) {
-    console.error("Onboarding error:", error);
-
-    return NextResponse.json(
-      {
-        error:
-          sanitizeErrorMessage(error) ||
-          "Failed to complete setup. Please try again.",
-        success: false,
-      },
-      { status: 500 },
-    );
-  }
-}
+      return NextResponse.json(
+        {
+          error:
+            sanitizeErrorMessage(error) ||
+            "Failed to complete setup. Please try again.",
+          success: false,
+        },
+        { status: 500 },
+      );
+    }
+  },
+);

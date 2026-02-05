@@ -2,7 +2,7 @@
 
 import useBusinessSlugAvailability from "@/hooks/onboarding/useBusinessSlugAvailability";
 import type { WelcomeFormValues } from "@/lib/schemas/onboarding";
-import { generateSlug } from "@/lib/utils/slug";
+import { generateSlug, SLUG_MAX_LENGTH } from "@/lib/utils/slug";
 import {
   Button,
   FormControl,
@@ -121,6 +121,7 @@ export function BusinessStep() {
                     <Input
                       className="border-0 shadow-none focus-visible:ring-0"
                       placeholder="acme-store"
+                      maxLength={SLUG_MAX_LENGTH}
                       {...field}
                       value={field.value ?? ""}
                     />

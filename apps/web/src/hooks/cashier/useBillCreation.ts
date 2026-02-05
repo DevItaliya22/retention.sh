@@ -1,5 +1,6 @@
 "use client";
 
+import { APP_CONSTANTS } from "@/lib/constants/app";
 import { fetcher } from "@/lib/fetcher";
 import { BillFormInput } from "@/lib/schemas/bill";
 import { useDebouncedCallback } from "@reelo/ui/hooks";
@@ -49,34 +50,22 @@ export function useBillCreation(businessId: string) {
 
   const searchCustomers = useCallback(
     async (phone: string) => {
-      if (phone.length < 4) {
+      const digitCount = phone.replace(/\D/g, "").length;
+      if (digitCount < APP_CONSTANTS.MIN_PHONE_LENGTH_FOR_SEARCH) {
         setSearchResults([]);
         return;
       }
 
       setIsSearching(true);
       try {
-        const promises: Promise<SearchCustomerResponse>[] = [];
-
-        if (phone.length >= 4) {
-          promises.push(
-            fetcher<SearchCustomerResponse>(
-              `/api/cashier/customer/search/customer?phone=${encodeURIComponent(
-                phone,
-              )}&businessId=${businessId}`,
-            ),
-          );
-        }
-
-        if (phone.length >= 6) {
-          promises.push(
-            fetcher<SearchCustomerResponse>(
-              `/api/cashier/customer/search/our-customer?phone=${encodeURIComponent(
-                phone,
-              )}&businessId=${businessId}`,
-            ),
-          );
-        }
+        const promises: Promise<SearchCustomerResponse>[] = [
+          fetcher<SearchCustomerResponse>(
+            `/api/cashier/customer/search/customer?phone=${encodeURIComponent(phone)}`,
+          ),
+          fetcher<SearchCustomerResponse>(
+            `/api/cashier/customer/search/our-customer?phone=${encodeURIComponent(phone)}`,
+          ),
+        ];
 
         const responses = await Promise.allSettled(promises);
 

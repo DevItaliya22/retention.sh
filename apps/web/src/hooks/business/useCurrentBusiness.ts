@@ -20,6 +20,7 @@ export interface CurrentBusiness {
   defaultPointsName: string;
   defaultCurrencySymbol: string;
   defaultCurrencyCode: string;
+  registrationBonusPoints: number;
   defaultBranding?: CurrentBusinessBranding | null;
   referralEnabled: boolean;
   referralProgram?: { id: string } | null;
@@ -51,6 +52,7 @@ export interface UpdateBusinessInput {
   defaultPointsName?: string;
   defaultCurrencySymbol?: string;
   defaultCurrencyCode?: string;
+  registrationBonusPoints?: number;
   referralEnabled?: boolean;
   defaultBranding?: UpdateBusinessBrandingInput;
 }

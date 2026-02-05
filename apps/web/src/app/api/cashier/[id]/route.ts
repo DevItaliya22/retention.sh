@@ -1,3 +1,4 @@
+import { hashPassword } from "@/lib/utils/password";
 import { withAdminAuth } from "@/lib/auth/middleware";
 import { updateCashierSchema } from "@/lib/schemas/cashier";
 import {
@@ -52,7 +53,6 @@ export const GET = withAdminAuth<{ id: string }>(
           name: cashier.user.name,
           email: cashier.email,
           cashierLinkSlug: cashier.cashierLinkSlug,
-          password: cashier.password,
           isActive: cashier.isActive,
           createdAt: cashier.createdAt.toISOString(),
           updatedAt: cashier.updatedAt.toISOString(),
@@ -170,7 +170,7 @@ export const PUT = withAdminAuth<{ id: string }>(
         if (cashierLinkSlug)
           cashierUpdateData.cashierLinkSlug = cashierLinkSlug;
         if (email) cashierUpdateData.email = email;
-        if (password) cashierUpdateData.password = password;
+        if (password) cashierUpdateData.password = await hashPassword(password);
         if (typeof isActive === "boolean")
           cashierUpdateData.isActive = isActive;
 

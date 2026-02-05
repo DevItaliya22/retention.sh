@@ -31,7 +31,6 @@ export interface CashierDetailResponse {
     name: string;
     email: string | null;
     cashierLinkSlug: string;
-    password: string;
     isActive: boolean;
     createdAt: string;
     updatedAt: string;

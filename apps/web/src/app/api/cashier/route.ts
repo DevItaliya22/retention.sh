@@ -1,3 +1,4 @@
+import { hashPassword } from "@/lib/utils/password";
 import { withAdminAuth } from "@/lib/auth/middleware";
 import {
   cashiersQuerySchema,
@@ -176,13 +177,14 @@ export const POST = withAdminAuth(async (request: NextRequest, context) => {
         },
       });
 
+      const passwordHash = await hashPassword(password);
       const cashier = await tx.cashier.create({
         data: {
           userId: cashierUser.id,
           businessId: context.business.id,
           cashierLinkSlug,
           email,
-          password,
+          password: passwordHash,
           isActive: true,
         },
         include: {

@@ -18,8 +18,8 @@ import {
   Skeleton,
 } from "@reelo/ui/components";
 import { DateDisplay } from "@reelo/ui/components";
-import { Eye, EyeOff, ExternalLink, UserX, UserCheck } from "lucide-react";
-import { useCallback, useState } from "react";
+import { ExternalLink, UserX, UserCheck } from "lucide-react";
+import { useCallback } from "react";
 import { toast } from "sonner";
 
 interface CashierDetailSheetProps {
@@ -33,7 +33,6 @@ export function CashierDetailSheet({
   open,
   onOpenChange,
 }: CashierDetailSheetProps) {
-  const [showPassword, setShowPassword] = useState(false);
   const { data, isLoading, isError, error } = useCashierDetail(cashierId);
   const { update } = useManageCashier();
 
@@ -71,7 +70,6 @@ export function CashierDetailSheet({
 
   const handleOpenChange = useCallback(
     (next: boolean) => {
-      if (!next) setShowPassword(false);
       onOpenChange(next);
     },
     [onOpenChange],
@@ -157,32 +155,6 @@ export function CashierDetailSheet({
                   <p className="text-foreground text-sm">
                     {cashier.email ?? "—"}
                   </p>
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-foreground-lighter text-xs font-medium">
-                    Password
-                  </Label>
-                  <div className="bg-muted/40 flex items-center gap-2 rounded-lg border px-3 py-2.5">
-                    <span className="font-mono text-sm tabular-nums">
-                      {showPassword ? cashier.password : "••••••••"}
-                    </span>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="ml-auto h-8 w-8 shrink-0"
-                      onClick={() => setShowPassword((p) => !p)}
-                      aria-label={
-                        showPassword ? "Hide password" : "Show password"
-                      }
-                    >
-                      {showPassword ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </div>
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-foreground-lighter text-xs font-medium">

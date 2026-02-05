@@ -16,7 +16,16 @@ export async function fetcher<T = unknown>(
     try {
       await fetch("/api/auth/revoke", { method: "POST" });
     } finally {
-      window.location.href = "/login";
+      // Customer on loyalty page → redirect to that business's login (slug in path)
+      const loyaltyMatch =
+        window.location.pathname.match(/^\/loyalty\/([^/]+)/);
+      if (loyaltyMatch) {
+        const businessSlug = loyaltyMatch[1];
+        const search = window.location.search || "";
+        window.location.href = `/loyalty/${businessSlug}/login${search}`;
+      } else {
+        window.location.href = "/login";
+      }
     }
     throw new Error("Session expired or invalid. Please sign in again.");
   }

@@ -241,8 +241,8 @@ export function CustomerDetailPageClient({
           const businessSlug = customer.businessSlug ?? "";
           const loyaltyUrl =
             typeof window !== "undefined"
-              ? `${window.location.origin}/loyalty/login?phone=${encodeURIComponent(phone)}&business=${encodeURIComponent(businessSlug)}`
-              : `/loyalty/login?phone=${encodeURIComponent(phone)}&business=${encodeURIComponent(businessSlug)}`;
+              ? `${window.location.origin}/loyalty/${encodeURIComponent(businessSlug)}/login?phone=${encodeURIComponent(phone)}`
+              : `/loyalty/${encodeURIComponent(businessSlug)}/login?phone=${encodeURIComponent(phone)}`;
           return (
             <Card>
               <CardHeader className="pb-2">
