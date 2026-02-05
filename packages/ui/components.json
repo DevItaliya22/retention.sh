@@ -16,5 +16,8 @@
     "hooks": "@reelo/ui/hooks",
     "lib": "@reelo/ui/lib",
     "ui": "@reelo/ui/components"
+  },
+  "registries": {
+    "@bklit-ui": "https://ui.bklit.com/r/{name}.json"
   }
 }
