@@ -2,9 +2,18 @@ import { z } from "zod";
 import { optionalPasswordSchema } from "./common";
 import { baseBusinessSchema, baseCashierSchema } from "./shared";
 
-export const businessStepSchema = z.object({
-  ...baseBusinessSchema,
-});
+export const businessStepSchema = z
+  .object({
+    ...baseBusinessSchema,
+  })
+  .refine(
+    (data) => {
+      const slug = (data.businessSlug ?? "").trim();
+      if (!slug) return true;
+      return data.businessSlugAvailable === true;
+    },
+    { message: "Not available", path: ["businessSlug"] },
+  );
 
 export const cashierStepSchema = z
   .object({

@@ -11,6 +11,9 @@ import { useLinearMultiStepForm } from "./use-linear-multi-step-form";
 export { FormNavigation } from "./form-navigation";
 export { ProgressBar } from "./progress-bar";
 export { ProgressStepper } from "./progress-stepper";
+export { StepContent } from "./step-content";
+export { StepInput } from "./step-input";
+export { StepError } from "./step-error";
 
 export function LinearMultiStepForm<TValues extends FieldValues>(props: {
   config: LinearMultiStepFormConfig<TValues>;
@@ -92,23 +95,87 @@ export function LinearMultiStepForm<TValues extends FieldValues>(props: {
           currentStepIndex={msf.currentStepIndex}
           totalSteps={msf.totalSteps}
           progress={msf.progress}
+          variant="minimal"
         />
       )
     ) : null;
 
+  // Enter always calls next(). next() runs validateStep() which sets
+  // form errors when validation fails, so the user sees WHY they can't proceed.
+  // next() will NOT advance if validation fails — it returns false.
+  const handleKeyDown = React.useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key !== "Enter" || e.shiftKey) return;
+      const target = e.target;
+      if (target instanceof HTMLTextAreaElement) return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (!msf.isLoading && !msf.isSubmitting) {
+        void msf.next();
+      }
+    },
+    [msf],
+  );
+
+  const msfRef = React.useRef(msf);
+  msfRef.current = msf;
+  React.useEffect(() => {
+    const doc = document;
+    const handleDocKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Enter" || e.shiftKey) return;
+      const target = e.target as Node | null;
+      if (target instanceof HTMLTextAreaElement) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const current = msfRef.current;
+      if (!current.isLoading && !current.isSubmitting) {
+        void current.next();
+      }
+    };
+    doc.addEventListener("keydown", handleDocKeyDown, true);
+    return () => doc.removeEventListener("keydown", handleDocKeyDown, true);
+  }, []);
+
   return (
     <Form {...(msf.form as any)}>
-      <div className="grid gap-6">
-        {ProgressElement}
-        {props.navigationPosition === "header" && NavigationElement}
-        <StepComponent
-          formId={msf.formId}
-          stepId={msf.currentStep.id}
-          stepIndex={msf.currentStepIndex}
-          isFirstStep={msf.isFirstStep}
-          isLastStep={msf.isLastStep}
-        />
-        {props.navigationPosition === "footer" && NavigationElement}
+      <div
+        className="relative flex h-full min-h-[inherit] flex-col"
+        onKeyDown={handleKeyDown}
+        role="presentation"
+      >
+        {/* Progress bar pinned at top */}
+        {progressType !== "none" && ProgressElement && (
+          <div className="sticky top-0 z-10 w-full shrink-0">
+            {ProgressElement}
+          </div>
+        )}
+
+        {props.navigationPosition === "header" && NavigationElement && (
+          <div className="shrink-0 px-4 py-4">{NavigationElement}</div>
+        )}
+
+        {/* Scrollable content area - vertically centers the step */}
+        <div className="flex flex-1 flex-col overflow-y-auto">
+          <div className="flex flex-1 items-center justify-center px-4 py-12 pb-28 sm:px-6">
+            <StepComponent
+              formId={msf.formId}
+              stepId={msf.currentStep.id}
+              stepIndex={msf.currentStepIndex}
+              totalSteps={msf.totalSteps}
+              isFirstStep={msf.isFirstStep}
+              isLastStep={msf.isLastStep}
+            />
+          </div>
+        </div>
+
+        {/* Navigation: fixed bottom-right */}
+        {(props.navigationPosition === "footer" ||
+          props.navigationPosition === undefined) &&
+          NavigationElement && (
+            <div className="fixed bottom-6 right-6 z-20 sm:bottom-8 sm:right-8">
+              {NavigationElement}
+            </div>
+          )}
       </div>
     </Form>
   );

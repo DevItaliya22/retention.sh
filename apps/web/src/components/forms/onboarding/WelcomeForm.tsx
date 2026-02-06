@@ -14,13 +14,9 @@ import {
 import { getErrorMessageFromResponse } from "@/lib/utils/error-handler";
 import { generateSlug } from "@/lib/utils/slug";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
   FormNavigation,
   LinearMultiStepForm,
+  StepContent,
   type LinearMultiStepFormConfig,
 } from "@reelo/ui/components";
 import { useQueryClient } from "@tanstack/react-query";
@@ -87,6 +83,19 @@ export function WelcomeForm({
                 password: values.cashierPassword,
                 cashierLinkSlug: values.cashierLinkSlug,
               });
+              const payload = {
+                email: values.cashierEmail,
+                password: values.cashierPassword,
+              };
+              const blob = new Blob([JSON.stringify(payload, null, 2)], {
+                type: "application/json",
+              });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = `cashier-credentials-${values.cashierEmail.replace(/@.*/, "")}.json`;
+              a.click();
+              URL.revokeObjectURL(url);
             } catch (cashierError) {
               console.error("Failed to create cashier:", cashierError);
               const errorMessage = getErrorMessageFromResponse(
@@ -141,25 +150,23 @@ export function WelcomeForm({
         fields: [
           "businessName",
           "businessSlug",
+          "businessSlugAvailable",
           "defaultPointsName",
           "defaultCurrencySymbol",
           "defaultCurrencyCode",
           "themeColor",
         ],
         schema: businessStepSchema,
-        Component: () => (
-          <Card className="border-none shadow-none">
-            <CardHeader className="px-0 pt-0">
-              <CardTitle>Tell us about your business</CardTitle>
-              <CardDescription>
-                This information will be used to customize your customers'
-                experience.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="px-0">
-              <BusinessStep />
-            </CardContent>
-          </Card>
+        Component: ({ stepIndex, totalSteps }) => (
+          <StepContent
+            stepIndex={stepIndex}
+            totalSteps={totalSteps}
+            title="Tell us about your business"
+            description="This information will be used to customize your customers' experience."
+            required
+          >
+            <BusinessStep />
+          </StepContent>
         ),
       },
       {
@@ -173,18 +180,15 @@ export function WelcomeForm({
           "cashierLinkSlug",
         ],
         schema: cashierStepSchema,
-        Component: () => (
-          <Card className="border-none shadow-none">
-            <CardHeader className="px-0 pt-0">
-              <CardTitle>Set up your team</CardTitle>
-              <CardDescription>
-                Add a cashier account so your team can start accepting points.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="px-0">
-              <CashierStep />
-            </CardContent>
-          </Card>
+        Component: ({ stepIndex, totalSteps }) => (
+          <StepContent
+            stepIndex={stepIndex}
+            totalSteps={totalSteps}
+            title="Set up your team"
+            description="Add a cashier account so your team can start accepting points. You can skip this and do it later."
+          >
+            <CashierStep />
+          </StepContent>
         ),
       },
       {
@@ -195,81 +199,43 @@ export function WelcomeForm({
     ],
   };
 
+  const formInitialValues = {
+    businessName: "",
+    businessSlug: "",
+    businessSlugAvailable: false,
+    defaultPointsName: "Points",
+    defaultCurrencySymbol: "₹",
+    defaultCurrencyCode: "INR",
+    createCashier: false,
+    cashierName: "",
+    cashierEmail: "",
+    cashierPassword: "",
+    cashierLinkSlug: "",
+  };
+
   if (embedded) {
     return (
-      <div className="w-full space-y-8">
-        <div className="space-y-2 text-center">
-          <h1 className="text-4xl font-bold tracking-tight">
-            Welcome to Reelo!
-          </h1>
-          <p className="text-muted-foreground text-lg">
-            Let's get your business set up in just a few steps.
-          </p>
-        </div>
-
-        <Card className="bg-card border-border shadow-xl backdrop-blur-sm">
-          <CardContent className="p-8">
-            <LinearMultiStepForm<WelcomeFormValues>
-              config={config}
-              initialValues={{
-                businessName: "",
-                businessSlug: "",
-                businessSlugAvailable: false,
-                defaultPointsName: "Points",
-                defaultCurrencySymbol: "₹",
-                defaultCurrencyCode: "INR",
-                createCashier: false,
-                cashierName: "",
-                cashierEmail: "",
-                cashierPassword: "",
-                cashierLinkSlug: "",
-              }}
-              navigationPosition="footer"
-              NavigationComponent={FormNavigation}
-              progressType="bar"
-            />
-          </CardContent>
-        </Card>
+      <div className="min-h-[80vh] w-full">
+        <LinearMultiStepForm<WelcomeFormValues>
+          config={config}
+          initialValues={formInitialValues}
+          navigationPosition="footer"
+          NavigationComponent={FormNavigation}
+          progressType="bar"
+        />
       </div>
     );
   }
 
   return (
-    <div className="bg-muted/30 flex min-h-screen items-center justify-center p-4">
-      <div className="w-full max-w-4xl space-y-8">
-        <div className="space-y-2 text-center">
-          <h1 className="text-4xl font-bold tracking-tight">
-            Welcome to Reelo!
-          </h1>
-          <p className="text-muted-foreground text-lg">
-            Let's get your business set up in just a few steps.
-          </p>
-        </div>
-
-        <Card className="bg-card border-border shadow-xl backdrop-blur-sm">
-          <CardContent className="p-8">
-            <LinearMultiStepForm<WelcomeFormValues>
-              config={config}
-              initialValues={{
-                businessName: "",
-                businessSlug: "",
-                businessSlugAvailable: false,
-                defaultPointsName: "Points",
-                defaultCurrencySymbol: "₹",
-                defaultCurrencyCode: "INR",
-                createCashier: false,
-                cashierName: "",
-                cashierEmail: "",
-                cashierPassword: "",
-                cashierLinkSlug: "",
-              }}
-              navigationPosition="footer"
-              NavigationComponent={FormNavigation}
-              progressType="bar"
-            />
-          </CardContent>
-        </Card>
-      </div>
+    <div className="min-h-screen w-full">
+      <LinearMultiStepForm<WelcomeFormValues>
+        config={config}
+        initialValues={formInitialValues}
+        navigationPosition="footer"
+        NavigationComponent={FormNavigation}
+        progressType="bar"
+      />
     </div>
   );
 }

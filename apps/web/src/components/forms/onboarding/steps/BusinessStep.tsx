@@ -66,170 +66,189 @@ export function BusinessStep() {
 
   return (
     <div className="grid gap-6">
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <FormField
-          control={form.control as any}
-          name="businessName"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Business Name</FormLabel>
-              <FormControl>
-                <Input
-                  placeholder="Acme Store"
-                  {...field}
-                  value={field.value ?? ""}
-                  onChange={(e) => {
-                    field.onChange(e);
-                    const value = e.target.value;
-                    if (value && !slugTouchedRef.current) {
-                      debouncedSetSlug(value);
-                    }
-                  }}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+      <FormField
+        control={form.control as any}
+        name="businessName"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>
+              Business Name <span className="text-foreground">*</span>
+            </FormLabel>
+            <FormControl>
+              <Input
+                variant="underline"
+                placeholder="Acme Store"
+                {...field}
+                value={field.value ?? ""}
+                onChange={(e) => {
+                  field.onChange(e);
+                  const value = e.target.value;
+                  if (value && !slugTouchedRef.current) {
+                    debouncedSetSlug(value);
+                  }
+                }}
+              />
+            </FormControl>
+            <FormMessage variant="banner" />
+          </FormItem>
+        )}
+      />
 
-        <FormField
-          control={form.control as any}
-          name="businessSlug"
-          render={({ field }) => {
-            slugFieldRef.current = field;
-            return (
-              <FormItem>
-                <div className="flex items-center justify-between">
-                  <FormLabel>Business Slug</FormLabel>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 px-2 text-xs"
-                    onClick={handleRegenerateSlug}
-                    disabled={!businessName}
-                  >
-                    <RotateCw className="mr-1 h-3 w-3" />
-                    Regenerate
-                  </Button>
-                </div>
-                <FormControl>
-                  <div className="focus-within:ring-ring flex items-center overflow-hidden rounded-md border shadow-sm focus-within:ring-1">
-                    <span className="bg-muted text-muted-foreground flex shrink-0 items-center border-r px-3 py-2 text-sm">
-                      reelo.in/
-                    </span>
-                    <Input
-                      className="border-0 shadow-none focus-visible:ring-0"
-                      placeholder="acme-store"
-                      maxLength={SLUG_MAX_LENGTH}
-                      {...field}
-                      value={field.value ?? ""}
-                    />
-                    {(field.value ?? "").trim().length > 0 && (
-                      <span
-                        className={
-                          isCheckingSlug
-                            ? "text-muted-foreground px-3 text-xs"
-                            : isSlugCheckError
-                              ? "px-3 text-xs text-red-600"
-                              : slugAvailability?.available
-                                ? "px-3 text-xs text-green-600"
-                                : "px-3 text-xs text-red-600"
-                        }
-                      >
-                        {isCheckingSlug
-                          ? "Checking…"
+      <FormField
+        control={form.control as any}
+        name="businessSlug"
+        render={({ field }) => {
+          slugFieldRef.current = field;
+          return (
+            <FormItem>
+              <div className="flex items-center justify-between">
+                <FormLabel>
+                  Business Slug <span className="text-foreground">*</span>
+                </FormLabel>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2 text-xs"
+                  onClick={handleRegenerateSlug}
+                  disabled={!businessName}
+                >
+                  <RotateCw className="mr-1 h-3 w-3" />
+                  Regenerate
+                </Button>
+              </div>
+              <FormControl>
+                <div className="border-input focus-within:border-primary flex items-center border-b transition-colors">
+                  <span className="text-muted-foreground shrink-0 py-3 text-base">
+                    reelo.in/
+                  </span>
+                  <Input
+                    variant="underline"
+                    className="border-0"
+                    placeholder="acme-store"
+                    maxLength={SLUG_MAX_LENGTH}
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                  {(field.value ?? "").trim().length > 0 && (
+                    <span
+                      className={
+                        isCheckingSlug
+                          ? "text-muted-foreground shrink-0 text-xs"
                           : isSlugCheckError
-                            ? "Check failed"
+                            ? "shrink-0 text-xs text-red-600"
                             : slugAvailability?.available
-                              ? "Available"
-                              : "Not available"}
-                      </span>
-                    )}
-                  </div>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            );
-          }}
-        />
-      </div>
+                              ? "shrink-0 text-xs text-green-600"
+                              : "shrink-0 text-xs text-red-600"
+                      }
+                    >
+                      {isCheckingSlug
+                        ? "Checking…"
+                        : isSlugCheckError
+                          ? "Check failed"
+                          : slugAvailability?.available
+                            ? "Available"
+                            : "Not available"}
+                    </span>
+                  )}
+                </div>
+              </FormControl>
+              <FormMessage variant="banner" />
+            </FormItem>
+          );
+        }}
+      />
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <FormField
-          control={form.control as any}
-          name="defaultPointsName"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Points Name</FormLabel>
-              <FormControl>
+      <FormField
+        control={form.control as any}
+        name="defaultPointsName"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>
+              Points Name <span className="text-foreground">*</span>
+            </FormLabel>
+            <FormControl>
+              <Input
+                variant="underline"
+                placeholder="Points"
+                {...field}
+                value={field.value ?? ""}
+              />
+            </FormControl>
+            <FormMessage variant="banner" />
+          </FormItem>
+        )}
+      />
+
+      <FormField
+        control={form.control as any}
+        name="defaultCurrencySymbol"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>
+              Currency Symbol <span className="text-foreground">*</span>
+            </FormLabel>
+            <FormControl>
+              <Input
+                variant="underline"
+                placeholder="₹"
+                {...field}
+                value={field.value ?? ""}
+              />
+            </FormControl>
+            <FormMessage variant="banner" />
+          </FormItem>
+        )}
+      />
+
+      <FormField
+        control={form.control as any}
+        name="defaultCurrencyCode"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>
+              Currency Code <span className="text-foreground">*</span>
+            </FormLabel>
+            <FormControl>
+              <Input
+                variant="underline"
+                placeholder="INR"
+                {...field}
+                value={field.value ?? ""}
+              />
+            </FormControl>
+            <FormMessage variant="banner" />
+          </FormItem>
+        )}
+      />
+
+      <FormField
+        control={form.control as any}
+        name="themeColor"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Theme Color</FormLabel>
+            <FormControl>
+              <div className="border-input focus-within:border-primary flex items-center gap-3 border-b transition-colors">
                 <Input
-                  placeholder="Points"
+                  type="color"
+                  className="h-8 w-10 shrink-0 cursor-pointer rounded border-0 p-0"
                   {...field}
                   value={field.value ?? ""}
                 />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control as any}
-          name="defaultCurrencySymbol"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Currency Symbol</FormLabel>
-              <FormControl>
-                <Input placeholder="₹" {...field} value={field.value ?? ""} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control as any}
-          name="defaultCurrencyCode"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Currency Code</FormLabel>
-              <FormControl>
-                <Input placeholder="INR" {...field} value={field.value ?? ""} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <FormField
-          control={form.control as any}
-          name="themeColor"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Theme Color</FormLabel>
-              <FormControl>
-                <div className="flex gap-2">
-                  <Input
-                    type="color"
-                    className="h-10 w-12 shrink-0 cursor-pointer p-1"
-                    {...field}
-                    value={field.value ?? ""}
-                  />
-                  <Input
-                    placeholder="#7c3aed"
-                    {...field}
-                    value={field.value ?? ""}
-                  />
-                </div>
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      </div>
+                <Input
+                  variant="underline"
+                  className="border-0"
+                  placeholder="#7c3aed"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </div>
+            </FormControl>
+            <FormMessage variant="banner" />
+          </FormItem>
+        )}
+      />
     </div>
   );
 }

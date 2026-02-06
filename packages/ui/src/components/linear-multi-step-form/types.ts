@@ -22,6 +22,7 @@ export type LinearMultiStepFormStepConfig<TValues extends Record<string, any>> =
       formId: LinearMultiStepFormId;
       stepId: LinearMultiStepFormStepId;
       stepIndex: number;
+      totalSteps: number;
       isFirstStep: boolean;
       isLastStep: boolean;
     }>;

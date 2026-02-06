@@ -7,6 +7,7 @@ import {
   CardContent,
   FormNavigation,
   LinearMultiStepForm,
+  StepContent,
   type LinearMultiStepFormConfig,
 } from "@reelo/ui/components";
 import { useQueryClient } from "@tanstack/react-query";
@@ -24,9 +25,14 @@ import { ReferralProgramStep3 } from "./ReferralProgramStep3";
 
 interface ReferralProgramFormProps {
   initialData: any;
+  /** When true, render without Card wrapper (e.g. embedded in settings). */
+  embedded?: boolean;
 }
 
-export function ReferralProgramForm({ initialData }: ReferralProgramFormProps) {
+export function ReferralProgramForm({
+  initialData,
+  embedded = false,
+}: ReferralProgramFormProps) {
   const queryClient = useQueryClient();
   const { data: businessData } = useCurrentBusiness();
   const { mutateAsync: createReferralProgram } = useCreateReferralProgram();
@@ -95,7 +101,17 @@ export function ReferralProgramForm({ initialData }: ReferralProgramFormProps) {
           "sendReminderToCustomer",
         ],
         schema: referralProgramStep1Schema,
-        Component: ReferralProgramStep1,
+        Component: ({ stepIndex, totalSteps }) => (
+          <StepContent
+            stepIndex={stepIndex}
+            totalSteps={totalSteps}
+            title="New customer benefits"
+            description="Set up rewards for customers who join through referrals."
+            required
+          >
+            <ReferralProgramStep1 />
+          </StepContent>
+        ),
       },
       {
         id: "step-2",
@@ -108,14 +124,33 @@ export function ReferralProgramForm({ initialData }: ReferralProgramFormProps) {
           "termsAndConditionsExistingCustomer",
         ],
         schema: referralProgramStep2Schema,
-        Component: ReferralProgramStep2,
+        Component: ({ stepIndex, totalSteps }) => (
+          <StepContent
+            stepIndex={stepIndex}
+            totalSteps={totalSteps}
+            title="Existing customer benefits"
+            description="Set up rewards for customers who refer others, and add terms."
+            required
+          >
+            <ReferralProgramStep2 />
+          </StepContent>
+        ),
       },
       {
         id: "step-3",
         title: "Branding & Review",
         fields: ["branding"],
         schema: referralProgramStep3Schema,
-        Component: ReferralProgramStep3,
+        Component: ({ stepIndex, totalSteps }) => (
+          <StepContent
+            stepIndex={stepIndex}
+            totalSteps={totalSteps}
+            title="Branding & review"
+            description="Customize the appearance of your referral pages and review settings."
+          >
+            <ReferralProgramStep3 />
+          </StepContent>
+        ),
       },
     ],
   };
@@ -178,17 +213,23 @@ export function ReferralProgramForm({ initialData }: ReferralProgramFormProps) {
     );
   }
 
+  const form = (
+    <LinearMultiStepForm<ReferralProgramFormValues>
+      config={config}
+      initialValues={defaultValues}
+      navigationPosition="footer"
+      NavigationComponent={FormNavigation}
+      progressType="bar"
+    />
+  );
+
+  if (embedded) {
+    return <div className="min-h-[80vh] w-full">{form}</div>;
+  }
+
   return (
     <Card className="bg-card border-border shadow-xl">
-      <CardContent className="p-8">
-        <LinearMultiStepForm<ReferralProgramFormValues>
-          config={config}
-          initialValues={defaultValues}
-          navigationPosition="footer"
-          NavigationComponent={FormNavigation}
-          progressType="bar"
-        />
-      </CardContent>
+      <CardContent className="p-8">{form}</CardContent>
     </Card>
   );
 }
