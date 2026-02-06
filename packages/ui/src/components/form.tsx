@@ -14,6 +14,7 @@ import {
 } from "react-hook-form";
 import { cn } from "../lib/utils";
 import { Label } from "./label";
+import { AlertTriangle } from "lucide-react";
 
 const Form = FormProvider;
 
@@ -90,13 +91,12 @@ function FormLabel({
   className,
   ...props
 }: React.ComponentProps<typeof LabelPrimitive.Root>) {
-  const { error, formItemId } = useFormField();
+  const { formItemId } = useFormField();
 
   return (
     <Label
       data-slot="form-label"
-      data-error={!!error}
-      className={cn("data-[error=true]:text-destructive", className)}
+      className={cn("text-base font-medium", className)}
       htmlFor={formItemId}
       {...props}
     />
@@ -135,12 +135,35 @@ function FormDescription({ className, ...props }: React.ComponentProps<"p">) {
   );
 }
 
-function FormMessage({ className, ...props }: React.ComponentProps<"p">) {
+function FormMessage({
+  className,
+  variant = "inline",
+  ...props
+}: React.ComponentProps<"p"> & {
+  variant?: "inline" | "banner";
+}) {
   const { error, formMessageId } = useFormField();
   const body = error ? String(error?.message ?? "") : props.children;
 
   if (!body) {
     return null;
+  }
+
+  if (variant === "banner") {
+    return (
+      <div
+        data-slot="form-message"
+        id={formMessageId}
+        role="alert"
+        className={cn(
+          "border border-destructive/40 bg-destructive/10 text-destructive inline-flex w-fit max-w-full items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium",
+          className,
+        )}
+      >
+        <AlertTriangle className="size-3.5 shrink-0" aria-hidden />
+        <span className="truncate">{body}</span>
+      </div>
+    );
   }
 
   return (

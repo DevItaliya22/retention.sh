@@ -172,15 +172,28 @@ export function LoyaltyLoginPageClient() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label>Phone Number</Label>
-            <Input
-              value={phoneNumber}
-              onChange={(e) => setPhoneNumber(e.target.value)}
-              placeholder="9876543210"
-              disabled={isLoading || step === "verify" || step === "register"}
-            />
-          </div>
+          {step === "request" && (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                requestOtp();
+              }}
+              className="space-y-4"
+            >
+              <div className="space-y-2">
+                <Label>Phone Number</Label>
+                <Input
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  placeholder="9876543210"
+                  disabled={isLoading}
+                />
+              </div>
+              <Button type="submit" className="w-full" loading={isLoading}>
+                Send OTP
+              </Button>
+            </form>
+          )}
 
           {step === "register" && (
             <>
@@ -195,53 +208,59 @@ export function LoyaltyLoginPageClient() {
                   {registerInfo.pointsName} extra!
                 </p>
               )}
-              <div className="space-y-2">
-                <Label>Name</Label>
-                <Input
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Your name"
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  registerAndRequestOtp();
+                }}
+                className="space-y-4"
+              >
+                <div className="space-y-2">
+                  <Label>Name</Label>
+                  <Input
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Your name"
+                    disabled={isLoading}
+                  />
+                </div>
+                <Button type="submit" className="w-full" loading={isLoading}>
+                  Register
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="w-full"
+                  onClick={() => setStep("request")}
                   disabled={isLoading}
-                />
-              </div>
-              <Button
-                className="w-full"
-                onClick={registerAndRequestOtp}
-                loading={isLoading}
-              >
-                Register
-              </Button>
-              <Button
-                variant="ghost"
-                className="w-full"
-                onClick={() => setStep("request")}
-                disabled={isLoading}
-              >
-                Back
-              </Button>
+                >
+                  Back
+                </Button>
+              </form>
             </>
           )}
 
           {step === "verify" && (
-            <div className="space-y-2">
-              <Label>OTP</Label>
-              <Input
-                value={otp}
-                onChange={(e) => setOtp(e.target.value)}
-                placeholder="123456"
-                disabled={isLoading}
-              />
-            </div>
-          )}
-
-          {step !== "register" && (
-            <Button
-              className="w-full"
-              onClick={step === "request" ? requestOtp : verifyOtp}
-              loading={isLoading}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                verifyOtp();
+              }}
+              className="space-y-4"
             >
-              {step === "request" ? "Send OTP" : "Verify OTP"}
-            </Button>
+              <div className="space-y-2">
+                <Label>OTP</Label>
+                <Input
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value)}
+                  placeholder="123456"
+                  disabled={isLoading}
+                />
+              </div>
+              <Button type="submit" className="w-full" loading={isLoading}>
+                Verify OTP
+              </Button>
+            </form>
           )}
         </CardContent>
       </Card>

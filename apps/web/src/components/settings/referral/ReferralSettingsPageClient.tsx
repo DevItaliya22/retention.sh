@@ -47,11 +47,18 @@ export function ReferralSettingsPageClient() {
     );
   }
 
+  // Embedded multi-step form: render directly (no PageLayout/Scaffold), same as BusinessOnboardingSettings
+  if (referralEnabled && !hasProgram) {
+    return (
+      // <div className="min-h-full w-full px-4 py-6 sm:px-6">
+      <ReferralProgramForm initialData={null} embedded />
+      // </div>
+    );
+  }
+
   const subtitle = !referralEnabled
     ? "Referral is disabled for this business"
-    : !hasProgram
-      ? "Set up your referral program to reward customers"
-      : "View and edit your referral program settings";
+    : "View and edit your referral program settings";
 
   return (
     <PageLayout
@@ -79,8 +86,6 @@ export function ReferralSettingsPageClient() {
               </Button>
             </EmptyContent>
           </Empty>
-        ) : !hasProgram ? (
-          <ReferralProgramForm initialData={null} />
         ) : (
           <ReferralExistingSettings
             referralProgram={programData!.referralProgram as ReferralProgram}

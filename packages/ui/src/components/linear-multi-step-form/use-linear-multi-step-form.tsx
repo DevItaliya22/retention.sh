@@ -199,38 +199,8 @@ export function useLinearMultiStepForm<TValues extends AnyValues>(args: {
     const currentValues = values;
     const currentFormState = formState;
 
-    // Always persist latest values before any navigation
-    setValues({ formId: currentConfig.id, values: currentValues as any });
-
-    // If nothing changed on this step, just move on without API/validation
-    if (!isCurrentStepChanged) {
-      if (isLastStep && currentConfig.onSubmit) {
-        setLoadingAction("submit");
-        try {
-          const finalValues = (currentFormState?.values ??
-            currentValues ??
-            {}) as TValues;
-          await currentConfig.onSubmit({
-            formId: currentConfig.id,
-            values: finalValues,
-          });
-        } finally {
-          setLoadingAction(null);
-        }
-        return true;
-      }
-
-      if (currentStepIndex < totalSteps - 1) {
-        setCurrentStepIndex({
-          formId: currentConfig.id,
-          stepIndex: currentStepIndex + 1,
-        });
-      }
-
-      return true;
-    }
-
-    // For changed steps, run validation + step API + commit snapshot
+    // Validate BEFORE persisting to the store. setValues() triggers a
+    // useEffect(form.reset) which would wipe out any validation errors.
     setLoadingAction("next");
     try {
       const { ok, payload } = await validateStep();
@@ -239,21 +209,27 @@ export function useLinearMultiStepForm<TValues extends AnyValues>(args: {
         return false;
       }
 
-      if (currentStep.onStepSubmit) {
-        await currentStep.onStepSubmit({
+      // Validation passed — now it's safe to persist values to the store
+      setValues({ formId: currentConfig.id, values: currentValues as any });
+
+      // Only call onStepSubmit and commit snapshot if the step data changed
+      if (isCurrentStepChanged) {
+        if (currentStep.onStepSubmit) {
+          await currentStep.onStepSubmit({
+            formId: currentConfig.id,
+            stepId: currentStep.id,
+            stepIndex: currentStepIndex,
+            values: currentValues,
+            stepPayload: payload,
+          });
+        }
+
+        commitStep({
           formId: currentConfig.id,
           stepId: currentStep.id,
-          stepIndex: currentStepIndex,
-          values: currentValues,
-          stepPayload: payload,
+          snapshot: stableSerialize(payload),
         });
       }
-
-      commitStep({
-        formId: currentConfig.id,
-        stepId: currentStep.id,
-        snapshot: stableSerialize(payload),
-      });
 
       if (isLastStep && currentConfig.onSubmit) {
         setLoadingAction("submit");

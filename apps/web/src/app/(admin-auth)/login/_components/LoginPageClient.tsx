@@ -14,6 +14,7 @@ import {
   CardTitle,
   Input,
   Label,
+  PasswordInput,
   Tabs,
   TabsContent,
   TabsList,
@@ -225,9 +226,8 @@ export function LoginPageClient() {
                       Forgot password?
                     </a>
                   </div>
-                  <Input
+                  <PasswordInput
                     id="password"
-                    type="password"
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}

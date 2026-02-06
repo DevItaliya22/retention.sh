@@ -16,6 +16,7 @@ import {
   FormLabel,
   FormMessage,
   Input,
+  PasswordInput,
   Switch,
 } from "@reelo/ui/components";
 import { useDebouncedCallback } from "@reelo/ui/hooks";
@@ -251,8 +252,7 @@ export function EditCashierModal({
                   <FormItem>
                     <FormLabel>Password (optional)</FormLabel>
                     <FormControl>
-                      <Input
-                        type="password"
+                      <PasswordInput
                         placeholder="Leave empty to keep current password"
                         disabled={update.isPending}
                         className="placeholder:text-muted-foreground/60"
