@@ -19,9 +19,6 @@ import {
 import { Plus, Trash2 } from "lucide-react";
 import type { ReferralProgramFormValues } from "@/lib/schemas/referral-form";
 
-const textareaUnderlineClass =
-  "border-input min-h-20 border-0 border-b rounded-none bg-transparent resize-none px-0 py-3 shadow-none focus-visible:ring-0";
-
 export function ReferralProgramStep2() {
   const form = useFormContext<ReferralProgramFormValues>();
 
@@ -61,7 +58,7 @@ export function ReferralProgramStep2() {
             </FormLabel>
             <Select onValueChange={field.onChange} value={field.value}>
               <FormControl>
-                <SelectTrigger className="w-full border-0 border-b rounded-none bg-transparent px-0 py-3 shadow-none focus-visible:ring-0">
+                <SelectTrigger className="w-full border-0 border-b rounded-none bg-transparent dark:bg-transparent dark:hover:bg-transparent px-0 py-3 shadow-none focus-visible:ring-0">
                   <SelectValue placeholder="Select benefit type" />
                 </SelectTrigger>
               </FormControl>
@@ -139,8 +136,8 @@ export function ReferralProgramStep2() {
                   <FormItem className="flex-1">
                     <FormControl>
                       <Textarea
+                        variant="underline"
                         placeholder={`Point ${index + 1}`}
-                        className={textareaUnderlineClass}
                         {...field}
                         value={field.value ?? ""}
                       />
@@ -186,8 +183,8 @@ export function ReferralProgramStep2() {
                   <FormItem className="flex-1">
                     <FormControl>
                       <Textarea
+                        variant="underline"
                         placeholder={`Point ${index + 1}`}
-                        className={textareaUnderlineClass}
                         {...field}
                         value={field.value ?? ""}
                       />

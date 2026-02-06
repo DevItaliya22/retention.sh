@@ -17,7 +17,11 @@ export const referralProgramStep1Schema = z.object({
     .min(1)
     .optional()
     .nullable(),
-  informationSections: z.array(informationSectionSchema).min(0),
+  informationSections: z
+    .array(informationSectionSchema)
+    .min(0)
+    .optional()
+    .default([]),
   sendReminderToCustomer: z.boolean().default(false),
 });
 

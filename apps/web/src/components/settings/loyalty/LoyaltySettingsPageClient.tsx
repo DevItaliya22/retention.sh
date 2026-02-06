@@ -316,6 +316,7 @@ export function LoyaltySettingsPageClient() {
                   </div>
                   <div className="col-span-8 flex flex-col gap-1">
                     <Input
+                      variant="underline"
                       type="number"
                       min={0}
                       max={100}
@@ -342,6 +343,7 @@ export function LoyaltySettingsPageClient() {
                   </div>
                   <div className="col-span-8 flex flex-col gap-1">
                     <Input
+                      variant="underline"
                       {...form.register("cashbackBranding", {
                         setValueAs: (v) => (v === "" ? null : v),
                       })}
@@ -357,6 +359,7 @@ export function LoyaltySettingsPageClient() {
                   </div>
                   <div className="col-span-8 flex flex-col gap-1">
                     <Input
+                      variant="underline"
                       type="number"
                       min={0}
                       step="0.01"
@@ -375,6 +378,7 @@ export function LoyaltySettingsPageClient() {
                   </div>
                   <div className="col-span-8 flex flex-col gap-1">
                     <Input
+                      variant="underline"
                       type="number"
                       min={0}
                       step="0.01"
@@ -435,6 +439,7 @@ export function LoyaltySettingsPageClient() {
                   </div>
                   <div className="col-span-8 flex flex-col gap-1">
                     <Input
+                      variant="underline"
                       type="number"
                       min={0}
                       step="0.01"
@@ -456,6 +461,7 @@ export function LoyaltySettingsPageClient() {
                   </div>
                   <div className="col-span-8 flex flex-col gap-1">
                     <Input
+                      variant="underline"
                       type="number"
                       min={0}
                       step="0.01"
@@ -477,6 +483,7 @@ export function LoyaltySettingsPageClient() {
                   </div>
                   <div className="col-span-8 flex flex-col gap-1">
                     <Input
+                      variant="underline"
                       type="number"
                       min={0}
                       {...form.register("pointReminderDays", {
@@ -497,6 +504,7 @@ export function LoyaltySettingsPageClient() {
                   </div>
                   <div className="col-span-8 flex flex-col gap-1">
                     <Input
+                      variant="underline"
                       type="number"
                       min={1}
                       {...form.register("pointExpiryDays", {
@@ -586,8 +594,8 @@ export function LoyaltySettingsPageClient() {
                               <FormItem className="flex-1">
                                 <FormControl>
                                   <Textarea
+                                    variant="underline"
                                     placeholder={`Term ${index + 1}`}
-                                    className="min-h-[60px]"
                                     {...field}
                                     value={field.value ?? ""}
                                   />
@@ -669,6 +677,7 @@ export function LoyaltySettingsPageClient() {
                   </div>
                   <div className="col-span-8 flex flex-col gap-1">
                     <Input
+                      variant="underline"
                       {...form.register("branding.logo", {
                         setValueAs: (v) => (v === "" ? null : v),
                       })}
@@ -684,6 +693,7 @@ export function LoyaltySettingsPageClient() {
                   </div>
                   <div className="col-span-8 flex flex-col gap-1">
                     <Input
+                      variant="underline"
                       {...form.register("branding.themeColor", {
                         setValueAs: (v) => (v === "" ? null : v),
                       })}
@@ -699,6 +709,7 @@ export function LoyaltySettingsPageClient() {
                   </div>
                   <div className="col-span-8 flex flex-col gap-1">
                     <Input
+                      variant="underline"
                       {...form.register("branding.textColor", {
                         setValueAs: (v) => (v === "" ? null : v),
                       })}
@@ -714,6 +725,7 @@ export function LoyaltySettingsPageClient() {
                   </div>
                   <div className="col-span-8 flex flex-col gap-1">
                     <Input
+                      variant="underline"
                       {...form.register("branding.bannerImage", {
                         setValueAs: (v) => (v === "" ? null : v),
                       })}
@@ -729,6 +741,7 @@ export function LoyaltySettingsPageClient() {
                   </div>
                   <div className="col-span-8 flex flex-col gap-1">
                     <Input
+                      variant="underline"
                       {...form.register("branding.header", {
                         setValueAs: (v) => (v === "" ? null : v),
                       })}
@@ -744,6 +757,7 @@ export function LoyaltySettingsPageClient() {
                   </div>
                   <div className="col-span-8 flex flex-col gap-1">
                     <Input
+                      variant="underline"
                       {...form.register("branding.subtitle", {
                         setValueAs: (v) => (v === "" ? null : v),
                       })}

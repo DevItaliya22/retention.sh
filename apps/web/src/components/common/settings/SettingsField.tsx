@@ -196,6 +196,7 @@ export function SettingsField({
                     <div className="col-span-8 flex flex-col gap-1">
                       <FormControl>
                         <Textarea
+                          variant="underline"
                           {...field}
                           value={field.value as string}
                           placeholder={placeholder}
@@ -226,6 +227,7 @@ export function SettingsField({
                     <div className="col-span-8 flex flex-col gap-1">
                       <FormControl>
                         <Input
+                          variant="underline"
                           {...field}
                           value={field.value as string}
                           placeholder={placeholder}
