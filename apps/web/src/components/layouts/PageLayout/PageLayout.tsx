@@ -1,5 +1,6 @@
 "use client";
 
+import { LayoutGroup, motion } from "framer-motion";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ReactNode } from "react";
@@ -109,54 +110,90 @@ const PageLayout = ({
 
         {/* Navigation section */}
         {navigationItems.length > 0 && (
-          <NavMenu
-            className={cn(
-              isCompact ? "mt-2" : "mt-4",
-              size === "full" && "border-none",
-            )}
-          >
-            {navigationItems.map((item) => {
-              const isActive =
-                item.active !== undefined
-                  ? item.active
-                  : pathname === item.href;
-              return (
-                <NavMenuItem key={item.label} active={isActive}>
-                  {item.href ? (
-                    <Link
-                      href={item.href}
-                      className={cn(
-                        "inline-flex items-center gap-2",
-                        isActive && "text-foreground",
-                      )}
-                      onClick={item.onClick}
-                    >
-                      {item.icon && <span>{item.icon}</span>}
-                      {item.label}
-                      {item.badge && (
-                        <Badge variant="default">{item.badge}</Badge>
-                      )}
-                    </Link>
-                  ) : (
-                    <Button
-                      variant="link"
-                      onClick={item.onClick}
-                      className={cn(
-                        isActive && "text-foreground font-medium",
-                        "hover:no-underline",
-                      )}
-                      icon={item.icon && <span>{item.icon}</span>}
-                    >
-                      {item.label}
-                      {item.badge && (
-                        <Badge variant="default">{item.badge}</Badge>
-                      )}
-                    </Button>
+          <LayoutGroup id="page-layout-tabs">
+            <div className={cn(isCompact ? "mt-2" : "mt-4")}>
+              <div className="overflow-x-auto [-webkit-overflow-scrolling:touch]">
+                <NavMenu
+                  className={cn(
+                    size === "full" && "border-none",
+                    "min-w-full w-max relative overflow-visible [&>ul]:gap-2 [&>ul]:flex-nowrap [&>ul>li]:shrink-0",
                   )}
-                </NavMenuItem>
-              );
-            })}
-          </NavMenu>
+                >
+                  {navigationItems.map((item) => {
+                    const isActive =
+                      item.active !== undefined
+                        ? item.active
+                        : pathname === item.href;
+                    return (
+                      <NavMenuItem
+                        key={item.label}
+                        active={isActive}
+                        className={cn(
+                          "!border-0 transition-transform",
+                          "data-[state=active]:z-10 data-[state=active]:-translate-y-[1px]",
+                        )}
+                      >
+                        <span className="relative inline-flex items-center !py-0">
+                          {isActive && (
+                            <motion.span
+                              layoutId="page-layout-active-tab"
+                              transition={{
+                                type: "spring",
+                                stiffness: 420,
+                                damping: 32,
+                                mass: 0.6,
+                              }}
+                              className={cn(
+                                "pointer-events-none absolute inset-0 -bottom-px -z-10 rounded-t-xl border border-primary/30 bg-primary/10 shadow-sm",
+                              )}
+                            />
+                          )}
+                          {item.href ? (
+                            <Link
+                              href={item.href}
+                              className={cn(
+                                "relative z-10 inline-flex items-center gap-2 rounded-t-xl rounded-b-none px-3 py-2 text-sm font-medium transition-colors",
+                                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                                isActive
+                                  ? "text-primary"
+                                  : "text-muted-foreground hover:text-foreground",
+                              )}
+                              onClick={item.onClick}
+                            >
+                              {item.icon && <span>{item.icon}</span>}
+                              {item.label}
+                              {item.badge && (
+                                <Badge variant="default">{item.badge}</Badge>
+                              )}
+                            </Link>
+                          ) : (
+                            <Button
+                              variant="link"
+                              onClick={item.onClick}
+                              className={cn(
+                                "relative z-10 h-auto rounded-t-xl rounded-b-none px-3 py-2 text-sm font-medium",
+                                "focus-visible:ring-primary/40 focus-visible:ring-offset-background",
+                                "hover:!no-underline",
+                                isActive
+                                  ? "!text-primary"
+                                  : "!text-muted-foreground hover:!text-foreground",
+                              )}
+                              icon={item.icon && <span>{item.icon}</span>}
+                            >
+                              {item.label}
+                              {item.badge && (
+                                <Badge variant="default">{item.badge}</Badge>
+                              )}
+                            </Button>
+                          )}
+                        </span>
+                      </NavMenuItem>
+                    );
+                  })}
+                </NavMenu>
+              </div>
+            </div>
+          </LayoutGroup>
         )}
       </ScaffoldContainer>
       <ScaffoldSection

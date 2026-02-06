@@ -53,7 +53,7 @@ export function ReferralProgramStep1() {
             </FormLabel>
             <Select onValueChange={field.onChange} value={field.value}>
               <FormControl>
-                <SelectTrigger className="w-full border-0 border-b rounded-none bg-transparent px-0 py-3 shadow-none focus-visible:ring-0">
+                <SelectTrigger className="w-full border-0 border-b rounded-none bg-transparent dark:bg-transparent dark:hover:bg-transparent px-0 py-3 shadow-none focus-visible:ring-0">
                   <SelectValue placeholder="Select benefit type" />
                 </SelectTrigger>
               </FormControl>
@@ -119,6 +119,7 @@ export function ReferralProgramStep1() {
         )}
       />
 
+      {/* Information Sections - temporarily disabled
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <FormLabel>Information Sections</FormLabel>
@@ -185,6 +186,7 @@ export function ReferralProgramStep1() {
           </div>
         ))}
       </div>
+      */}
 
       <FormField
         control={form.control}

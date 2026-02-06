@@ -9,13 +9,20 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
+  Checkbox,
   Form,
   FormControl,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
+  InfoIcon,
   Input,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   Textarea,
 } from "@reelo/ui/components";
 import { useTransition } from "react";
@@ -23,14 +30,25 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import * as z from "zod";
 
+interface SelectOption {
+  value: string;
+  label: string;
+}
+
 interface FieldDefinition {
   name: string;
   label: string;
   placeholder?: string;
   helpText?: string;
+  tooltip?: string;
   disabled?: boolean;
   optional?: boolean;
-  type?: "text" | "textarea" | "number";
+  type?: "text" | "textarea" | "number" | "select" | "checkbox";
+  options?: SelectOption[];
+  checkboxLabel?: string;
+  min?: number;
+  max?: number;
+  step?: string;
 }
 
 interface SettingsFieldGroupProps {
@@ -79,8 +97,8 @@ export function SettingsFieldGroup({
       try {
         const filteredValues: Record<string, string> = {};
         fields.forEach((field) => {
-          if (!field.disabled && values[field.name]) {
-            filteredValues[field.name] = values[field.name] as string;
+          if (!field.disabled) {
+            filteredValues[field.name] = (values[field.name] ?? "") as string;
           }
         });
         const result = await onSubmit(filteredValues);
@@ -116,16 +134,81 @@ export function SettingsFieldGroup({
                 render={({ field: formField }) => (
                   <FormItem className="flex flex-col gap-2 md:grid md:grid-cols-12">
                     <div className="col-span-4 flex flex-col gap-2">
-                      <FormLabel className="text-sm">{field.label}</FormLabel>
+                      {field.tooltip ? (
+                        <div className="flex items-center gap-1.5">
+                          <FormLabel className="text-sm">
+                            {field.label}
+                          </FormLabel>
+                          <InfoIcon content={field.tooltip} size={14} />
+                        </div>
+                      ) : (
+                        <FormLabel className="text-sm">{field.label}</FormLabel>
+                      )}
                     </div>
                     <div className="col-span-8 flex flex-col gap-1">
                       <FormControl>
-                        <Input
-                          {...formField}
-                          value={formField.value || ""}
-                          placeholder={field.placeholder}
-                          disabled={field.disabled || isPending}
-                        />
+                        {field.type === "textarea" ? (
+                          <Textarea
+                            variant="underline"
+                            {...formField}
+                            value={formField.value || ""}
+                            placeholder={field.placeholder}
+                            disabled={field.disabled || isPending}
+                          />
+                        ) : field.type === "select" && field.options ? (
+                          <Select
+                            onValueChange={formField.onChange}
+                            value={formField.value || ""}
+                            disabled={field.disabled || isPending}
+                          >
+                            <SelectTrigger className="w-full border-0 border-b rounded-none bg-transparent dark:bg-transparent dark:hover:bg-transparent px-0 py-3 shadow-none focus-visible:ring-0">
+                              <SelectValue
+                                placeholder={field.placeholder || "Select..."}
+                              />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {field.options.map((option) => (
+                                <SelectItem
+                                  key={option.value}
+                                  value={option.value}
+                                >
+                                  {option.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : field.type === "checkbox" ? (
+                          <div className="flex items-center gap-2">
+                            <Checkbox
+                              checked={formField.value === "true"}
+                              onCheckedChange={(v) =>
+                                formField.onChange(v ? "true" : "false")
+                              }
+                              disabled={field.disabled || isPending}
+                            />
+                            {field.checkboxLabel && (
+                              <span className="text-muted-foreground text-sm">
+                                {field.checkboxLabel}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <Input
+                            variant="underline"
+                            type={field.type === "number" ? "number" : "text"}
+                            {...formField}
+                            value={formField.value || ""}
+                            placeholder={field.placeholder}
+                            disabled={field.disabled || isPending}
+                            {...(field.type === "number"
+                              ? {
+                                  min: field.min,
+                                  max: field.max,
+                                  step: field.step,
+                                }
+                              : {})}
+                          />
+                        )}
                       </FormControl>
                       {field.helpText && (
                         <p className="text-foreground-lighter text-xs">

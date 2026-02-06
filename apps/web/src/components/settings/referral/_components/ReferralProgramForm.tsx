@@ -55,7 +55,7 @@ export function ReferralProgramForm({
           existingCustomerBenefitExpiresInDays:
             values.existingCustomerBenefitExpiresInDays || null,
           sendReminderToCustomer: values.sendReminderToCustomer,
-          informationSections: values.informationSections,
+          informationSections: [], // Information sections temporarily disabled
           branding: values.branding,
           termsAndConditionsNewCustomer:
             (values.termsAndConditionsNewCustomer ?? []).filter(
@@ -97,7 +97,6 @@ export function ReferralProgramForm({
           "newCustomerBenefitType",
           "newCustomerBenefitValue",
           "newCustomerBenefitExpiresInDays",
-          "informationSections",
           "sendReminderToCustomer",
         ],
         schema: referralProgramStep1Schema,

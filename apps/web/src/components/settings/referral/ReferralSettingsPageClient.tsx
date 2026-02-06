@@ -1,6 +1,7 @@
 "use client";
 
 import { ReferralExistingSettings } from "./ReferralExistingSettings";
+import { ReferralSettingsSkeleton } from "./ReferralSettingsSkeleton";
 import { ReferralProgramForm } from "./_components/ReferralProgramForm";
 import { PageLayout, ScaffoldContainer } from "@/components/layouts";
 import { useCurrentBusiness } from "@/hooks/business/useCurrentBusiness";
@@ -15,7 +16,6 @@ import {
   EmptyDescription,
   EmptyHeader,
   EmptyTitle,
-  Skeleton,
 } from "@reelo/ui/components";
 import { useRouter } from "next/navigation";
 
@@ -38,10 +38,7 @@ export function ReferralSettingsPageClient() {
         scaffoldSectionClassName="h-full w-full pt-2 pb-0"
       >
         <ScaffoldContainer>
-          <div className="space-y-4">
-            <Skeleton className="h-64 w-full" />
-            <Skeleton className="h-64 w-full" />
-          </div>
+          <ReferralSettingsSkeleton />
         </ScaffoldContainer>
       </PageLayout>
     );
