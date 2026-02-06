@@ -26,7 +26,8 @@ export const cashierStepSchema = z
       if (data.createCashier) {
         return (
           !!data.cashierName &&
-          !!data.cashierEmail &&
+          !!data.cashierEmailLocalPart &&
+          !!data.cashierEmailSuffix &&
           !!data.cashierPassword &&
           !!data.cashierLinkSlug
         );

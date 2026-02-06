@@ -63,6 +63,10 @@ export const PUT = withAdminAuth(async (request, context) => {
       where: { id: businessId },
       data: {
         name: validatedData.name ?? undefined,
+        website:
+          validatedData.website !== undefined
+            ? validatedData.website
+            : undefined,
         defaultPointsName: validatedData.defaultPointsName ?? undefined,
         defaultCurrencySymbol: validatedData.defaultCurrencySymbol ?? undefined,
         defaultCurrencyCode: validatedData.defaultCurrencyCode ?? undefined,

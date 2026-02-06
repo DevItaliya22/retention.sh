@@ -6,32 +6,38 @@ import { Button, type ButtonProps } from "./button";
 import { Input } from "./input";
 import { Textarea } from "./textarea";
 
-const InputGroup = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => {
-  return (
-    <div
-      ref={ref}
-      className={cn(
-        "border-input bg-background flex items-center gap-0 rounded-md border shadow-xs",
-        className,
-      )}
-      {...props}
-    />
-  );
-});
+interface InputGroupProps extends React.HTMLAttributes<HTMLDivElement> {
+  variant?: "default" | "underline";
+}
+
+const InputGroup = React.forwardRef<HTMLDivElement, InputGroupProps>(
+  ({ className, variant = "default", ...props }, ref) => {
+    return (
+      <div
+        ref={ref}
+        className={cn(
+          "flex items-center gap-0",
+          variant === "underline"
+            ? "border-input focus-within:border-primary border-0 border-b bg-transparent transition-colors"
+            : "border-input bg-background rounded-md border shadow-xs",
+          className,
+        )}
+        {...props}
+      />
+    );
+  },
+);
 InputGroup.displayName = "InputGroup";
 
 const InputGroupInput = React.forwardRef<
   HTMLInputElement,
   React.ComponentProps<typeof Input>
->(({ className, ...props }, ref) => {
+>(({ className, variant: _variant, ...props }, ref) => {
   return (
     <Input
       ref={ref}
       className={cn(
-        "min-w-0 flex-1 border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0",
+        "min-w-0 flex-1 border-0 bg-transparent shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 dark:bg-transparent",
         className,
       )}
       {...props}

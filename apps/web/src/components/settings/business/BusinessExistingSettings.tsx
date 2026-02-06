@@ -41,6 +41,7 @@ export function BusinessExistingSettings({
     try {
       await updateBusiness({
         name: values.name,
+        website: values.website || null,
         defaultPointsName: business.defaultPointsName,
         defaultCurrencySymbol: business.defaultCurrencySymbol,
         defaultCurrencyCode: business.defaultCurrencyCode,
@@ -135,7 +136,7 @@ export function BusinessExistingSettings({
         <div className="space-y-6">
           <SettingsFieldGroup
             title="Basic Information"
-            description="Manage your business name and identifier"
+            description="Manage your business name, identifier, and website"
             fields={[
               {
                 name: "name",
@@ -150,10 +151,17 @@ export function BusinessExistingSettings({
                 helpText: "This field is read-only.",
                 disabled: true,
               },
+              {
+                name: "website",
+                label: "Website",
+                placeholder: "https://www.example.com",
+                helpText: "Your business website URL (optional).",
+              },
             ]}
             defaultValues={{
               name: business.name,
               slug: `reelo.in/${business.slug}`,
+              website: business.website ?? "",
             }}
             onSubmit={handleUpdateBasicInfo}
           />

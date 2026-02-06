@@ -17,6 +17,7 @@ export interface CurrentBusiness {
   id: string;
   name: string;
   slug: string;
+  website?: string | null;
   defaultPointsName: string;
   defaultCurrencySymbol: string;
   defaultCurrencyCode: string;
@@ -49,6 +50,7 @@ export interface UpdateBusinessBrandingInput {
 
 export interface UpdateBusinessInput {
   name?: string;
+  website?: string | null;
   defaultPointsName?: string;
   defaultCurrencySymbol?: string;
   defaultCurrencyCode?: string;

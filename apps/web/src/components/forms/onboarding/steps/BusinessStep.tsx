@@ -224,6 +224,25 @@ export function BusinessStep() {
 
       <FormField
         control={form.control as any}
+        name="website"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Website</FormLabel>
+            <FormControl>
+              <Input
+                variant="underline"
+                placeholder="https://www.example.com"
+                {...field}
+                value={field.value ?? ""}
+              />
+            </FormControl>
+            <FormMessage variant="banner" />
+          </FormItem>
+        )}
+      />
+
+      <FormField
+        control={form.control as any}
         name="themeColor"
         render={({ field }) => (
           <FormItem>

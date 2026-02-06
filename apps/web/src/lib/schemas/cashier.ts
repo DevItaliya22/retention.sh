@@ -1,12 +1,15 @@
 import { z } from "zod";
 import {
+  cashierEmailLocalPartSchema,
   emailSchema,
+  emailSuffixSchema,
   nameSchema,
   optionalPasswordSchema,
   passwordSchema,
   slugSchema,
 } from "./common";
 
+// API schemas (receive the fully-composed email)
 export const createCashierSchema = z.object({
   name: nameSchema,
   email: emailSchema,
@@ -17,6 +20,24 @@ export const createCashierSchema = z.object({
 export const updateCashierSchema = z.object({
   name: nameSchema,
   email: emailSchema,
+  password: optionalPasswordSchema,
+  cashierLinkSlug: slugSchema,
+  isActive: z.boolean().optional(),
+});
+
+// Form schemas (UI captures local part + suffix, email is composed before API call)
+export const createCashierFormSchema = z.object({
+  name: nameSchema,
+  emailLocalPart: cashierEmailLocalPartSchema,
+  emailSuffix: emailSuffixSchema,
+  password: passwordSchema,
+  cashierLinkSlug: slugSchema,
+});
+
+export const updateCashierFormSchema = z.object({
+  name: nameSchema,
+  emailLocalPart: cashierEmailLocalPartSchema,
+  emailSuffix: emailSuffixSchema,
   password: optionalPasswordSchema,
   cashierLinkSlug: slugSchema,
   isActive: z.boolean().optional(),
@@ -33,4 +54,6 @@ export const cashiersQuerySchema = z.object({
 
 export type CreateCashierInput = z.infer<typeof createCashierSchema>;
 export type UpdateCashierInput = z.infer<typeof updateCashierSchema>;
+export type CreateCashierFormValues = z.infer<typeof createCashierFormSchema>;
+export type UpdateCashierFormValues = z.infer<typeof updateCashierFormSchema>;
 export type CashiersQueryInput = z.infer<typeof cashiersQuerySchema>;

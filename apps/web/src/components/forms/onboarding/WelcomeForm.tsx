@@ -3,6 +3,7 @@
 import { BusinessStep } from "@/components/forms/onboarding/steps/BusinessStep";
 import { CashierStep } from "@/components/forms/onboarding/steps/CashierStep";
 import { ReviewStep } from "@/components/forms/onboarding/steps/ReviewStep";
+import { DEFAULT_EMAIL_DOMAIN_SUFFIX } from "@/lib/constants/email-domains";
 import { useCurrentBusiness } from "@/hooks/business/useCurrentBusiness";
 import { useManageCashier } from "@/hooks/cashier/useManageCashier";
 import useOnboarding from "@/hooks/onboarding/useOnboarding";
@@ -11,6 +12,7 @@ import {
   cashierStepSchema,
   type WelcomeFormValues,
 } from "@/lib/schemas/onboarding";
+import { buildCashierEmail } from "@/lib/utils/cashier-email";
 import { getErrorMessageFromResponse } from "@/lib/utils/error-handler";
 import { generateSlug } from "@/lib/utils/slug";
 import {
@@ -46,6 +48,7 @@ export function WelcomeForm({
         const businessData = {
           businessName: values.businessName,
           businessSlug: values.businessSlug,
+          website: values.website,
           defaultPointsName: values.defaultPointsName,
           defaultCurrencySymbol: values.defaultCurrencySymbol,
           defaultCurrencyCode: values.defaultCurrencyCode,
@@ -72,19 +75,25 @@ export function WelcomeForm({
 
           if (
             values.createCashier &&
-            values.cashierEmail &&
+            values.cashierEmailLocalPart &&
+            values.cashierEmailSuffix &&
             values.cashierPassword &&
             values.cashierLinkSlug
           ) {
             try {
+              const cashierEmail = buildCashierEmail(
+                values.cashierEmailLocalPart,
+                values.businessSlug,
+                values.cashierEmailSuffix,
+              );
               await createCashier.mutateAsync({
                 name: values.cashierName || "Cashier",
-                email: values.cashierEmail,
+                email: cashierEmail,
                 password: values.cashierPassword,
                 cashierLinkSlug: values.cashierLinkSlug,
               });
               const payload = {
-                email: values.cashierEmail,
+                email: cashierEmail,
                 password: values.cashierPassword,
               };
               const blob = new Blob([JSON.stringify(payload, null, 2)], {
@@ -93,7 +102,7 @@ export function WelcomeForm({
               const url = URL.createObjectURL(blob);
               const a = document.createElement("a");
               a.href = url;
-              a.download = `cashier-credentials-${values.cashierEmail.replace(/@.*/, "")}.json`;
+              a.download = `cashier-credentials-${values.cashierEmailLocalPart}.json`;
               a.click();
               URL.revokeObjectURL(url);
             } catch (cashierError) {
@@ -151,6 +160,7 @@ export function WelcomeForm({
           "businessName",
           "businessSlug",
           "businessSlugAvailable",
+          "website",
           "defaultPointsName",
           "defaultCurrencySymbol",
           "defaultCurrencyCode",
@@ -175,7 +185,8 @@ export function WelcomeForm({
         fields: [
           "createCashier",
           "cashierName",
-          "cashierEmail",
+          "cashierEmailLocalPart",
+          "cashierEmailSuffix",
           "cashierPassword",
           "cashierLinkSlug",
         ],
@@ -203,12 +214,14 @@ export function WelcomeForm({
     businessName: "",
     businessSlug: "",
     businessSlugAvailable: false,
+    website: "",
     defaultPointsName: "Points",
     defaultCurrencySymbol: "₹",
     defaultCurrencyCode: "INR",
     createCashier: false,
     cashierName: "",
-    cashierEmail: "",
+    cashierEmailLocalPart: "",
+    cashierEmailSuffix: DEFAULT_EMAIL_DOMAIN_SUFFIX,
     cashierPassword: "",
     cashierLinkSlug: "",
   };
