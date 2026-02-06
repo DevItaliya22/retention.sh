@@ -1,11 +1,21 @@
 "use client";
 
+import { buildCashierEmail } from "@/lib/utils/cashier-email";
 import type { WelcomeFormValues } from "@/lib/schemas/onboarding";
 import { useFormContext } from "@reelo/ui/components";
 
 export function ReviewStep() {
   const form = useFormContext<WelcomeFormValues>();
   const values = form.getValues();
+
+  const cashierEmail =
+    values.cashierEmailLocalPart && values.cashierEmailSuffix
+      ? buildCashierEmail(
+          values.cashierEmailLocalPart,
+          values.businessSlug,
+          values.cashierEmailSuffix,
+        )
+      : "";
 
   return (
     <div className="space-y-6">
@@ -39,6 +49,12 @@ export function ReviewStep() {
             <p className="text-muted-foreground">Points Name</p>
             <p className="font-medium">{values.defaultPointsName}</p>
           </div>
+          {values.website && (
+            <div>
+              <p className="text-muted-foreground">Website</p>
+              <p className="font-medium">{values.website}</p>
+            </div>
+          )}
         </div>
 
         {values.createCashier && (
@@ -54,7 +70,7 @@ export function ReviewStep() {
                 </div>
                 <div>
                   <p className="text-muted-foreground">Cashier Email</p>
-                  <p className="font-medium">{values.cashierEmail}</p>
+                  <p className="font-medium">{cashierEmail}</p>
                 </div>
               </div>
             </div>

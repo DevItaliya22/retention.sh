@@ -3,6 +3,7 @@ import {
   type WelcomeFormValues,
   welcomeFormSchema,
 } from "@/lib/schemas/onboarding";
+import { buildCashierEmail } from "@/lib/utils/cashier-email";
 import {
   sanitizeErrorMessage,
   validateSchema,
@@ -45,6 +46,7 @@ export const POST = withAdminAuthOptionalBusiness(
           data: {
             name: validatedData.businessName,
             slug: validatedData.businessSlug,
+            website: validatedData.website || null,
             defaultPointsName: validatedData.defaultPointsName || "Points",
             defaultCurrencySymbol: validatedData.defaultCurrencySymbol || "₹",
             defaultCurrencyCode: validatedData.defaultCurrencyCode || "INR",
@@ -71,10 +73,17 @@ export const POST = withAdminAuthOptionalBusiness(
 
         if (
           validatedData.createCashier &&
-          validatedData.cashierEmail &&
+          validatedData.cashierEmailLocalPart &&
+          validatedData.cashierEmailSuffix &&
           validatedData.cashierPassword &&
           validatedData.cashierLinkSlug
         ) {
+          const cashierEmail = buildCashierEmail(
+            validatedData.cashierEmailLocalPart,
+            validatedData.businessSlug,
+            validatedData.cashierEmailSuffix,
+          );
+
           const existingCashierSlug = await tx.cashier.findFirst({
             where: {
               cashierLinkSlug: validatedData.cashierLinkSlug,
@@ -89,7 +98,7 @@ export const POST = withAdminAuthOptionalBusiness(
           const existingCashierEmail = await tx.cashier.findFirst({
             where: {
               businessId: business.id,
-              email: validatedData.cashierEmail,
+              email: cashierEmail,
             },
           });
 
@@ -115,7 +124,7 @@ export const POST = withAdminAuthOptionalBusiness(
               userId: cashierUser.id,
               businessId: business.id,
               cashierLinkSlug: validatedData.cashierLinkSlug,
-              email: validatedData.cashierEmail,
+              email: cashierEmail,
               password: cashierPasswordHash,
             },
           });

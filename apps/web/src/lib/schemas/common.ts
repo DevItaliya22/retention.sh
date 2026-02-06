@@ -80,7 +80,8 @@ export const urlSchema = z
   .max(2048, "URL is too long (max 2048 characters)")
   .url("Invalid URL format")
   .optional()
-  .nullable();
+  .nullable()
+  .or(z.literal(""));
 
 export const textSchema = (maxLength: number = 1000) =>
   z
@@ -88,3 +89,18 @@ export const textSchema = (maxLength: number = 1000) =>
     .max(maxLength, `Text is too long (max ${maxLength} characters)`)
     .optional()
     .nullable();
+
+export const cashierEmailLocalPartSchema = z
+  .string()
+  .min(1, "Email is required")
+  .max(64, "Email local part is too long (max 64 characters)")
+  .regex(
+    /^[a-zA-Z0-9._%+-]+$/,
+    "Only letters, numbers, dots, underscores, percent, plus, and hyphens are allowed",
+  )
+  .trim();
+
+export const emailSuffixSchema = z
+  .string()
+  .min(1, "Domain suffix is required")
+  .max(20, "Domain suffix is too long");

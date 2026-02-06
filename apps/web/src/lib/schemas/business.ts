@@ -11,6 +11,7 @@ import {
 
 export const updateBusinessSchema = z.object({
   name: businessNameSchema.optional(),
+  website: urlSchema,
   defaultPointsName: pointsNameSchema.optional(),
   defaultCurrencySymbol: currencySymbolSchema.optional(),
   defaultCurrencyCode: currencyCodeSchema.optional(),

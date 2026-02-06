@@ -1,7 +1,8 @@
 model Business {
-  id   String @id @default(uuid())
-  name String
-  slug String @unique
+  id      String  @id @default(uuid())
+  name    String
+  slug    String  @unique
+  website String?
 
   defaultPointsName       String    @default("Points")
   defaultCurrencySymbol   String    @default("₹")

@@ -79,7 +79,7 @@ export function SkuSettingPageClient() {
         ) : undefined
       }
     >
-      <ScaffoldContainer size="full">
+      <ScaffoldContainer className="px-6">
         <ScaffoldSection isFullWidth className="pt-0!">
           <Tabs value={activeTab} className="w-full">
             <div className="flex items-center justify-between gap-4">

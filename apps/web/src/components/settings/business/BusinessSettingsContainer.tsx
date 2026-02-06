@@ -55,6 +55,17 @@ function SettingsSkeleton() {
                   </p>
                 </div>
               </div>
+              <div className="flex flex-col gap-2 md:grid md:grid-cols-12">
+                <div className="col-span-4 flex flex-col gap-2">
+                  <label className="text-sm">Website</label>
+                </div>
+                <div className="col-span-8 flex flex-col gap-1">
+                  <Skeleton className="h-9 w-full" />
+                  <p className="text-foreground-lighter text-xs">
+                    Your business website URL (optional).
+                  </p>
+                </div>
+              </div>
             </CardContent>
             <CardFooter className="flex items-center justify-end space-x-2 px-6 py-2">
               <Skeleton className="h-9 w-32" />

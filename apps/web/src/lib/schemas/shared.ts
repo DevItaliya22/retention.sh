@@ -1,9 +1,10 @@
 import { z } from "zod";
 import {
   businessNameSchema,
+  cashierEmailLocalPartSchema,
   currencyCodeSchema,
   currencySymbolSchema,
-  emailSchema,
+  emailSuffixSchema,
   nameSchema,
   pointsNameSchema,
   slugSchema,
@@ -20,10 +21,14 @@ export const baseBusinessSchema = {
   businessSlugAvailable: z.boolean().optional(),
   logo: urlSchema,
   themeColor: themeColorSchema,
+  website: urlSchema,
 };
 
 export const baseCashierSchema = {
   cashierName: nameSchema.optional().or(z.literal("")),
-  cashierEmail: emailSchema.optional().or(z.literal("")),
+  cashierEmailLocalPart: cashierEmailLocalPartSchema
+    .optional()
+    .or(z.literal("")),
+  cashierEmailSuffix: emailSuffixSchema.optional().or(z.literal("")),
   cashierLinkSlug: slugSchema.optional().or(z.literal("")),
 };
