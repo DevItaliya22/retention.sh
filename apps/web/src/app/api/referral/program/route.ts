@@ -4,6 +4,10 @@ import {
   updateReferralProgramSchema,
 } from "@/lib/schemas/referral";
 import {
+  type IsServiceEnabled,
+  setServiceEnabled,
+} from "@/lib/utils/service-enabled";
+import {
   sanitizeErrorMessage,
   validateSchema,
 } from "@/lib/utils/error-handler";
@@ -171,10 +175,18 @@ export const POST = withAdminAuth(async (request, context) => {
       ),
     ]);
 
-    // Update business referralEnabled flag
+    const business = await db.business.findUnique({
+      where: { id: businessId },
+      select: { isServiceEnabled: true },
+    });
+    const newServiceEnabled = setServiceEnabled(
+      (business?.isServiceEnabled ?? null) as IsServiceEnabled | null,
+      "referral",
+      true,
+    );
     await db.business.update({
       where: { id: businessId },
-      data: { referralEnabled: true },
+      data: { isServiceEnabled: newServiceEnabled },
     });
 
     // Refetch with terms included

@@ -86,9 +86,9 @@ export type UpdateReferralProgramInput = z.infer<
   typeof updateReferralProgramSchema
 >;
 
-// Claim referral schema
+// Claim referral schema (referralSlug is UUID from BusinessCustomer.referralSlug)
 export const claimReferralSchema = z.object({
-  referralSlug: z.string().min(1, "Referral slug is required"),
+  referralSlug: z.string().uuid("Invalid referral link"),
   phoneNumber: z
     .string()
     .min(1, "Phone number is required")

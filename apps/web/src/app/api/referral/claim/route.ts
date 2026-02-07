@@ -1,5 +1,9 @@
 import { APP_CONSTANTS } from "@/lib/constants/app";
 import {
+  type IsServiceEnabled,
+  isServiceEnabled,
+} from "@/lib/utils/service-enabled";
+import {
   sanitizeErrorMessage,
   validateSchema,
 } from "@/lib/utils/error-handler";
@@ -47,7 +51,12 @@ export async function POST(request: NextRequest) {
     const business = referrer.business;
 
     // Check if referral is enabled on business and program (reject immediately when off)
-    if (!business.referralEnabled) {
+    if (
+      !isServiceEnabled(
+        business.isServiceEnabled as IsServiceEnabled | null,
+        "referral",
+      )
+    ) {
       return NextResponse.json(
         { success: false, error: "Referral is not enabled for this business" },
         { status: 403 },
@@ -153,13 +162,19 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // Award points when benefit type is LOYALTY_BONUS (no need for business.loyalty row)
+      // Award points when benefit type is LOYALTY_BONUS (only when loyalty is enabled)
       const referralProgram = business.referralProgram!;
+      const loyaltyEnabled = isServiceEnabled(
+        business.isServiceEnabled as IsServiceEnabled | null,
+        "loyalty",
+      );
       const referrerPoints =
+        loyaltyEnabled &&
         referralProgram.existingCustomerBenefitType === "LOYALTY_BONUS"
           ? referralProgram.existingCustomerBenefitValue
           : 0;
       const referredPoints =
+        loyaltyEnabled &&
         referralProgram.newCustomerBenefitType === "LOYALTY_BONUS"
           ? referralProgram.newCustomerBenefitValue
           : 0;

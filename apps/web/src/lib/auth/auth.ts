@@ -16,6 +16,7 @@ import { ADMIN_COOKIE_PREFIX } from "../utils/cookie";
  *
  * API endpoint: /api/auth/admin/*
  */
+
 export const auth = betterAuth({
   basePath: "/api/auth/admin",
   database: prismaAdapter(db, {

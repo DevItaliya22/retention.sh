@@ -1,5 +1,9 @@
 import { withCashierAuth } from "@/lib/auth/middleware";
 import {
+  type IsServiceEnabled,
+  isServiceEnabled,
+} from "@/lib/utils/service-enabled";
+import {
   calculateEarnedPoints,
   calculateRedeemablePoints,
   expireBucketsForCustomer,
@@ -37,6 +41,27 @@ export const GET = withCashierAuth(async (request: NextRequest, context) => {
     }
 
     const formattedPhone = formatPhoneNumber(phone);
+
+    const business = await db.business.findUnique({
+      where: { id: businessId },
+      select: { isServiceEnabled: true },
+    });
+    if (
+      !isServiceEnabled(
+        business?.isServiceEnabled as IsServiceEnabled | null | undefined,
+        "loyalty",
+      )
+    ) {
+      return NextResponse.json({
+        preview: {
+          pointsBalance: 0,
+          redeemablePoints: 0,
+          earnablePoints: 0,
+          expiringBuckets: [],
+          cashbackInFinalAmount: false,
+        },
+      });
+    }
 
     const result = await db.$transaction(async (tx) => {
       const settings = await getBusinessLoyaltySettings(tx, businessId);

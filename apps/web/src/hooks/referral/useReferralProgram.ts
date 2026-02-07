@@ -11,6 +11,8 @@ import {
   CreateReferralProgramInput,
   UpdateReferralProgramInput,
 } from "@/lib/schemas/referral";
+import type { IsServiceEnabled } from "@/lib/utils/service-enabled";
+import { isServiceEnabled } from "@/lib/utils/service-enabled";
 
 export interface ReferralStatRow {
   id: string;
@@ -20,7 +22,7 @@ export interface ReferralStatRow {
 }
 
 export interface ReferralStatsResponse {
-  referralEnabled: boolean;
+  isServiceEnabled: IsServiceEnabled | null;
   items: ReferralStatRow[];
   total: number;
   page: number;

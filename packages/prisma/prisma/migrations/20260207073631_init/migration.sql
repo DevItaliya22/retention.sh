@@ -47,7 +47,7 @@ CREATE TYPE "AutoCampaignTrigger" AS ENUM ('BIRTHDAY', 'ANNIVERSARY', 'FIRST_PUR
 CREATE TYPE "TransactionType" AS ENUM ('EARNED', 'REDEEMED', 'REFUNDED', 'GIFTED', 'ADJUSTMENT', 'EXPIRED');
 
 -- CreateEnum
-CREATE TYPE "TransactionSource" AS ENUM ('BILL', 'FEEDBACK', 'SCRATCH_CARD', 'CAMPAIGN', 'REFERRAL', 'MANUAL_ADJUSTMENT');
+CREATE TYPE "TransactionSource" AS ENUM ('BILL', 'FEEDBACK', 'SCRATCH_CARD', 'CAMPAIGN', 'REFERRAL', 'REGISTRATION', 'MANUAL_ADJUSTMENT');
 
 -- CreateEnum
 CREATE TYPE "WalletType" AS ENUM ('POINTS', 'STORE_CREDIT');
@@ -60,8 +60,13 @@ CREATE TABLE "bill" (
     "id" TEXT NOT NULL,
     "billNumber" TEXT NOT NULL,
     "amount" DOUBLE PRECISION,
+    "notes" TEXT,
+    "finalAmount" DOUBLE PRECISION,
+    "loyaltyPointsEarned" INTEGER NOT NULL DEFAULT 0,
+    "loyaltyPointsRedeemed" INTEGER NOT NULL DEFAULT 0,
     "businessId" TEXT NOT NULL,
     "customerId" TEXT NOT NULL,
+    "cashierId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -105,10 +110,12 @@ CREATE TABLE "business" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "slug" TEXT NOT NULL,
+    "website" TEXT,
     "defaultPointsName" TEXT NOT NULL DEFAULT 'Points',
     "defaultCurrencySymbol" TEXT NOT NULL DEFAULT '₹',
     "defaultCurrencyCode" TEXT NOT NULL DEFAULT 'INR',
-    "referralEnabled" BOOLEAN NOT NULL DEFAULT false,
+    "registrationBonusPoints" INTEGER NOT NULL DEFAULT 0,
+    "isServiceEnabled" JSONB,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -266,6 +273,7 @@ CREATE TABLE "loyalty" (
     "businessId" TEXT NOT NULL,
     "brandingId" TEXT,
     "earningPercentage" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "earnPointsOnPaidAmountOnly" BOOLEAN NOT NULL DEFAULT true,
     "cashbackInFinalAmount" BOOLEAN NOT NULL DEFAULT false,
     "cashbackBranding" TEXT,
     "minPurchaseForEarning" DOUBLE PRECISION NOT NULL DEFAULT 0,
@@ -305,9 +313,41 @@ CREATE TABLE "points_transaction" (
     "amount" INTEGER NOT NULL,
     "type" "TransactionType" NOT NULL,
     "source" "TransactionSource" NOT NULL,
+    "sourceId" TEXT,
+    "billId" TEXT,
+    "expiresAt" TIMESTAMP(3),
+    "metadata" JSONB,
+    "balanceAfter" INTEGER NOT NULL DEFAULT 0,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "points_transaction_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "points_bucket" (
+    "id" TEXT NOT NULL,
+    "businessId" TEXT NOT NULL,
+    "customerId" TEXT NOT NULL,
+    "earnedTransactionId" TEXT NOT NULL,
+    "originalAmount" INTEGER NOT NULL,
+    "remainingAmount" INTEGER NOT NULL,
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "status" TEXT NOT NULL DEFAULT 'ACTIVE',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "points_bucket_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "points_redemption_allocation" (
+    "id" TEXT NOT NULL,
+    "redeemTransactionId" TEXT NOT NULL,
+    "bucketId" TEXT NOT NULL,
+    "amount" INTEGER NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "points_redemption_allocation_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -566,8 +606,10 @@ CREATE TABLE "admin" (
 CREATE TABLE "cashier" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
+    "email" TEXT NOT NULL,
     "cashierLinkSlug" TEXT NOT NULL,
     "password" TEXT NOT NULL,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
     "businessId" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -626,6 +668,9 @@ CREATE INDEX "bill_businessId_idx" ON "bill"("businessId");
 
 -- CreateIndex
 CREATE INDEX "bill_customerId_idx" ON "bill"("customerId");
+
+-- CreateIndex
+CREATE INDEX "bill_cashierId_idx" ON "bill"("cashierId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "bill_businessId_billNumber_key" ON "bill"("businessId", "billNumber");
@@ -724,10 +769,34 @@ CREATE INDEX "loyalty_tier_loyaltyId_idx" ON "loyalty_tier"("loyaltyId");
 CREATE INDEX "points_transaction_businessId_customerId_idx" ON "points_transaction"("businessId", "customerId");
 
 -- CreateIndex
+CREATE INDEX "points_transaction_businessId_customerId_createdAt_idx" ON "points_transaction"("businessId", "customerId", "createdAt");
+
+-- CreateIndex
 CREATE INDEX "points_transaction_source_idx" ON "points_transaction"("source");
 
 -- CreateIndex
+CREATE INDEX "points_transaction_source_sourceId_idx" ON "points_transaction"("source", "sourceId");
+
+-- CreateIndex
+CREATE INDEX "points_transaction_billId_idx" ON "points_transaction"("billId");
+
+-- CreateIndex
 CREATE INDEX "points_transaction_type_idx" ON "points_transaction"("type");
+
+-- CreateIndex
+CREATE INDEX "points_transaction_expiresAt_idx" ON "points_transaction"("expiresAt");
+
+-- CreateIndex
+CREATE INDEX "points_bucket_businessId_customerId_expiresAt_idx" ON "points_bucket"("businessId", "customerId", "expiresAt");
+
+-- CreateIndex
+CREATE INDEX "points_bucket_remainingAmount_idx" ON "points_bucket"("remainingAmount");
+
+-- CreateIndex
+CREATE INDEX "points_redemption_allocation_redeemTransactionId_idx" ON "points_redemption_allocation"("redeemTransactionId");
+
+-- CreateIndex
+CREATE INDEX "points_redemption_allocation_bucketId_idx" ON "points_redemption_allocation"("bucketId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "membership_brandingId_key" ON "membership"("brandingId");
@@ -877,6 +946,9 @@ CREATE INDEX "cashier_businessId_idx" ON "cashier"("businessId");
 CREATE UNIQUE INDEX "cashier_cashierLinkSlug_businessId_key" ON "cashier"("cashierLinkSlug", "businessId");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "cashier_businessId_email_key" ON "cashier"("businessId", "email");
+
+-- CreateIndex
 CREATE INDEX "session_userId_idx" ON "session"("userId");
 
 -- CreateIndex
@@ -890,6 +962,9 @@ CREATE INDEX "verification_identifier_idx" ON "verification"("identifier");
 
 -- AddForeignKey
 ALTER TABLE "bill" ADD CONSTRAINT "bill_businessId_customerId_fkey" FOREIGN KEY ("businessId", "customerId") REFERENCES "business_customer"("businessId", "customerId") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "bill" ADD CONSTRAINT "bill_cashierId_fkey" FOREIGN KEY ("cashierId") REFERENCES "cashier"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "bill_line_item" ADD CONSTRAINT "bill_line_item_billId_fkey" FOREIGN KEY ("billId") REFERENCES "bill"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -956,6 +1031,21 @@ ALTER TABLE "loyalty_tier" ADD CONSTRAINT "loyalty_tier_loyaltyId_fkey" FOREIGN 
 
 -- AddForeignKey
 ALTER TABLE "points_transaction" ADD CONSTRAINT "points_transaction_businessId_customerId_fkey" FOREIGN KEY ("businessId", "customerId") REFERENCES "business_customer"("businessId", "customerId") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "points_transaction" ADD CONSTRAINT "points_transaction_billId_fkey" FOREIGN KEY ("billId") REFERENCES "bill"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "points_bucket" ADD CONSTRAINT "points_bucket_businessId_customerId_fkey" FOREIGN KEY ("businessId", "customerId") REFERENCES "business_customer"("businessId", "customerId") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "points_bucket" ADD CONSTRAINT "points_bucket_earnedTransactionId_fkey" FOREIGN KEY ("earnedTransactionId") REFERENCES "points_transaction"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "points_redemption_allocation" ADD CONSTRAINT "points_redemption_allocation_redeemTransactionId_fkey" FOREIGN KEY ("redeemTransactionId") REFERENCES "points_transaction"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "points_redemption_allocation" ADD CONSTRAINT "points_redemption_allocation_bucketId_fkey" FOREIGN KEY ("bucketId") REFERENCES "points_bucket"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "membership" ADD CONSTRAINT "membership_businessId_fkey" FOREIGN KEY ("businessId") REFERENCES "business"("id") ON DELETE CASCADE ON UPDATE CASCADE;

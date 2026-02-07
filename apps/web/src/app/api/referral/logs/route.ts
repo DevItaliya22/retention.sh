@@ -1,4 +1,5 @@
 import { withAdminAuth } from "@/lib/auth/middleware";
+import { isServiceEnabled } from "@/lib/utils/service-enabled";
 import { referralQuerySchema } from "@/lib/schemas/referral";
 import {
   sanitizeErrorMessage,
@@ -39,7 +40,7 @@ async function getSlugByPhone(
 
 export const GET = withAdminAuth(async (request: NextRequest, context) => {
   try {
-    if (!context.business.referralEnabled) {
+    if (!isServiceEnabled(context.business.isServiceEnabled, "referral")) {
       return NextResponse.json(
         {
           items: [],

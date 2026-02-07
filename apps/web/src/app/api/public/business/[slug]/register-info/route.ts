@@ -1,3 +1,9 @@
+import { slugParamSchema } from "@/lib/schemas/common";
+import {
+  type IsServiceEnabled,
+  isServiceEnabled,
+} from "@/lib/utils/service-enabled";
+import { validateSchema } from "@/lib/utils/error-handler";
 import { db } from "@reelo/db";
 import { NextResponse } from "next/server";
 
@@ -10,19 +16,26 @@ export async function GET(
   { params }: { params: Promise<{ slug: string }> },
 ) {
   try {
-    const { slug } = await params;
-    if (!slug) {
-      return NextResponse.json({
-        registrationBonusPoints: 0,
-        pointsName: "Points",
-      });
+    const resolved = await params;
+    const validation = validateSchema(slugParamSchema, resolved);
+    if (!validation.success) {
+      return NextResponse.json(
+        {
+          registrationBonusPoints: 0,
+          pointsName: "Points",
+          error: validation.error,
+        },
+        { status: 400 },
+      );
     }
+    const { slug } = validation.data;
 
     const business = await db.business.findUnique({
       where: { slug },
       select: {
         registrationBonusPoints: true,
         defaultPointsName: true,
+        isServiceEnabled: true,
       },
     });
 
@@ -33,8 +46,14 @@ export async function GET(
       });
     }
 
+    const loyaltyEnabled = isServiceEnabled(
+      business.isServiceEnabled as IsServiceEnabled | null | undefined,
+      "loyalty",
+    );
     return NextResponse.json({
-      registrationBonusPoints: business.registrationBonusPoints ?? 0,
+      registrationBonusPoints: loyaltyEnabled
+        ? (business.registrationBonusPoints ?? 0)
+        : 0,
       pointsName: business.defaultPointsName ?? "Points",
     });
   } catch (error) {

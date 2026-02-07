@@ -1,6 +1,7 @@
 import { db } from "@reelo/db";
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "./auth";
+import type { IsServiceEnabled } from "@/lib/utils/service-enabled";
 import {
   getCashierSessionFromHeaders,
   type CashierSessionData,
@@ -31,7 +32,7 @@ export interface AdminAuthContext {
     id: string;
     name: string;
     slug: string;
-    referralEnabled: boolean;
+    isServiceEnabled: IsServiceEnabled | null;
   };
 }
 
@@ -170,7 +171,7 @@ export function withAdminAuth<T extends Record<string, string | string[]>>(
               id: true,
               name: true,
               slug: true,
-              referralEnabled: true,
+              isServiceEnabled: true,
             },
           },
         },
@@ -183,6 +184,9 @@ export function withAdminAuth<T extends Record<string, string | string[]>>(
         );
       }
 
+      const biz = admin.business as {
+        isServiceEnabled?: IsServiceEnabled | null;
+      };
       const context: AdminAuthContext = {
         user: {
           id: session.user.id,
@@ -205,7 +209,7 @@ export function withAdminAuth<T extends Record<string, string | string[]>>(
           id: admin.business.id,
           name: admin.business.name,
           slug: admin.business.slug,
-          referralEnabled: admin.business.referralEnabled ?? false,
+          isServiceEnabled: biz.isServiceEnabled ?? null,
         },
       };
 
@@ -262,7 +266,7 @@ export function withAdminAuthOptionalBusiness<
               id: true,
               name: true,
               slug: true,
-              referralEnabled: true,
+              isServiceEnabled: true,
             },
           },
         },
@@ -294,7 +298,12 @@ export function withAdminAuthOptionalBusiness<
                 id: admin.business.id,
                 name: admin.business.name,
                 slug: admin.business.slug,
-                referralEnabled: admin.business.referralEnabled ?? false,
+                isServiceEnabled:
+                  (
+                    admin.business as {
+                      isServiceEnabled?: IsServiceEnabled | null;
+                    }
+                  ).isServiceEnabled ?? null,
               }
             : null,
       };

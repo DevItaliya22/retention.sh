@@ -1,4 +1,8 @@
 import { withCustomerAuth } from "@/lib/auth/middleware";
+import {
+  type IsServiceEnabled,
+  isServiceEnabled,
+} from "@/lib/utils/service-enabled";
 import { expireBucketsForCustomer } from "@/lib/loyalty";
 import { sanitizeErrorMessage } from "@/lib/utils/error-handler";
 import { db } from "@reelo/db";
@@ -16,6 +20,7 @@ export const GET = withCustomerAuth(async (_request, context) => {
             slug: true,
             defaultCurrencyCode: true,
             defaultCurrencySymbol: true,
+            isServiceEnabled: true,
           },
         },
       },
@@ -33,6 +38,15 @@ export const GET = withCustomerAuth(async (_request, context) => {
     }[];
 
     for (const bc of businessCustomers) {
+      if (
+        !isServiceEnabled(
+          bc.business.isServiceEnabled as IsServiceEnabled | null | undefined,
+          "loyalty",
+        )
+      ) {
+        continue;
+      }
+
       await db.$transaction(async (tx) => {
         await expireBucketsForCustomer(tx, {
           businessId: bc.businessId,

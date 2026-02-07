@@ -1,4 +1,5 @@
 import { withAdminAuth } from "@/lib/auth/middleware";
+import { isServiceEnabled } from "@/lib/utils/service-enabled";
 import { loyaltyStatsQuerySchema } from "@/lib/schemas/loyalty";
 import {
   sanitizeErrorMessage,
@@ -23,6 +24,19 @@ export interface LoyaltyStatRow {
 
 export const GET = withAdminAuth(async (request: NextRequest, context) => {
   try {
+    if (!isServiceEnabled(context.business.isServiceEnabled, "loyalty")) {
+      return NextResponse.json(
+        {
+          error: "Loyalty is not enabled. Enable it in Settings → General.",
+          items: [],
+          total: 0,
+          page: 1,
+          perPage: 10,
+        },
+        { status: 403 },
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const queryParams = Object.fromEntries(searchParams.entries());
 

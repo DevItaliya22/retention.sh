@@ -1,6 +1,7 @@
 "use client";
 
 import { fetcher } from "@/lib/fetcher";
+import type { IsServiceEnabled } from "@/lib/utils/service-enabled";
 import { useQuery } from "@tanstack/react-query";
 
 export interface CustomerBillLineItemSku {
@@ -47,7 +48,7 @@ export interface CustomerDetail {
   updatedAt: string;
   businessSlug?: string;
   referralSlug?: string;
-  referralEnabled?: boolean;
+  isServiceEnabled?: IsServiceEnabled | null;
   referredBy?: { name: string; slugId: string } | null;
   referrals?: { name: string; slugId: string }[];
   referralLogs?: ReferralLogSummary[];
