@@ -1,7 +1,6 @@
 "use client";
 
 import { useSessionContext } from "@/hooks/auth/useSessionContext";
-import { motion } from "framer-motion";
 import {
   Collapsible,
   CollapsibleContent,
@@ -22,14 +21,13 @@ import {
   SidebarHeader as UISidebarHeader,
   useSidebar,
 } from "@reelo/ui/components/sidebar";
+import { motion } from "framer-motion";
 import {
   Award,
   ChevronRight,
   FileText,
   Gift,
   Inbox,
-  Layers,
-  Package,
   Settings,
   Users,
 } from "lucide-react";

@@ -116,7 +116,7 @@ const PageLayout = ({
                 <NavMenu
                   className={cn(
                     size === "full" && "border-none",
-                    "min-w-full w-max relative overflow-visible [&>ul]:gap-2 [&>ul]:flex-nowrap [&>ul>li]:shrink-0",
+                    "relative w-max min-w-full overflow-visible [&>ul]:flex-nowrap [&>ul]:gap-2 [&>ul>li]:shrink-0",
                   )}
                 >
                   {navigationItems.map((item) => {
@@ -144,7 +144,7 @@ const PageLayout = ({
                                 mass: 0.6,
                               }}
                               className={cn(
-                                "pointer-events-none absolute inset-0 -bottom-px -z-10 rounded-t-xl border border-primary/30 bg-primary/10 shadow-sm",
+                                "border-primary/30 bg-primary/10 pointer-events-none absolute inset-0 -bottom-px -z-10 rounded-t-xl border shadow-sm",
                               )}
                             />
                           )}
@@ -153,7 +153,7 @@ const PageLayout = ({
                               href={item.href}
                               className={cn(
                                 "relative z-10 inline-flex items-center gap-2 rounded-t-xl rounded-b-none px-3 py-2 text-sm font-medium transition-colors",
-                                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                                "focus-visible:ring-primary/40 focus-visible:ring-offset-background focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
                                 isActive
                                   ? "text-primary"
                                   : "text-muted-foreground hover:text-foreground",

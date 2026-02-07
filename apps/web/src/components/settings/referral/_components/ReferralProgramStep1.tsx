@@ -1,7 +1,7 @@
 "use client";
 
+import type { ReferralProgramFormValues } from "@/lib/schemas/referral-form";
 import {
-  Button,
   FormControl,
   FormField,
   FormItem,
@@ -14,11 +14,8 @@ import {
   SelectTrigger,
   SelectValue,
   Switch,
-  Textarea,
   useFormContext,
 } from "@reelo/ui/components";
-import { Plus, Trash2 } from "lucide-react";
-import type { ReferralProgramFormValues } from "@/lib/schemas/referral-form";
 
 export function ReferralProgramStep1() {
   const form = useFormContext<ReferralProgramFormValues>();
@@ -53,7 +50,7 @@ export function ReferralProgramStep1() {
             </FormLabel>
             <Select onValueChange={field.onChange} value={field.value}>
               <FormControl>
-                <SelectTrigger className="w-full border-0 border-b rounded-none bg-transparent dark:bg-transparent dark:hover:bg-transparent px-0 py-3 shadow-none focus-visible:ring-0">
+                <SelectTrigger className="w-full rounded-none border-0 border-b bg-transparent px-0 py-3 shadow-none focus-visible:ring-0 dark:bg-transparent dark:hover:bg-transparent">
                   <SelectValue placeholder="Select benefit type" />
                 </SelectTrigger>
               </FormControl>

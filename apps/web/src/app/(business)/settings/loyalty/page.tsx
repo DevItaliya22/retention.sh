@@ -1,5 +1,5 @@
-import { LoyaltySettingsPageClient } from "./_components/LoyaltySettingsPageClient";
 import { LoyaltySettingsSkeleton } from "@/components/settings/loyalty/LoyaltySettingsSkeleton";
+import { LoyaltySettingsPageClient } from "./_components/LoyaltySettingsPageClient";
 
 import { generateRouteMetadata } from "@/lib/utils/route-metadata";
 import type { Metadata } from "next";

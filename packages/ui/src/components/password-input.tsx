@@ -1,8 +1,8 @@
 "use client";
 
-import * as React from "react";
-import { Eye, EyeOff } from "lucide-react";
 import { cn } from "@reelo/ui/lib/utils";
+import { Eye, EyeOff } from "lucide-react";
+import * as React from "react";
 import { Button } from "./button";
 import { Input } from "./input";
 

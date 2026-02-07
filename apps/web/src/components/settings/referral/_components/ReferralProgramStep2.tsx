@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReferralProgramFormValues } from "@/lib/schemas/referral-form";
 import {
   Button,
   FormControl,
@@ -17,7 +18,6 @@ import {
   useFormContext,
 } from "@reelo/ui/components";
 import { Plus, Trash2 } from "lucide-react";
-import type { ReferralProgramFormValues } from "@/lib/schemas/referral-form";
 
 export function ReferralProgramStep2() {
   const form = useFormContext<ReferralProgramFormValues>();
@@ -58,7 +58,7 @@ export function ReferralProgramStep2() {
             </FormLabel>
             <Select onValueChange={field.onChange} value={field.value}>
               <FormControl>
-                <SelectTrigger className="w-full border-0 border-b rounded-none bg-transparent dark:bg-transparent dark:hover:bg-transparent px-0 py-3 shadow-none focus-visible:ring-0">
+                <SelectTrigger className="w-full rounded-none border-0 border-b bg-transparent px-0 py-3 shadow-none focus-visible:ring-0 dark:bg-transparent dark:hover:bg-transparent">
                   <SelectValue placeholder="Select benefit type" />
                 </SelectTrigger>
               </FormControl>
@@ -128,7 +128,7 @@ export function ReferralProgramStep2() {
         <FormLabel>Terms for New Customers</FormLabel>
         {(termsNew.length === 0 ? [] : termsNew).map(
           (_: string, index: number) => (
-            <div key={index} className="flex gap-2 items-start">
+            <div key={index} className="flex items-start gap-2">
               <FormField
                 control={form.control}
                 name={`termsAndConditionsNewCustomer.${index}`}
@@ -153,7 +153,7 @@ export function ReferralProgramStep2() {
                 onClick={() =>
                   removeTerm("termsAndConditionsNewCustomer", index)
                 }
-                className="shrink-0 mt-2"
+                className="mt-2 shrink-0"
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
@@ -175,7 +175,7 @@ export function ReferralProgramStep2() {
         <FormLabel>Terms for Existing Customers</FormLabel>
         {(termsExisting.length === 0 ? [] : termsExisting).map(
           (_: string, index: number) => (
-            <div key={index} className="flex gap-2 items-start">
+            <div key={index} className="flex items-start gap-2">
               <FormField
                 control={form.control}
                 name={`termsAndConditionsExistingCustomer.${index}`}
@@ -200,7 +200,7 @@ export function ReferralProgramStep2() {
                 onClick={() =>
                   removeTerm("termsAndConditionsExistingCustomer", index)
                 }
-                className="shrink-0 mt-2"
+                className="mt-2 shrink-0"
               >
                 <Trash2 className="h-4 w-4" />
               </Button>

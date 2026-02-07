@@ -73,9 +73,9 @@ export function ReferralLandingPageClient({
   return (
     <div className="flex min-h-screen items-center justify-center p-4">
       <Card className="w-full max-w-2xl">
-        <CardContent className="p-6 space-y-6">
+        <CardContent className="space-y-6 p-6">
           {referralProgram.branding?.header && (
-            <h1 className="text-3xl font-bold text-center">
+            <h1 className="text-center text-3xl font-bold">
               {referralProgram.branding.header}
             </h1>
           )}
@@ -87,7 +87,7 @@ export function ReferralLandingPageClient({
 
           <div className="space-y-4">
             <div>
-              <h2 className="text-xl font-semibold mb-2">What You Get</h2>
+              <h2 className="mb-2 text-xl font-semibold">What You Get</h2>
               <p className="text-muted-foreground">
                 {referralProgram.existingCustomerBenefitValue}{" "}
                 {referralProgram.existingCustomerBenefitType === "LOYALTY_BONUS"
@@ -100,7 +100,7 @@ export function ReferralLandingPageClient({
             </div>
 
             <div>
-              <h2 className="text-xl font-semibold mb-2">
+              <h2 className="mb-2 text-xl font-semibold">
                 What Your Friend Gets
               </h2>
               <p className="text-muted-foreground">
@@ -119,7 +119,7 @@ export function ReferralLandingPageClient({
               <div className="space-y-4">
                 {referralProgram.informationSections.map((section, index) => (
                   <div key={index}>
-                    <h3 className="font-semibold mb-1">{section.title}</h3>
+                    <h3 className="mb-1 font-semibold">{section.title}</h3>
                     <p className="text-muted-foreground text-sm">
                       {section.content}
                     </p>

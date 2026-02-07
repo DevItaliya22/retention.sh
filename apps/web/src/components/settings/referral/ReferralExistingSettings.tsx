@@ -368,7 +368,7 @@ function InformationSectionsCard({
       </CardHeader>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
-          <CardContent className="border-b px-6 py-4 space-y-4">
+          <CardContent className="space-y-4 border-b px-6 py-4">
             {watchSections.map((_, index) => (
               <div key={index} className="flex gap-2 rounded-lg border p-4">
                 <div className="flex-1 space-y-2">
@@ -501,9 +501,9 @@ function TermsCard({
       </CardHeader>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
-          <CardContent className="border-b px-6 py-4 space-y-3">
+          <CardContent className="space-y-3 border-b px-6 py-4">
             {watchItems.map((_, index) => (
-              <div key={index} className="flex gap-2 items-start">
+              <div key={index} className="flex items-start gap-2">
                 <FormField
                   control={form.control}
                   name={`items.${index}`}
@@ -525,7 +525,7 @@ function TermsCard({
                   variant="ghost"
                   size="icon"
                   onClick={() => removePoint(index)}
-                  className="shrink-0 mt-2"
+                  className="mt-2 shrink-0"
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>

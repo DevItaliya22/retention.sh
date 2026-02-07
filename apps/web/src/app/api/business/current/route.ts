@@ -4,13 +4,13 @@ import {
 } from "@/lib/auth/middleware";
 import { updateBusinessSchema } from "@/lib/schemas/business";
 import {
-  type IsServiceEnabled,
-  mergeServiceEnabled,
-} from "@/lib/utils/service-enabled";
-import {
   sanitizeErrorMessage,
   validateSchema,
 } from "@/lib/utils/error-handler";
+import {
+  type IsServiceEnabled,
+  mergeServiceEnabled,
+} from "@/lib/utils/service-enabled";
 import { db } from "@reelo/db";
 import { NextResponse } from "next/server";
 

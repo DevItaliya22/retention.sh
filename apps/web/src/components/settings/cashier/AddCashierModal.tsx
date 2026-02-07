@@ -35,13 +35,13 @@ import { toast } from "sonner";
 import { useCurrentBusiness } from "@/hooks/business/useCurrentBusiness";
 import { useManageCashier } from "@/hooks/cashier/useManageCashier";
 import {
-  createCashierFormSchema,
-  type CreateCashierFormValues,
-} from "@/lib/schemas/cashier";
-import {
   DEFAULT_EMAIL_DOMAIN_SUFFIX,
   EMAIL_DOMAIN_SUFFIXES,
 } from "@/lib/constants/email-domains";
+import {
+  createCashierFormSchema,
+  type CreateCashierFormValues,
+} from "@/lib/schemas/cashier";
 import { buildCashierEmail } from "@/lib/utils/cashier-email";
 import { getErrorMessageFromResponse } from "@/lib/utils/error-handler";
 import { generateSlug } from "@/lib/utils/slug";

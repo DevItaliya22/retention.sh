@@ -1,5 +1,5 @@
-import { Resend } from "resend";
 import type { ReactElement } from "react";
+import { Resend } from "resend";
 
 export interface SendEmailOptions {
   /** Recipient email address(es) */

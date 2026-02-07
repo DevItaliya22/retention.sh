@@ -31,8 +31,8 @@ import * as React from "react";
 import { getSortingStateParser } from "../lib/parsers";
 import {
   ExtendedColumnSort,
-  queryKeysFromPrefix,
   QueryKeys,
+  queryKeysFromPrefix,
 } from "../types/data-table";
 import { useDebouncedCallback } from "./use-debounced-callback";
 

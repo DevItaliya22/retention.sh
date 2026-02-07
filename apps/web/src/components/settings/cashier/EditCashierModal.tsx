@@ -37,13 +37,13 @@ import { useCurrentBusiness } from "@/hooks/business/useCurrentBusiness";
 import type { Cashier } from "@/hooks/cashier/useManageCashier";
 import { useManageCashier } from "@/hooks/cashier/useManageCashier";
 import {
-  updateCashierFormSchema,
-  type UpdateCashierFormValues,
-} from "@/lib/schemas/cashier";
-import {
   DEFAULT_EMAIL_DOMAIN_SUFFIX,
   EMAIL_DOMAIN_SUFFIXES,
 } from "@/lib/constants/email-domains";
+import {
+  updateCashierFormSchema,
+  type UpdateCashierFormValues,
+} from "@/lib/schemas/cashier";
 import {
   buildCashierEmail,
   parseCashierEmail,

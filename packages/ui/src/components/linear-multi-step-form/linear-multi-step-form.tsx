@@ -16,8 +16,8 @@ export { FormNavigation } from "./form-navigation";
 export { ProgressBar } from "./progress-bar";
 export { ProgressStepper } from "./progress-stepper";
 export { StepContent } from "./step-content";
-export { StepInput } from "./step-input";
 export { StepError } from "./step-error";
+export { StepInput } from "./step-input";
 
 type StepTransitionDirection = "forward" | "backward";
 
@@ -283,7 +283,7 @@ export function LinearMultiStepForm<TValues extends FieldValues>(props: {
         {(props.navigationPosition === "footer" ||
           props.navigationPosition === undefined) &&
           NavigationElement && (
-            <div className="fixed bottom-6 right-6 z-20 sm:bottom-8 sm:right-8">
+            <div className="fixed right-6 bottom-6 z-20 sm:right-8 sm:bottom-8">
               {NavigationElement}
             </div>
           )}

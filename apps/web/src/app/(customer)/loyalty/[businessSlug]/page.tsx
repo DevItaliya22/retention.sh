@@ -22,8 +22,8 @@ import {
   TableHeader,
   TableRow,
 } from "@reelo/ui/components";
-import { Gift, Receipt } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { Gift, Receipt } from "lucide-react";
 import { useParams } from "next/navigation";
 
 interface LoyaltyDetailResponse {

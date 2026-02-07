@@ -1,8 +1,8 @@
 "use client";
 
+import { useBreadcrumbOverride } from "@/components/layouts/context/breadcrumb-override";
 import { useCustomerQuery } from "@/hooks/customers/useCustomerQuery";
 import { isServiceEnabled } from "@/lib/utils/service-enabled";
-import { useBreadcrumbOverride } from "@/components/layouts/context/breadcrumb-override";
 import {
   Avatar,
   AvatarFallback,
@@ -61,18 +61,18 @@ function DetailRow({
   return (
     <div className="flex items-start gap-3 py-3 first:pt-0 last:pb-0">
       {Icon && (
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted/60 text-muted-foreground">
+        <div className="bg-muted/60 text-muted-foreground flex size-9 shrink-0 items-center justify-center rounded-lg">
           <Icon className="size-4" />
         </div>
       )}
       <div className="min-w-0 flex-1 space-y-0.5">
-        <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+        <p className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
           {label}
         </p>
         {isLoading ? (
           <Skeleton className={cn("h-5", skeletonWidth)} />
         ) : (
-          <div className="text-sm font-medium leading-tight">{value}</div>
+          <div className="text-sm leading-tight font-medium">{value}</div>
         )}
       </div>
     </div>
@@ -97,14 +97,14 @@ export function CustomerDetailPageClient({
 
   if (isError) {
     return (
-      <div className="flex min-h-[280px] flex-col items-center justify-center rounded-xl border border-dashed bg-muted/30 px-6 py-16 text-center">
-        <div className="flex size-12 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+      <div className="bg-muted/30 flex min-h-[280px] flex-col items-center justify-center rounded-xl border border-dashed px-6 py-16 text-center">
+        <div className="bg-destructive/10 text-destructive flex size-12 items-center justify-center rounded-full">
           <User className="size-6" />
         </div>
-        <p className="mt-4 font-medium text-foreground">
+        <p className="text-foreground mt-4 font-medium">
           Failed to load customer
         </p>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="text-muted-foreground mt-1 text-sm">
           {error?.message ?? "Please try again later"}
         </p>
       </div>
@@ -124,9 +124,9 @@ export function CustomerDetailPageClient({
   return (
     <div className="space-y-8">
       {/* Profile header */}
-      <Card className="overflow-hidden border-0 bg-muted/30 shadow-none">
+      <Card className="bg-muted/30 overflow-hidden border-0 shadow-none">
         <CardContent className="flex flex-col gap-6 p-6 sm:flex-row sm:items-center sm:gap-8">
-          <Avatar className="size-16 shrink-0 border-2 border-background text-lg font-semibold shadow-sm">
+          <Avatar className="border-background size-16 shrink-0 border-2 text-lg font-semibold shadow-sm">
             <AvatarFallback className="bg-primary/10 text-primary">
               {isLoading && !customer ? (
                 <Skeleton className="size-8 rounded-full" />
@@ -165,7 +165,7 @@ export function CustomerDetailPageClient({
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-base">
-              <User className="size-4 text-muted-foreground" />
+              <User className="text-muted-foreground size-4" />
               Contact & details
             </CardTitle>
             <CardDescription>Email, phone and basic info</CardDescription>
@@ -199,7 +199,7 @@ export function CustomerDetailPageClient({
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-base">
-              <Gift className="size-4 text-muted-foreground" />
+              <Gift className="text-muted-foreground size-4" />
               Loyalty
             </CardTitle>
             <CardDescription>Points and membership</CardDescription>
@@ -248,7 +248,7 @@ export function CustomerDetailPageClient({
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center gap-2 text-base">
-                  <Link2 className="size-4 text-muted-foreground" />
+                  <Link2 className="text-muted-foreground size-4" />
                   Loyalty link
                 </CardTitle>
                 <CardDescription>
@@ -258,7 +258,7 @@ export function CustomerDetailPageClient({
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex items-center gap-2">
-                  <code className="flex-1 truncate rounded-md border bg-muted/50 px-3 py-2 text-sm font-mono">
+                  <code className="bg-muted/50 flex-1 truncate rounded-md border px-3 py-2 font-mono text-sm">
                     {loyaltyUrl}
                   </code>
                   <Button
@@ -292,7 +292,7 @@ export function CustomerDetailPageClient({
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center gap-2 text-base">
-                <Link2 className="size-4 text-muted-foreground" />
+                <Link2 className="text-muted-foreground size-4" />
                 Referral link
               </CardTitle>
               <CardDescription>
@@ -305,7 +305,7 @@ export function CustomerDetailPageClient({
                 <Skeleton className="h-10 w-full" />
               ) : (
                 <div className="flex items-center gap-2">
-                  <code className="flex-1 truncate rounded-md border bg-muted/50 px-3 py-2 text-sm font-mono">
+                  <code className="bg-muted/50 flex-1 truncate rounded-md border px-3 py-2 font-mono text-sm">
                     {typeof window !== "undefined"
                       ? `${window.location.origin}/referral/${customer.businessSlug}/${customer.referralSlug}`
                       : `/referral/${customer.businessSlug}/${customer.referralSlug}`}
@@ -341,7 +341,7 @@ export function CustomerDetailPageClient({
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-base">
-              <Users className="size-4 text-muted-foreground" />
+              <Users className="text-muted-foreground size-4" />
               Referral details
             </CardTitle>
             <CardDescription>
@@ -351,7 +351,7 @@ export function CustomerDetailPageClient({
           <CardContent className="space-y-4">
             {customer?.referredBy && (
               <div className="space-y-1">
-                <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                <p className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
                   Referred by
                 </p>
                 <Link
@@ -361,17 +361,17 @@ export function CustomerDetailPageClient({
                     "h-auto justify-start gap-2 font-medium",
                   )}
                 >
-                  <UserPlus className="size-4 text-muted-foreground" />
+                  <UserPlus className="text-muted-foreground size-4" />
                   {customer.referredBy.name}
                 </Link>
               </div>
             )}
             {customer?.referralLogs && customer.referralLogs.length > 0 && (
               <div className="space-y-2">
-                <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                <p className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
                   People they referred ({customer.referralLogs.length})
                 </p>
-                <ul className="space-y-2 rounded-lg border bg-muted/20 p-3">
+                <ul className="bg-muted/20 space-y-2 rounded-lg border p-3">
                   {customer.referralLogs.map((log) => (
                     <li
                       key={log.id}
@@ -388,7 +388,7 @@ export function CustomerDetailPageClient({
                           Claimed
                         </Badge>
                       )}
-                      <span className="w-full text-xs text-muted-foreground">
+                      <span className="text-muted-foreground w-full text-xs">
                         <DateDisplay date={log.createdAt} />
                       </span>
                     </li>
@@ -404,7 +404,7 @@ export function CustomerDetailPageClient({
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-base">
-            <Receipt className="size-4 text-muted-foreground" />
+            <Receipt className="text-muted-foreground size-4" />
             Bills
           </CardTitle>
           <CardDescription>
@@ -421,14 +421,14 @@ export function CustomerDetailPageClient({
               ))}
             </div>
           ) : bills.length === 0 ? (
-            <div className="flex flex-col items-center justify-center rounded-lg border border-dashed bg-muted/20 py-12 text-center">
-              <div className="flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground">
+            <div className="bg-muted/20 flex flex-col items-center justify-center rounded-lg border border-dashed py-12 text-center">
+              <div className="bg-muted text-muted-foreground flex size-10 items-center justify-center rounded-full">
                 <Receipt className="size-5" />
               </div>
-              <p className="mt-3 text-sm font-medium text-foreground">
+              <p className="text-foreground mt-3 text-sm font-medium">
                 No bills yet
               </p>
-              <p className="mt-1 max-w-[240px] text-xs text-muted-foreground">
+              <p className="text-muted-foreground mt-1 max-w-[240px] text-xs">
                 Bills for this customer will show up here once they make a
                 purchase.
               </p>
@@ -436,7 +436,7 @@ export function CustomerDetailPageClient({
           ) : (
             <Table>
               <TableHeader>
-                <TableRow className="hover:bg-transparent border-b">
+                <TableRow className="border-b hover:bg-transparent">
                   <TableHead className="font-medium">Bill number</TableHead>
                   <TableHead className="text-right font-medium">
                     Amount

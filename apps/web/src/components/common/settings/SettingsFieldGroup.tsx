@@ -161,7 +161,7 @@ export function SettingsFieldGroup({
                             value={formField.value || ""}
                             disabled={field.disabled || isPending}
                           >
-                            <SelectTrigger className="w-full border-0 border-b rounded-none bg-transparent dark:bg-transparent dark:hover:bg-transparent px-0 py-3 shadow-none focus-visible:ring-0">
+                            <SelectTrigger className="w-full rounded-none border-0 border-b bg-transparent px-0 py-3 shadow-none focus-visible:ring-0 dark:bg-transparent dark:hover:bg-transparent">
                               <SelectValue
                                 placeholder={field.placeholder || "Select..."}
                               />

@@ -15,7 +15,7 @@ export function CustomerDetailSkeleton() {
   return (
     <div className="space-y-8">
       {/* Profile header */}
-      <Card className="overflow-hidden border-0 bg-muted/30 shadow-none">
+      <Card className="bg-muted/30 overflow-hidden border-0 shadow-none">
         <CardContent className="flex flex-col gap-6 p-6 sm:flex-row sm:items-center sm:gap-8">
           <Skeleton className="size-16 shrink-0 rounded-full" />
           <div className="min-w-0 flex-1 space-y-2">

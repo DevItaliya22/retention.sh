@@ -8,7 +8,7 @@ export {
 } from "./tooltip-content";
 export { TooltipDot, type TooltipDotProps } from "./tooltip-dot";
 export {
-  type IndicatorWidth,
   TooltipIndicator,
+  type IndicatorWidth,
   type TooltipIndicatorProps,
 } from "./tooltip-indicator";

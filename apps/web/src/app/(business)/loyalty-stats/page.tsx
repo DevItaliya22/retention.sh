@@ -1,7 +1,7 @@
-import { LoyaltyStatsPageClient } from "./_components/LoyaltyStatsPageClient";
 import { generateRouteMetadata } from "@/lib/utils/route-metadata";
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { LoyaltyStatsPageClient } from "./_components/LoyaltyStatsPageClient";
 
 export const metadata: Metadata = generateRouteMetadata("/loyalty-stats");
 

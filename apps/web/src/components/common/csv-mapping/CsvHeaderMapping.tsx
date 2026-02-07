@@ -155,7 +155,7 @@ export function CsvHeaderMapping({
           type="file"
           accept=".csv,.xlsx,.xls"
           onChange={handleFile}
-          className="border-input bg-background text-foreground file:bg-primary file:text-primary-foreground file:mr-3 block w-full cursor-pointer rounded-md border px-3 py-2 text-sm file:rounded file:border-0 file:px-3 file:py-1 file:text-sm"
+          className="border-input bg-background text-foreground file:bg-primary file:text-primary-foreground block w-full cursor-pointer rounded-md border px-3 py-2 text-sm file:mr-3 file:rounded file:border-0 file:px-3 file:py-1 file:text-sm"
         />
         {userHeaders.length > 0 && (
           <p className="text-muted-foreground mt-1 text-xs">

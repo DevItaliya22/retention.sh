@@ -188,7 +188,7 @@ export function LoyaltyStatsTable() {
             typeof item.balanceAfter === "number" ? item.balanceAfter : "—";
           return (
             <div className="flex justify-end">
-              <span className="tabular-nums text-muted-foreground">{val}</span>
+              <span className="text-muted-foreground tabular-nums">{val}</span>
             </div>
           );
         },

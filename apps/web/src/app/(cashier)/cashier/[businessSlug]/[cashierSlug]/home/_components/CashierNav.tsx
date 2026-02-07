@@ -1,9 +1,9 @@
 "use client";
 
-import { useCashierContext } from "../_context/CashierContext";
 import { cn } from "@reelo/ui/lib/utils";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useCashierContext } from "../_context/CashierContext";
 
 const navItems = [
   { href: "home", label: "Create Bill" },

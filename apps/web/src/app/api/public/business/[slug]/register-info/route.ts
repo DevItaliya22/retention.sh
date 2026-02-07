@@ -1,9 +1,9 @@
 import { slugParamSchema } from "@/lib/schemas/common";
+import { validateSchema } from "@/lib/utils/error-handler";
 import {
   type IsServiceEnabled,
   isServiceEnabled,
 } from "@/lib/utils/service-enabled";
-import { validateSchema } from "@/lib/utils/error-handler";
 import { db } from "@reelo/db";
 import { NextResponse } from "next/server";
 

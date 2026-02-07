@@ -1,13 +1,10 @@
 import { withAdminAuth } from "@/lib/auth/middleware";
-import {
-  type IsServiceEnabled,
-  isServiceEnabled,
-} from "@/lib/utils/service-enabled";
 import { referralStatsQuerySchema } from "@/lib/schemas/referral";
 import {
   sanitizeErrorMessage,
   validateSchema,
 } from "@/lib/utils/error-handler";
+import { isServiceEnabled } from "@/lib/utils/service-enabled";
 import { db } from "@reelo/db";
 import { NextRequest, NextResponse } from "next/server";
 

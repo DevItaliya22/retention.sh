@@ -177,12 +177,12 @@ export function LoyaltySettingsSkeleton() {
               </div>
             </div>
             <div className="col-span-8 flex flex-col gap-3">
-              <div className="flex gap-2 items-start">
-                <Skeleton className="flex-1 min-h-[60px] rounded-md" />
+              <div className="flex items-start gap-2">
+                <Skeleton className="min-h-[60px] flex-1 rounded-md" />
                 <Skeleton className="h-9 w-9 shrink-0 rounded-md" />
               </div>
-              <div className="flex gap-2 items-start">
-                <Skeleton className="flex-1 min-h-[60px] rounded-md" />
+              <div className="flex items-start gap-2">
+                <Skeleton className="min-h-[60px] flex-1 rounded-md" />
                 <Skeleton className="h-9 w-9 shrink-0 rounded-md" />
               </div>
               <Skeleton className="h-9 w-24 rounded-md" />

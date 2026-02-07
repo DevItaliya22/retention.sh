@@ -2,6 +2,7 @@
 
 import * as LabelPrimitive from "@radix-ui/react-label";
 import { Slot } from "@radix-ui/react-slot";
+import { AlertTriangle } from "lucide-react";
 import * as React from "react";
 import {
   Controller,
@@ -14,7 +15,6 @@ import {
 } from "react-hook-form";
 import { cn } from "../lib/utils";
 import { Label } from "./label";
-import { AlertTriangle } from "lucide-react";
 
 const Form = FormProvider;
 
@@ -156,7 +156,7 @@ function FormMessage({
         id={formMessageId}
         role="alert"
         className={cn(
-          "border border-destructive/40 bg-destructive/10 text-destructive inline-flex w-fit max-w-full items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium",
+          "border-destructive/40 bg-destructive/10 text-destructive inline-flex w-fit max-w-full items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium",
           className,
         )}
       >

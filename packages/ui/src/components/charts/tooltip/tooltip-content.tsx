@@ -92,7 +92,7 @@ export function TooltipContent({ title, rows, children }: TooltipContentProps) {
     >
       <div className="px-3 py-2.5" ref={measureRef}>
         {title && (
-          <div className="mb-2 font-medium text-xs text-zinc-400">{title}</div>
+          <div className="mb-2 text-xs font-medium text-zinc-400">{title}</div>
         )}
         <div className="space-y-1.5">
           {rows.map((row) => (
@@ -109,7 +109,7 @@ export function TooltipContent({ title, rows, children }: TooltipContentProps) {
                   {row.label}
                 </span>
               </div>
-              <span className="font-medium text-sm text-white tabular-nums dark:text-zinc-800">
+              <span className="text-sm font-medium text-white tabular-nums dark:text-zinc-800">
                 {typeof row.value === "number"
                   ? row.value.toLocaleString()
                   : row.value}

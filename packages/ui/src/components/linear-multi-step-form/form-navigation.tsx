@@ -1,8 +1,8 @@
 "use client";
 
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "../button";
 import { ButtonGroup, ButtonGroupSeparator } from "../button-group";
-import { ChevronDown, ChevronUp } from "lucide-react";
 import { NavigationArgs } from "./types";
 
 export function FormNavigation({

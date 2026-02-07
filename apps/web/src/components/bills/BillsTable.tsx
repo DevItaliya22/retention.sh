@@ -168,7 +168,7 @@ export function BillsTable() {
           const totalQty =
             bill.lineItems?.reduce((s, li) => s + li.qty, 0) ?? 0;
           return (
-            <div className="flex justify-center text-muted-foreground text-sm tabular-nums">
+            <div className="text-muted-foreground flex justify-center text-sm tabular-nums">
               {count === 0 ? "—" : totalQty}
             </div>
           );

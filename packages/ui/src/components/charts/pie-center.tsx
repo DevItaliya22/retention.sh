@@ -123,7 +123,7 @@ export function PieCenter({
           willChange
         />
       </span>
-      <span className={cn("mt-0.5 text-chart-label", labelClassName)}>
+      <span className={cn("text-chart-label mt-0.5", labelClassName)}>
         {displayLabel}
       </span>
     </div>

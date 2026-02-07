@@ -202,13 +202,13 @@ export function ReferralSettingsSkeleton() {
             Terms shown to new customers who join via referral
           </CardDescription>
         </CardHeader>
-        <CardContent className="border-b px-6 py-4 space-y-3">
-          <div className="flex gap-2 items-start">
-            <Skeleton className="flex-1 min-h-[60px] rounded-md" />
+        <CardContent className="space-y-3 border-b px-6 py-4">
+          <div className="flex items-start gap-2">
+            <Skeleton className="min-h-[60px] flex-1 rounded-md" />
             <Skeleton className="h-9 w-9 shrink-0 rounded-md" />
           </div>
-          <div className="flex gap-2 items-start">
-            <Skeleton className="flex-1 min-h-[60px] rounded-md" />
+          <div className="flex items-start gap-2">
+            <Skeleton className="min-h-[60px] flex-1 rounded-md" />
             <Skeleton className="h-9 w-9 shrink-0 rounded-md" />
           </div>
           <Skeleton className="h-9 w-24 rounded-md" />
@@ -228,13 +228,13 @@ export function ReferralSettingsSkeleton() {
             Terms for existing customers who refer others
           </CardDescription>
         </CardHeader>
-        <CardContent className="border-b px-6 py-4 space-y-3">
-          <div className="flex gap-2 items-start">
-            <Skeleton className="flex-1 min-h-[60px] rounded-md" />
+        <CardContent className="space-y-3 border-b px-6 py-4">
+          <div className="flex items-start gap-2">
+            <Skeleton className="min-h-[60px] flex-1 rounded-md" />
             <Skeleton className="h-9 w-9 shrink-0 rounded-md" />
           </div>
-          <div className="flex gap-2 items-start">
-            <Skeleton className="flex-1 min-h-[60px] rounded-md" />
+          <div className="flex items-start gap-2">
+            <Skeleton className="min-h-[60px] flex-1 rounded-md" />
             <Skeleton className="h-9 w-9 shrink-0 rounded-md" />
           </div>
           <Skeleton className="h-9 w-24 rounded-md" />

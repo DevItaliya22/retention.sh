@@ -5,6 +5,7 @@ import { useManageSku } from "@/hooks/sku/useManageSku";
 import type { SkuItem } from "@/hooks/sku/useSkusQuery";
 import { updateSkuSchema } from "@/lib/schemas/sku";
 import { getErrorMessageFromResponse } from "@/lib/utils/error-handler";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Button,
   Dialog,
@@ -12,6 +13,7 @@ import {
   DialogDescription,
   DialogFooter,
   DialogHeader,
+  DialogSection,
   DialogTitle,
   Form,
   FormControl,
@@ -27,8 +29,6 @@ import {
   SelectValue,
   Switch,
 } from "@reelo/ui/components";
-import { DialogSection } from "@reelo/ui/components";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";

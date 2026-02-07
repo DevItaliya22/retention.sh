@@ -1,7 +1,7 @@
 "use client";
 
-import { LoyaltyStatsTable } from "@/components/loyalty-stats/LoyaltyStatsTable";
 import { PageLayout, ScaffoldContainer } from "@/components/layouts";
+import { LoyaltyStatsTable } from "@/components/loyalty-stats/LoyaltyStatsTable";
 import { Skeleton } from "@reelo/ui/components";
 import { Suspense } from "react";
 

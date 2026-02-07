@@ -1,9 +1,9 @@
 "use client";
 
-import { useCashierContext } from "../../_context/CashierContext";
 import { CashierBillsList } from "../../_components/CashierBillsList";
 import { CashierLogoutButton } from "../../_components/CashierLogoutButton";
 import { CashierNav } from "../../_components/CashierNav";
+import { useCashierContext } from "../../_context/CashierContext";
 
 export function CashierBillsPageContent() {
   const { business, cashier, businessSlug, cashierSlug } = useCashierContext();

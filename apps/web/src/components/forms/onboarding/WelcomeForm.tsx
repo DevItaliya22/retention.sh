@@ -3,10 +3,10 @@
 import { BusinessStep } from "@/components/forms/onboarding/steps/BusinessStep";
 import { CashierStep } from "@/components/forms/onboarding/steps/CashierStep";
 import { ReviewStep } from "@/components/forms/onboarding/steps/ReviewStep";
-import { DEFAULT_EMAIL_DOMAIN_SUFFIX } from "@/lib/constants/email-domains";
 import { useCurrentBusiness } from "@/hooks/business/useCurrentBusiness";
 import { useManageCashier } from "@/hooks/cashier/useManageCashier";
 import useOnboarding from "@/hooks/onboarding/useOnboarding";
+import { DEFAULT_EMAIL_DOMAIN_SUFFIX } from "@/lib/constants/email-domains";
 import {
   businessStepSchema,
   cashierStepSchema,

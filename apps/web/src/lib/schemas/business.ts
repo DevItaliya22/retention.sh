@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isServiceEnabledSchema } from "../utils/service-enabled";
 import {
   businessNameSchema,
   currencyCodeSchema,
@@ -8,7 +9,6 @@ import {
   themeColorSchema,
   urlSchema,
 } from "./common";
-import { isServiceEnabledSchema } from "../utils/service-enabled";
 
 export const updateBusinessSchema = z.object({
   name: businessNameSchema.optional(),

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCurrentBusiness } from "@/hooks/business/useCurrentBusiness";
-import { getErrorMessageFromResponse } from "@/lib/utils/error-handler";
+import { fetcher } from "@/lib/fetcher";
 import {
   loyaltyProgramStep1Schema,
   loyaltyProgramStep2Schema,
@@ -9,6 +9,7 @@ import {
   loyaltyProgramStep4Schema,
   type LoyaltyProgramFormValues,
 } from "@/lib/schemas/loyalty-form";
+import { getErrorMessageFromResponse } from "@/lib/utils/error-handler";
 import {
   Card,
   CardContent,
@@ -17,7 +18,6 @@ import {
   StepContent,
   type LinearMultiStepFormConfig,
 } from "@reelo/ui/components";
-import { fetcher } from "@/lib/fetcher";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { LoyaltyProgramStep1 } from "./LoyaltyProgramStep1";

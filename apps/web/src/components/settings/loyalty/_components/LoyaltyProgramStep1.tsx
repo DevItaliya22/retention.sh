@@ -1,5 +1,6 @@
 "use client";
 
+import type { LoyaltyProgramFormValues } from "@/lib/schemas/loyalty-form";
 import {
   Checkbox,
   FormControl,
@@ -10,7 +11,6 @@ import {
   Label,
   useFormContext,
 } from "@reelo/ui/components";
-import type { LoyaltyProgramFormValues } from "@/lib/schemas/loyalty-form";
 
 function LabelWithTooltip({
   children,

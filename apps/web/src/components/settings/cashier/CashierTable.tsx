@@ -5,6 +5,7 @@ import type { Cashier as ManageCashier } from "@/hooks/cashier/useManageCashier"
 import { getDataTableConfig } from "@/lib/utils/data-table-params";
 import {
   Badge,
+  Button,
   DataTable,
   DataTableColumnHeader,
   DataTableToolbar,
@@ -15,7 +16,6 @@ import { useDataTable } from "@reelo/ui/hooks";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Eye } from "lucide-react";
 import { useMemo, useState } from "react";
-import { Button } from "@reelo/ui/components";
 import { CashierDetailSheet } from "./CashierDetailSheet";
 import { DeleteCashierButton } from "./DeleteCashierButton";
 import { EditCashierButton } from "./EditCashierButton";

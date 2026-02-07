@@ -8,6 +8,7 @@ import { getErrorMessageFromResponse } from "@/lib/utils/error-handler";
 import {
   Badge,
   Button,
+  DateDisplay,
   Label,
   Sheet,
   SheetContent,
@@ -17,8 +18,7 @@ import {
   SheetTitle,
   Skeleton,
 } from "@reelo/ui/components";
-import { DateDisplay } from "@reelo/ui/components";
-import { ExternalLink, UserX, UserCheck } from "lucide-react";
+import { ExternalLink, UserCheck, UserX } from "lucide-react";
 import { useCallback } from "react";
 import { toast } from "sonner";
 
@@ -132,7 +132,7 @@ export function CashierDetailSheet({
           )}
 
           {isError && (
-            <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3">
+            <div className="border-destructive/30 bg-destructive/5 rounded-lg border px-4 py-3">
               <p className="text-destructive text-sm">
                 {error?.message ?? "Failed to load cashier details"}
               </p>

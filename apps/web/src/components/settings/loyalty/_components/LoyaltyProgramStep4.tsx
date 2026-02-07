@@ -1,5 +1,6 @@
 "use client";
 
+import type { LoyaltyProgramFormValues } from "@/lib/schemas/loyalty-form";
 import {
   FormControl,
   FormField,
@@ -9,7 +10,6 @@ import {
   Label,
   useFormContext,
 } from "@reelo/ui/components";
-import type { LoyaltyProgramFormValues } from "@/lib/schemas/loyalty-form";
 
 export function LoyaltyProgramStep4() {
   const form = useFormContext<LoyaltyProgramFormValues>();

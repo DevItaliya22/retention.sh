@@ -1,5 +1,5 @@
-import { db } from "@reelo/db";
 import { verifyPassword } from "@/lib/utils/password";
+import { db } from "@reelo/db";
 
 export interface CashierLoginData {
   id: string;

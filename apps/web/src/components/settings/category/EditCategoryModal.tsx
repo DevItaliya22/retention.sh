@@ -1,15 +1,16 @@
 "use client";
 
 import { useCategoriesListQuery } from "@/hooks/category/useCategoriesListQuery";
-import { useManageCategory } from "@/hooks/category/useManageCategory";
 import type { CategoryItem } from "@/hooks/category/useCategoriesQuery";
+import { useManageCategory } from "@/hooks/category/useManageCategory";
+import { updateCategorySchema } from "@/lib/schemas/sku";
 import {
   getCategoryOptionsWithDepth,
   getDescendantIds,
   getNextSortOrder,
 } from "@/lib/utils/category-tree";
-import { updateCategorySchema } from "@/lib/schemas/sku";
 import { getErrorMessageFromResponse } from "@/lib/utils/error-handler";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Button,
   Dialog,
@@ -17,6 +18,7 @@ import {
   DialogDescription,
   DialogFooter,
   DialogHeader,
+  DialogSection,
   DialogTitle,
   Form,
   FormControl,
@@ -31,8 +33,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@reelo/ui/components";
-import { DialogSection } from "@reelo/ui/components";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";

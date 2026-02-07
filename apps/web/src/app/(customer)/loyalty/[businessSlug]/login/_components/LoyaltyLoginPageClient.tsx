@@ -114,7 +114,7 @@ export function LoyaltyLoginPageClient() {
 
   if (!businessSlug) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
+      <div className="bg-muted/30 flex min-h-screen items-center justify-center p-4">
         <Card className="w-full max-w-sm">
           <CardHeader>
             <CardTitle>Invalid link</CardTitle>
@@ -128,7 +128,7 @@ export function LoyaltyLoginPageClient() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
+    <div className="bg-muted/30 flex min-h-screen items-center justify-center p-4">
       <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle>Customer Login</CardTitle>
@@ -164,7 +164,7 @@ export function LoyaltyLoginPageClient() {
                 />
               </div>
               {registerInfo && registerInfo.registrationBonusPoints > 0 && (
-                <p className="text-sm font-medium text-primary">
+                <p className="text-primary text-sm font-medium">
                   New customers get{" "}
                   {registerInfo.registrationBonusPoints.toLocaleString()}{" "}
                   {registerInfo.pointsName} bonus!

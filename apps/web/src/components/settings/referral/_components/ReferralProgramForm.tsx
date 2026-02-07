@@ -1,7 +1,14 @@
 "use client";
 
-import { useCreateReferralProgram } from "@/hooks/referral/useReferralProgram";
 import { useCurrentBusiness } from "@/hooks/business/useCurrentBusiness";
+import { useCreateReferralProgram } from "@/hooks/referral/useReferralProgram";
+import {
+  referralProgramStep1Schema,
+  referralProgramStep2Schema,
+  referralProgramStep3Schema,
+  type ReferralProgramFormValues,
+} from "@/lib/schemas/referral-form";
+import { getErrorMessageFromResponse } from "@/lib/utils/error-handler";
 import {
   Card,
   CardContent,
@@ -12,15 +19,8 @@ import {
 } from "@reelo/ui/components";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { getErrorMessageFromResponse } from "@/lib/utils/error-handler";
-import {
-  referralProgramStep1Schema,
-  referralProgramStep2Schema,
-  referralProgramStep3Schema,
-  type ReferralProgramFormValues,
-} from "@/lib/schemas/referral-form";
-import { ReferralProgramStep2 } from "./ReferralProgramStep2";
 import { ReferralProgramStep1 } from "./ReferralProgramStep1";
+import { ReferralProgramStep2 } from "./ReferralProgramStep2";
 import { ReferralProgramStep3 } from "./ReferralProgramStep3";
 
 interface ReferralProgramFormProps {
@@ -200,7 +200,7 @@ export function ReferralProgramForm({
     return (
       <Card>
         <CardContent className="p-6">
-          <div className="text-center space-y-2">
+          <div className="space-y-2 text-center">
             <h3 className="text-lg font-semibold">Loyalty Program Required</h3>
             <p className="text-muted-foreground">
               You need to enable a loyalty program before setting up referrals.

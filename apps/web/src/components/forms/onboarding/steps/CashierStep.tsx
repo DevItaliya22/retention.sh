@@ -116,7 +116,7 @@ export function CashierStep() {
                 <FormControl>
                   <InputGroupInput
                     placeholder="john"
-                    className="h-auto px-0 py-3 text-base placeholder:text-muted-foreground/60"
+                    className="placeholder:text-muted-foreground/60 h-auto px-0 py-3 text-base"
                     {...field}
                     value={field.value ?? ""}
                   />

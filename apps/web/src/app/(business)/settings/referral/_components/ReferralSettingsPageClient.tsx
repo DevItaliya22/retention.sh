@@ -1,15 +1,15 @@
 "use client";
 
+import { PageLayout, ScaffoldContainer } from "@/components/layouts";
 import { ReferralExistingSettings } from "@/components/settings/referral/ReferralExistingSettings";
 import { ReferralSettingsSkeleton } from "@/components/settings/referral/ReferralSettingsSkeleton";
 import { ReferralProgramForm } from "@/components/settings/referral/_components/ReferralProgramForm";
-import { PageLayout, ScaffoldContainer } from "@/components/layouts";
 import { useCurrentBusiness } from "@/hooks/business/useCurrentBusiness";
-import { isServiceEnabled } from "@/lib/utils/service-enabled";
 import {
   ReferralProgram,
   useReferralProgram,
 } from "@/hooks/referral/useReferralProgram";
+import { isServiceEnabled } from "@/lib/utils/service-enabled";
 import {
   Button,
   Empty,

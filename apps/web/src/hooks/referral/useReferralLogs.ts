@@ -1,9 +1,8 @@
 "use client";
 
 import { fetcher } from "@/lib/fetcher";
-import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { ReferralQueryInput } from "@/lib/schemas/referral";
+import { useSearchParams } from "next/navigation";
 
 export interface ReferralLog {
   id: string;

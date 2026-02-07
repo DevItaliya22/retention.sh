@@ -1,7 +1,7 @@
-import { ReferralStatsPageClient } from "./_components/ReferralStatsPageClient";
 import { generateRouteMetadata } from "@/lib/utils/route-metadata";
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { ReferralStatsPageClient } from "./_components/ReferralStatsPageClient";
 
 export const metadata: Metadata = generateRouteMetadata("/referral-stats");
 
