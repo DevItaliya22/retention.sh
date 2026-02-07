@@ -39,7 +39,7 @@ export function LoyaltyProgramStep1() {
         name="earningPercentage"
         render={({ field }) => (
           <FormItem>
-            <LabelWithTooltip tooltip="Percentage of the bill amount that customers earn as loyalty points.">
+            <LabelWithTooltip tooltip="Percentage of the bill amount that customers earn as loyalty points (0–100).">
               Earning percentage *
             </LabelWithTooltip>
             <FormControl>
@@ -49,12 +49,21 @@ export function LoyaltyProgramStep1() {
                 min={0}
                 max={100}
                 step="0.01"
-                {...field}
+                value={
+                  field.value === 0 ||
+                  field.value === null ||
+                  field.value === undefined
+                    ? ""
+                    : field.value
+                }
                 onChange={(e) => {
-                  const n = Number(e.target.value);
-                  field.onChange(
-                    e.target.value === "" || Number.isNaN(n) ? 0 : n,
-                  );
+                  const raw = e.target.value;
+                  if (raw === "" || Number.isNaN(Number(raw))) {
+                    field.onChange(0);
+                    return;
+                  }
+                  const n = Math.min(100, Math.max(0, Number(raw)));
+                  field.onChange(n);
                 }}
               />
             </FormControl>
@@ -99,16 +108,22 @@ export function LoyaltyProgramStep1() {
                 type="number"
                 min={0}
                 step="0.01"
-                {...field}
-                value={field.value ?? ""}
-                onChange={(e) =>
-                  field.onChange(
-                    e.target.value === "" ||
-                      Number.isNaN(Number(e.target.value))
-                      ? 0
-                      : Number(e.target.value),
-                  )
+                value={
+                  field.value === 0 ||
+                  field.value === null ||
+                  field.value === undefined
+                    ? ""
+                    : field.value
                 }
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  if (raw === "" || Number.isNaN(Number(raw))) {
+                    field.onChange(0);
+                    return;
+                  }
+                  const n = Math.max(0, Number(raw));
+                  field.onChange(n);
+                }}
               />
             </FormControl>
             <FormMessage />
@@ -129,16 +144,22 @@ export function LoyaltyProgramStep1() {
                 type="number"
                 min={0}
                 step="0.01"
-                {...field}
-                value={field.value ?? ""}
-                onChange={(e) =>
-                  field.onChange(
-                    e.target.value === "" ||
-                      Number.isNaN(Number(e.target.value))
-                      ? 0
-                      : Number(e.target.value),
-                  )
+                value={
+                  field.value === 0 ||
+                  field.value === null ||
+                  field.value === undefined
+                    ? ""
+                    : field.value
                 }
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  if (raw === "" || Number.isNaN(Number(raw))) {
+                    field.onChange(0);
+                    return;
+                  }
+                  const n = Math.max(0, Number(raw));
+                  field.onChange(n);
+                }}
               />
             </FormControl>
             <FormMessage />

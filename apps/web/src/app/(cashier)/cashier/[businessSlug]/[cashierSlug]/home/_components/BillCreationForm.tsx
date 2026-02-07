@@ -269,7 +269,17 @@ export function BillCreationForm() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4" autoComplete="off">
+          {/* Hidden inputs to discourage browser autocomplete (Chrome often ignores form autoComplete="off") */}
+          <input
+            type="text"
+            autoComplete="off"
+            name="prevent_autofill"
+            tabIndex={-1}
+            className="absolute -left-[9999px] opacity-0 pointer-events-none h-0 w-0"
+            aria-hidden
+            readOnly
+          />
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="billNumber">Bill Number *</Label>
@@ -280,6 +290,7 @@ export function BillCreationForm() {
                 onChange={(e) => setBillNumber(e.target.value)}
                 required
                 disabled={isCreating}
+                autoComplete="off"
               />
             </div>
 
@@ -358,6 +369,8 @@ export function BillCreationForm() {
                 }}
                 required
                 disabled={isCreating || !!selectedCustomer}
+                autoComplete="nope"
+                defaultCountry="IN"
               />
               {selectedCustomer && (
                 <button
@@ -426,6 +439,7 @@ export function BillCreationForm() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               disabled={isCreating}
+              autoComplete="nope"
             />
           </div>
 
@@ -438,6 +452,7 @@ export function BillCreationForm() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={isCreating}
+              autoComplete="nope"
             />
           </div>
 
@@ -449,6 +464,7 @@ export function BillCreationForm() {
               value={addressLine1}
               onChange={(e) => setAddressLine1(e.target.value)}
               disabled={isCreating}
+              autoComplete="nope"
             />
           </div>
 
@@ -460,53 +476,62 @@ export function BillCreationForm() {
               value={addressLine2}
               onChange={(e) => setAddressLine2(e.target.value)}
               disabled={isCreating}
+              autoComplete="nope"
             />
           </div>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="city">City</Label>
+              <Label htmlFor="billCity">City</Label>
               <Input
-                id="city"
+                id="billCity"
+                name="billCity"
                 placeholder="Mumbai"
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
                 disabled={isCreating}
+                autoComplete="nope"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="state">State</Label>
+              <Label htmlFor="billState">State</Label>
               <Input
-                id="state"
+                id="billState"
+                name="billState"
                 placeholder="Maharashtra"
                 value={state}
                 onChange={(e) => setState(e.target.value)}
                 disabled={isCreating}
+                autoComplete="nope"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="country">Country</Label>
+              <Label htmlFor="billCountry">Country</Label>
               <Input
-                id="country"
+                id="billCountry"
+                name="billCountry"
                 placeholder="India"
                 value={country}
                 onChange={(e) => setCountry(e.target.value)}
                 disabled={isCreating}
+                autoComplete="nope"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="postalCode">Postal Code</Label>
+              <Label htmlFor="billPostalCode">Postal Code</Label>
               <Input
-                id="postalCode"
+                id="billPostalCode"
+                name="billPostalCode"
                 placeholder="400001"
                 value={postalCode}
                 onChange={(e) => setPostalCode(e.target.value)}
                 disabled={isCreating}
+                autoComplete="nope"
               />
             </div>
           </div>
@@ -521,6 +546,7 @@ export function BillCreationForm() {
               disabled={isCreating}
               rows={3}
               className="resize-none"
+              autoComplete="off"
             />
           </div>
 

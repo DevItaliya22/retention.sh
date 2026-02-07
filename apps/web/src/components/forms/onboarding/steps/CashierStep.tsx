@@ -88,6 +88,7 @@ export function CashierStep() {
               <Input
                 variant="underline"
                 placeholder="John Doe"
+                autoComplete="off"
                 {...field}
                 value={field.value ?? ""}
                 onChange={(e) => {
@@ -124,7 +125,7 @@ export function CashierStep() {
             )}
           />
           <InputGroupAddon className="px-0 py-3">
-            @{businessSlug || "slug"}.
+            @{businessSlug || "slug"}
           </InputGroupAddon>
           <FormField
             control={form.control}

@@ -2,10 +2,14 @@ import * as React from "react";
 
 import { cn } from "@reelo/ui/lib/utils";
 
+const numberInputClass =
+  "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none";
+
 function Input({
   className,
   type,
   variant = "default",
+  onWheel,
   ...props
 }: React.ComponentProps<"input"> & {
   variant?: "default" | "underline";
@@ -14,6 +18,14 @@ function Input({
     <input
       type={type}
       data-slot="input"
+      onWheel={
+        type === "number"
+          ? (e) => {
+              e.currentTarget.blur();
+              onWheel?.(e);
+            }
+          : onWheel
+      }
       className={cn(
         variant === "underline"
           ? "text-foreground placeholder:text-muted-foreground/60 border-input focus-visible:border-primary flex h-auto w-full min-w-0 border-0 border-b bg-transparent dark:bg-transparent px-0 py-3 text-base outline-none transition-colors disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive"
@@ -22,6 +34,7 @@ function Input({
               "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
               "aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
             ),
+        type === "number" && numberInputClass,
         className,
       )}
       {...props}

@@ -229,7 +229,7 @@ export function AddCashierModal({ isOpen, onClose }: AddCashierModalProps) {
                       </FormItem>
                     )}
                   />
-                  <InputGroupAddon>@{businessSlug || "slug"}.</InputGroupAddon>
+                  <InputGroupAddon>@{businessSlug || "slug"}</InputGroupAddon>
                   <FormField
                     control={form.control as any}
                     name="emailSuffix"

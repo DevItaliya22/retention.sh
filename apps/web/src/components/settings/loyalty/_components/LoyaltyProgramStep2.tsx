@@ -48,16 +48,21 @@ export function LoyaltyProgramStep2() {
                 min={0}
                 step="0.01"
                 placeholder="No limit"
-                {...field}
-                value={field.value ?? ""}
-                onChange={(e) =>
-                  field.onChange(
-                    e.target.value === "" ||
-                      Number.isNaN(Number(e.target.value))
-                      ? null
-                      : Number(e.target.value),
-                  )
+                value={
+                  field.value === null ||
+                  field.value === undefined ||
+                  field.value === 0
+                    ? ""
+                    : field.value
                 }
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  if (raw === "" || Number.isNaN(Number(raw))) {
+                    field.onChange(null);
+                    return;
+                  }
+                  field.onChange(Math.max(0, Number(raw)));
+                }}
               />
             </FormControl>
             <FormMessage />
@@ -79,16 +84,21 @@ export function LoyaltyProgramStep2() {
                 min={0}
                 step="0.01"
                 placeholder="No limit"
-                {...field}
-                value={field.value ?? ""}
-                onChange={(e) =>
-                  field.onChange(
-                    e.target.value === "" ||
-                      Number.isNaN(Number(e.target.value))
-                      ? null
-                      : Number(e.target.value),
-                  )
+                value={
+                  field.value === null ||
+                  field.value === undefined ||
+                  field.value === 0
+                    ? ""
+                    : field.value
                 }
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  if (raw === "" || Number.isNaN(Number(raw))) {
+                    field.onChange(null);
+                    return;
+                  }
+                  field.onChange(Math.max(0, Number(raw)));
+                }}
               />
             </FormControl>
             <FormMessage />
@@ -109,16 +119,21 @@ export function LoyaltyProgramStep2() {
                 type="number"
                 min={0}
                 placeholder="Disabled"
-                {...field}
-                value={field.value ?? ""}
-                onChange={(e) =>
-                  field.onChange(
-                    e.target.value === "" ||
-                      Number.isNaN(Number(e.target.value))
-                      ? null
-                      : Number(e.target.value),
-                  )
+                value={
+                  field.value === null ||
+                  field.value === undefined ||
+                  field.value === 0
+                    ? ""
+                    : field.value
                 }
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  if (raw === "" || Number.isNaN(Number(raw))) {
+                    field.onChange(null);
+                    return;
+                  }
+                  field.onChange(Math.max(0, Number(raw)));
+                }}
               />
             </FormControl>
             <FormMessage />
@@ -139,16 +154,21 @@ export function LoyaltyProgramStep2() {
                 type="number"
                 min={1}
                 placeholder="Never expire"
-                {...field}
-                value={field.value ?? ""}
-                onChange={(e) =>
-                  field.onChange(
-                    e.target.value === "" ||
-                      Number.isNaN(Number(e.target.value))
-                      ? null
-                      : Number(e.target.value),
-                  )
+                value={
+                  field.value === null ||
+                  field.value === undefined ||
+                  field.value === 0
+                    ? ""
+                    : field.value
                 }
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  if (raw === "" || Number.isNaN(Number(raw))) {
+                    field.onChange(null);
+                    return;
+                  }
+                  field.onChange(Math.max(1, Number(raw)));
+                }}
               />
             </FormControl>
             <FormMessage />
