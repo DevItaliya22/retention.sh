@@ -259,7 +259,11 @@ export function LoyaltyExistingSettings() {
 
   return (
     <Form {...form}>
-      <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
+      <form
+        onSubmit={(e) => e.preventDefault()}
+        className="space-y-6"
+        autoComplete="off"
+      >
         <Card className="gap-0 p-0!">
           <CardHeader className="flex flex-col gap-0 border-b py-2!">
             <CardTitle className="text-base font-medium">
@@ -272,29 +276,48 @@ export function LoyaltyExistingSettings() {
           <CardContent className="space-y-4 px-6 py-4">
             <div className="flex flex-col gap-2 md:grid md:grid-cols-12">
               <div className="col-span-4 flex flex-col gap-2">
-                <LabelWithTooltip tooltip="Percentage of the bill amount that customers earn as loyalty points. E.g., 5% means ₹5 points on a ₹100 bill.">
+                <LabelWithTooltip tooltip="Percentage of the bill amount that customers earn as loyalty points (0–100). E.g., 5% means ₹5 points on a ₹100 bill.">
                   Earning percentage *
                 </LabelWithTooltip>
               </div>
               <div className="col-span-8 flex flex-col gap-1">
-                <Input
-                  variant="underline"
-                  type="number"
-                  min={0}
-                  max={100}
-                  step="0.01"
-                  {...form.register("earningPercentage", {
-                    setValueAs: (v) => {
-                      const n = Number(v);
-                      return v === "" || Number.isNaN(n) ? 0 : n;
-                    },
-                  })}
+                <FormField
+                  control={form.control}
+                  name="earningPercentage"
+                  render={({ field }) => (
+                    <>
+                      <Input
+                        variant="underline"
+                        type="number"
+                        min={0}
+                        max={100}
+                        step="0.01"
+                        value={
+                          field.value === 0 ||
+                          field.value === null ||
+                          field.value === undefined
+                            ? ""
+                            : field.value
+                        }
+                        onChange={(e) => {
+                          const raw = e.target.value;
+                          if (raw === "" || Number.isNaN(Number(raw))) {
+                            field.onChange(0);
+                            return;
+                          }
+                          field.onChange(
+                            Math.min(100, Math.max(0, Number(raw))),
+                          );
+                        }}
+                      />
+                      {form.formState.errors.earningPercentage && (
+                        <p className="text-destructive text-xs">
+                          {form.formState.errors.earningPercentage.message}
+                        </p>
+                      )}
+                    </>
+                  )}
                 />
-                {form.formState.errors.earningPercentage && (
-                  <p className="text-destructive text-xs">
-                    {form.formState.errors.earningPercentage.message}
-                  </p>
-                )}
               </div>
             </div>
             <div className="flex flex-col gap-2 md:grid md:grid-cols-12">
@@ -320,15 +343,32 @@ export function LoyaltyExistingSettings() {
                 </LabelWithTooltip>
               </div>
               <div className="col-span-8 flex flex-col gap-1">
-                <Input
-                  variant="underline"
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  {...form.register("minPurchaseForEarning", {
-                    setValueAs: (v) =>
-                      v === "" || Number.isNaN(Number(v)) ? 0 : Number(v),
-                  })}
+                <FormField
+                  control={form.control}
+                  name="minPurchaseForEarning"
+                  render={({ field }) => (
+                    <Input
+                      variant="underline"
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={
+                        field.value === 0 ||
+                        field.value === null ||
+                        field.value === undefined
+                          ? ""
+                          : field.value
+                      }
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        if (raw === "" || Number.isNaN(Number(raw))) {
+                          field.onChange(0);
+                          return;
+                        }
+                        field.onChange(Math.max(0, Number(raw)));
+                      }}
+                    />
+                  )}
                 />
               </div>
             </div>
@@ -339,15 +379,32 @@ export function LoyaltyExistingSettings() {
                 </LabelWithTooltip>
               </div>
               <div className="col-span-8 flex flex-col gap-1">
-                <Input
-                  variant="underline"
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  {...form.register("minPurchaseForRedemption", {
-                    setValueAs: (v) =>
-                      v === "" || Number.isNaN(Number(v)) ? 0 : Number(v),
-                  })}
+                <FormField
+                  control={form.control}
+                  name="minPurchaseForRedemption"
+                  render={({ field }) => (
+                    <Input
+                      variant="underline"
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={
+                        field.value === 0 ||
+                        field.value === null ||
+                        field.value === undefined
+                          ? ""
+                          : field.value
+                      }
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        if (raw === "" || Number.isNaN(Number(raw))) {
+                          field.onChange(0);
+                          return;
+                        }
+                        field.onChange(Math.max(0, Number(raw)));
+                      }}
+                    />
+                  )}
                 />
               </div>
             </div>
@@ -399,16 +456,33 @@ export function LoyaltyExistingSettings() {
                 </LabelWithTooltip>
               </div>
               <div className="col-span-8 flex flex-col gap-1">
-                <Input
-                  variant="underline"
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  {...form.register("upperLimitBillAmount", {
-                    setValueAs: (v) =>
-                      v === "" || Number.isNaN(Number(v)) ? null : Number(v),
-                  })}
-                  placeholder="No limit"
+                <FormField
+                  control={form.control}
+                  name="upperLimitBillAmount"
+                  render={({ field }) => (
+                    <Input
+                      variant="underline"
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      placeholder="No limit"
+                      value={
+                        field.value === null ||
+                        field.value === undefined ||
+                        field.value === 0
+                          ? ""
+                          : field.value
+                      }
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        if (raw === "" || Number.isNaN(Number(raw))) {
+                          field.onChange(null);
+                          return;
+                        }
+                        field.onChange(Math.max(0, Number(raw)));
+                      }}
+                    />
+                  )}
                 />
               </div>
             </div>
@@ -419,16 +493,33 @@ export function LoyaltyExistingSettings() {
                 </LabelWithTooltip>
               </div>
               <div className="col-span-8 flex flex-col gap-1">
-                <Input
-                  variant="underline"
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  {...form.register("upperLimitClaimableAmount", {
-                    setValueAs: (v) =>
-                      v === "" || Number.isNaN(Number(v)) ? null : Number(v),
-                  })}
-                  placeholder="No limit"
+                <FormField
+                  control={form.control}
+                  name="upperLimitClaimableAmount"
+                  render={({ field }) => (
+                    <Input
+                      variant="underline"
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      placeholder="No limit"
+                      value={
+                        field.value === null ||
+                        field.value === undefined ||
+                        field.value === 0
+                          ? ""
+                          : field.value
+                      }
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        if (raw === "" || Number.isNaN(Number(raw))) {
+                          field.onChange(null);
+                          return;
+                        }
+                        field.onChange(Math.max(0, Number(raw)));
+                      }}
+                    />
+                  )}
                 />
               </div>
             </div>
@@ -439,15 +530,32 @@ export function LoyaltyExistingSettings() {
                 </LabelWithTooltip>
               </div>
               <div className="col-span-8 flex flex-col gap-1">
-                <Input
-                  variant="underline"
-                  type="number"
-                  min={0}
-                  {...form.register("pointReminderDays", {
-                    setValueAs: (v) =>
-                      v === "" || Number.isNaN(Number(v)) ? null : Number(v),
-                  })}
-                  placeholder="Disabled"
+                <FormField
+                  control={form.control}
+                  name="pointReminderDays"
+                  render={({ field }) => (
+                    <Input
+                      variant="underline"
+                      type="number"
+                      min={0}
+                      placeholder="Disabled"
+                      value={
+                        field.value === null ||
+                        field.value === undefined ||
+                        field.value === 0
+                          ? ""
+                          : field.value
+                      }
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        if (raw === "" || Number.isNaN(Number(raw))) {
+                          field.onChange(null);
+                          return;
+                        }
+                        field.onChange(Math.max(0, Number(raw)));
+                      }}
+                    />
+                  )}
                 />
               </div>
             </div>
@@ -458,15 +566,32 @@ export function LoyaltyExistingSettings() {
                 </LabelWithTooltip>
               </div>
               <div className="col-span-8 flex flex-col gap-1">
-                <Input
-                  variant="underline"
-                  type="number"
-                  min={1}
-                  {...form.register("pointExpiryDays", {
-                    setValueAs: (v) =>
-                      v === "" || Number.isNaN(Number(v)) ? null : Number(v),
-                  })}
-                  placeholder="Never expire"
+                <FormField
+                  control={form.control}
+                  name="pointExpiryDays"
+                  render={({ field }) => (
+                    <Input
+                      variant="underline"
+                      type="number"
+                      min={1}
+                      placeholder="Never expire"
+                      value={
+                        field.value === null ||
+                        field.value === undefined ||
+                        field.value === 0
+                          ? ""
+                          : field.value
+                      }
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        if (raw === "" || Number.isNaN(Number(raw))) {
+                          field.onChange(null);
+                          return;
+                        }
+                        field.onChange(Math.max(1, Number(raw)));
+                      }}
+                    />
+                  )}
                 />
               </div>
             </div>

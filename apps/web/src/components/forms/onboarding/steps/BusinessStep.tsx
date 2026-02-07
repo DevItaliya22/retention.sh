@@ -78,6 +78,7 @@ export function BusinessStep() {
               <Input
                 variant="underline"
                 placeholder="Acme Store"
+                autoComplete="off"
                 {...field}
                 value={field.value ?? ""}
                 onChange={(e) => {
@@ -127,6 +128,7 @@ export function BusinessStep() {
                     className="border-0"
                     placeholder="acme-store"
                     maxLength={SLUG_MAX_LENGTH}
+                    autoComplete="off"
                     {...field}
                     value={field.value ?? ""}
                   />

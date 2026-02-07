@@ -8,8 +8,8 @@ export const SLUG_MIN_LENGTH = 2;
 
 // Reserved slugs that cannot be used for workspaces
 export const RESERVED_SLUGS = [
-  "cashier",
-  "cashiers",
+  // "cashier",
+  // "cashiers",
   "api",
   "dy",
   "dy-cashier",

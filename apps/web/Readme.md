@@ -74,3 +74,5 @@ no suggesyion shoyuld come in inpiuts
 issue in image.pmg
 
 we have a x amount of token given to person who regiter themselves , but people can do one thing like regietre and then immeditely make a bill which can make loss , so we should have a "x" amount of days to wait for using yhis point
+
+~~add animation in form~~ (done: step slide + fade in `LinearMultiStepForm`, `animateSteps` prop to toggle)

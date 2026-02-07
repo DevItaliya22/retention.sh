@@ -1,5 +1,6 @@
 "use client";
 
+import { AnimatePresence, motion } from "motion/react";
 import * as React from "react";
 import type { FieldValues } from "react-hook-form";
 import { Form } from "../form";
@@ -8,12 +9,17 @@ import { ProgressStepper } from "./progress-stepper";
 import type { LinearMultiStepFormConfig, NavigationArgs } from "./types";
 import { useLinearMultiStepForm } from "./use-linear-multi-step-form";
 
+const STEP_SLIDE_PX = 32;
+const STEP_TRANSITION_DURATION = 0.25;
+
 export { FormNavigation } from "./form-navigation";
 export { ProgressBar } from "./progress-bar";
 export { ProgressStepper } from "./progress-stepper";
 export { StepContent } from "./step-content";
 export { StepInput } from "./step-input";
 export { StepError } from "./step-error";
+
+type StepTransitionDirection = "forward" | "backward";
 
 export function LinearMultiStepForm<TValues extends FieldValues>(props: {
   config: LinearMultiStepFormConfig<TValues>;
@@ -30,6 +36,8 @@ export function LinearMultiStepForm<TValues extends FieldValues>(props: {
     NavigationArgs & { allValues: TValues }
   >;
   showProgressStepper?: boolean;
+  /** Enable slide + fade transition between steps. Default: true */
+  animateSteps?: boolean;
 }) {
   const msf = useLinearMultiStepForm<TValues>({
     config: props.config,
@@ -37,6 +45,20 @@ export function LinearMultiStepForm<TValues extends FieldValues>(props: {
   });
 
   const StepComponent = msf.currentStep.Component;
+  const animateSteps = props.animateSteps !== false;
+
+  const prevStepIndexRef = React.useRef<number | null>(null);
+  const directionRef = React.useRef<StepTransitionDirection>("forward");
+  if (prevStepIndexRef.current !== msf.currentStepIndex) {
+    if (prevStepIndexRef.current !== null) {
+      directionRef.current =
+        msf.currentStepIndex > prevStepIndexRef.current
+          ? "forward"
+          : "backward";
+    }
+    prevStepIndexRef.current = msf.currentStepIndex;
+  }
+  const stepDirection = directionRef.current;
 
   const navigationArgs: NavigationArgs & { allValues: TValues } = {
     next: msf.next,
@@ -100,41 +122,93 @@ export function LinearMultiStepForm<TValues extends FieldValues>(props: {
       )
     ) : null;
 
-  // Enter always calls next(). next() runs validateStep() which sets
-  // form errors when validation fails, so the user sees WHY they can't proceed.
-  // next() will NOT advance if validation fails — it returns false.
-  const handleKeyDown = React.useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key !== "Enter" || e.shiftKey) return;
-      const target = e.target;
-      if (target instanceof HTMLTextAreaElement) return;
-      e.preventDefault();
-      e.stopPropagation();
-      if (!msf.isLoading && !msf.isSubmitting) {
-        void msf.next();
-      }
-    },
-    [msf],
-  );
+  const isFormControl = (target: EventTarget | null) => {
+    if (!target || !(target instanceof HTMLElement)) return false;
+    const tagName = target.tagName.toLowerCase();
+    const role = target.getAttribute?.("role");
+    if (tagName === "textarea" || tagName === "input" || tagName === "select")
+      return true;
+    if (role === "combobox" || role === "listbox") return true;
+    return target.isContentEditable;
+  };
+
+  // Only skip Arrow Up/Down when the element actually uses them (number, range, select, combobox).
+  const shouldSkipArrowNav = (target: EventTarget | null) => {
+    if (!target || !(target instanceof HTMLElement)) return false;
+    if (target.isContentEditable) return true;
+    const tagName = target.tagName.toLowerCase();
+    if (tagName === "select") return true;
+    if (tagName === "input") {
+      const type = (target as HTMLInputElement).type?.toLowerCase();
+      return type === "number" || type === "range";
+    }
+    const role = target.getAttribute?.("role");
+    return role === "combobox" || role === "listbox" || role === "spinbutton";
+  };
 
   const msfRef = React.useRef(msf);
   msfRef.current = msf;
+
+  const handleNavKey = React.useCallback(
+    (e: {
+      key: string;
+      shiftKey: boolean;
+      target: EventTarget | null;
+      preventDefault: () => void;
+      stopPropagation: () => void;
+    }) => {
+      const key = e.key;
+      const isNext = (key === "Enter" && !e.shiftKey) || key === "ArrowDown";
+      const isPrev = key === "ArrowUp";
+      if (!isNext && !isPrev) return;
+      if (key === "Enter" && isFormControl(e.target)) return;
+      if (
+        (key === "ArrowUp" || key === "ArrowDown") &&
+        shouldSkipArrowNav(e.target)
+      )
+        return;
+      const current = msfRef.current;
+      if (current.isLoading || current.isSubmitting) return;
+      if (isPrev) {
+        if (!current.isFirstStep) {
+          e.preventDefault();
+          e.stopPropagation();
+          void current.prev();
+        }
+        return;
+      }
+      if (isNext) {
+        // Arrow Down must not submit the form on last step (avoid accidental submit)
+        if (key === "ArrowDown" && current.isLastStep) return;
+        e.preventDefault();
+        e.stopPropagation();
+        void current.next();
+      }
+    },
+    [],
+  );
+
+  const handleKeyDown = React.useCallback(
+    (e: React.KeyboardEvent) => {
+      handleNavKey(e);
+    },
+    [handleNavKey],
+  );
+
   React.useEffect(() => {
     const doc = document;
     const handleDocKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== "Enter" || e.shiftKey) return;
-      const target = e.target as Node | null;
-      if (target instanceof HTMLTextAreaElement) return;
-      e.preventDefault();
-      e.stopPropagation();
-      const current = msfRef.current;
-      if (!current.isLoading && !current.isSubmitting) {
-        void current.next();
-      }
+      handleNavKey({
+        key: e.key,
+        shiftKey: e.shiftKey,
+        target: e.target,
+        preventDefault: () => e.preventDefault(),
+        stopPropagation: () => e.stopPropagation(),
+      });
     };
     doc.addEventListener("keydown", handleDocKeyDown, true);
     return () => doc.removeEventListener("keydown", handleDocKeyDown, true);
-  }, []);
+  }, [handleNavKey]);
 
   return (
     <Form {...(msf.form as any)}>
@@ -156,15 +230,52 @@ export function LinearMultiStepForm<TValues extends FieldValues>(props: {
 
         {/* Scrollable content area - vertically centers the step */}
         <div className="flex flex-1 flex-col overflow-y-auto">
-          <div className="flex flex-1 items-center justify-center px-4 py-12 pb-28 sm:px-6">
-            <StepComponent
-              formId={msf.formId}
-              stepId={msf.currentStep.id}
-              stepIndex={msf.currentStepIndex}
-              totalSteps={msf.totalSteps}
-              isFirstStep={msf.isFirstStep}
-              isLastStep={msf.isLastStep}
-            />
+          <div className="relative flex flex-1 items-center justify-center overflow-x-hidden px-4 py-12 pb-28 sm:px-6">
+            {animateSteps ? (
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.div
+                  key={msf.currentStep.id}
+                  initial={{
+                    opacity: 0,
+                    x:
+                      stepDirection === "forward"
+                        ? STEP_SLIDE_PX
+                        : -STEP_SLIDE_PX,
+                  }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{
+                    opacity: 0,
+                    x:
+                      stepDirection === "forward"
+                        ? -STEP_SLIDE_PX
+                        : STEP_SLIDE_PX,
+                  }}
+                  transition={{
+                    duration: STEP_TRANSITION_DURATION,
+                    ease: [0.32, 0.72, 0, 1],
+                  }}
+                  className="flex w-full max-w-full flex-1 flex-col items-center justify-center"
+                >
+                  <StepComponent
+                    formId={msf.formId}
+                    stepId={msf.currentStep.id}
+                    stepIndex={msf.currentStepIndex}
+                    totalSteps={msf.totalSteps}
+                    isFirstStep={msf.isFirstStep}
+                    isLastStep={msf.isLastStep}
+                  />
+                </motion.div>
+              </AnimatePresence>
+            ) : (
+              <StepComponent
+                formId={msf.formId}
+                stepId={msf.currentStep.id}
+                stepIndex={msf.currentStepIndex}
+                totalSteps={msf.totalSteps}
+                isFirstStep={msf.isFirstStep}
+                isLastStep={msf.isLastStep}
+              />
+            )}
           </div>
         </div>
 
