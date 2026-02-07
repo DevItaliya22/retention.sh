@@ -43,6 +43,10 @@ export const slugSchema = z
   })
   .trim();
 
+/** Route param schemas for validating dynamic segments (e.g. [slug], [businessSlug]) */
+export const slugParamSchema = z.object({ slug: slugSchema });
+export const businessSlugParamSchema = z.object({ businessSlug: slugSchema });
+
 export const businessNameSchema = z
   .string()
   .min(2, "Business name is too short (min 2 characters)")

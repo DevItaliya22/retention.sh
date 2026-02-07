@@ -5,6 +5,7 @@ import { ReferralSettingsSkeleton } from "./ReferralSettingsSkeleton";
 import { ReferralProgramForm } from "./_components/ReferralProgramForm";
 import { PageLayout, ScaffoldContainer } from "@/components/layouts";
 import { useCurrentBusiness } from "@/hooks/business/useCurrentBusiness";
+import { isServiceEnabled } from "@/lib/utils/service-enabled";
 import {
   ReferralProgram,
   useReferralProgram,
@@ -27,7 +28,9 @@ export function ReferralSettingsPageClient() {
 
   const isLoading = programLoading || businessLoading;
   const hasProgram = !!programData?.referralProgram;
-  const referralEnabled = businessData?.business?.referralEnabled ?? false;
+  const referralEnabled =
+    isServiceEnabled(businessData?.business?.isServiceEnabled, "referral") ??
+    false;
 
   if (isLoading && !programData && !businessData) {
     return (

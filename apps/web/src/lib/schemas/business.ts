@@ -8,6 +8,7 @@ import {
   themeColorSchema,
   urlSchema,
 } from "./common";
+import { isServiceEnabledSchema } from "../utils/service-enabled";
 
 export const updateBusinessSchema = z.object({
   name: businessNameSchema.optional(),
@@ -21,7 +22,8 @@ export const updateBusinessSchema = z.object({
     .min(0)
     .max(999999)
     .optional(),
-  referralEnabled: z.boolean().optional(),
+  /** Partial service enable updates: { referral?: boolean, loyalty?: boolean } */
+  serviceEnabled: isServiceEnabledSchema,
   defaultBranding: z
     .object({
       logo: urlSchema,

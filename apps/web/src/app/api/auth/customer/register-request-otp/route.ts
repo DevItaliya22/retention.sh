@@ -1,6 +1,10 @@
 import { APP_CONSTANTS } from "@/lib/constants/app";
 import { registerRequestOtpSchema } from "@/lib/schemas/customer-auth";
 import {
+  type IsServiceEnabled,
+  isServiceEnabled,
+} from "@/lib/utils/service-enabled";
+import {
   sanitizeErrorMessage,
   validateSchema,
 } from "@/lib/utils/error-handler";
@@ -27,6 +31,11 @@ export async function POST(request: Request) {
 
     const business = await db.business.findUnique({
       where: { slug: businessSlug },
+      select: {
+        id: true,
+        registrationBonusPoints: true,
+        isServiceEnabled: true,
+      },
     });
     if (!business) {
       return NextResponse.json(
@@ -91,7 +100,14 @@ export async function POST(request: Request) {
       });
     }
 
-    const bonusPoints = (business.registrationBonusPoints ?? 0) || 0;
+    const loyaltyEnabled = isServiceEnabled(
+      business.isServiceEnabled as IsServiceEnabled | null | undefined,
+      "loyalty",
+    );
+    const bonusPoints =
+      loyaltyEnabled && isNewRegistration
+        ? (business.registrationBonusPoints ?? 0) || 0
+        : 0;
     if (isNewRegistration && bonusPoints > 0) {
       await db.businessCustomer.update({
         where: {

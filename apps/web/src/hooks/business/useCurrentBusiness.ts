@@ -1,6 +1,7 @@
 "use client";
 
 import { fetcher } from "@/lib/fetcher";
+import type { IsServiceEnabled } from "@/lib/utils/service-enabled";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 export interface CurrentBusinessBranding {
@@ -23,8 +24,9 @@ export interface CurrentBusiness {
   defaultCurrencyCode: string;
   registrationBonusPoints: number;
   defaultBranding?: CurrentBusinessBranding | null;
-  referralEnabled: boolean;
+  isServiceEnabled?: IsServiceEnabled | null;
   referralProgram?: { id: string } | null;
+  loyalty?: { id: string } | null;
 }
 
 export interface CurrentBusinessResponse {
@@ -55,7 +57,7 @@ export interface UpdateBusinessInput {
   defaultCurrencySymbol?: string;
   defaultCurrencyCode?: string;
   registrationBonusPoints?: number;
-  referralEnabled?: boolean;
+  serviceEnabled?: IsServiceEnabled;
   defaultBranding?: UpdateBusinessBrandingInput;
 }
 

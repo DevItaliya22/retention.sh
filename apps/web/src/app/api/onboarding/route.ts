@@ -3,6 +3,7 @@ import {
   type WelcomeFormValues,
   welcomeFormSchema,
 } from "@/lib/schemas/onboarding";
+import { DEFAULT_SERVICES_ON_CREATION } from "@/lib/utils/service-enabled";
 import { buildCashierEmail } from "@/lib/utils/cashier-email";
 import {
   sanitizeErrorMessage,
@@ -50,6 +51,7 @@ export const POST = withAdminAuthOptionalBusiness(
             defaultPointsName: validatedData.defaultPointsName || "Points",
             defaultCurrencySymbol: validatedData.defaultCurrencySymbol || "₹",
             defaultCurrencyCode: validatedData.defaultCurrencyCode || "INR",
+            isServiceEnabled: DEFAULT_SERVICES_ON_CREATION,
             defaultBranding: {
               create: {
                 logo: validatedData.logo,

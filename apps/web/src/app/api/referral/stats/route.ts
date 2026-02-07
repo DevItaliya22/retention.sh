@@ -1,4 +1,8 @@
 import { withAdminAuth } from "@/lib/auth/middleware";
+import {
+  type IsServiceEnabled,
+  isServiceEnabled,
+} from "@/lib/utils/service-enabled";
 import { referralStatsQuerySchema } from "@/lib/schemas/referral";
 import {
   sanitizeErrorMessage,
@@ -16,12 +20,15 @@ export interface ReferralStatRow {
 
 export const GET = withAdminAuth(async (request: NextRequest, context) => {
   try {
-    const referralEnabled = context.business.referralEnabled ?? false;
+    const referralEnabled = isServiceEnabled(
+      context.business.isServiceEnabled,
+      "referral",
+    );
 
     if (!referralEnabled) {
       return NextResponse.json(
         {
-          referralEnabled: false,
+          isServiceEnabled: context.business.isServiceEnabled,
           error: "Referral is not enabled. Enable it in Settings → General.",
           items: [],
           total: 0,
@@ -39,7 +46,7 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
     if (!validation.success) {
       return NextResponse.json(
         {
-          referralEnabled: true,
+          isServiceEnabled: context.business.isServiceEnabled,
           error: validation.error,
           items: [],
           total: 0,
@@ -69,7 +76,7 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
 
     if (pageSlice.length === 0) {
       return NextResponse.json({
-        referralEnabled: true,
+        isServiceEnabled: context.business.isServiceEnabled,
         items: [],
         total,
         page,
@@ -111,7 +118,7 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
     });
 
     return NextResponse.json({
-      referralEnabled: true,
+      isServiceEnabled: context.business.isServiceEnabled,
       items,
       total,
       page,
@@ -121,7 +128,7 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
     console.error("Failed to fetch referral stats:", error);
     return NextResponse.json(
       {
-        referralEnabled: false,
+        isServiceEnabled: null,
         items: [],
         total: 0,
         page: 1,

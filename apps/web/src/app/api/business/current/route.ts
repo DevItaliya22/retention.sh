@@ -4,6 +4,10 @@ import {
 } from "@/lib/auth/middleware";
 import { updateBusinessSchema } from "@/lib/schemas/business";
 import {
+  type IsServiceEnabled,
+  mergeServiceEnabled,
+} from "@/lib/utils/service-enabled";
+import {
   sanitizeErrorMessage,
   validateSchema,
 } from "@/lib/utils/error-handler";
@@ -22,6 +26,7 @@ export const GET = withAdminAuthOptionalBusiness(async (request, context) => {
       include: {
         defaultBranding: true,
         referralProgram: { select: { id: true } },
+        loyalty: { select: { id: true } },
       },
     });
 
@@ -29,7 +34,11 @@ export const GET = withAdminAuthOptionalBusiness(async (request, context) => {
       return NextResponse.json({ business: null });
     }
 
-    return NextResponse.json({ business });
+    const businessWithComputed = {
+      ...business,
+    };
+
+    return NextResponse.json({ business: businessWithComputed });
   } catch (error: any) {
     console.error("Failed to fetch current business:", error);
     return NextResponse.json(
@@ -59,6 +68,20 @@ export const PUT = withAdminAuth(async (request, context) => {
 
     const businessId = context.business.id;
 
+    const business = await db.business.findUnique({
+      where: { id: businessId },
+      select: { isServiceEnabled: true },
+    });
+
+    const mergedServiceEnabled =
+      validatedData.serviceEnabled != null &&
+      Object.keys(validatedData.serviceEnabled).length > 0
+        ? mergeServiceEnabled(
+            (business?.isServiceEnabled ?? null) as IsServiceEnabled | null,
+            validatedData.serviceEnabled,
+          )
+        : undefined;
+
     const updated = await db.business.update({
       where: { id: businessId },
       data: {
@@ -72,7 +95,9 @@ export const PUT = withAdminAuth(async (request, context) => {
         defaultCurrencyCode: validatedData.defaultCurrencyCode ?? undefined,
         registrationBonusPoints:
           validatedData.registrationBonusPoints ?? undefined,
-        referralEnabled: validatedData.referralEnabled ?? undefined,
+        ...(mergedServiceEnabled !== undefined && {
+          isServiceEnabled: mergedServiceEnabled,
+        }),
         defaultBranding: validatedData.defaultBranding
           ? {
               upsert: {
@@ -104,7 +129,11 @@ export const PUT = withAdminAuth(async (request, context) => {
       },
     });
 
-    return NextResponse.json({ business: updated });
+    const updatedWithComputed = {
+      ...updated,
+    };
+
+    return NextResponse.json({ business: updatedWithComputed });
   } catch (error: any) {
     console.error("Failed to update current business:", error);
     return NextResponse.json(

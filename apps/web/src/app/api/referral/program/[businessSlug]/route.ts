@@ -1,4 +1,8 @@
-import { referralQuerySchema } from "@/lib/schemas/referral";
+import { businessSlugParamSchema } from "@/lib/schemas/common";
+import {
+  type IsServiceEnabled,
+  isServiceEnabled,
+} from "@/lib/utils/service-enabled";
 import {
   sanitizeErrorMessage,
   validateSchema,
@@ -11,7 +15,15 @@ export async function GET(
   { params }: { params: Promise<{ businessSlug: string }> },
 ) {
   try {
-    const { businessSlug } = await params;
+    const resolved = await params;
+    const validation = validateSchema(businessSlugParamSchema, resolved);
+    if (!validation.success) {
+      return NextResponse.json(
+        { referralProgram: null, error: validation.error },
+        { status: 400 },
+      );
+    }
+    const { businessSlug } = validation.data;
 
     // Find business by slug
     const business = await db.business.findUnique({
@@ -29,7 +41,12 @@ export async function GET(
       );
     }
 
-    if (!business.referralEnabled) {
+    if (
+      !isServiceEnabled(
+        business.isServiceEnabled as IsServiceEnabled | null,
+        "referral",
+      )
+    ) {
       return NextResponse.json(
         {
           referralProgram: null,

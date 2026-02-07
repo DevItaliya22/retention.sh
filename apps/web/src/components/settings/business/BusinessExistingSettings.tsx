@@ -3,6 +3,7 @@
 import { SettingsFieldGroup } from "@/components/common/settings/SettingsFieldGroup";
 import { PageLayout, ScaffoldContainer } from "@/components/layouts";
 import type { CurrentBusiness } from "@/hooks/business/useCurrentBusiness";
+import { isServiceEnabled } from "@/lib/utils/service-enabled";
 import { useUpdateBusiness } from "@/hooks/business/useCurrentBusiness";
 import {
   Card,
@@ -25,11 +26,23 @@ export function BusinessExistingSettings({
 }: BusinessExistingSettingsProps) {
   const { mutateAsync: updateBusiness } = useUpdateBusiness();
   const [referralPending, startReferralTransition] = useTransition();
+  const [loyaltyPending, startLoyaltyTransition] = useTransition();
+
+  const handleLoyaltyEnabledChange = (enabled: boolean) => {
+    startLoyaltyTransition(async () => {
+      try {
+        await updateBusiness({ serviceEnabled: { loyalty: enabled } });
+        toast.success("Settings updated successfully");
+      } catch (error: any) {
+        toast.error(error?.message || "Failed to update");
+      }
+    });
+  };
 
   const handleReferralEnabledChange = (enabled: boolean) => {
     startReferralTransition(async () => {
       try {
-        await updateBusiness({ referralEnabled: enabled });
+        await updateBusiness({ serviceEnabled: { referral: enabled } });
         toast.success("Settings updated successfully");
       } catch (error: any) {
         toast.error(error?.message || "Failed to update");
@@ -263,6 +276,45 @@ export function BusinessExistingSettings({
 
           <Card className="gap-0 p-0!">
             <CardHeader className="flex flex-col gap-0 border-b py-2!">
+              <CardTitle className="text-base font-medium">Loyalty</CardTitle>
+              <CardDescription className="text-xs">
+                Enable loyalty points and rewards for your business
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-2 px-6 py-4">
+              <div className="flex flex-row items-center justify-between">
+                <span className="text-sm">Loyalty enabled</span>
+                <Switch
+                  checked={
+                    isServiceEnabled(business.isServiceEnabled, "loyalty") ??
+                    false
+                  }
+                  onCheckedChange={handleLoyaltyEnabledChange}
+                  disabled={loyaltyPending}
+                />
+              </div>
+              {!isServiceEnabled(business.isServiceEnabled, "loyalty") && (
+                <p className="text-muted-foreground text-xs">
+                  {business.loyalty ? (
+                    "Already setup but it's off."
+                  ) : (
+                    <>
+                      Not set up yet.{" "}
+                      <Link
+                        href="/settings/loyalty"
+                        className="text-primary underline underline-offset-2 hover:no-underline"
+                      >
+                        Set up loyalty
+                      </Link>
+                    </>
+                  )}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="gap-0 p-0!">
+            <CardHeader className="flex flex-col gap-0 border-b py-2!">
               <CardTitle className="text-base font-medium">Referral</CardTitle>
               <CardDescription className="text-xs">
                 Enable referral program for your business (requires loyalty to
@@ -273,12 +325,15 @@ export function BusinessExistingSettings({
               <div className="flex flex-row items-center justify-between">
                 <span className="text-sm">Referral enabled</span>
                 <Switch
-                  checked={business.referralEnabled ?? false}
+                  checked={
+                    isServiceEnabled(business.isServiceEnabled, "referral") ??
+                    false
+                  }
                   onCheckedChange={handleReferralEnabledChange}
                   disabled={referralPending}
                 />
               </div>
-              {!business.referralEnabled && (
+              {!isServiceEnabled(business.isServiceEnabled, "referral") && (
                 <p className="text-muted-foreground text-xs">
                   {business.referralProgram ? (
                     "Already setup but it's off."

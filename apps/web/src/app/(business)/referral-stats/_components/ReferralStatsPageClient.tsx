@@ -3,6 +3,7 @@
 import { PageLayout, ScaffoldContainer } from "@/components/layouts";
 import { ReferralStatsTable } from "@/components/settings/referral/ReferralStatsTable";
 import { useReferralStatsQuery } from "@/hooks/referral/useReferralProgram";
+import { isServiceEnabled } from "@/lib/utils/service-enabled";
 import { Button, Skeleton } from "@reelo/ui/components";
 import { useRouter } from "next/navigation";
 import { Suspense } from "react";
@@ -10,7 +11,8 @@ import { Suspense } from "react";
 function ReferralStatsContent() {
   const router = useRouter();
   const { data, isLoading, isError } = useReferralStatsQuery();
-  const referralEnabled = !isError && (data?.referralEnabled ?? false);
+  const referralEnabled =
+    !isError && isServiceEnabled(data?.isServiceEnabled, "referral");
 
   if (isLoading && data == null) {
     return (
@@ -43,7 +45,8 @@ function ReferralStatsContent() {
 export function ReferralStatsPageClient() {
   const router = useRouter();
   const { data, isError } = useReferralStatsQuery();
-  const referralEnabled = !isError && (data?.referralEnabled ?? false);
+  const referralEnabled =
+    !isError && isServiceEnabled(data?.isServiceEnabled, "referral");
 
   return (
     <PageLayout

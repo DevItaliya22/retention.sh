@@ -1,4 +1,8 @@
 import { db, Prisma, TransactionSource, TransactionType } from "@reelo/db";
+import {
+  type IsServiceEnabled,
+  isServiceEnabled,
+} from "@/lib/utils/service-enabled";
 
 export const DEFAULT_POINT_EXPIRY_DAYS = 180;
 
@@ -192,9 +196,10 @@ export async function expireBucketsForCustomer(
 }
 
 /**
- * Apply loyalty logic to a bill. Points are ONLY given when the business has
- * a Loyalty configuration (Loyalty row exists). When no loyalty exists,
- * returns zeros for earned/redeemed points.
+ * Apply loyalty logic to a bill. Points are ONLY given when:
+ * - Business has isServiceEnabled.loyalty === true
+ * - Business has a Loyalty configuration (Loyalty row exists)
+ * When either is false, returns zeros for earned/redeemed points.
  */
 export async function applyLoyaltyForBill(
   tx: Prisma.TransactionClient,
@@ -209,7 +214,27 @@ export async function applyLoyaltyForBill(
   const { businessId, customerId, billId, billAmount } = params;
   const requested = Math.max(0, params.redeemPointsRequested ?? 0);
 
-  // Loyalty OFF = no Loyalty row for this business → no points
+  const business = await tx.business.findUnique({
+    where: { id: businessId },
+    select: { isServiceEnabled: true },
+  });
+
+  // Loyalty OFF = service disabled or no Loyalty row → no points
+  if (
+    !isServiceEnabled(
+      business?.isServiceEnabled as IsServiceEnabled | null | undefined,
+      "loyalty",
+    )
+  ) {
+    return {
+      earnedPoints: 0,
+      redeemedPoints: 0,
+      pointsBalance: 0,
+      finalAmount: billAmount,
+      settings: null,
+    };
+  }
+
   const settings = await getBusinessLoyaltySettings(tx, businessId);
   if (!settings) {
     return {

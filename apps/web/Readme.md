@@ -2,10 +2,6 @@ insta auto dm
 
 online menu
 
-Cashier email is unique per business only (Cashier.email + @@unique(businessId, email)); User.email is null for cashiers; two businesses can have cashiers with the same email.
-
-colour sky
-
 IMP :
 
 In referal ,expiration , theme and all is not done , points are getting tp both the people , but for points we have to make sure it gets expire after "X" days , so maybe cROn and also a way where we set expiryDate in DB hihv helps to chekc how many points are still remaining
@@ -13,23 +9,12 @@ In referal ,expiration , theme and all is not done , points are getting tp both 
 T and C system is also not done yet
 
 Baki:
+referal
 Loyalty
 QR
 Feedback
 Tier
 Membership
-
-right now in loyalty , there is swapping in giving the points (IMP)
-
-password shoyld have eye button , cashier email should always end with @companyslug
-
-Also we have to add a field for "website" in business
-
-customer login page shouold ve http://localhost:3000/loyalty/login?phone=%2B919988776655&business=flowers-vechu-chu not like this , it should be like http://localhost:3000/loyalty/login/flowers-vechu-chu?phone=xyz here we have to use businesslug in route not in random place as this is very mpo
-
-also in that page when we are gicing wrong OTP it is pushing to /login which is admin login page , we should show only that fucker thi is wrong , and if correct then push to http://localhost:3000/loyalty/flowers-vechu-chu with session , if there is no sesion and someone goes on this page then we will show them ifo about the company
-
-CAn make a redirect logic hook for each 3 role , this can help i future too maybe , not sure , also have to make al the compoent refactor
 
 analytics
 email
@@ -81,3 +66,11 @@ numbers and send msgs seprately from each number using APIS
 check this and you will nderstand a need of a variable
 and one more thing , right now in bill creation there is one issue ,
 what is happening is if a bill oof 1000 is created with 10% cashback point , so they will reciece 100 point , now let say user comes next time and make another bill of 1000 then he redeem the 100 points from pre back , so the bill amount should be 1000 but points should only be given on 900 , if admin wants to give to 1000 then its fine usin a var ( make new )
+
+cashback means give amount in the same bill , deduct the amount in the same bill and no loyalty points will be there for thatbill , but loyalty points mesns give loyalty point , free item means give free item , and % points means give in per
+
+no suggesyion shoyuld come in inpiuts
+
+issue in image.pmg
+
+we have a x amount of token given to person who regiter themselves , but people can do one thing like regietre and then immeditely make a bill which can make loss , so we should have a "x" amount of days to wait for using yhis point

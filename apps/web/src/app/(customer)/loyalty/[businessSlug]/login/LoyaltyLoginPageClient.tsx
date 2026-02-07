@@ -21,13 +21,7 @@ interface RegisterInfoResponse {
   pointsName: string;
 }
 
-type Step = "request" | "register" | "verify";
-
-interface RequestOtpResponse {
-  success: boolean;
-  error?: string;
-  notCustomer?: boolean;
-}
+type Step = "request" | "verify";
 
 export function LoyaltyLoginPageClient() {
   const router = useRouter();
@@ -55,40 +49,11 @@ export function LoyaltyLoginPageClient() {
     if (phone) setPhoneNumber(phone);
   }, [searchParams]);
 
-  const requestOtp = async () => {
-    if (!businessSlug) return;
-    setIsLoading(true);
-    try {
-      const response = await fetcher<RequestOtpResponse>(
-        "/api/auth/customer/request-otp",
-        {
-          method: "POST",
-          body: JSON.stringify({ phoneNumber, businessSlug }),
-        },
-      );
-      if (response.success) {
-        toast.success("OTP sent. Check server console for now.");
-        setStep("verify");
-        return;
-      }
-      if (response.notCustomer) {
-        setStep("register");
-        toast.info(
-          "You're not an existing customer. Enter your name to register.",
-        );
-        return;
-      }
-      toast.error(response.error || "Failed to send OTP");
-    } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : "Failed to send OTP";
-      toast.error(message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const registerAndRequestOtp = async () => {
+  /**
+   * Single flow for both new and existing customers: always use register-request-otp.
+   * This prevents user enumeration (attackers can't probe which phones are customers).
+   */
+  const sendOtp = async () => {
     if (!businessSlug || !name.trim()) {
       toast.error("Please enter your name");
       return;
@@ -107,14 +72,14 @@ export function LoyaltyLoginPageClient() {
         },
       );
       if (!response.success) {
-        toast.error(response.error || "Failed to register");
+        toast.error(response.error || "Failed to send OTP");
         return;
       }
       toast.success("OTP sent. Check server console for now.");
       setStep("verify");
     } catch (error: unknown) {
       const message =
-        error instanceof Error ? error.message : "Failed to register";
+        error instanceof Error ? error.message : "Failed to send OTP";
       toast.error(message);
     } finally {
       setIsLoading(false);
@@ -176,7 +141,7 @@ export function LoyaltyLoginPageClient() {
             <form
               onSubmit={(e) => {
                 e.preventDefault();
-                requestOtp();
+                sendOtp();
               }}
               className="space-y-4"
             >
@@ -189,55 +154,26 @@ export function LoyaltyLoginPageClient() {
                   disabled={isLoading}
                 />
               </div>
+              <div className="space-y-2">
+                <Label>Name</Label>
+                <Input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Your name"
+                  disabled={isLoading}
+                />
+              </div>
+              {registerInfo && registerInfo.registrationBonusPoints > 0 && (
+                <p className="text-sm font-medium text-primary">
+                  New customers get{" "}
+                  {registerInfo.registrationBonusPoints.toLocaleString()}{" "}
+                  {registerInfo.pointsName} bonus!
+                </p>
+              )}
               <Button type="submit" className="w-full" loading={isLoading}>
                 Send OTP
               </Button>
             </form>
-          )}
-
-          {step === "register" && (
-            <>
-              <p className="text-sm text-muted-foreground">
-                You're not an existing customer for this business, but you can
-                become one. Enter your name to register.
-              </p>
-              {registerInfo && registerInfo.registrationBonusPoints > 0 && (
-                <p className="text-sm font-medium text-primary">
-                  Register now and you'll get{" "}
-                  {registerInfo.registrationBonusPoints.toLocaleString()}{" "}
-                  {registerInfo.pointsName} extra!
-                </p>
-              )}
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  registerAndRequestOtp();
-                }}
-                className="space-y-4"
-              >
-                <div className="space-y-2">
-                  <Label>Name</Label>
-                  <Input
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Your name"
-                    disabled={isLoading}
-                  />
-                </div>
-                <Button type="submit" className="w-full" loading={isLoading}>
-                  Register
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="w-full"
-                  onClick={() => setStep("request")}
-                  disabled={isLoading}
-                >
-                  Back
-                </Button>
-              </form>
-            </>
           )}
 
           {step === "verify" && (
@@ -259,6 +195,15 @@ export function LoyaltyLoginPageClient() {
               </div>
               <Button type="submit" className="w-full" loading={isLoading}>
                 Verify OTP
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                className="w-full"
+                onClick={() => setStep("request")}
+                disabled={isLoading}
+              >
+                Back
               </Button>
             </form>
           )}

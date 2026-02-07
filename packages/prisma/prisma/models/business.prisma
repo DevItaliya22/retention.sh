@@ -10,8 +10,9 @@ model Business {
   registrationBonusPoints Int       @default(0) // Bonus points when customer registers from loyalty login page
   defaultBranding         Branding?
 
-  // Referral settings -> to enable this , business should have a loyatly first
-  referralEnabled Boolean @default(false)
+  // Service toggles: { referral?: boolean, loyalty?: boolean, ... }
+  // Missing key = disabled. Add new keys in lib/schemas/service-enabled.ts
+  isServiceEnabled Json?
 
   // Relations
   admins    Admin[]

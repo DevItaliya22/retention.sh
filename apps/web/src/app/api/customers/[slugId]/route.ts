@@ -1,4 +1,5 @@
 import { withAdminAuth } from "@/lib/auth/middleware";
+import { isServiceEnabled } from "@/lib/utils/service-enabled";
 import { customerSlugIdParamSchema } from "@/lib/schemas/customer";
 import {
   sanitizeErrorMessage,
@@ -119,7 +120,7 @@ export const GET = withAdminAuth<{ slugId: string }>(
         updatedAt: businessCustomer.updatedAt.toISOString(),
         businessSlug: context.business.slug,
         referralSlug: businessCustomer.referralSlug,
-        referralEnabled: context.business.referralEnabled ?? false,
+        isServiceEnabled: context.business.isServiceEnabled,
         referredBy: businessCustomer.referredBy
           ? {
               name: businessCustomer.referredBy.customer.user.name,

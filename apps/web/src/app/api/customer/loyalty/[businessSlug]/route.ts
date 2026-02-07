@@ -1,13 +1,28 @@
 import { withCustomerAuth } from "@/lib/auth/middleware";
+import { businessSlugParamSchema } from "@/lib/schemas/common";
+import {
+  type IsServiceEnabled,
+  isServiceEnabled,
+} from "@/lib/utils/service-enabled";
 import { expireBucketsForCustomer } from "@/lib/loyalty";
-import { sanitizeErrorMessage } from "@/lib/utils/error-handler";
+import {
+  sanitizeErrorMessage,
+  validateSchema,
+} from "@/lib/utils/error-handler";
 import { db } from "@reelo/db";
 import { NextRequest, NextResponse } from "next/server";
 
 export const GET = withCustomerAuth<{ businessSlug: string }>(
   async (_request: NextRequest, context, params) => {
     try {
-      const { businessSlug } = params;
+      const validation = validateSchema(businessSlugParamSchema, params);
+      if (!validation.success) {
+        return NextResponse.json(
+          { loyalty: null, error: validation.error },
+          { status: 400 },
+        );
+      }
+      const { businessSlug } = validation.data;
 
       const business = await db.business.findUnique({
         where: { slug: businessSlug },
@@ -20,6 +35,18 @@ export const GET = withCustomerAuth<{ businessSlug: string }>(
         return NextResponse.json(
           { error: "Business not found", loyalty: null },
           { status: 404 },
+        );
+      }
+
+      if (
+        !isServiceEnabled(
+          business.isServiceEnabled as IsServiceEnabled | null | undefined,
+          "loyalty",
+        )
+      ) {
+        return NextResponse.json(
+          { error: "Loyalty is not enabled for this business", loyalty: null },
+          { status: 403 },
         );
       }
 
