@@ -1,7 +1,7 @@
 "use client";
 
-import { CsvHeaderMapping } from "@/components/csv-mapping";
-import type { FileLoadedPayload } from "@/components/csv-mapping";
+import { CsvHeaderMapping } from "@/components/common/csv-mapping";
+import type { FileLoadedPayload } from "@/components/common/csv-mapping";
 import { useManageBill } from "@/hooks/bills/useManageBill";
 import { billImportItemSchema } from "@/lib/schemas/bill";
 import {

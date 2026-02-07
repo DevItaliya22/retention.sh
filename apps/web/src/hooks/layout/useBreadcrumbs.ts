@@ -1,6 +1,6 @@
 "use client";
 
-import { useBreadcrumbOverride } from "@/lib/contexts/breadcrumb-override";
+import { useBreadcrumbOverride } from "@/components/layouts/context/breadcrumb-override";
 import {
   type BreadcrumbConfig,
   parseBreadcrumbPath,

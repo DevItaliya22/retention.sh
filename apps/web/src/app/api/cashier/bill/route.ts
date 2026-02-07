@@ -1,6 +1,6 @@
 import { withCashierAuth } from "@/lib/auth/middleware";
 import { APP_CONSTANTS } from "@/lib/constants/app";
-import { applyLoyaltyForBill } from "@/lib/loyalty";
+import { applyLoyaltyForBill } from "@/lib/actions/loyalty";
 import { createBillApiSchema } from "@/lib/schemas/bill";
 import {
   sanitizeErrorMessage,

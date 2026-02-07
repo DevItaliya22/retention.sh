@@ -1,6 +1,6 @@
 import { withCashierAuth } from "@/lib/auth/middleware";
 import { APP_CONSTANTS } from "@/lib/constants/app";
-import { searchBusinessCustomerSchema } from "@/lib/schemas/bill";
+import { searchBusinessCustomerSchema } from "@/lib/schemas/cashier";
 import {
   sanitizeErrorMessage,
   validateSchema,

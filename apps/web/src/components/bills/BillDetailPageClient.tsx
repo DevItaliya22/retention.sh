@@ -1,7 +1,7 @@
 "use client";
 
 import { useBillQuery } from "@/hooks/bills/useBillQuery";
-import { useBreadcrumbOverride } from "@/lib/contexts/breadcrumb-override";
+import { useBreadcrumbOverride } from "@/components/layouts/context/breadcrumb-override";
 import {
   buttonVariants,
   Card,

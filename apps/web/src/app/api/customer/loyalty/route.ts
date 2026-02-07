@@ -3,7 +3,7 @@ import {
   type IsServiceEnabled,
   isServiceEnabled,
 } from "@/lib/utils/service-enabled";
-import { expireBucketsForCustomer } from "@/lib/loyalty";
+import { expireBucketsForCustomer } from "@/lib/actions/loyalty";
 import { sanitizeErrorMessage } from "@/lib/utils/error-handler";
 import { db } from "@reelo/db";
 import { NextResponse } from "next/server";

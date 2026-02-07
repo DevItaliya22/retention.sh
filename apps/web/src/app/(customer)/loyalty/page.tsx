@@ -1,6 +1,6 @@
 "use client";
 
-import { CustomerLogoutButton } from "@/components/customer/CustomerLogoutButton";
+import { CustomerLogoutButton } from "@/components/customer-portal/CustomerLogoutButton";
 import { PageLayout, ScaffoldContainer } from "@/components/layouts";
 import { fetcher } from "@/lib/fetcher";
 import {

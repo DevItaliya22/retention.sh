@@ -1,6 +1,6 @@
 "use client";
 
-import { useSessionContext } from "@/hooks/misc/useSessionContext";
+import { useSessionContext } from "@/hooks/auth/useSessionContext";
 import { DropdownButton } from "@reelo/ui/components/dropdown-button";
 import {
   DropdownMenu,

@@ -87,22 +87,6 @@ export const createBillApiSchema = billFormSchema.extend({
   businessId: z.string().uuid("Invalid business ID"),
 });
 
-export const searchBusinessCustomerSchema = z.object({
-  phone: z
-    .string()
-    .min(4, "Phone number must be at least 4 digits")
-    .max(20, "Phone number is too long"),
-  businessId: z.string().uuid("Invalid business ID"),
-});
-
-export const searchUserCustomerSchema = z.object({
-  phone: z
-    .string()
-    .min(6, "Phone number must be at least 6 digits")
-    .max(20, "Phone number is too long"),
-  businessId: z.string().uuid("Invalid business ID"),
-});
-
 export const billsQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1).optional(),
   perPage: z.coerce.number().int().min(1).max(100).default(10).optional(),
@@ -132,9 +116,5 @@ export const billImportSchema = z.object({
 
 export type BillFormInput = z.infer<typeof billFormSchema>;
 export type CreateBillApiInput = z.infer<typeof createBillApiSchema>;
-export type SearchBusinessCustomerInput = z.infer<
-  typeof searchBusinessCustomerSchema
->;
-export type SearchUserCustomerInput = z.infer<typeof searchUserCustomerSchema>;
 export type BillsQueryInput = z.infer<typeof billsQuerySchema>;
 export type BillImportInput = z.infer<typeof billImportSchema>;

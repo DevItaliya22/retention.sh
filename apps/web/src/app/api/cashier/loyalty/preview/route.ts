@@ -8,7 +8,7 @@ import {
   calculateRedeemablePoints,
   expireBucketsForCustomer,
   getBusinessLoyaltySettings,
-} from "@/lib/loyalty";
+} from "@/lib/actions/loyalty";
 import { loyaltyPreviewSchema } from "@/lib/schemas/loyalty";
 import {
   sanitizeErrorMessage,

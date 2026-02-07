@@ -60,10 +60,10 @@ export function useBillCreation(businessId: string) {
       try {
         const promises: Promise<SearchCustomerResponse>[] = [
           fetcher<SearchCustomerResponse>(
-            `/api/cashier/customer/search/customer?phone=${encodeURIComponent(phone)}`,
+            `/api/cashier/customer/search/business-customer?phone=${encodeURIComponent(phone)}`,
           ),
           fetcher<SearchCustomerResponse>(
-            `/api/cashier/customer/search/our-customer?phone=${encodeURIComponent(phone)}`,
+            `/api/cashier/customer/search/other-customer?phone=${encodeURIComponent(phone)}`,
           ),
         ];
 

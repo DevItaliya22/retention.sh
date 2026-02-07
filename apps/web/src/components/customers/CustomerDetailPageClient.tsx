@@ -2,7 +2,7 @@
 
 import { useCustomerQuery } from "@/hooks/customers/useCustomerQuery";
 import { isServiceEnabled } from "@/lib/utils/service-enabled";
-import { useBreadcrumbOverride } from "@/lib/contexts/breadcrumb-override";
+import { useBreadcrumbOverride } from "@/components/layouts/context/breadcrumb-override";
 import {
   Avatar,
   AvatarFallback,

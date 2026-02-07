@@ -1,7 +1,7 @@
 "use client";
 
 import { PageLayout, ScaffoldContainer } from "@/components/layouts";
-import { ReferralStatsTable } from "@/components/settings/referral/ReferralStatsTable";
+import { ReferralStatsTable } from "@/components/referral-stats/ReferralStatsTable";
 import { useReferralStatsQuery } from "@/hooks/referral/useReferralProgram";
 import { isServiceEnabled } from "@/lib/utils/service-enabled";
 import { Button, Skeleton } from "@reelo/ui/components";

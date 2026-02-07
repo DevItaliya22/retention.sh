@@ -1,5 +1,5 @@
 "use client";
-import { BreadcrumbOverrideProvider } from "@/lib/contexts/breadcrumb-override";
+import { BreadcrumbOverrideProvider } from "@/components/layouts/context/breadcrumb-override";
 import { PropsWithChildren } from "react";
 
 import { SidebarInset, SidebarProvider } from "@reelo/ui/components/sidebar";
