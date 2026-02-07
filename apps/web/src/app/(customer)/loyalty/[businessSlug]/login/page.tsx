@@ -1,4 +1,4 @@
-import { LoyaltyLoginPageClient } from "./LoyaltyLoginPageClient";
+import { LoyaltyLoginPageClient } from "./_components/LoyaltyLoginPageClient";
 import { Suspense } from "react";
 
 function LoyaltyLoginFallback() {

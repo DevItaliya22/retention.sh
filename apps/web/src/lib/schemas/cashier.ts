@@ -52,8 +52,30 @@ export const cashiersQuerySchema = z.object({
   isActive: z.enum(["true", "false"]).optional(),
 });
 
+/** Cashier customer search: search existing business customers by phone */
+export const searchBusinessCustomerSchema = z.object({
+  phone: z
+    .string()
+    .min(4, "Phone number must be at least 4 digits")
+    .max(20, "Phone number is too long"),
+  businessId: z.string().uuid("Invalid business ID"),
+});
+
+/** Cashier customer search: search users not yet linked to this business */
+export const searchUserCustomerSchema = z.object({
+  phone: z
+    .string()
+    .min(6, "Phone number must be at least 6 digits")
+    .max(20, "Phone number is too long"),
+  businessId: z.string().uuid("Invalid business ID"),
+});
+
 export type CreateCashierInput = z.infer<typeof createCashierSchema>;
 export type UpdateCashierInput = z.infer<typeof updateCashierSchema>;
 export type CreateCashierFormValues = z.infer<typeof createCashierFormSchema>;
 export type UpdateCashierFormValues = z.infer<typeof updateCashierFormSchema>;
 export type CashiersQueryInput = z.infer<typeof cashiersQuerySchema>;
+export type SearchBusinessCustomerInput = z.infer<
+  typeof searchBusinessCustomerSchema
+>;
+export type SearchUserCustomerInput = z.infer<typeof searchUserCustomerSchema>;

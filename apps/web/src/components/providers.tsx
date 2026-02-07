@@ -1,6 +1,6 @@
 "use client";
 
-import { SessionProvider } from "@/hooks/misc/useSessionContext";
+import { SessionProvider } from "@/hooks/auth/useSessionContext";
 import { NuqsAdapter } from "@reelo/ui/components/nuqs-adapter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider as NextThemesProvider } from "next-themes";

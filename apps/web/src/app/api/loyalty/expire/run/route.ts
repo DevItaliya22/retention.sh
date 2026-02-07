@@ -1,4 +1,4 @@
-import { expireBucketsForBusiness } from "@/lib/loyalty";
+import { expireBucketsForBusiness } from "@/lib/actions/loyalty";
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {

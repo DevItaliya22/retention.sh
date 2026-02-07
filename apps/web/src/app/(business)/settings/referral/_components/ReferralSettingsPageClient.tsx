@@ -1,8 +1,8 @@
 "use client";
 
-import { ReferralExistingSettings } from "./ReferralExistingSettings";
-import { ReferralSettingsSkeleton } from "./ReferralSettingsSkeleton";
-import { ReferralProgramForm } from "./_components/ReferralProgramForm";
+import { ReferralExistingSettings } from "@/components/settings/referral/ReferralExistingSettings";
+import { ReferralSettingsSkeleton } from "@/components/settings/referral/ReferralSettingsSkeleton";
+import { ReferralProgramForm } from "@/components/settings/referral/_components/ReferralProgramForm";
 import { PageLayout, ScaffoldContainer } from "@/components/layouts";
 import { useCurrentBusiness } from "@/hooks/business/useCurrentBusiness";
 import { isServiceEnabled } from "@/lib/utils/service-enabled";
@@ -49,11 +49,7 @@ export function ReferralSettingsPageClient() {
 
   // Embedded multi-step form: render directly (no PageLayout/Scaffold), same as BusinessOnboardingSettings
   if (referralEnabled && !hasProgram) {
-    return (
-      // <div className="min-h-full w-full px-4 py-6 sm:px-6">
-      <ReferralProgramForm initialData={null} embedded />
-      // </div>
-    );
+    return <ReferralProgramForm initialData={null} embedded />;
   }
 
   const subtitle = !referralEnabled

@@ -1,4 +1,4 @@
-import { ReferralSettingsPageClient } from "@/components/settings/referral/ReferralSettingsPageClient";
+import { ReferralSettingsPageClient } from "./_components/ReferralSettingsPageClient";
 import { generateRouteMetadata } from "@/lib/utils/route-metadata";
 import type { Metadata } from "next";
 import { Suspense } from "react";

@@ -1,6 +1,6 @@
 "use client";
 
-import { useSessionContext } from "@/hooks/misc/useSessionContext";
+import { useSessionContext } from "@/hooks/auth/useSessionContext";
 import {
   Avatar,
   AvatarFallback,
