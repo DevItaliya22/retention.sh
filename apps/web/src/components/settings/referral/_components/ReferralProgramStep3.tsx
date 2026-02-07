@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReferralProgramFormValues } from "@/lib/schemas/referral-form";
 import {
   FormControl,
   FormField,
@@ -10,7 +11,6 @@ import {
   Textarea,
   useFormContext,
 } from "@reelo/ui/components";
-import type { ReferralProgramFormValues } from "@/lib/schemas/referral-form";
 
 const textareaUnderlineClass =
   "border-input min-h-20 border-0 border-b rounded-none bg-transparent resize-none px-0 py-3 shadow-none focus-visible:ring-0";

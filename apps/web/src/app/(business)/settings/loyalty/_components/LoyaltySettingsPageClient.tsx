@@ -1,12 +1,12 @@
 "use client";
 
+import { PageLayout, ScaffoldContainer } from "@/components/layouts";
 import { LoyaltyProgramForm } from "@/components/settings/loyalty/_components/LoyaltyProgramForm";
 import { LoyaltyExistingSettings } from "@/components/settings/loyalty/LoyaltyExistingSettings";
 import { LoyaltySettingsSkeleton } from "@/components/settings/loyalty/LoyaltySettingsSkeleton";
-import { PageLayout, ScaffoldContainer } from "@/components/layouts";
 import { useCurrentBusiness } from "@/hooks/business/useCurrentBusiness";
-import { isServiceEnabled } from "@/lib/utils/service-enabled";
 import { fetcher } from "@/lib/fetcher";
+import { isServiceEnabled } from "@/lib/utils/service-enabled";
 import {
   Button,
   Empty,

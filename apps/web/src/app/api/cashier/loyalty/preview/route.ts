@@ -1,20 +1,20 @@
-import { withCashierAuth } from "@/lib/auth/middleware";
-import {
-  type IsServiceEnabled,
-  isServiceEnabled,
-} from "@/lib/utils/service-enabled";
 import {
   calculateEarnedPoints,
   calculateRedeemablePoints,
   expireBucketsForCustomer,
   getBusinessLoyaltySettings,
 } from "@/lib/actions/loyalty";
+import { withCashierAuth } from "@/lib/auth/middleware";
 import { loyaltyPreviewSchema } from "@/lib/schemas/loyalty";
 import {
   sanitizeErrorMessage,
   validateSchema,
 } from "@/lib/utils/error-handler";
 import { formatPhoneNumber } from "@/lib/utils/phone";
+import {
+  type IsServiceEnabled,
+  isServiceEnabled,
+} from "@/lib/utils/service-enabled";
 import { db } from "@reelo/db";
 import { NextRequest, NextResponse } from "next/server";
 

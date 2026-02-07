@@ -5,8 +5,8 @@ import { parseCashierRoute } from "@/lib/utils/cashier-routes";
 import {
   ADMIN_COOKIE_PREFIX,
   ADMIN_SESSION_COOKIE_NAME,
-  CLEAR_SESSION_COOKIE_OPTIONS,
   CASHIER_SESSION_COOKIE_NAME,
+  CLEAR_SESSION_COOKIE_OPTIONS,
   CUSTOMER_SESSION_COOKIE_NAME,
 } from "@/lib/utils/cookie";
 import { db } from "@reelo/db";

@@ -1,7 +1,11 @@
 "use client";
 
-import { useBillQuery } from "@/hooks/bills/useBillQuery";
 import { useBreadcrumbOverride } from "@/components/layouts/context/breadcrumb-override";
+import type {
+  BillLineItemResponse,
+  BillLoyaltyLog,
+} from "@/hooks/bills/useBillQuery";
+import { useBillQuery } from "@/hooks/bills/useBillQuery";
 import {
   buttonVariants,
   Card,
@@ -13,10 +17,6 @@ import {
   Skeleton,
 } from "@reelo/ui/components";
 import { cn } from "@reelo/ui/lib/utils";
-import type {
-  BillLineItemResponse,
-  BillLoyaltyLog,
-} from "@/hooks/bills/useBillQuery";
 import {
   CalendarDays,
   Gift,
@@ -49,18 +49,18 @@ function DetailRow({
   return (
     <div className="flex items-start gap-3 py-3 first:pt-0 last:pb-0">
       {Icon && (
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted/60 text-muted-foreground">
+        <div className="bg-muted/60 text-muted-foreground flex size-9 shrink-0 items-center justify-center rounded-lg">
           <Icon className="size-4" />
         </div>
       )}
       <div className="min-w-0 flex-1 space-y-0.5">
-        <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+        <p className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
           {label}
         </p>
         {isLoading ? (
           <Skeleton className={cn("h-5", skeletonWidth)} />
         ) : (
-          <div className="text-sm font-medium leading-tight">{value}</div>
+          <div className="text-sm leading-tight font-medium">{value}</div>
         )}
       </div>
     </div>
@@ -83,12 +83,12 @@ export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
 
   if (isError) {
     return (
-      <div className="flex min-h-[280px] flex-col items-center justify-center rounded-xl border border-dashed bg-muted/30 px-6 py-16 text-center">
-        <div className="flex size-12 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+      <div className="bg-muted/30 flex min-h-[280px] flex-col items-center justify-center rounded-xl border border-dashed px-6 py-16 text-center">
+        <div className="bg-destructive/10 text-destructive flex size-12 items-center justify-center rounded-full">
           <Receipt className="size-6" />
         </div>
-        <p className="mt-4 font-medium text-foreground">Failed to load bill</p>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="text-foreground mt-4 font-medium">Failed to load bill</p>
+        <p className="text-muted-foreground mt-1 text-sm">
           {error?.message ?? "Please try again later"}
         </p>
       </div>
@@ -128,10 +128,10 @@ export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
   return (
     <div className="space-y-8">
       {/* Bill header */}
-      <Card className="overflow-hidden border-0 bg-muted/30 shadow-none">
+      <Card className="bg-muted/30 overflow-hidden border-0 shadow-none">
         <CardContent className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
           <div className="space-y-1">
-            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            <p className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
               Bill number
             </p>
             {isLoading && !bill ? (
@@ -146,7 +146,7 @@ export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
             {isLoading && !bill ? (
               <Skeleton className="h-8 w-24" />
             ) : (
-              <span className="text-2xl font-semibold tabular-nums text-foreground">
+              <span className="text-foreground text-2xl font-semibold tabular-nums">
                 {amountFormatted}
               </span>
             )}
@@ -159,7 +159,7 @@ export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-base">
-              <Gift className="size-4 text-muted-foreground" />
+              <Gift className="text-muted-foreground size-4" />
               Loyalty on this bill
             </CardTitle>
             <CardDescription>
@@ -204,7 +204,7 @@ export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-base">
-              <Receipt className="size-4 text-muted-foreground" />
+              <Receipt className="text-muted-foreground size-4" />
               Bill details
             </CardTitle>
             <CardDescription>Number, amount and date</CardDescription>
@@ -240,7 +240,7 @@ export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
           <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-4 pb-2">
             <div>
               <CardTitle className="flex items-center gap-2 text-base">
-                <User className="size-4 text-muted-foreground" />
+                <User className="text-muted-foreground size-4" />
                 Customer
               </CardTitle>
               <CardDescription>Linked customer for this bill</CardDescription>
@@ -286,14 +286,14 @@ export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
             )}
             {!isLoading && !bill?.customerPhone && !bill?.customerEmail && (
               <div className="flex items-start gap-3 py-3">
-                <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted/60 text-muted-foreground">
+                <div className="bg-muted/60 text-muted-foreground flex size-9 shrink-0 items-center justify-center rounded-lg">
                   <Mail className="size-4" />
                 </div>
                 <div className="min-w-0 flex-1 space-y-0.5">
-                  <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  <p className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
                     Contact
                   </p>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-muted-foreground text-sm">
                     No contact details on file for this bill
                   </p>
                 </div>
@@ -308,7 +308,7 @@ export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-base">
-              <Package className="size-4 text-muted-foreground" />
+              <Package className="text-muted-foreground size-4" />
               Line items
             </CardTitle>
             <CardDescription>SKUs and quantities on this bill</CardDescription>
@@ -317,7 +317,7 @@ export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
             <div className="overflow-x-auto rounded-md border">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b bg-muted/50">
+                  <tr className="bg-muted/50 border-b">
                     <th className="px-4 py-3 text-left font-medium">
                       SKU / Name
                     </th>
@@ -337,7 +337,7 @@ export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
                     return (
                       <tr key={li.id} className="border-b last:border-b-0">
                         <td className="px-4 py-3">
-                          <div className="font-mono text-muted-foreground text-xs">
+                          <div className="text-muted-foreground font-mono text-xs">
                             {li.sku.sku}
                           </div>
                           <div className="font-medium">{li.sku.name}</div>
@@ -374,7 +374,7 @@ export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-base">
-              <Gift className="size-4 text-muted-foreground" />
+              <Gift className="text-muted-foreground size-4" />
               Loyalty logs
             </CardTitle>
             <CardDescription>
@@ -385,7 +385,7 @@ export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
             <div className="overflow-x-auto rounded-md border">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b bg-muted/50">
+                  <tr className="bg-muted/50 border-b">
                     <th className="px-4 py-3 text-left font-medium">Type</th>
                     <th className="px-4 py-3 text-left font-medium">Source</th>
                     <th className="px-4 py-3 text-right font-medium">Points</th>
@@ -401,7 +401,7 @@ export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
                       <td className="px-4 py-3 font-medium">
                         {formatLoyaltyType(log.type)}
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground">
+                      <td className="text-muted-foreground px-4 py-3">
                         {log.source}
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums">
@@ -411,7 +411,7 @@ export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
                       <td className="px-4 py-3 text-right tabular-nums">
                         {log.balanceAfter}
                       </td>
-                      <td className="px-4 py-3 text-right text-muted-foreground">
+                      <td className="text-muted-foreground px-4 py-3 text-right">
                         {new Date(log.createdAt).toLocaleString("en-IN", {
                           dateStyle: "short",
                           timeStyle: "short",

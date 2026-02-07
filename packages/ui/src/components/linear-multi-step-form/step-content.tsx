@@ -48,7 +48,7 @@ export function StepContent({
             )}
             <div className="min-w-0 flex-1 space-y-2">
               {title != null && (
-                <h2 className="text-foreground text-xl font-semibold leading-snug tracking-tight sm:text-2xl">
+                <h2 className="text-foreground text-xl leading-snug font-semibold tracking-tight sm:text-2xl">
                   {title}
                   {required && (
                     <span className="text-foreground ml-1" aria-hidden>

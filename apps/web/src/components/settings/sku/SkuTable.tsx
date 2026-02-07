@@ -7,15 +7,15 @@ import {
   DataTableColumnHeader,
   DataTableToolbar,
   DateDisplay,
+  InfoTooltip,
   Skeleton,
   Switch,
-  InfoTooltip,
 } from "@reelo/ui/components";
 import { useDataTable } from "@reelo/ui/hooks";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useMemo, useState } from "react";
-import { EditSkuButton } from "./EditSkuButton";
 import { DeleteSkuButton } from "./DeleteSkuButton";
+import { EditSkuButton } from "./EditSkuButton";
 
 interface SkuTableProps {
   skus: SkuItem[];

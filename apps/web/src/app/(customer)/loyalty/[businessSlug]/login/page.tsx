@@ -1,10 +1,10 @@
-import { LoyaltyLoginPageClient } from "./_components/LoyaltyLoginPageClient";
 import { Suspense } from "react";
+import { LoyaltyLoginPageClient } from "./_components/LoyaltyLoginPageClient";
 
 function LoyaltyLoginFallback() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
-      <div className="h-64 w-full max-w-sm animate-pulse rounded-lg bg-muted" />
+    <div className="bg-muted/30 flex min-h-screen items-center justify-center p-4">
+      <div className="bg-muted h-64 w-full max-w-sm animate-pulse rounded-lg" />
     </div>
   );
 }

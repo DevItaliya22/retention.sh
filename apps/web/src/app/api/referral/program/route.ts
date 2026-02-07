@@ -4,13 +4,13 @@ import {
   updateReferralProgramSchema,
 } from "@/lib/schemas/referral";
 import {
-  type IsServiceEnabled,
-  setServiceEnabled,
-} from "@/lib/utils/service-enabled";
-import {
   sanitizeErrorMessage,
   validateSchema,
 } from "@/lib/utils/error-handler";
+import {
+  type IsServiceEnabled,
+  setServiceEnabled,
+} from "@/lib/utils/service-enabled";
 import { db } from "@reelo/db";
 import { NextResponse } from "next/server";
 

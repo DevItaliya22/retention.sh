@@ -1,7 +1,7 @@
 "use client";
 
-import { buildCashierEmail } from "@/lib/utils/cashier-email";
 import type { WelcomeFormValues } from "@/lib/schemas/onboarding";
+import { buildCashierEmail } from "@/lib/utils/cashier-email";
 import { useFormContext } from "@reelo/ui/components";
 
 export function ReviewStep() {

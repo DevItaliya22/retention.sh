@@ -1,8 +1,8 @@
 "use client";
 
 import { fetcher } from "@/lib/fetcher";
-import { useMutation } from "@tanstack/react-query";
 import { ClaimReferralInput } from "@/lib/schemas/referral";
+import { useMutation } from "@tanstack/react-query";
 
 export interface ClaimReferralResponse {
   success: boolean;

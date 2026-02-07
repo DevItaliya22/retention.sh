@@ -1,6 +1,8 @@
 "use client";
 
 import { useClaimReferral } from "@/hooks/referral/useClaimReferral";
+import { nameSchema } from "@/lib/schemas/common";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Button,
   Card,
@@ -15,15 +17,12 @@ import {
   FormLabel,
   FormMessage,
   Input,
-  Skeleton,
 } from "@reelo/ui/components";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { nameSchema } from "@/lib/schemas/common";
 import { toast } from "sonner";
+import { z } from "zod";
 
 const claimFormSchema = z.object({
   name: nameSchema,
@@ -90,7 +89,7 @@ export function ReferralClaimPageClient({
       <div className="flex min-h-screen items-center justify-center p-4">
         <Card className="w-full max-w-2xl">
           <CardHeader>
-            <CardTitle className="text-2xl text-center">Success!</CardTitle>
+            <CardTitle className="text-center text-2xl">Success!</CardTitle>
             <CardDescription className="text-center">
               You've successfully joined through the referral program
             </CardDescription>
@@ -111,7 +110,7 @@ export function ReferralClaimPageClient({
       <div className="flex min-h-screen items-center justify-center p-4">
         <Card className="w-full max-w-2xl">
           <CardHeader>
-            <CardTitle className="text-2xl text-center text-destructive">
+            <CardTitle className="text-destructive text-center text-2xl">
               Unable to Claim
             </CardTitle>
             <CardDescription className="text-center">

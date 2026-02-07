@@ -1,13 +1,13 @@
 "use client";
 
 import { fetcher } from "@/lib/fetcher";
-import { useCashierContext } from "../../../_context/CashierContext";
-import { CashierNav } from "../../../_components/CashierNav";
 import { buttonVariants, DateDisplay, Skeleton } from "@reelo/ui/components";
-import { useQuery } from "@tanstack/react-query";
 import { cn } from "@reelo/ui/lib/utils";
+import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { CashierNav } from "../../../_components/CashierNav";
+import { useCashierContext } from "../../../_context/CashierContext";
 
 interface CashierBillDetailContentProps {
   billId: string;
@@ -63,7 +63,7 @@ export function CashierBillDetailContent({
           <div className="flex justify-center">
             <CashierNav />
           </div>
-          <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3">
+          <div className="border-destructive/30 bg-destructive/5 rounded-lg border px-4 py-3">
             <p className="text-destructive text-sm">
               {error?.message ?? "Failed to load bill"}
             </p>

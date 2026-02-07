@@ -1,12 +1,12 @@
 "use client";
 
 import { useCashierBillsQuery } from "@/hooks/cashier/useCashierBillsQuery";
-import { useCashierContext } from "../_context/CashierContext";
 import { buttonVariants, DateDisplay, Skeleton } from "@reelo/ui/components";
-import { ExternalLink } from "lucide-react";
 import { cn } from "@reelo/ui/lib/utils";
+import { ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useCashierContext } from "../_context/CashierContext";
 
 export function CashierBillsList() {
   useCashierContext();
@@ -16,7 +16,7 @@ export function CashierBillsList() {
 
   if (isError) {
     return (
-      <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3">
+      <div className="border-destructive/30 bg-destructive/5 rounded-lg border px-4 py-3">
         <p className="text-destructive text-sm">
           {error?.message ?? "Failed to load bills"}
         </p>

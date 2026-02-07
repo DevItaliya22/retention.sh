@@ -1,7 +1,7 @@
 import { z } from "zod";
 import {
-  referralBenefitTypeSchema,
   informationSectionSchema,
+  referralBenefitTypeSchema,
   referralBrandingSchema,
 } from "./referral";
 

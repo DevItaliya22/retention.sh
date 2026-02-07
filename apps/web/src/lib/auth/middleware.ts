@@ -1,7 +1,7 @@
+import type { IsServiceEnabled } from "@/lib/utils/service-enabled";
 import { db } from "@reelo/db";
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "./auth";
-import type { IsServiceEnabled } from "@/lib/utils/service-enabled";
 import {
   getCashierSessionFromHeaders,
   type CashierSessionData,

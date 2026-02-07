@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { loyaltyTermsSchema, loyaltyBrandingSchema } from "./loyalty";
+import { loyaltyBrandingSchema, loyaltyTermsSchema } from "./loyalty";
 
 export const loyaltyProgramStep1Schema = z.object({
   earningPercentage: z.coerce.number().min(0).max(100),

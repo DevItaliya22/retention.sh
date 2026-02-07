@@ -3,8 +3,8 @@
 import { SettingsFieldGroup } from "@/components/common/settings/SettingsFieldGroup";
 import { PageLayout, ScaffoldContainer } from "@/components/layouts";
 import type { CurrentBusiness } from "@/hooks/business/useCurrentBusiness";
-import { isServiceEnabled } from "@/lib/utils/service-enabled";
 import { useUpdateBusiness } from "@/hooks/business/useCurrentBusiness";
+import { isServiceEnabled } from "@/lib/utils/service-enabled";
 import {
   Card,
   CardContent,

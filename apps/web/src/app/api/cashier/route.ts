@@ -1,4 +1,3 @@
-import { hashPassword } from "@/lib/utils/password";
 import { withAdminAuth } from "@/lib/auth/middleware";
 import {
   cashiersQuerySchema,
@@ -8,6 +7,7 @@ import {
   sanitizeErrorMessage,
   validateSchema,
 } from "@/lib/utils/error-handler";
+import { hashPassword } from "@/lib/utils/password";
 import { db } from "@reelo/db";
 import { NextRequest, NextResponse } from "next/server";
 

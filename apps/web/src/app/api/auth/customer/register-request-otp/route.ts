@@ -1,16 +1,15 @@
 import { APP_CONSTANTS } from "@/lib/constants/app";
 import { registerRequestOtpSchema } from "@/lib/schemas/customer-auth";
 import {
-  type IsServiceEnabled,
-  isServiceEnabled,
-} from "@/lib/utils/service-enabled";
-import {
   sanitizeErrorMessage,
   validateSchema,
 } from "@/lib/utils/error-handler";
 import { formatPhoneNumber } from "@/lib/utils/phone";
-import { db } from "@reelo/db";
-import { TransactionSource, TransactionType } from "@reelo/db";
+import {
+  type IsServiceEnabled,
+  isServiceEnabled,
+} from "@/lib/utils/service-enabled";
+import { db, TransactionSource, TransactionType } from "@reelo/db";
 import { randomInt } from "crypto";
 import { NextResponse } from "next/server";
 

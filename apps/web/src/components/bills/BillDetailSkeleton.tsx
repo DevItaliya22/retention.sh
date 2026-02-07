@@ -15,7 +15,7 @@ export function BillDetailSkeleton() {
   return (
     <div className="space-y-8">
       {/* Bill header */}
-      <Card className="overflow-hidden border-0 bg-muted/30 shadow-none">
+      <Card className="bg-muted/30 overflow-hidden border-0 shadow-none">
         <CardContent className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
           <div className="space-y-2">
             <Skeleton className="h-3 w-20" />

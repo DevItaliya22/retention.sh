@@ -1,5 +1,6 @@
 "use client";
 
+import type { LoyaltyProgramFormValues } from "@/lib/schemas/loyalty-form";
 import {
   Button,
   Checkbox,
@@ -11,7 +12,6 @@ import {
   useFormContext,
 } from "@reelo/ui/components";
 import { Plus, Trash2 } from "lucide-react";
-import type { LoyaltyProgramFormValues } from "@/lib/schemas/loyalty-form";
 
 export function LoyaltyProgramStep3() {
   const form = useFormContext<LoyaltyProgramFormValues>();
@@ -78,7 +78,7 @@ export function LoyaltyProgramStep3() {
             <div className="flex flex-col gap-2">
               <span className="text-sm font-medium">Terms & conditions</span>
               {terms.map((_, index) => (
-                <div key={index} className="flex gap-2 items-start">
+                <div key={index} className="flex items-start gap-2">
                   <FormField
                     control={form.control}
                     name={`termsAndConditions.${index}`}
@@ -111,7 +111,7 @@ export function LoyaltyProgramStep3() {
                         { shouldDirty: true },
                       );
                     }}
-                    className="shrink-0 mt-2"
+                    className="mt-2 shrink-0"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>

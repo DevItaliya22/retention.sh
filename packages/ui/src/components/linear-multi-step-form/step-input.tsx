@@ -1,7 +1,7 @@
 "use client";
 
-import * as React from "react";
 import { cn } from "@reelo/ui/lib/utils";
+import * as React from "react";
 import { Input } from "../input";
 
 export type StepInputProps = React.ComponentProps<typeof Input>;

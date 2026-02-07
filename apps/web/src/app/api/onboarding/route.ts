@@ -3,13 +3,13 @@ import {
   type WelcomeFormValues,
   welcomeFormSchema,
 } from "@/lib/schemas/onboarding";
-import { DEFAULT_SERVICES_ON_CREATION } from "@/lib/utils/service-enabled";
 import { buildCashierEmail } from "@/lib/utils/cashier-email";
 import {
   sanitizeErrorMessage,
   validateSchema,
 } from "@/lib/utils/error-handler";
 import { hashPassword } from "@/lib/utils/password";
+import { DEFAULT_SERVICES_ON_CREATION } from "@/lib/utils/service-enabled";
 import { db } from "@reelo/db";
 import { NextRequest, NextResponse } from "next/server";
 

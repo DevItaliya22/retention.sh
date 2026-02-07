@@ -1,10 +1,10 @@
 "use client";
 
+import { useReferralLogsByReferrer } from "@/hooks/referral/useReferralLogs";
 import {
   type ReferralStatRow,
   useReferralStatsQuery,
 } from "@/hooks/referral/useReferralProgram";
-import { useReferralLogsByReferrer } from "@/hooks/referral/useReferralLogs";
 import { getDataTableConfig } from "@/lib/utils/data-table-params";
 import {
   Badge,
@@ -191,7 +191,7 @@ export function ReferralStatsTable() {
               onClick={() => toggleExpanded(rowId)}
               aria-expanded={isExpanded}
               aria-label={isExpanded ? "Collapse row" : "Expand row"}
-              className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              className="text-muted-foreground hover:bg-muted hover:text-foreground flex h-8 w-8 items-center justify-center rounded-md transition-colors"
             >
               {isExpanded ? (
                 <ChevronDown className="h-4 w-4" />

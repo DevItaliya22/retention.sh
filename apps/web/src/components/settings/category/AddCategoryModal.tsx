@@ -2,12 +2,13 @@
 
 import { useCategoriesListQuery } from "@/hooks/category/useCategoriesListQuery";
 import { useManageCategory } from "@/hooks/category/useManageCategory";
+import { createCategorySchema } from "@/lib/schemas/sku";
 import {
   getCategoryOptionsWithDepth,
   getNextSortOrder,
 } from "@/lib/utils/category-tree";
-import { createCategorySchema } from "@/lib/schemas/sku";
 import { getErrorMessageFromResponse } from "@/lib/utils/error-handler";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Button,
   Dialog,
@@ -15,6 +16,7 @@ import {
   DialogDescription,
   DialogFooter,
   DialogHeader,
+  DialogSection,
   DialogTitle,
   Form,
   FormControl,
@@ -29,8 +31,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@reelo/ui/components";
-import { DialogSection } from "@reelo/ui/components";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";

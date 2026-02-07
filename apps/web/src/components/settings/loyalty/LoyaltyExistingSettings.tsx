@@ -6,6 +6,7 @@ import {
   loyaltySettingsSchema,
   type LoyaltySettingsInput,
 } from "@/lib/schemas/loyalty";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Button,
   Card,
@@ -25,7 +26,6 @@ import {
   Label,
   Textarea,
 } from "@reelo/ui/components";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2 } from "lucide-react";
 import type { Resolver } from "react-hook-form";
@@ -250,7 +250,7 @@ export function LoyaltyExistingSettings() {
         <p className="text-destructive text-sm">
           {data?.error || "Failed to load loyalty settings"}
         </p>
-        <p className="text-muted-foreground text-xs mt-1">
+        <p className="text-muted-foreground mt-1 text-xs">
           Please try again later
         </p>
       </div>
@@ -421,7 +421,7 @@ export function LoyaltyExistingSettings() {
                     form.setValue("earnPointsOnPaidAmountOnly", !!v)
                   }
                 />
-                <span className="text-sm text-muted-foreground">
+                <span className="text-muted-foreground text-sm">
                   On (recommended): earn on amount paid after redemption
                 </span>
               </div>
@@ -658,7 +658,7 @@ export function LoyaltyExistingSettings() {
               </div>
               <div className="col-span-8 flex flex-col gap-3">
                 {(form.watch("termsAndConditions") ?? [""]).map((_, index) => (
-                  <div key={index} className="flex gap-2 items-start">
+                  <div key={index} className="flex items-start gap-2">
                     <FormField
                       control={form.control}
                       name={`termsAndConditions.${index}`}
@@ -691,7 +691,7 @@ export function LoyaltyExistingSettings() {
                           { shouldDirty: true },
                         );
                       }}
-                      className="shrink-0 mt-2"
+                      className="mt-2 shrink-0"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>

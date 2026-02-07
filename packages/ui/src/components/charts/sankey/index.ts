@@ -4,14 +4,14 @@ export {
   type SankeyData,
 } from "./sankey-chart";
 export {
+  SankeyProvider,
+  sankeyCssVars,
+  useSankey,
   type Margin,
   type SankeyContextValue,
   type SankeyLinkDatum,
   type SankeyNodeDatum,
-  SankeyProvider,
   type SankeyTooltipData,
-  sankeyCssVars,
-  useSankey,
 } from "./sankey-context";
 export { SankeyLink, type SankeyLinkProps } from "./sankey-link";
 export { SankeyNode, type SankeyNodeProps } from "./sankey-node";

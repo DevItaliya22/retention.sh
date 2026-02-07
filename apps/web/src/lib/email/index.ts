@@ -18,9 +18,9 @@
  * ```
  */
 
+export { sendMagicLink, type SendMagicLinkOptions } from "./magic-link";
 export {
   sendEmail,
   type SendEmailOptions,
   type SendEmailResult,
 } from "./send-email";
-export { sendMagicLink, type SendMagicLinkOptions } from "./magic-link";

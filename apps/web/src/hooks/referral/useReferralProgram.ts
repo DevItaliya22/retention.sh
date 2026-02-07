@@ -2,17 +2,16 @@
 
 import { fetcher } from "@/lib/fetcher";
 import {
-  buildApiParams,
-  getDataTableConfig,
-} from "@/lib/utils/data-table-params";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useSearchParams } from "next/navigation";
-import {
   CreateReferralProgramInput,
   UpdateReferralProgramInput,
 } from "@/lib/schemas/referral";
+import {
+  buildApiParams,
+  getDataTableConfig,
+} from "@/lib/utils/data-table-params";
 import type { IsServiceEnabled } from "@/lib/utils/service-enabled";
-import { isServiceEnabled } from "@/lib/utils/service-enabled";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSearchParams } from "next/navigation";
 
 export interface ReferralStatRow {
   id: string;

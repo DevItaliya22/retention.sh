@@ -1,5 +1,4 @@
 import { withAdminAuth } from "@/lib/auth/middleware";
-import { isServiceEnabled } from "@/lib/utils/service-enabled";
 import { customerSlugIdParamSchema } from "@/lib/schemas/customer";
 import {
   sanitizeErrorMessage,

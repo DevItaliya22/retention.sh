@@ -1,8 +1,8 @@
 "use client";
 
 import { useCategoriesListQuery } from "@/hooks/category/useCategoriesListQuery";
-import { buildCategoryTree } from "@/lib/utils/category-tree";
 import type { CategoryTreeNode } from "@/lib/utils/category-tree";
+import { buildCategoryTree } from "@/lib/utils/category-tree";
 import {
   Button,
   Card,
@@ -15,7 +15,7 @@ import {
   CollapsibleTrigger,
   Skeleton,
 } from "@reelo/ui/components";
-import { ChevronRight, FolderOpen, Folder, Plus } from "lucide-react";
+import { ChevronRight, Folder, FolderOpen, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { DeleteCategoryButton } from "./DeleteCategoryButton";
 import { EditCategoryButton } from "./EditCategoryButton";
@@ -42,7 +42,7 @@ function CategoryRow({
       <div className="flex w-5 shrink-0 items-center justify-center">
         {hasChildren ? (
           <ChevronRight
-            className="h-4 w-4 text-muted-foreground transition-transform duration-200"
+            className="text-muted-foreground h-4 w-4 transition-transform duration-200"
             style={{ transform: open ? "rotate(90deg)" : undefined }}
           />
         ) : (
@@ -50,20 +50,20 @@ function CategoryRow({
         )}
       </div>
       {hasChildren ? (
-        <FolderOpen className="h-4 w-4 shrink-0 text-muted-foreground" />
+        <FolderOpen className="text-muted-foreground h-4 w-4 shrink-0" />
       ) : (
-        <Folder className="h-4 w-4 shrink-0 text-muted-foreground" />
+        <Folder className="text-muted-foreground h-4 w-4 shrink-0" />
       )}
       <span className="min-w-0 flex-1 truncate font-medium">{node.name}</span>
-      <span className="shrink-0 text-xs text-muted-foreground">
-        <span className="rounded bg-muted px-1.5 py-0.5" title="Display order">
+      <span className="text-muted-foreground shrink-0 text-xs">
+        <span className="bg-muted rounded px-1.5 py-0.5" title="Display order">
           #{node.sortOrder}
         </span>
-        <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5">
+        <span className="bg-muted ml-1.5 rounded px-1.5 py-0.5">
           {node.skuCount} SKU{node.skuCount !== 1 ? "s" : ""}
         </span>
         {node.subcategoryCount > 0 && (
-          <span className="ml-1 rounded bg-muted px-1.5 py-0.5">
+          <span className="bg-muted ml-1 rounded px-1.5 py-0.5">
             {node.subcategoryCount} sub
           </span>
         )}
@@ -97,7 +97,7 @@ function CategoryRow({
   if (!hasChildren) {
     return (
       <div
-        className="group flex min-h-10 items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors hover:bg-muted/60"
+        className="group hover:bg-muted/60 flex min-h-10 items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors"
         style={{ paddingLeft: 12 + indent }}
       >
         {rowContent}
@@ -110,14 +110,14 @@ function CategoryRow({
       <div className="group">
         <CollapsibleTrigger asChild>
           <div
-            className="flex min-h-10 cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors hover:bg-muted/60"
+            className="hover:bg-muted/60 flex min-h-10 cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors"
             style={{ paddingLeft: 12 + indent }}
           >
             {rowContent}
           </div>
         </CollapsibleTrigger>
         <CollapsibleContent>
-          <div className="border-l border-muted/60 pl-0">
+          <div className="border-muted/60 border-l pl-0">
             {node.children.map((child) => (
               <CategoryRow
                 key={child.id}
@@ -185,11 +185,11 @@ export function CategoryTree({ onAddSubcategory }: CategoryTreeProps) {
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-          <Folder className="h-10 w-10 text-muted-foreground/50" />
-          <p className="mt-2 font-medium text-muted-foreground">
+          <Folder className="text-muted-foreground/50 h-10 w-10" />
+          <p className="text-muted-foreground mt-2 font-medium">
             No categories yet
           </p>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Use &quot;Add Category&quot; above to create your first category
           </p>
         </CardContent>
@@ -209,7 +209,7 @@ export function CategoryTree({ onAddSubcategory }: CategoryTreeProps) {
         </CardDescription>
       </CardHeader>
       <CardContent className="px-0 py-2">
-        <div className="divide-y divide-border/60">
+        <div className="divide-border/60 divide-y">
           {tree.map((node) => (
             <CategoryRow
               key={node.id}

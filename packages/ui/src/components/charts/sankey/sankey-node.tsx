@@ -206,7 +206,7 @@ function AnimatedNode({
               opacity: nameOpacity,
               x: nameLabelX,
             }}
-            className="fill-foreground font-medium text-[13px]"
+            className="fill-foreground text-[13px] font-medium"
             dy="0.35em"
             initial={{ opacity: 0, x: isLeftSide ? x + 8 : x + width - 8 }}
             textAnchor={isLeftSide ? "end" : "start"}

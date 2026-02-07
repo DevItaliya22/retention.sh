@@ -1,10 +1,10 @@
 "use client";
 
 import { useBillCreation } from "@/hooks/cashier/useBillCreation";
-import { useLoyaltyPreview } from "@/hooks/cashier/useLoyaltyPreview";
 import { useCashierSkusQuery } from "@/hooks/cashier/useCashierSkusQuery";
-import { billFormSchema } from "@/lib/schemas/bill";
+import { useLoyaltyPreview } from "@/hooks/cashier/useLoyaltyPreview";
 import type { BillLineItemInput } from "@/lib/schemas/bill";
+import { billFormSchema } from "@/lib/schemas/bill";
 import { getErrorMessageFromResponse } from "@/lib/utils/error-handler";
 import {
   Button,
@@ -276,7 +276,7 @@ export function BillCreationForm() {
             autoComplete="off"
             name="prevent_autofill"
             tabIndex={-1}
-            className="absolute -left-[9999px] opacity-0 pointer-events-none h-0 w-0"
+            className="pointer-events-none absolute -left-[9999px] h-0 w-0 opacity-0"
             aria-hidden
             readOnly
           />
@@ -311,17 +311,17 @@ export function BillCreationForm() {
           <div className="grid grid-cols-1 gap-4 rounded-lg border p-4 md:grid-cols-2">
             <div className="space-y-1">
               <p className="text-sm font-medium">Loyalty Preview</p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 Points balance: {pointsBalance}
               </p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 Earnable points: {earnablePoints}
               </p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 Redeemable points: {redeemablePoints}
               </p>
               {loyaltyPreview?.expiringBuckets?.length ? (
-                <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+                <div className="text-muted-foreground mt-2 space-y-1 text-xs">
                   <p>Expiring soon:</p>
                   {loyaltyPreview.expiringBuckets.map((bucket) => (
                     <p key={bucket.id}>
@@ -345,7 +345,7 @@ export function BillCreationForm() {
                 disabled={isCreating}
               />
               {billAmountNumber > 0 ? (
-                <p className="text-xs text-muted-foreground">
+                <p className="text-muted-foreground text-xs">
                   Payable amount:{" "}
                   {Math.max(
                     0,
@@ -581,7 +581,7 @@ export function BillCreationForm() {
                 {lineItems.map((row, index) => (
                   <div
                     key={index}
-                    className="flex flex-wrap items-end gap-3 rounded-md border bg-muted/30 p-3"
+                    className="bg-muted/30 flex flex-wrap items-end gap-3 rounded-md border p-3"
                   >
                     <div className="min-w-[180px] flex-1 space-y-2">
                       <Label className="text-xs">SKU</Label>
@@ -646,7 +646,7 @@ export function BillCreationForm() {
                       onClick={() => removeLineItem(index)}
                       disabled={isCreating}
                       aria-label="Remove line item"
-                      className="shrink-0 text-muted-foreground hover:text-destructive"
+                      className="text-muted-foreground hover:text-destructive shrink-0"
                     >
                       <Trash2 className="size-4" />
                     </Button>

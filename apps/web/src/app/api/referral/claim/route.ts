@@ -1,16 +1,16 @@
 import { APP_CONSTANTS } from "@/lib/constants/app";
-import {
-  type IsServiceEnabled,
-  isServiceEnabled,
-} from "@/lib/utils/service-enabled";
+import { claimReferralSchema } from "@/lib/schemas/referral";
 import {
   sanitizeErrorMessage,
   validateSchema,
 } from "@/lib/utils/error-handler";
 import { formatPhoneNumber } from "@/lib/utils/phone";
+import {
+  type IsServiceEnabled,
+  isServiceEnabled,
+} from "@/lib/utils/service-enabled";
 import { db } from "@reelo/db";
 import { NextRequest, NextResponse } from "next/server";
-import { claimReferralSchema } from "@/lib/schemas/referral";
 
 export async function POST(request: NextRequest) {
   try {

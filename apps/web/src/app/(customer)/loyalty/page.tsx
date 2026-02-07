@@ -65,12 +65,12 @@ export default function LoyaltyListPage() {
                 </CardHeader>
                 <CardContent>
                   {item.nextExpiry ? (
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                       {item.nextExpiry.amount} points expire on{" "}
                       <DateDisplay date={item.nextExpiry.expiresAt} />
                     </p>
                   ) : (
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                       No points expiring soon
                     </p>
                   )}
