@@ -1,25 +1,56 @@
+// ========================================================================
+// BILL
+// ========================================================================
+// A bill represents a single purchase/transaction by a customer.
+//
+// Amount fields:
+//   subtotal    — sum of line items before store discounts and tax.
+//   amount      — bill total after store discounts and tax (pre-loyalty).
+//   finalAmount — amount after loyalty adjustments (cashback deducted or
+//                 points redeemed). This is what the customer actually pays.
+//
+// For CASHBACK loyalty: cashbackAmount stores the discount applied.
+//   e.g. amount ₹1000, cashback ₹100 → finalAmount ₹900.
+//
+// Points earned/redeemed are NOT stored here — they are derivable from
+// PointsTransaction rows linked via pointsTransactions relation.
+// Query: SUM(amount) WHERE billId = this.id AND type = EARNED / REDEEMED.
+// ========================================================================
+
 model Bill {
   id String @id @default(uuid())
 
-  billNumber            String
-  amount                Float?
-  notes                 String? // Optional notes on the bill
-  finalAmount           Float? // Amount after applying loyalty redemption (if any)
-  loyaltyPointsEarned   Int     @default(0)
-  loyaltyPointsRedeemed Int     @default(0)
+  billNumber String
 
+  // ── Amounts ────────────────────────────────────────────────────────────
+  // subtotal: snapshot of line items total at billing time (before discounts/tax).
+  //   Derivable from BillLineItem but cached for performance and historical accuracy.
+  // amount: bill total after store discounts and tax (what customer owes pre-loyalty).
+  // finalAmount: after loyalty adjustments (the actual payable amount).
+  subtotal    Float?
+  amount      Float?
+  finalAmount Float?
+
+  // For CASHBACK loyalty type: the cashback amount applied to this bill.
+  // Not derivable (depends on caps, rounding, etc. at time of billing).
+  cashbackAmount Float?
+
+  // Optional notes on the bill.
+  notes String?
+
+  // ── Relations ──────────────────────────────────────────────────────────
   businessId       String
   customerId       String
   businessCustomer BusinessCustomer @relation(fields: [businessId, customerId], references: [businessId, customerId], onDelete: Cascade)
 
-  // Optional: which cashier created this bill
+  // Optional: which cashier created this bill.
   cashierId String?
   cashier   Cashier? @relation(fields: [cashierId], references: [id], onDelete: SetNull)
 
-  // Relation to scratch cards
   scratchCardResponses ScratchCardResponse[]
 
-  // Loyalty: point transactions (earned/redeemed) linked to this bill
+  // Point transactions (earned/redeemed) linked to this bill.
+  // Use this to derive loyaltyPointsEarned and loyaltyPointsRedeemed.
   pointsTransactions PointsTransaction[]
 
   lineItems BillLineItem[]
@@ -34,6 +65,14 @@ model Bill {
   @@map("bill")
 }
 
+// ========================================================================
+// BILL LINE ITEM
+// ========================================================================
+// Individual item/SKU in a bill with quantity and price snapshot.
+// unitPrice captures the price at time of purchase (may differ from Sku.price
+// if the price changed since).
+// ========================================================================
+
 model BillLineItem {
   id String @id @default(uuid())
 
@@ -44,7 +83,7 @@ model BillLineItem {
   sku   Sku    @relation(fields: [skuId], references: [id], onDelete: Cascade)
 
   qty       Int    @default(1)
-  unitPrice Float? // price at time of purchase (optional; can use sku.price)
+  unitPrice Float? // Price at time of purchase (optional; can fall back to sku.price)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

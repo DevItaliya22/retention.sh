@@ -1,76 +1,379 @@
+// ========================================================================
+// LOYALTY PROGRAM
+// ========================================================================
+// A business has exactly ONE loyalty program, chosen from four types:
+//   1. CASHBACK     — Instant cashback on the same bill (no points)
+//   2. TIER         — Lifetime spending tiers with escalating cashback %
+//   3. AMOUNT_SPENT — Points earned per bill amount, redeemable for rewards
+//   4. VISIT_MADE   — Points earned per visit, redeemable for rewards
+//
+// Common fields (branding, T&C, channels, expiry) apply to all types.
+// Exactly one type-specific config relation is non-null.
+// Points name comes from Business.defaultPointsName (not stored here).
+// ========================================================================
+
 model Loyalty {
   id String @id @default(uuid())
 
-  // Business Connection (One business has one loyalty)
+  // Type discriminator — determines which config relation is populated.
+  loyaltyType LoyaltyType // CASHBACK | TIER | AMOUNT_SPENT | VISIT_MADE
+
+  // Business (1:1). One business can have at most one loyalty program.
   businessId String   @unique
   business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
 
-  // Branding
+  // ── COMMON FIELDS (shared across all four loyalty types) ───────────────
+
+  // Branding: logo, colors, card design, etc. (optional)
   brandingId String?   @unique
   branding   Branding? @relation(fields: [brandingId], references: [id], onDelete: SetNull, map: "loyalty_branding_fkey")
 
-  // Form STEP 2 - Cashback Settings
-  earningPercentage          Float   @default(0) // Customer earns X%
-  earnPointsOnPaidAmountOnly Boolean @default(true) // When redeeming: earn points on amount paid (finalAmount); if false, earn on full bill amount
-  cashbackInFinalAmount      Boolean @default(false) // Cashback available in final amount? means if there is a bill of 1000 and 10% cashback then the customer will receive 100 points now if next time he comes and make another bill of 1000 then he redeem the 100 points from pre back , so the bill amount should be 1000 but points should only be given on 900 , if admin wants to give to 1000 then its this variable shouyld be true 
-  cashbackBranding           String? // e.g., "cookies", "chillies"
-  minPurchaseForEarning      Float   @default(0) // Minimum purchase for earning cashback
-  minPurchaseForRedemption   Float   @default(0) // Minimum purchase for using loyalty coupon
-
-  // Form STEP 3 - Limits
-  upperLimitBillAmount      Float? // Upper limit on bill amount
-  upperLimitClaimableAmount Float? // Upper limit on claimable amount
-
-  // Form STEP 4 - Terms & Conditions
+  // Terms & Conditions (polymorphic array — can also live on individual tiers)
   termsAndConditions TermsAndConditions[]
 
-  // Form STEP 5 - Points Configuration
-  pointReminderDays Int? // Point reminder after how many days
-  pointExpiryDays   Int? // Points expire after how many days
+  // Expiry & Reminders (in days).
+  //   pointReminderDays: send reminder X days before points expire.
+  //   pointExpiryDays:   points expire X days after being earned.
+  // Null = no reminder / points never expire.
+  pointReminderDays Int?
+  pointExpiryDays   Int?
 
-  // Form STEP 6 - Communication Channels
+  // Communication channels for loyalty messages (earn, expire, remind).
   whatsappEnabled Boolean @default(false)
   emailEnabled    Boolean @default(false)
   smsEnabled      Boolean @default(false)
 
-  // Relations
+  // ── TYPE-SPECIFIC CONFIGS ──────────────────────────────────────────────
+  // Exactly one of these is non-null, matching loyaltyType.
+  cashbackConfig    LoyaltyCashbackConfig?
+  tierConfig        LoyaltyTierConfig?
+  amountSpentConfig LoyaltyAmountSpentConfig?
+  visitMadeConfig   LoyaltyVisitMadeConfig?
+
+  // ── Other Relations ────────────────────────────────────────────────────
+  qrs Qr[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([businessId])
+  @@index([loyaltyType])
+  @@map("loyalty")
+}
+
+// ========================================================================
+// TYPE 1: CASHBACK (Basic)
+// ========================================================================
+// Instant cashback applied on each bill — conceptually "labeled discount."
+//
+// Flow:
+//   1. Bill created for ₹1000, cashback % = 10.
+//   2. Cashback earned = ₹100 (capped by maxCashbackCap if set).
+//   3. Bill displays: amount ₹1000, cashback ₹100, payable ₹900.
+//   4. Cashback goes to customer wallet for future redemption.
+//
+// Redemption limits control how much of the wallet balance or bill amount
+// can be redeemed at once.
+// ========================================================================
+
+model LoyaltyCashbackConfig {
+  id String @id @default(uuid())
+
+  loyaltyId String  @unique
+  loyalty   Loyalty @relation(fields: [loyaltyId], references: [id], onDelete: Cascade)
+
+  // Cashback percentage (e.g. 10.0 = 10% of bill becomes cashback).
+  cashbackPercentage Float @default(0)
+
+  // If true: calculate cashback on final amount (after store discounts + tax).
+  // If false: calculate on subtotal (sum of line items before discounts/tax).
+  onFinalAmount Boolean @default(false)
+
+  // Maximum cashback per bill (cap). Null = no cap.
+  // E.g. cap ₹1000 → bill ₹11,000 at 10% gives ₹1,000 (not ₹1,100).
+  maxCashbackCap Float?
+
+  // Minimum bill amount to earn cashback. Toggle + value.
+  minPurchaseForEarningEnabled Boolean @default(false)
+  minPurchaseForEarning        Float?
+
+  // Minimum bill amount to redeem accumulated cashback. Toggle + value.
+  minPurchaseForRedemptionEnabled Boolean @default(false)
+  minPurchaseForRedemption        Float?
+
+  // ── Redemption Limits on Wallet Balance ────────────────────────────────
+  // Cap how much of their total cashback balance a customer can use at once.
+  // When enabled, either amount or percentage (or both) can be set.
+  redemptionBalanceLimitEnabled    Boolean @default(false)
+  redemptionBalanceLimitAmount     Float? // Max redeemable (₹)
+  redemptionBalanceLimitPercentage Float? // Max redeemable as % of available balance
+
+  // ── Redemption Limits on Bill Amount ───────────────────────────────────
+  // Cap redemption relative to the current bill total.
+  // Which "total" depends on onFinalAmount setting.
+  redemptionBillLimitEnabled    Boolean @default(false)
+  redemptionBillLimitAmount     Float? // Max redeemable (₹) on current bill
+  redemptionBillLimitPercentage Float? // Max redeemable as % of bill amount
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("loyalty_cashback_config")
+}
+
+// ========================================================================
+// TYPE 2: TIER / GAMIFIED
+// ========================================================================
+// Customers earn points and progress through tiers based on LIFETIME spending.
+// Higher tiers unlock better cashback percentages.
+//
+// Tiers are defined by spending ranges:
+//   e.g. ₹0–5k = Silver (3%), ₹5k–20k = Gold (5%), ₹20k+ = Platinum (8%).
+//
+// Each tier has its own minPurchaseForEarning, minPurchaseForRedemption,
+// and maxCashbackCap. The global config holds pointsPerRupee and a global
+// maxCashbackCap as fallback.
+//
+// BusinessCustomer.lifetimeSpend tracks the cumulative spend for tier placement.
+// BusinessCustomer.currentTierId points to the customer's active tier.
+// ========================================================================
+
+model LoyaltyTierConfig {
+  id String @id @default(uuid())
+
+  loyaltyId String  @unique
+  loyalty   Loyalty @relation(fields: [loyaltyId], references: [id], onDelete: Cascade)
+
+  // Default points conversion: 1 rupee spent = X points.
+  pointsPerRupee Float @default(1)
+
+  // Global max cashback cap per transaction. Toggle + value.
+  // Guards against huge bills (e.g. party orders) exhausting too many points.
+  maxCashbackCapEnabled Boolean @default(false)
+  maxCashbackCap        Float?
+
   tiers LoyaltyTier[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Relations
-  qrs Qr[]
-
-  @@index([businessId])
-  @@map("loyalty")
+  @@map("loyalty_tier_config")
 }
 
 model LoyaltyTier {
   id String @id @default(uuid())
 
-  name      String // e.g. "Gold", "Silver"
-  rank      Int // 1- highest rank , 2- second highest rank , 3- third highest rank , etc.
-  minPoints Int    @default(0) // Entry criteria
+  tierConfigId String
+  tierConfig   LoyaltyTierConfig @relation(fields: [tierConfigId], references: [id], onDelete: Cascade)
 
-  rewards String[] // Simple text rewards for now
+  // Display name (e.g. "Silver", "Gold", "Platinum").
+  name String
 
-  // Relation to Loyalty
-  loyaltyId String
-  loyalty   Loyalty @relation(fields: [loyaltyId], references: [id], onDelete: Cascade)
+  // Ordering: 1 = lowest/entry tier, higher numbers = better tiers.
+  rank Int
 
-  // Terms
+  // Lifetime spending range (₹) to qualify for this tier.
+  // minLifetimeSpend = entry threshold; maxLifetimeSpend = ceiling.
+  // Null maxLifetimeSpend = no upper limit (top tier).
+  minLifetimeSpend Float
+  maxLifetimeSpend Float?
+
+  // Cashback percentage customers earn in this tier (e.g. 5.0 = 5%).
+  cashbackPercentage Float @default(0)
+
+  // Minimum purchase for earning cashback in this tier. Toggle + value.
+  minPurchaseForEarningEnabled Boolean @default(false)
+  minPurchaseForEarning        Float?
+
+  // Minimum purchase for redemption in this tier. Toggle + value.
+  minPurchaseForRedemptionEnabled Boolean @default(false)
+  minPurchaseForRedemption        Float?
+
+  // Max cashback cap per transaction in this tier. Toggle + value.
+  maxCashbackCapEnabled Boolean @default(false)
+  maxCashbackCap        Float?
+
+  // Relations
   termsAndConditions TermsAndConditions[]
-
-  // Customers in this tier
-  customers BusinessCustomer[]
+  customers          BusinessCustomer[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([loyaltyId])
+  @@index([tierConfigId])
   @@map("loyalty_tier")
 }
+
+// ========================================================================
+// TYPE 3: AMOUNT SPENT (This Bill Only)
+// ========================================================================
+// Points earned based on THIS BILL's amount only — NOT lifetime total.
+// Customer earns X points per rupee spent in a single bill, redeemable
+// via configurable reward stages (free item, % discount, cash discount).
+//
+// Example: pointsPerRupee = 1, bill ₹1000 → earn 1000 points.
+//          Reward stage: 5000 pts → "10% off entire purchase."
+//
+// No minPurchaseForEarning here — rewards are threshold-based via
+// pointsRequired on each LoyaltyRewardStage.
+//
+// This is DIFFERENT from Tier (which tracks lifetime spending).
+// ========================================================================
+
+model LoyaltyAmountSpentConfig {
+  id String @id @default(uuid())
+
+  loyaltyId String  @unique
+  loyalty   Loyalty @relation(fields: [loyaltyId], references: [id], onDelete: Cascade)
+
+  // Points conversion: 1 rupee spent = X points.
+  pointsPerRupee Float @default(1)
+
+  // If true: earn points on final amount (after store discounts + tax).
+  // If false: earn points on subtotal (sum of line items before discounts/tax).
+  onFinalAmount Boolean @default(false)
+
+  // Max points a customer can earn in a single purchase. Null = no cap.
+  maxPointsPerPurchase Int?
+
+  // Configurable reward stages (e.g. 5000 pts → 10% off, 10000 pts → free item).
+  rewardStages LoyaltyRewardStage[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("loyalty_amount_spent_config")
+}
+
+// ========================================================================
+// TYPE 4: VISIT MADE
+// ========================================================================
+// Points earned per visit (1 visit = 1 bill by default).
+// Customer earns X points per qualifying visit, redeemable via reward stages.
+//
+// Visit interval: optionally require a minimum time gap between visits
+// to prevent gaming (e.g. only count visits that are 24h apart).
+// When enabled, backend checks BusinessCustomer.lastVisitAt.
+// When disabled, every bill counts as one visit.
+//
+// Reward structure is identical to Amount Spent (free item, %, cash).
+// ========================================================================
+
+model LoyaltyVisitMadeConfig {
+  id String @id @default(uuid())
+
+  loyaltyId String  @unique
+  loyalty   Loyalty @relation(fields: [loyaltyId], references: [id], onDelete: Cascade)
+
+  // Points earned per qualifying visit.
+  pointsPerVisit Int @default(1)
+
+  // Visit interval: minimum time between visits to count as separate visits.
+  // When enabled, only increment visitCount if now - lastVisitAt > interval.
+  // When disabled, every bill = 1 visit.
+  // Constraint ranges (enforced in application):
+  //   MINUTE: 1–60, HOUR: 1–23, DAY: 1–31, WEEK: 1–4, MONTH: 1–12
+  visitIntervalEnabled Boolean            @default(false)
+  visitIntervalValue   Int? // e.g. 24 (for 24 hours)
+  visitIntervalUnit    VisitIntervalUnit? // MINUTE | HOUR | DAY | WEEK | MONTH
+
+  // Configurable reward stages (same structure as Amount Spent).
+  rewardStages LoyaltyRewardStage[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("loyalty_visit_made_config")
+}
+
+// ========================================================================
+// REWARD STAGES (shared by Amount Spent + Visit Made)
+// ========================================================================
+// Configurable reward tiers that customers can redeem points for.
+// Each stage defines: points needed, reward type, and reward details.
+//
+// Reward types:
+//   FREE_ITEM           — a specific SKU or named item given for free
+//   PERCENTAGE_DISCOUNT — X% off (entire purchase or specific products)
+//   CASH_DISCOUNT       — flat ₹X off the bill
+//
+// Each stage belongs to EITHER AmountSpentConfig OR VisitMadeConfig
+// (exactly one FK is non-null).
+//
+// For Visit Made, pointsRequired = visits × pointsPerVisit.
+// E.g. 3 visits at 10 pts/visit = 30 pointsRequired for that stage.
+// ========================================================================
+
+model LoyaltyRewardStage {
+  id String @id @default(uuid())
+
+  // Parent config — exactly one is non-null.
+  amountSpentConfigId String?
+  amountSpentConfig   LoyaltyAmountSpentConfig? @relation(fields: [amountSpentConfigId], references: [id], onDelete: Cascade)
+
+  visitMadeConfigId String?
+  visitMadeConfig   LoyaltyVisitMadeConfig? @relation(fields: [visitMadeConfigId], references: [id], onDelete: Cascade)
+
+  // Points required to unlock/redeem this reward.
+  pointsRequired Int
+
+  // Reward classification.
+  rewardType LoyaltyRewardType // FREE_ITEM | PERCENTAGE_DISCOUNT | CASH_DISCOUNT
+  rewardName String // Display name (e.g. "10% off on entire purchase")
+
+  // ── FREE_ITEM fields ──────────────────────────────────────────────────
+  // freeItemSkuId: optional FK to Sku (if item exists in catalog).
+  // freeItemName:  static display name (used when no SKU linked, or as label).
+  freeItemSkuId String?
+  freeItemSku   Sku?    @relation(fields: [freeItemSkuId], references: [id], onDelete: SetNull)
+  freeItemName  String?
+
+  // ── PERCENTAGE_DISCOUNT fields ─────────────────────────────────────────
+  percentageValue         Float? // e.g. 10.0 = 10% off
+  appliesToEntirePurchase Boolean  @default(true) // false = specific products only
+  specificProductIds      String[] // SKU IDs when appliesToEntirePurchase = false
+
+  // ── CASH_DISCOUNT fields ──────────────────────────────────────────────
+  cashAmount Float? // Flat discount amount (₹)
+
+  // ── Common reward constraints (PERCENTAGE_DISCOUNT + CASH_DISCOUNT) ───
+  // Minimum bill amount required to redeem this reward. Toggle + value.
+  minPurchaseForRedemptionEnabled Boolean @default(false)
+  minPurchaseForRedemption        Float?
+  // Maximum discount cap (prevents outsized discounts). Toggle + value.
+  maxDiscountCapEnabled           Boolean @default(false)
+  maxDiscountCap                  Float?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([amountSpentConfigId])
+  @@index([visitMadeConfigId])
+  @@map("loyalty_reward_stage")
+}
+
+// ========================================================================
+// POINTS TRACKING (Unified Ledger)
+// ========================================================================
+// Single-table ledger for all point movements. Used by TIER, AMOUNT_SPENT,
+// and VISIT_MADE loyalty types. NOT used by CASHBACK (which uses wallet only).
+//
+// Every earn, redeem, expire, gift, or adjustment is one row.
+// Running balance is denormalized in balanceAfter for fast reads.
+//
+// For EARNED entries: remainingAmount tracks unspent points for FIFO
+// expiry and redemption (replaces the old PointsBucket + Allocation tables).
+//
+// ── FIFO Redemption Flow ─────────────────────────────────────────────────
+//   1. Query oldest EARNED rows where remainingAmount > 0.
+//   2. Decrement remainingAmount on those rows (oldest first).
+//   3. Insert a REDEEMED row with negative amount and updated balanceAfter.
+//
+// ── Expiry Flow (cron job) ───────────────────────────────────────────────
+//   1. Find EARNED rows where remainingAmount > 0 AND expiresAt < now().
+//   2. Insert EXPIRED row with negative amount.
+//   3. Set remainingAmount = 0 on expired rows.
+// ========================================================================
 
 model PointsTransaction {
   id String @id @default(uuid())
@@ -79,17 +382,39 @@ model PointsTransaction {
   customerId       String
   businessCustomer BusinessCustomer @relation(fields: [businessId, customerId], references: [businessId, customerId], onDelete: Cascade)
 
-  amount                Int
-  type                  TransactionType
-  source                TransactionSource
-  sourceId              String? // Generic source reference; when source=BILL use billId
-  billId                String? // FK to Bill when source=BILL (earned/redeemed on this bill)
-  bill                  Bill?                        @relation(fields: [billId], references: [id], onDelete: SetNull)
-  expiresAt             DateTime?
-  metadata              Json?
-  balanceAfter          Int                          @default(0)
-  redemptionAllocations PointsRedemptionAllocation[]
-  earnedBuckets         PointsBucket[]
+  // Points moved in this transaction.
+  // Positive for EARNED, GIFTED, ADJUSTMENT(+).
+  // Negative for REDEEMED, EXPIRED, REFUNDED, ADJUSTMENT(-).
+  amount Int
+
+  // Classification
+  type   TransactionType // EARNED | REDEEMED | EXPIRED | GIFTED | ADJUSTMENT | REFUNDED
+  source TransactionSource // BILL | FEEDBACK | SCRATCH_CARD | CAMPAIGN | REFERRAL | REGISTRATION | MANUAL_ADJUSTMENT
+
+  // Source entity reference (e.g. scratch card response ID, campaign ID).
+  sourceId String?
+
+  // Direct bill FK (convenience — also trackable via source + sourceId).
+  billId String?
+  bill   Bill?   @relation(fields: [billId], references: [id], onDelete: SetNull)
+
+  // ── FIFO Expiry Tracking (EARNED type only) ───────────────────────────
+  // expiresAt: when these earned points expire (computed from Loyalty.pointExpiryDays).
+  //   Null = never expires.
+  // remainingAmount: how many of these earned points are still available.
+  //   Decremented on redeem/expire. 0 = fully consumed.
+  //   Null for non-EARNED rows.
+  expiresAt       DateTime?
+  remainingAmount Int?
+
+  // Running balance after this transaction (denormalized for fast reads).
+  balanceAfter Int @default(0)
+
+  // Human-readable note (e.g. "Earned from bill #1234", "Redeemed for 10% off").
+  description String?
+
+  // Arbitrary metadata (e.g. tier at time of earning, reward stage redeemed).
+  metadata Json?
 
   createdAt DateTime @default(now())
 
@@ -100,47 +425,6 @@ model PointsTransaction {
   @@index([billId])
   @@index([type])
   @@index([expiresAt])
+  @@index([type, remainingAmount]) // For querying redeemable EARNED points (FIFO)
   @@map("points_transaction")
-}
-
-model PointsBucket {
-  id String @id @default(uuid())
-
-  businessId       String
-  customerId       String
-  businessCustomer BusinessCustomer @relation(fields: [businessId, customerId], references: [businessId, customerId], onDelete: Cascade)
-
-  earnedTransactionId String
-  earnedTransaction   PointsTransaction @relation(fields: [earnedTransactionId], references: [id], onDelete: Cascade)
-
-  originalAmount        Int
-  remainingAmount       Int
-  expiresAt             DateTime
-  status                String                       @default("ACTIVE") // ACTIVE | EXPIRED | CONSUMED
-  redemptionAllocations PointsRedemptionAllocation[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([businessId, customerId, expiresAt])
-  @@index([remainingAmount])
-  @@map("points_bucket")
-}
-
-model PointsRedemptionAllocation {
-  id String @id @default(uuid())
-
-  redeemTransactionId String
-  redeemTransaction   PointsTransaction @relation(fields: [redeemTransactionId], references: [id], onDelete: Cascade)
-
-  bucketId String
-  bucket   PointsBucket @relation(fields: [bucketId], references: [id], onDelete: Cascade)
-
-  amount Int
-
-  createdAt DateTime @default(now())
-
-  @@index([redeemTransactionId])
-  @@index([bucketId])
-  @@map("points_redemption_allocation")
 }

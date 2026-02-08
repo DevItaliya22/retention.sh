@@ -1,12 +1,25 @@
+// ========================================================================
+// CUSTOMER
+// ========================================================================
+// A customer is a person who shops at one or more businesses.
+// The User table holds auth credentials (email is number@dy.com for customers,
+// used only for auth identification). The actual customer email is stored here.
+//
+// A customer can belong to multiple businesses via BusinessCustomer (pivot).
+// All business-specific data (points, tier, bills, etc.) lives on that pivot.
+// ========================================================================
+
 model Customer {
   id String @id @default(uuid())
 
   userId String @unique
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  email String // This is the email of the customer , it will be used for sending emails to the custome r, the email in the User table is for the admin and cashier only , we will not use it for the customer , the email will be number@dy.com in user table for just sake of making user and identification purpose
+  // Customer's real email (for communication).
+  // The User.email is a placeholder (number@dy.com) for auth only.
+  email String
 
-  // Optional Address fields
+  // Optional address fields
   addressLine1 String?
   addressLine2 String?
   city         String?
@@ -14,7 +27,7 @@ model Customer {
   country      String?
   postalCode   String?
 
-  // Business Connection (Customer can belong to multiple businesses)
+  // Business connections (customer can belong to multiple businesses)
   businesses BusinessCustomer[]
 
   createdAt DateTime @default(now())
@@ -23,9 +36,25 @@ model Customer {
   @@map("customer")
 }
 
-// This is bussiness customer relation , all the data related to customer for that particular bussiness will come in this thing
+// ========================================================================
+// BUSINESS–CUSTOMER PIVOT
+// ========================================================================
+// All data specific to a customer within a particular business.
+// Composite PK: (businessId, customerId).
+//
+// Loyalty tracking fields:
+//   pointsBalance  — current redeemable points (denormalized from PointsTransaction).
+//   lifetimeSpend  — cumulative bill total (denormalized; used for TIER placement).
+//   visitCount     — total qualifying visits (denormalized; used for VISIT_MADE).
+//   lastVisitAt    — timestamp of last qualifying visit (used for visit interval check).
+//   currentTierId  — FK to the customer's active LoyaltyTier (for TIER type).
+//
+// These denormalized fields are updated by the billing/loyalty service on each
+// transaction. Source of truth is PointsTransaction + Bill tables.
+// ========================================================================
+
 model BusinessCustomer {
-  slugId String @unique @default(uuid()) // this id will be used for the slug in the url and for the api endpoints 
+  slugId String @unique @default(uuid()) // URL-safe identifier for API endpoints
 
   businessId String
   business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
@@ -33,34 +62,53 @@ model BusinessCustomer {
   customerId String
   customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
-  // Referral slug - unique per business-customer for sharing
+  // ── Referral ───────────────────────────────────────────────────────────
+  // Unique referral slug for this customer within this business.
   referralSlug String @unique @default(uuid())
 
-  // Referred by other business customer (business-specific)
+  // Who referred this customer (business-specific).
   referredByBusinessId String?
   referredByCustomerId String?
   referredBy           BusinessCustomer? @relation("BusinessCustomerReferral", fields: [referredByBusinessId, referredByCustomerId], references: [businessId, customerId], onDelete: SetNull)
 
-  // Business customers this person has referred (business-specific)
+  // Customers this person has referred (business-specific).
   referrals BusinessCustomer[] @relation("BusinessCustomerReferral")
 
-  // Referral logs (for tracking/rewards) - business-specific
+  // Referral tracking logs.
   referralLogs ReferralLog[]
 
+  // ── Tags & Status ─────────────────────────────────────────────────────
   tags          String[]
   isBlocked     Boolean  @default(false)
   blockedReason String?
 
-  pointsBalance     Int                 @default(0)
-  pointTransactions PointsTransaction[]
-  pointsBuckets     PointsBucket[]
+  // ── Loyalty Tracking (denormalized — updated on each transaction) ──────
+  // Current redeemable points balance.
+  // Source of truth: SUM(PointsTransaction.amount) for this customer.
+  pointsBalance Int @default(0)
 
+  // Cumulative bill total across all purchases (₹).
+  // Used by TIER loyalty type for tier placement.
+  // Source of truth: SUM(Bill.amount) for this customer.
+  lifetimeSpend Float @default(0)
+
+  // Total qualifying visits (incremented per bill, respecting visit interval).
+  // Used by VISIT_MADE loyalty type.
+  visitCount Int @default(0)
+
+  // Timestamp of last qualifying visit (used for visit interval check).
+  // Updated when visitCount is incremented.
+  lastVisitAt DateTime?
+
+  // Current tier for TIER loyalty type. Null if not using tiers.
+  currentTierId String?
+  currentTier   LoyaltyTier? @relation(fields: [currentTierId], references: [id], onDelete: SetNull)
+
+  // ── Transaction & Activity Relations ───────────────────────────────────
+  pointTransactions    PointsTransaction[]
   feedbackResponses    FeedbackResponse[]
   scratchCardResponses ScratchCardResponse[]
   bills                Bill[]
-
-  currentTierId String?
-  currentTier   LoyaltyTier? @relation(fields: [currentTierId], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

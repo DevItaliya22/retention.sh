@@ -73,6 +73,8 @@ export const billFormSchema = z.object({
     .optional()
     .nullable(),
   amount: amountSchema,
+  /** Subtotal (line items sum before discounts/tax). Optional; computed from line items when not provided. */
+  subtotal: amountSchema.optional(),
   lineItems: billLineItemsSchema.optional(),
   redeemPoints: z.coerce.number().int().min(0).optional(),
   notes: z

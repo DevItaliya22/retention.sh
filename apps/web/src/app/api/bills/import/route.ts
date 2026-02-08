@@ -205,12 +205,14 @@ export const POST = withAdminAuth(async (request: NextRequest, context) => {
 
         const billAmount = item.amount ?? 0;
         const redeemPoints = item.redeemPoints ?? 0;
+        const billSubtotal = item.subtotal ?? null;
 
         await db.$transaction(async (tx) => {
           const bill = await tx.bill.create({
             data: {
               billNumber: item.billNumber,
               amount: item.amount ?? null,
+              subtotal: billSubtotal,
               notes: item.notes ?? null,
               businessId,
               customerId: customer.id,
@@ -223,6 +225,7 @@ export const POST = withAdminAuth(async (request: NextRequest, context) => {
             customerId: customer.id,
             billId: bill.id,
             billAmount,
+            billSubtotal,
             redeemPointsRequested: redeemPoints > 0 ? redeemPoints : null,
           });
 
@@ -230,8 +233,10 @@ export const POST = withAdminAuth(async (request: NextRequest, context) => {
             where: { id: bill.id },
             data: {
               finalAmount: item.amount == null ? null : loyalty.finalAmount,
-              loyaltyPointsEarned: loyalty.earnedPoints,
-              loyaltyPointsRedeemed: loyalty.redeemedPoints,
+              cashbackAmount:
+                loyalty.cashbackAmount != null
+                  ? loyalty.cashbackAmount
+                  : undefined,
             },
           });
 

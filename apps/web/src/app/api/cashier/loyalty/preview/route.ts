@@ -1,10 +1,13 @@
 import {
-  calculateEarnedPoints,
-  calculateRedeemablePoints,
   expireBucketsForCustomer,
-  getBusinessLoyaltySettings,
+  getBusinessLoyaltyContext,
 } from "@/lib/actions/loyalty";
 import { withCashierAuth } from "@/lib/auth/middleware";
+import {
+  calculatePointsEarnedForBill,
+  calculateRedeemable,
+  resolveTierForLifetimeSpend,
+} from "@/lib/loyalty";
 import { loyaltyPreviewSchema } from "@/lib/schemas/loyalty";
 import {
   sanitizeErrorMessage,
@@ -15,7 +18,7 @@ import {
   type IsServiceEnabled,
   isServiceEnabled,
 } from "@/lib/utils/service-enabled";
-import { db } from "@reelo/db";
+import { db, TransactionType } from "@reelo/db";
 import { NextRequest, NextResponse } from "next/server";
 
 export const GET = withCashierAuth(async (request: NextRequest, context) => {
@@ -64,8 +67,8 @@ export const GET = withCashierAuth(async (request: NextRequest, context) => {
     }
 
     const result = await db.$transaction(async (tx) => {
-      const settings = await getBusinessLoyaltySettings(tx, businessId);
-      if (!settings) {
+      const loyaltyContext = await getBusinessLoyaltyContext(tx, businessId);
+      if (!loyaltyContext) {
         return {
           pointsBalance: 0,
           redeemablePoints: 0,
@@ -84,9 +87,15 @@ export const GET = withCashierAuth(async (request: NextRequest, context) => {
         return {
           pointsBalance: 0,
           redeemablePoints: 0,
-          earnablePoints: calculateEarnedPoints(billAmount, settings),
+          earnablePoints: calculatePointsEarnedForBill(
+            billAmount,
+            loyaltyContext,
+          ),
           expiringBuckets: [],
-          cashbackInFinalAmount: settings.cashbackInFinalAmount,
+          cashbackInFinalAmount:
+            loyaltyContext.type === "CASHBACK"
+              ? loyaltyContext.config.onFinalAmount
+              : false,
         };
       }
 
@@ -97,15 +106,22 @@ export const GET = withCashierAuth(async (request: NextRequest, context) => {
             customerId: user.customer.id,
           },
         },
+        select: { pointsBalance: true, lifetimeSpend: true, customerId: true },
       });
 
       if (!businessCustomer) {
         return {
           pointsBalance: 0,
           redeemablePoints: 0,
-          earnablePoints: calculateEarnedPoints(billAmount, settings),
+          earnablePoints: calculatePointsEarnedForBill(
+            billAmount,
+            loyaltyContext,
+          ),
           expiringBuckets: [],
-          cashbackInFinalAmount: settings.cashbackInFinalAmount,
+          cashbackInFinalAmount:
+            loyaltyContext.type === "CASHBACK"
+              ? loyaltyContext.config.onFinalAmount
+              : false,
         };
       }
 
@@ -126,18 +142,27 @@ export const GET = withCashierAuth(async (request: NextRequest, context) => {
 
       const pointsBalance = refreshed?.pointsBalance ?? 0;
 
-      const redeemablePoints = calculateRedeemablePoints(
-        billAmount,
-        settings,
-        pointsBalance,
+      const resolvedTier =
+        loyaltyContext.type === "TIER"
+          ? resolveTierForLifetimeSpend(
+              loyaltyContext.config.tiers,
+              businessCustomer?.lifetimeSpend ?? 0,
+            )
+          : null;
+
+      const redeemablePoints = Math.floor(
+        calculateRedeemable(billAmount, pointsBalance, loyaltyContext, {
+          resolvedTier,
+        }),
       );
 
-      const expiringBuckets = await tx.pointsBucket.findMany({
+      const expiringRows = await tx.pointsTransaction.findMany({
         where: {
           businessId,
           customerId: businessCustomer.customerId,
+          type: TransactionType.EARNED,
           remainingAmount: { gt: 0 },
-          status: "ACTIVE",
+          expiresAt: { not: null },
         },
         orderBy: { expiresAt: "asc" },
         take: 3,
@@ -151,18 +176,27 @@ export const GET = withCashierAuth(async (request: NextRequest, context) => {
       return {
         pointsBalance,
         redeemablePoints,
-        earnablePoints: calculateEarnedPoints(billAmount, settings),
-        expiringBuckets: expiringBuckets.map((b) => ({
-          id: b.id,
-          remainingAmount: b.remainingAmount,
-          expiresAt: b.expiresAt.toISOString(),
-        })),
-        cashbackInFinalAmount: settings.cashbackInFinalAmount,
+        earnablePoints: calculatePointsEarnedForBill(
+          billAmount,
+          loyaltyContext,
+          { resolvedTier },
+        ),
+        expiringBuckets: expiringRows
+          .filter((r) => r.expiresAt)
+          .map((r) => ({
+            id: r.id,
+            remainingAmount: r.remainingAmount ?? 0,
+            expiresAt: r.expiresAt!.toISOString(),
+          })),
+        cashbackInFinalAmount:
+          loyaltyContext.type === "CASHBACK"
+            ? loyaltyContext.config.onFinalAmount
+            : false,
       };
     });
 
     return NextResponse.json({ preview: result });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Failed to fetch loyalty preview:", error);
     return NextResponse.json(
       {

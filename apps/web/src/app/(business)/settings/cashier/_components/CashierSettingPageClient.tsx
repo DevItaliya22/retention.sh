@@ -3,8 +3,8 @@
 import { PageLayout, ScaffoldContainer } from "@/components/layouts";
 import { Suspense } from "react";
 
-import { AddCashierModal } from "@/components/cashier/AddCashierModal";
-import { CashierTable } from "@/components/cashier/CashierTable";
+import { AddCashierModal } from "@/components/settings/cashier/AddCashierModal";
+import { CashierTable } from "@/components/settings/cashier/CashierTable";
 import { useCashiersQuery } from "@/hooks/cashier/useCashiersQuery";
 import { Button } from "@reelo/ui/components";
 import { Plus } from "lucide-react";

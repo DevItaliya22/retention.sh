@@ -79,13 +79,21 @@ export const GET = withAdminAuth<{ id: string }>(
         );
       }
 
+      const earned = bill.pointsTransactions
+        .filter((pt) => pt.type === "EARNED")
+        .reduce((s, pt) => s + Math.max(0, pt.amount), 0);
+      const redeemed = bill.pointsTransactions
+        .filter((pt) => pt.type === "REDEEMED")
+        .reduce((s, pt) => s + Math.abs(pt.amount), 0);
+
       const formattedBill = {
         id: bill.id,
         billNumber: bill.billNumber,
         amount: bill.amount,
         finalAmount: bill.finalAmount,
-        loyaltyPointsEarned: bill.loyaltyPointsEarned,
-        loyaltyPointsRedeemed: bill.loyaltyPointsRedeemed,
+        cashbackAmount: bill.cashbackAmount,
+        loyaltyPointsEarned: earned,
+        loyaltyPointsRedeemed: redeemed,
         businessCustomerId: bill.businessCustomer.slugId,
         customerName: bill.businessCustomer.customer.user.name,
         customerPhone: bill.businessCustomer.customer.user.phoneNumber,

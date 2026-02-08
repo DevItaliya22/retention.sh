@@ -29,6 +29,7 @@ export interface Bill {
   billNumber: string;
   amount: number | null;
   finalAmount?: number | null;
+  cashbackAmount?: number | null;
   loyaltyPointsEarned?: number;
   loyaltyPointsRedeemed?: number;
   customerName: string;
