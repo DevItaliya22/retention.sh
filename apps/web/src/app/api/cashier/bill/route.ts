@@ -162,6 +162,7 @@ export const POST = withCashierAuth(async (request: NextRequest, context) => {
       billNumber,
       phoneNumber,
       amount,
+      subtotal: subtotalFromRequest,
       redeemPoints,
       notes,
       lineItems = [],
@@ -227,10 +228,34 @@ export const POST = withCashierAuth(async (request: NextRequest, context) => {
     const billAmount = amount ?? 0;
 
     const result = await db.$transaction(async (tx) => {
+      let computedSubtotal: number | null = null;
+      if (
+        lineItems.length > 0 &&
+        (subtotalFromRequest == null || subtotalFromRequest === 0)
+      ) {
+        const skuIds = [
+          ...new Set(lineItems.map((li: { skuId: string }) => li.skuId)),
+        ];
+        const skus = await tx.sku.findMany({
+          where: { id: { in: skuIds }, businessId },
+          select: { id: true, price: true },
+        });
+        const priceMap = new Map(skus.map((s) => [s.id, s.price]));
+        computedSubtotal = lineItems.reduce(
+          (
+            sum: number,
+            li: { skuId: string; qty: number; unitPrice?: number },
+          ) => sum + li.qty * (li.unitPrice ?? priceMap.get(li.skuId) ?? 0),
+          0,
+        );
+      }
+      const billSubtotal = subtotalFromRequest ?? computedSubtotal ?? null;
+
       const bill = await tx.bill.create({
         data: {
           billNumber,
           amount: amount ?? null,
+          subtotal: billSubtotal,
           notes: notes ?? null,
           businessId,
           customerId: customer.id,
@@ -259,6 +284,7 @@ export const POST = withCashierAuth(async (request: NextRequest, context) => {
         customerId: customer.id,
         billId: bill.id,
         billAmount,
+        billSubtotal,
         redeemPointsRequested: redeemPoints ?? null,
       });
 
@@ -266,8 +292,8 @@ export const POST = withCashierAuth(async (request: NextRequest, context) => {
         where: { id: bill.id },
         data: {
           finalAmount: amount == null ? null : loyalty.finalAmount,
-          loyaltyPointsEarned: loyalty.earnedPoints,
-          loyaltyPointsRedeemed: loyalty.redeemedPoints,
+          cashbackAmount:
+            loyalty.cashbackAmount != null ? loyalty.cashbackAmount : undefined,
         },
       });
 

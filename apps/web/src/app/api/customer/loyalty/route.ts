@@ -64,12 +64,13 @@ export const GET = withCustomerAuth(async (_request, context) => {
         select: { pointsBalance: true },
       });
 
-      const nextBucket = await db.pointsBucket.findFirst({
+      const nextExpiring = await db.pointsTransaction.findFirst({
         where: {
           businessId: bc.businessId,
           customerId: bc.customerId,
+          type: "EARNED",
           remainingAmount: { gt: 0 },
-          status: "ACTIVE",
+          expiresAt: { not: null },
         },
         orderBy: { expiresAt: "asc" },
         select: { remainingAmount: true, expiresAt: true },
@@ -80,10 +81,10 @@ export const GET = withCustomerAuth(async (_request, context) => {
         businessName: bc.business.name,
         businessSlug: bc.business.slug,
         pointsBalance: refreshed?.pointsBalance ?? bc.pointsBalance,
-        nextExpiry: nextBucket
+        nextExpiry: nextExpiring?.expiresAt
           ? {
-              amount: nextBucket.remainingAmount,
-              expiresAt: nextBucket.expiresAt.toISOString(),
+              amount: nextExpiring.remainingAmount ?? 0,
+              expiresAt: nextExpiring.expiresAt.toISOString(),
             }
           : null,
         currencySymbol: bc.business.defaultCurrencySymbol,

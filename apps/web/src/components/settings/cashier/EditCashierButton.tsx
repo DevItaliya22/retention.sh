@@ -4,7 +4,7 @@ import { Button } from "@reelo/ui/components";
 import { Edit } from "lucide-react";
 import { useState } from "react";
 
-import { EditCashierModal } from "@/components/cashier/EditCashierModal";
+import { EditCashierModal } from "@/components/settings/cashier/EditCashierModal";
 import type { Cashier } from "@/hooks/cashier/useManageCashier";
 
 interface EditCashierButtonProps {

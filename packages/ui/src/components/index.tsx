@@ -34,6 +34,7 @@ export * from "./input-otp";
 export * from "./kbd";
 export * from "./label";
 export * from "./linear-multi-step-form/linear-multi-step-form";
+export * from "./linear-multi-step-form/store";
 export * from "./linear-multi-step-form/types";
 export * from "./linear-multi-step-form/use-linear-multi-step-form";
 export * from "./linkify-text";

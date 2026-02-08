@@ -142,37 +142,52 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
               },
             },
           },
+          pointsTransactions: {
+            where: {
+              type: { in: ["EARNED", "REDEEMED"] },
+            },
+            select: { type: true, amount: true },
+          },
         },
       }),
       db.bill.count({ where }),
     ]);
 
-    const formattedBills = bills.map((bill) => ({
-      id: bill.id,
-      billNumber: bill.billNumber,
-      amount: bill.amount,
-      finalAmount: bill.finalAmount,
-      loyaltyPointsEarned: bill.loyaltyPointsEarned,
-      loyaltyPointsRedeemed: bill.loyaltyPointsRedeemed,
-      customerName: bill.businessCustomer.customer.user.name,
-      customerPhone: bill.businessCustomer.customer.user.phoneNumber,
-      customerEmail: bill.businessCustomer.customer.email,
-      lineItems: bill.lineItems.map((li) => ({
-        id: li.id,
-        skuId: li.skuId,
-        qty: li.qty,
-        unitPrice: li.unitPrice,
-        sku: {
-          id: li.sku.id,
-          sku: li.sku.sku,
-          name: li.sku.name,
-          price: li.sku.price,
-          unit: li.sku.unit,
-        },
-      })),
-      createdAt: bill.createdAt.toISOString(),
-      updatedAt: bill.updatedAt.toISOString(),
-    }));
+    const formattedBills = bills.map((bill) => {
+      const earned = bill.pointsTransactions
+        .filter((pt) => pt.type === "EARNED")
+        .reduce((s, pt) => s + Math.max(0, pt.amount), 0);
+      const redeemed = bill.pointsTransactions
+        .filter((pt) => pt.type === "REDEEMED")
+        .reduce((s, pt) => s + Math.abs(pt.amount), 0);
+      return {
+        id: bill.id,
+        billNumber: bill.billNumber,
+        amount: bill.amount,
+        finalAmount: bill.finalAmount,
+        cashbackAmount: bill.cashbackAmount,
+        loyaltyPointsEarned: earned,
+        loyaltyPointsRedeemed: redeemed,
+        customerName: bill.businessCustomer.customer.user.name,
+        customerPhone: bill.businessCustomer.customer.user.phoneNumber,
+        customerEmail: bill.businessCustomer.customer.email,
+        lineItems: bill.lineItems.map((li) => ({
+          id: li.id,
+          skuId: li.skuId,
+          qty: li.qty,
+          unitPrice: li.unitPrice,
+          sku: {
+            id: li.sku.id,
+            sku: li.sku.sku,
+            name: li.sku.name,
+            price: li.sku.price,
+            unit: li.sku.unit,
+          },
+        })),
+        createdAt: bill.createdAt.toISOString(),
+        updatedAt: bill.updatedAt.toISOString(),
+      };
+    });
 
     return NextResponse.json({
       bills: formattedBills,

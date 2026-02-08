@@ -1,3 +1,24 @@
+enum LoyaltyType {
+  CASHBACK // Direct discount on same bill, no points
+  TIER // Lifetime spending tiers, points earned
+  AMOUNT_SPENT // Bill-specific amount thresholds, points earned
+  VISIT_MADE // Visit count rewards, points earned
+}
+
+enum LoyaltyRewardType {
+  FREE_ITEM
+  PERCENTAGE_DISCOUNT
+  CASH_DISCOUNT
+}
+
+enum VisitIntervalUnit {
+  MINUTE // 1-60
+  HOUR // 1-23
+  DAY // 1-31
+  WEEK // 1-4
+  MONTH // 1-12
+}
+
 enum LoyaltyMessageType {
   FIRST_PURCHASE // Sent on first purchase
   EXPIRE // Sent when points are about to expire
@@ -97,23 +118,25 @@ enum AutoCampaignTrigger {
   POINTS_EXPIRY
 }
 
+// Point transaction types — what happened to the points.
 enum TransactionType {
-  EARNED
-  REDEEMED
-  REFUNDED
-  GIFTED
-  ADJUSTMENT
-  EXPIRED
+  EARNED // Points earned (from bill, feedback, scratch card, etc.)
+  REDEEMED // Points spent on a reward or cashback redemption
+  REFUNDED // Points returned (e.g. bill voided or order cancelled)
+  GIFTED // Points gifted by admin or system promotion
+  ADJUSTMENT // Manual adjustment by admin (positive or negative)
+  EXPIRED // Points expired due to inactivity (past pointExpiryDays)
 }
 
+// What triggered the point transaction — the origin event.
 enum TransactionSource {
-  BILL
-  FEEDBACK
-  SCRATCH_CARD
-  CAMPAIGN
-  REFERRAL
-  REGISTRATION
-  MANUAL_ADJUSTMENT
+  BILL // Points from a purchase/bill
+  FEEDBACK // Points for providing feedback
+  SCRATCH_CARD // Points from scratch card game
+  CAMPAIGN // Points from marketing campaign
+  REFERRAL // Points from referral program
+  REGISTRATION // Registration bonus (Business.registrationBonusPoints)
+  MANUAL_ADJUSTMENT // Admin manual adjustment
 }
 
 enum WalletType {

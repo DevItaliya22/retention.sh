@@ -92,7 +92,7 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
         });
       }
       where.source = "BILL";
-      where.sourceId = { in: ids };
+      where.billId = { in: ids };
     }
     if (dateFrom || dateTo) {
       where.createdAt = {};

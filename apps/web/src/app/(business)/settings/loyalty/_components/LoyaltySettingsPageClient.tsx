@@ -5,7 +5,7 @@ import { LoyaltyProgramForm } from "@/components/settings/loyalty/_components/Lo
 import { LoyaltyExistingSettings } from "@/components/settings/loyalty/LoyaltyExistingSettings";
 import { LoyaltySettingsSkeleton } from "@/components/settings/loyalty/LoyaltySettingsSkeleton";
 import { useCurrentBusiness } from "@/hooks/business/useCurrentBusiness";
-import { fetcher } from "@/lib/fetcher";
+import { useLoyaltySettingsQuery } from "@/hooks/loyalty/useLoyaltySettings";
 import { isServiceEnabled } from "@/lib/utils/service-enabled";
 import {
   Button,
@@ -15,26 +15,14 @@ import {
   EmptyHeader,
   EmptyTitle,
 } from "@reelo/ui/components";
-import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-
-interface LoyaltySettingsResponse {
-  loyalty: unknown;
-  error?: string;
-}
 
 export function LoyaltySettingsPageClient() {
   const router = useRouter();
   const { data: businessData, isLoading: businessLoading } =
     useCurrentBusiness();
-  const { data: loyaltyData, isLoading: loyaltyLoading } = useQuery<
-    LoyaltySettingsResponse,
-    Error
-  >({
-    queryKey: ["loyalty-settings"],
-    queryFn: () => fetcher<LoyaltySettingsResponse>("/api/loyalty"),
-    staleTime: 5000,
-  });
+  const { data: loyaltyData, isLoading: loyaltyLoading } =
+    useLoyaltySettingsQuery();
 
   const isLoading = businessLoading || loyaltyLoading;
   const hasLoyalty = !!loyaltyData?.loyalty;

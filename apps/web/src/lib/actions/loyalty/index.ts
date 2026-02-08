@@ -1,11 +1,21 @@
 import {
-  type IsServiceEnabled,
+  calculatePointsEarnedForBill,
+  calculateRedeemable,
+  getExpiryDays,
+  isVisitQualifying,
+  resolveTierForLifetimeSpend,
+  type LoyaltyContext,
+} from "@/lib/loyalty";
+import {
   isServiceEnabled,
+  type IsServiceEnabled,
 } from "@/lib/utils/service-enabled";
 import { db, Prisma, TransactionSource, TransactionType } from "@reelo/db";
 
-export const DEFAULT_POINT_EXPIRY_DAYS = 180;
+// Re-export for backwards compatibility
+export { DEFAULT_POINT_EXPIRY_DAYS, getExpiryDays } from "@/lib/loyalty";
 
+/** @deprecated Use LoyaltyContext from @/lib/loyalty */
 export type LoyaltySettingsSnapshot = {
   earningPercentage: number;
   earnPointsOnPaidAmountOnly: boolean;
@@ -19,106 +29,222 @@ export type LoyaltySettingsSnapshot = {
   pointExpiryDays: number | null;
 };
 
-export function getExpiryDays(pointExpiryDays: number | null | undefined) {
-  return pointExpiryDays && pointExpiryDays > 0
-    ? pointExpiryDays
-    : DEFAULT_POINT_EXPIRY_DAYS;
-}
-
-/**
- * Calculate points earned for a bill. Returns 0 when:
- * - billAmount <= 0
- * - billAmount < minPurchaseForEarning
- * - earningPercentage is 0
- */
+/** @deprecated Use calculatePointsEarnedForBill from @/lib/loyalty */
 export function calculateEarnedPoints(
   billAmount: number,
-  settings: LoyaltySettingsSnapshot,
-) {
-  if (billAmount <= 0 || settings.earningPercentage <= 0) return 0;
+  settings: LoyaltySettingsSnapshot | null,
+): number {
+  if (!settings || billAmount <= 0) return 0;
+  // Legacy: flat percentage, min purchase
+  if (settings.earningPercentage <= 0) return 0;
   if (billAmount < settings.minPurchaseForEarning) return 0;
-
   const capped =
     settings.upperLimitBillAmount != null && settings.upperLimitBillAmount >= 0
       ? Math.min(billAmount, settings.upperLimitBillAmount)
       : billAmount;
-
-  const earned = Math.floor((capped * settings.earningPercentage) / 100);
-  return Math.max(0, earned);
+  return Math.floor((capped * settings.earningPercentage) / 100);
 }
 
-/**
- * Max points that can be redeemed on a bill. Returns 0 when:
- * - billAmount <= 0
- * - billAmount < minPurchaseForRedemption
- * - pointsBalance <= 0
- */
+/** @deprecated Use calculateRedeemable from @/lib/loyalty */
 export function calculateRedeemablePoints(
   billAmount: number,
-  settings: LoyaltySettingsSnapshot,
+  _settings: LoyaltySettingsSnapshot | null,
   pointsBalance: number,
-) {
+): number {
   if (billAmount <= 0 || pointsBalance <= 0) return 0;
-  if (billAmount < settings.minPurchaseForRedemption) return 0;
-
-  const cap =
-    settings.upperLimitClaimableAmount != null &&
-    settings.upperLimitClaimableAmount >= 0
-      ? Math.min(pointsBalance, settings.upperLimitClaimableAmount)
-      : pointsBalance;
-
-  return Math.max(0, Math.min(pointsBalance, cap));
+  return Math.min(pointsBalance, Math.floor(billAmount));
 }
 
 export type RedemptionAllocation = {
-  bucketId: string;
+  transactionId: string;
   amount: number;
 };
 
+/** FIFO redemption using PointsTransaction.remainingAmount */
 export function allocateRedemptionFIFO(
-  buckets: { id: string; remainingAmount: number }[],
+  earnedRows: { id: string; remainingAmount: number }[],
   requested: number,
-) {
+): { allocations: RedemptionAllocation[]; remaining: number } {
   let remaining = requested;
   const allocations: RedemptionAllocation[] = [];
 
-  for (const bucket of buckets) {
+  for (const row of earnedRows) {
     if (remaining <= 0) break;
-    const take = Math.min(bucket.remainingAmount, remaining);
+    const take = Math.min(row.remainingAmount ?? 0, remaining);
     if (take <= 0) continue;
-    allocations.push({ bucketId: bucket.id, amount: take });
+    allocations.push({ transactionId: row.id, amount: take });
     remaining -= take;
   }
 
   return { allocations, remaining };
 }
 
-export async function getBusinessLoyaltySettings(
+export async function getBusinessLoyaltyContext(
   tx: Prisma.TransactionClient,
   businessId: string,
-) {
+): Promise<LoyaltyContext | null> {
   const loyalty = await tx.loyalty.findUnique({
     where: { businessId },
+    include: {
+      cashbackConfig: true,
+      tierConfig: { include: { tiers: { orderBy: { rank: "asc" } } } },
+      amountSpentConfig: true,
+      visitMadeConfig: true,
+    },
   });
 
   if (!loyalty) return null;
 
-  const snapshot: LoyaltySettingsSnapshot = {
-    earningPercentage: loyalty.earningPercentage,
-    earnPointsOnPaidAmountOnly: loyalty.earnPointsOnPaidAmountOnly,
-    cashbackInFinalAmount: loyalty.cashbackInFinalAmount,
-    cashbackBranding: loyalty.cashbackBranding ?? null,
-    minPurchaseForEarning: loyalty.minPurchaseForEarning,
-    minPurchaseForRedemption: loyalty.minPurchaseForRedemption,
-    upperLimitBillAmount: loyalty.upperLimitBillAmount ?? null,
-    upperLimitClaimableAmount: loyalty.upperLimitClaimableAmount ?? null,
-    pointReminderDays: loyalty.pointReminderDays ?? null,
-    pointExpiryDays: loyalty.pointExpiryDays ?? null,
-  };
-
-  return snapshot;
+  switch (loyalty.loyaltyType) {
+    case "CASHBACK":
+      if (!loyalty.cashbackConfig) return null;
+      return {
+        type: "CASHBACK",
+        config: {
+          cashbackPercentage: loyalty.cashbackConfig.cashbackPercentage ?? 0,
+          onFinalAmount: loyalty.cashbackConfig.onFinalAmount ?? false,
+          maxCashbackCap: loyalty.cashbackConfig.maxCashbackCap,
+          minPurchaseForEarningEnabled:
+            loyalty.cashbackConfig.minPurchaseForEarningEnabled ?? false,
+          minPurchaseForEarning:
+            loyalty.cashbackConfig.minPurchaseForEarning ?? null,
+          minPurchaseForRedemptionEnabled:
+            loyalty.cashbackConfig.minPurchaseForRedemptionEnabled ?? false,
+          minPurchaseForRedemption:
+            loyalty.cashbackConfig.minPurchaseForRedemption ?? null,
+          redemptionBalanceLimitEnabled:
+            loyalty.cashbackConfig.redemptionBalanceLimitEnabled ?? false,
+          redemptionBalanceLimitAmount:
+            loyalty.cashbackConfig.redemptionBalanceLimitAmount ?? null,
+          redemptionBalanceLimitPercentage:
+            loyalty.cashbackConfig.redemptionBalanceLimitPercentage ?? null,
+          redemptionBillLimitEnabled:
+            loyalty.cashbackConfig.redemptionBillLimitEnabled ?? false,
+          redemptionBillLimitAmount:
+            loyalty.cashbackConfig.redemptionBillLimitAmount ?? null,
+          redemptionBillLimitPercentage:
+            loyalty.cashbackConfig.redemptionBillLimitPercentage ?? null,
+          pointExpiryDays: loyalty.pointExpiryDays,
+        },
+      };
+    case "TIER":
+      if (!loyalty.tierConfig) return null;
+      return {
+        type: "TIER",
+        config: {
+          pointsPerRupee: loyalty.tierConfig.pointsPerRupee ?? 1,
+          maxCashbackCapEnabled:
+            loyalty.tierConfig.maxCashbackCapEnabled ?? false,
+          maxCashbackCap: loyalty.tierConfig.maxCashbackCap ?? null,
+          tiers: loyalty.tierConfig.tiers.map((t) => ({
+            id: t.id,
+            name: t.name,
+            rank: t.rank,
+            minLifetimeSpend: t.minLifetimeSpend,
+            maxLifetimeSpend: t.maxLifetimeSpend,
+            cashbackPercentage: t.cashbackPercentage ?? 0,
+            minPurchaseForEarningEnabled:
+              t.minPurchaseForEarningEnabled ?? false,
+            minPurchaseForEarning: t.minPurchaseForEarning ?? null,
+            minPurchaseForRedemptionEnabled:
+              t.minPurchaseForRedemptionEnabled ?? false,
+            minPurchaseForRedemption: t.minPurchaseForRedemption ?? null,
+            maxCashbackCapEnabled: t.maxCashbackCapEnabled ?? false,
+            maxCashbackCap: t.maxCashbackCap ?? null,
+          })),
+          pointExpiryDays: loyalty.pointExpiryDays,
+        },
+      };
+    case "AMOUNT_SPENT":
+      if (!loyalty.amountSpentConfig) return null;
+      return {
+        type: "AMOUNT_SPENT",
+        config: {
+          pointsPerRupee: loyalty.amountSpentConfig.pointsPerRupee ?? 1,
+          onFinalAmount: loyalty.amountSpentConfig.onFinalAmount ?? false,
+          maxPointsPerPurchase:
+            loyalty.amountSpentConfig.maxPointsPerPurchase ?? null,
+          pointExpiryDays: loyalty.pointExpiryDays,
+        },
+      };
+    case "VISIT_MADE":
+      if (!loyalty.visitMadeConfig) return null;
+      return {
+        type: "VISIT_MADE",
+        config: {
+          pointsPerVisit: loyalty.visitMadeConfig.pointsPerVisit ?? 1,
+          visitIntervalEnabled:
+            loyalty.visitMadeConfig.visitIntervalEnabled ?? false,
+          visitIntervalValue:
+            loyalty.visitMadeConfig.visitIntervalValue ?? null,
+          visitIntervalUnit: loyalty.visitMadeConfig.visitIntervalUnit ?? null,
+          pointExpiryDays: loyalty.pointExpiryDays,
+        },
+      };
+    default:
+      return null;
+  }
 }
 
+/** @deprecated Use getBusinessLoyaltyContext. Kept for loyalty preview which expects flat settings. */
+export async function getBusinessLoyaltySettings(
+  tx: Prisma.TransactionClient,
+  businessId: string,
+): Promise<LoyaltySettingsSnapshot | null> {
+  const ctx = await getBusinessLoyaltyContext(tx, businessId);
+  if (!ctx) return null;
+  // Map to legacy shape for preview
+  if (ctx.type === "CASHBACK") {
+    return {
+      earningPercentage: ctx.config.cashbackPercentage,
+      earnPointsOnPaidAmountOnly: false,
+      cashbackInFinalAmount: ctx.config.onFinalAmount,
+      cashbackBranding: null,
+      minPurchaseForEarning: ctx.config.minPurchaseForEarning ?? 0,
+      minPurchaseForRedemption: ctx.config.minPurchaseForRedemption ?? 0,
+      upperLimitBillAmount: ctx.config.maxCashbackCap,
+      upperLimitClaimableAmount: null,
+      pointReminderDays: null,
+      pointExpiryDays: ctx.config.pointExpiryDays ?? null,
+    };
+  }
+  if (ctx.type === "TIER") {
+    return {
+      earningPercentage: 1,
+      earnPointsOnPaidAmountOnly: false,
+      cashbackInFinalAmount: false,
+      cashbackBranding: null,
+      minPurchaseForEarning: 0,
+      minPurchaseForRedemption: 0,
+      upperLimitBillAmount: ctx.config.maxCashbackCap ?? null,
+      upperLimitClaimableAmount: null,
+      pointReminderDays: null,
+      pointExpiryDays: ctx.config.pointExpiryDays ?? null,
+    };
+  }
+  const pointExpiryDays =
+    ctx.type === "AMOUNT_SPENT" || ctx.type === "VISIT_MADE"
+      ? ((ctx.config as { pointExpiryDays?: number | null }).pointExpiryDays ??
+        null)
+      : null;
+  return {
+    earningPercentage: 1,
+    earnPointsOnPaidAmountOnly:
+      ctx.type === "AMOUNT_SPENT" &&
+      "onFinalAmount" in ctx.config &&
+      ctx.config.onFinalAmount,
+    cashbackInFinalAmount: false,
+    cashbackBranding: null,
+    minPurchaseForEarning: 0,
+    minPurchaseForRedemption: 0,
+    upperLimitBillAmount: null,
+    upperLimitClaimableAmount: null,
+    pointReminderDays: null,
+    pointExpiryDays,
+  };
+}
+
+/** Expire EARNED points using PointsTransaction (no PointsBucket). */
 export async function expireBucketsForCustomer(
   tx: Prisma.TransactionClient,
   params: {
@@ -126,81 +252,75 @@ export async function expireBucketsForCustomer(
     customerId: string;
     now?: Date;
   },
-) {
+): Promise<{ expiredPoints: number }> {
   const { businessId, customerId } = params;
   const now = params.now ?? new Date();
 
-  const expiringBuckets = await tx.pointsBucket.findMany({
+  const expiringRows = await tx.pointsTransaction.findMany({
     where: {
       businessId,
       customerId,
+      type: TransactionType.EARNED,
       remainingAmount: { gt: 0 },
-      expiresAt: { lt: now },
-      status: "ACTIVE",
+      expiresAt: { lt: now, not: null },
     },
     select: { id: true, remainingAmount: true },
+    orderBy: { expiresAt: "asc" },
   });
 
-  if (expiringBuckets.length === 0) {
+  if (expiringRows.length === 0) {
     return { expiredPoints: 0 };
   }
 
-  const expiredPoints = expiringBuckets.reduce(
-    (sum, b) => sum + b.remainingAmount,
+  const expiredPoints = expiringRows.reduce(
+    (sum, r) => sum + (r.remainingAmount ?? 0),
     0,
   );
 
-  const customer = await tx.businessCustomer.findUnique({
-    where: {
-      businessId_customerId: { businessId, customerId },
-    },
+  const bc = await tx.businessCustomer.findUnique({
+    where: { businessId_customerId: { businessId, customerId } },
     select: { pointsBalance: true },
   });
-
-  const currentBalance = customer?.pointsBalance ?? 0;
+  const currentBalance = bc?.pointsBalance ?? 0;
   const nextBalance = Math.max(0, currentBalance - expiredPoints);
 
-  await tx.pointsBucket.updateMany({
-    where: {
-      id: { in: expiringBuckets.map((b) => b.id) },
-    },
-    data: {
-      remainingAmount: 0,
-      status: "EXPIRED",
-    },
-  });
+  for (const row of expiringRows) {
+    await tx.pointsTransaction.update({
+      where: { id: row.id },
+      data: { remainingAmount: 0 },
+    });
+  }
 
   await tx.pointsTransaction.create({
     data: {
       businessId,
       customerId,
-      amount: expiredPoints,
+      amount: -expiredPoints,
       type: TransactionType.EXPIRED,
       source: TransactionSource.MANUAL_ADJUSTMENT,
-      metadata: {
-        reason: "expiry",
-        bucketCount: expiringBuckets.length,
-      },
       balanceAfter: nextBalance,
+      description: `Expired ${expiredPoints} points`,
     },
   });
 
   await tx.businessCustomer.update({
-    where: {
-      businessId_customerId: { businessId, customerId },
-    },
+    where: { businessId_customerId: { businessId, customerId } },
     data: { pointsBalance: nextBalance },
   });
 
   return { expiredPoints };
 }
 
-/**
- * Apply loyalty logic to a bill. Points are ONLY given when:
- * - Business has isServiceEnabled.loyalty === true
- * - Business has a Loyalty configuration (Loyalty row exists)
- * When either is false, returns zeros for earned/redeemed points.
- */
+export interface ApplyLoyaltyResult {
+  earnedPoints: number;
+  redeemedPoints: number;
+  cashbackAmount: number | null;
+  pointsBalance: number;
+  finalAmount: number;
+  settings: LoyaltySettingsSnapshot | null;
+}
+
+/** Apply loyalty logic to a bill. Supports all 4 loyalty types. */
 export async function applyLoyaltyForBill(
   tx: Prisma.TransactionClient,
   params: {
@@ -208,18 +328,20 @@ export async function applyLoyaltyForBill(
     customerId: string;
     billId: string;
     billAmount: number;
+    /** Subtotal (line items sum before discounts/tax). When onFinalAmount=false, used for earning. */
+    billSubtotal?: number | null;
     redeemPointsRequested?: number | null;
   },
-) {
+): Promise<ApplyLoyaltyResult> {
   const { businessId, customerId, billId, billAmount } = params;
-  const requested = Math.max(0, params.redeemPointsRequested ?? 0);
+  const billSubtotal = params.billSubtotal ?? null;
+  const requested = Math.max(0, Math.floor(params.redeemPointsRequested ?? 0));
 
   const business = await tx.business.findUnique({
     where: { id: businessId },
     select: { isServiceEnabled: true },
   });
 
-  // Loyalty OFF = service disabled or no Loyalty row → no points
   if (
     !isServiceEnabled(
       business?.isServiceEnabled as IsServiceEnabled | null | undefined,
@@ -229,17 +351,19 @@ export async function applyLoyaltyForBill(
     return {
       earnedPoints: 0,
       redeemedPoints: 0,
+      cashbackAmount: null,
       pointsBalance: 0,
       finalAmount: billAmount,
       settings: null,
     };
   }
 
-  const settings = await getBusinessLoyaltySettings(tx, businessId);
-  if (!settings) {
+  const context = await getBusinessLoyaltyContext(tx, businessId);
+  if (!context) {
     return {
       earnedPoints: 0,
       redeemedPoints: 0,
+      cashbackAmount: null,
       pointsBalance: 0,
       finalAmount: billAmount,
       settings: null,
@@ -248,38 +372,49 @@ export async function applyLoyaltyForBill(
 
   await expireBucketsForCustomer(tx, { businessId, customerId });
 
-  const customer = await tx.businessCustomer.findUnique({
-    where: {
-      businessId_customerId: { businessId, customerId },
+  const bc = await tx.businessCustomer.findUnique({
+    where: { businessId_customerId: { businessId, customerId } },
+    select: {
+      pointsBalance: true,
+      lifetimeSpend: true,
+      lastVisitAt: true,
     },
-    select: { pointsBalance: true },
   });
+  let pointsBalance = bc?.pointsBalance ?? 0;
 
-  let pointsBalance = customer?.pointsBalance ?? 0;
-
-  const redeemablePoints =
-    billAmount > 0
-      ? calculateRedeemablePoints(billAmount, settings, pointsBalance)
-      : 0;
-
-  const redeemedPoints = Math.min(requested, redeemablePoints);
+  const resolvedTier =
+    context.type === "TIER"
+      ? resolveTierForLifetimeSpend(
+          context.config.tiers,
+          bc?.lifetimeSpend ?? 0,
+        )
+      : null;
+  const redeemable = calculateRedeemable(billAmount, pointsBalance, context, {
+    resolvedTier,
+  });
+  const redeemedPoints = Math.min(requested, Math.floor(redeemable));
 
   let finalAmount = billAmount;
+  let cashbackAmount: number | null = null;
 
+  // Redemption: deduct from balance using FIFO on PointsTransaction
   if (redeemedPoints > 0) {
-    const buckets = await tx.pointsBucket.findMany({
+    const earnedRows = await tx.pointsTransaction.findMany({
       where: {
         businessId,
         customerId,
+        type: TransactionType.EARNED,
         remainingAmount: { gt: 0 },
-        status: "ACTIVE",
       },
       orderBy: { expiresAt: "asc" },
       select: { id: true, remainingAmount: true },
     });
 
     const { allocations, remaining } = allocateRedemptionFIFO(
-      buckets,
+      earnedRows.map((r) => ({
+        id: r.id,
+        remainingAmount: r.remainingAmount ?? 0,
+      })),
       redeemedPoints,
     );
 
@@ -287,74 +422,84 @@ export async function applyLoyaltyForBill(
       throw new Error("Insufficient points for redemption");
     }
 
-    for (const allocation of allocations) {
-      const bucket = buckets.find((b) => b.id === allocation.bucketId);
-      const remainingAmount =
-        (bucket?.remainingAmount ?? 0) - allocation.amount;
-      await tx.pointsBucket.update({
-        where: { id: allocation.bucketId },
-        data: {
-          remainingAmount,
-          status: remainingAmount === 0 ? "CONSUMED" : "ACTIVE",
-        },
+    for (const alloc of allocations) {
+      const row = earnedRows.find((r) => r.id === alloc.transactionId);
+      const newRemaining = Math.max(
+        0,
+        (row?.remainingAmount ?? 0) - alloc.amount,
+      );
+      await tx.pointsTransaction.update({
+        where: { id: alloc.transactionId },
+        data: { remainingAmount: newRemaining },
       });
     }
 
     const nextBalance = Math.max(0, pointsBalance - redeemedPoints);
 
-    const redeemTransaction = await tx.pointsTransaction.create({
+    await tx.pointsTransaction.create({
       data: {
         businessId,
         customerId,
-        amount: redeemedPoints,
+        amount: -redeemedPoints,
         type: TransactionType.REDEEMED,
         source: TransactionSource.BILL,
         sourceId: billId,
         billId,
-        metadata: {
-          billId,
-          requested,
-        },
         balanceAfter: nextBalance,
+        description: `Redeemed ${redeemedPoints} on bill`,
       },
     });
-
-    if (allocations.length > 0) {
-      await tx.pointsRedemptionAllocation.createMany({
-        data: allocations.map((allocation) => ({
-          redeemTransactionId: redeemTransaction.id,
-          bucketId: allocation.bucketId,
-          amount: allocation.amount,
-        })),
-      });
-    }
 
     pointsBalance = nextBalance;
     await tx.businessCustomer.update({
-      where: {
-        businessId_customerId: { businessId, customerId },
-      },
+      where: { businessId_customerId: { businessId, customerId } },
       data: { pointsBalance },
     });
 
+    // For CASHBACK: redeemedPoints is in ₹. For points types: 1 pt = ₹1 discount
     finalAmount = Math.max(0, billAmount - redeemedPoints);
   }
 
-  // When earnPointsOnPaidAmountOnly: give points on amount actually paid (after redemption); otherwise on full bill amount
+  // Earning: amountForEarning = subtotal vs amount based on onFinalAmount
   const amountForEarning =
-    settings.earnPointsOnPaidAmountOnly && redeemedPoints > 0
+    (context.type === "CASHBACK" && context.config.onFinalAmount) ||
+    (context.type === "AMOUNT_SPENT" && context.config.onFinalAmount)
       ? finalAmount
-      : billAmount;
-  const earnedPoints = calculateEarnedPoints(amountForEarning, settings);
+      : billSubtotal != null && billSubtotal > 0
+        ? billSubtotal
+        : billAmount;
+
+  // VISIT_MADE: only award points if visit qualifies (interval passed or first visit)
+  const visitQualifies =
+    context.type !== "VISIT_MADE" ||
+    isVisitQualifying(context.config, bc?.lastVisitAt ?? null);
+
+  const earnedPoints = visitQualifies
+    ? calculatePointsEarnedForBill(amountForEarning, context, {
+        resolvedTier,
+      })
+    : 0;
 
   if (earnedPoints > 0) {
-    const expiryDays = getExpiryDays(settings.pointExpiryDays);
+    const expiryDays =
+      context.type === "CASHBACK"
+        ? getExpiryDays(context.config.pointExpiryDays)
+        : context.type === "TIER"
+          ? getExpiryDays(context.config.pointExpiryDays)
+          : context.type === "AMOUNT_SPENT"
+            ? getExpiryDays(context.config.pointExpiryDays)
+            : getExpiryDays(
+                context.type === "VISIT_MADE"
+                  ? context.config.pointExpiryDays
+                  : null,
+              );
+
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + expiryDays);
 
     const nextBalance = pointsBalance + earnedPoints;
 
-    const earnedTransaction = await tx.pointsTransaction.create({
+    await tx.pointsTransaction.create({
       data: {
         businessId,
         customerId,
@@ -364,42 +509,60 @@ export async function applyLoyaltyForBill(
         sourceId: billId,
         billId,
         expiresAt,
-        metadata: {
-          billId,
-          expiryDays,
-        },
-        balanceAfter: nextBalance,
-      },
-    });
-
-    await tx.pointsBucket.create({
-      data: {
-        businessId,
-        customerId,
-        earnedTransactionId: earnedTransaction.id,
-        originalAmount: earnedPoints,
         remainingAmount: earnedPoints,
-        expiresAt,
+        balanceAfter: nextBalance,
+        description: `Earned ${earnedPoints} from bill`,
       },
     });
 
     pointsBalance = nextBalance;
     await tx.businessCustomer.update({
-      where: {
-        businessId_customerId: { businessId, customerId },
-      },
+      where: { businessId_customerId: { businessId, customerId } },
       data: { pointsBalance },
+    });
+
+    if (context.type === "CASHBACK") {
+      cashbackAmount = earnedPoints; // stored as integer rupees
+    }
+  }
+
+  // Update lifetimeSpend, visitCount, currentTierId for TIER / VISIT_MADE
+  if (context.type === "TIER" || context.type === "VISIT_MADE") {
+    const updateData: {
+      lifetimeSpend: { increment: number };
+      visitCount?: { increment: number };
+      lastVisitAt?: Date;
+      currentTierId?: string | null;
+    } = { lifetimeSpend: { increment: billAmount } };
+
+    if (context.type === "TIER") {
+      updateData.visitCount = { increment: 1 };
+      updateData.lastVisitAt = new Date();
+      const newTier = resolveTierForLifetimeSpend(
+        context.config.tiers,
+        (bc?.lifetimeSpend ?? 0) + billAmount,
+      );
+      updateData.currentTierId = newTier?.id ?? null;
+    } else if (context.type === "VISIT_MADE" && visitQualifies) {
+      updateData.visitCount = { increment: 1 };
+      updateData.lastVisitAt = new Date();
+    }
+
+    await tx.businessCustomer.update({
+      where: { businessId_customerId: { businessId, customerId } },
+      data: updateData,
     });
   }
 
-  const finalAmountValue = finalAmount;
+  const legacySettings = await getBusinessLoyaltySettings(tx, businessId);
 
   return {
     earnedPoints,
     redeemedPoints,
+    cashbackAmount,
     pointsBalance,
-    finalAmount: finalAmountValue,
-    settings,
+    finalAmount,
+    settings: legacySettings,
   };
 }
 
@@ -409,27 +572,24 @@ export async function expireBucketsForBusiness(params: {
 }) {
   const now = params.now ?? new Date();
 
-  const buckets = await db.pointsBucket.findMany({
+  const expiring = await db.pointsTransaction.findMany({
     where: {
+      type: TransactionType.EARNED,
       remainingAmount: { gt: 0 },
-      expiresAt: { lt: now },
-      status: "ACTIVE",
+      expiresAt: { lt: now, not: null },
       ...(params.businessId ? { businessId: params.businessId } : {}),
     },
-    select: {
-      businessId: true,
-      customerId: true,
-    },
+    select: { businessId: true, customerId: true },
     distinct: ["businessId", "customerId"],
   });
 
   let expiredCustomers = 0;
-
-  for (const bucket of buckets) {
+  for (const row of expiring) {
     await db.$transaction(async (tx) => {
       await expireBucketsForCustomer(tx, {
-        businessId: bucket.businessId,
-        customerId: bucket.customerId,
+        businessId: row.businessId,
+        customerId: row.customerId,
+        now,
       });
     });
     expiredCustomers += 1;

@@ -7,6 +7,7 @@ import * as React from "react";
 import {
   Controller,
   FormProvider,
+  useForm,
   useFormContext,
   useFormState,
   type ControllerProps,
@@ -186,6 +187,8 @@ export {
   FormItem,
   FormLabel,
   FormMessage,
+  FormProvider,
+  useForm,
   useFormContext,
   useFormField,
 };

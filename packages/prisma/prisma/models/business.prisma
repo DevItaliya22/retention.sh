@@ -80,7 +80,8 @@ model Sku {
   unit        String? // e.g. "piece", "kg", "liter"
   isActive    Boolean @default(true)
 
-  billLineItems BillLineItem[]
+  billLineItems       BillLineItem[]
+  loyaltyRewardStages LoyaltyRewardStage[] // FREE_ITEM reward stages referencing this SKU
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

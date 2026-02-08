@@ -82,12 +82,13 @@ export const GET = withCustomerAuth<{ businessSlug: string }>(
         },
       });
 
-      const buckets = await db.pointsBucket.findMany({
+      const expiringRows = await db.pointsTransaction.findMany({
         where: {
           businessId: business.id,
           customerId: businessCustomer.customerId,
+          type: "EARNED",
           remainingAmount: { gt: 0 },
-          status: "ACTIVE",
+          expiresAt: { not: null },
         },
         orderBy: { expiresAt: "asc" },
         take: 10,
@@ -114,11 +115,13 @@ export const GET = withCustomerAuth<{ businessSlug: string }>(
           },
           settings: business.loyalty,
           pointsBalance: refreshed?.pointsBalance ?? 0,
-          buckets: buckets.map((b) => ({
-            id: b.id,
-            remainingAmount: b.remainingAmount,
-            expiresAt: b.expiresAt.toISOString(),
-          })),
+          buckets: expiringRows
+            .filter((b) => b.expiresAt)
+            .map((b) => ({
+              id: b.id,
+              remainingAmount: b.remainingAmount ?? 0,
+              expiresAt: b.expiresAt!.toISOString(),
+            })),
           transactions: transactions.map((t) => ({
             id: t.id,
             amount: t.amount,
