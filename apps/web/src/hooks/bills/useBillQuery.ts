@@ -31,8 +31,14 @@ export interface BillLoyaltyLog {
 export interface BillDetail {
   id: string;
   billNumber: string;
+  /** Legacy: same as finalAmount for display */
   amount: number | null;
+  subtotal?: number | null;
+  storeDiscount?: number | null;
+  tax?: number[];
   finalAmount?: number | null;
+  cashbackAmount?: number | null;
+  userPaidAmount?: number | null;
   loyaltyPointsEarned?: number;
   loyaltyPointsRedeemed?: number;
   /** BusinessCustomer slugId for /customers/[slugId] link */

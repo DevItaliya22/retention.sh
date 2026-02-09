@@ -31,13 +31,10 @@ import {
 } from "@reelo/ui/components";
 import { useEffect } from "react";
 import { toast } from "sonner";
-import {
-  AmountSpentConfigSettingsCard,
-  CashbackConfigSettingsCard,
-  RewardStagesSettingsCard,
-  TierSettingsCard,
-  VisitMadeConfigSettingsCard,
-} from "./_components/settings";
+import { AmountSpentSettingsCard } from "./amount-spent";
+import { CashbackSettingsCard } from "./cashback";
+import { TierSettingsCard } from "./tier";
+import { VisitMadeSettingsCard } from "./visit";
 
 export function LoyaltyExistingSettings() {
   const { data, isLoading, isError } = useLoyaltySettingsQuery();
@@ -83,13 +80,16 @@ export function LoyaltyExistingSettings() {
   return (
     <div className="space-y-6 pb-12">
       {loyalty.loyaltyType === "CASHBACK" && loyalty.cashbackConfig && (
-        <CashbackConfigSettingsCard
+        <CashbackSettingsCard
           config={loyalty.cashbackConfig}
-          onSave={(payload) =>
+          onSave={(payload, options) =>
             updateMutation.mutate(
               { section: "cashbackConfig", cashbackConfig: payload },
               {
-                onSuccess: () => toast.success("Cashback settings saved"),
+                onSuccess: () => {
+                  toast.success("Cashback settings saved");
+                  options?.onSuccess?.();
+                },
                 onError: (e) => toast.error(e.message),
               },
             )
@@ -102,13 +102,17 @@ export function LoyaltyExistingSettings() {
         <TierSettingsCard
           tierConfig={{
             pointsPerRupee: loyalty.tierConfig.pointsPerRupee,
+            onFinalAmount: loyalty.tierConfig.onFinalAmount ?? false,
             tiers: loyalty.tierConfig.tiers,
           }}
           onSave={async (data, options) => {
             try {
               await updateMutation.mutateAsync({
                 section: "tierConfig",
-                tierConfig: { pointsPerRupee: data.pointsPerRupee },
+                tierConfig: {
+                  pointsPerRupee: data.pointsPerRupee,
+                  onFinalAmount: data.onFinalAmount,
+                },
               });
               await updateMutation.mutateAsync({
                 section: "tiers",
@@ -125,65 +129,49 @@ export function LoyaltyExistingSettings() {
       )}
 
       {loyalty.loyaltyType === "AMOUNT_SPENT" && loyalty.amountSpentConfig && (
-        <>
-          <AmountSpentConfigSettingsCard
-            config={loyalty.amountSpentConfig}
-            onSave={(payload) =>
-              updateMutation.mutate(
-                { section: "amountSpentConfig", amountSpentConfig: payload },
-                {
-                  onSuccess: () => toast.success("Points config saved"),
-                  onError: (e) => toast.error(e.message),
-                },
-              )
+        <AmountSpentSettingsCard
+          config={loyalty.amountSpentConfig}
+          onSave={async (data, options) => {
+            try {
+              await updateMutation.mutateAsync({
+                section: "amountSpentConfig",
+                amountSpentConfig: data.amountSpentConfig,
+              });
+              await updateMutation.mutateAsync({
+                section: "rewardStages",
+                rewardStages: data.rewardStages,
+              });
+              toast.success("Points & reward stages saved");
+              options?.onSuccess?.();
+            } catch (e) {
+              toast.error(e instanceof Error ? e.message : "Failed to save");
             }
-            isSaving={updateMutation.isPending}
-          />
-          <RewardStagesSettingsCard
-            stages={loyalty.amountSpentConfig.rewardStages}
-            onSave={(stages) =>
-              updateMutation.mutate(
-                { section: "rewardStages", rewardStages: stages },
-                {
-                  onSuccess: () => toast.success("Reward stages saved"),
-                  onError: (e) => toast.error(e.message),
-                },
-              )
-            }
-            isSaving={updateMutation.isPending}
-          />
-        </>
+          }}
+          isSaving={updateMutation.isPending}
+        />
       )}
 
       {loyalty.loyaltyType === "VISIT_MADE" && loyalty.visitMadeConfig && (
-        <>
-          <VisitMadeConfigSettingsCard
-            config={loyalty.visitMadeConfig}
-            onSave={(payload) =>
-              updateMutation.mutate(
-                { section: "visitMadeConfig", visitMadeConfig: payload },
-                {
-                  onSuccess: () => toast.success("Visit config saved"),
-                  onError: (e) => toast.error(e.message),
-                },
-              )
+        <VisitMadeSettingsCard
+          config={loyalty.visitMadeConfig}
+          onSave={async (data, options) => {
+            try {
+              await updateMutation.mutateAsync({
+                section: "visitMadeConfig",
+                visitMadeConfig: data.visitMadeConfig,
+              });
+              await updateMutation.mutateAsync({
+                section: "rewardStages",
+                rewardStages: data.rewardStages,
+              });
+              toast.success("Visit & reward stages saved");
+              options?.onSuccess?.();
+            } catch (e) {
+              toast.error(e instanceof Error ? e.message : "Failed to save");
             }
-            isSaving={updateMutation.isPending}
-          />
-          <RewardStagesSettingsCard
-            stages={loyalty.visitMadeConfig.rewardStages}
-            onSave={(stages) =>
-              updateMutation.mutate(
-                { section: "rewardStages", rewardStages: stages },
-                {
-                  onSuccess: () => toast.success("Reward stages saved"),
-                  onError: (e) => toast.error(e.message),
-                },
-              )
-            }
-            isSaving={updateMutation.isPending}
-          />
-        </>
+          }}
+          isSaving={updateMutation.isPending}
+        />
       )}
 
       <CommonSettingsCard loyalty={loyalty} updateMutation={updateMutation} />
@@ -231,7 +219,10 @@ function CommonSettingsCard({
         termsAndConditions: filtered.length > 0 ? filtered : [],
       },
       {
-        onSuccess: () => toast.success("Expiry & channels saved"),
+        onSuccess: () => {
+          toast.success("Expiry & channels saved");
+          form.reset(values, { keepDefaultValues: false });
+        },
         onError: (e) => toast.error(e.message),
       },
     );
@@ -298,7 +289,10 @@ function BrandingSettingsCard({
     updateMutation.mutate(
       { section: "branding", branding: values.branding ?? null },
       {
-        onSuccess: () => toast.success("Branding saved"),
+        onSuccess: () => {
+          toast.success("Branding saved");
+          form.reset(values, { keepDefaultValues: false });
+        },
         onError: (e) => toast.error(e.message),
       },
     );

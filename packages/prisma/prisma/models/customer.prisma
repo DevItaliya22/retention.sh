@@ -87,9 +87,9 @@ model BusinessCustomer {
   // Source of truth: SUM(PointsTransaction.amount) for this customer.
   pointsBalance Int @default(0)
 
-  // Cumulative bill total across all purchases (₹).
+  // Cumulative bill total across all purchases (₹). Pre-loyalty total per bill.
   // Used by TIER loyalty type for tier placement.
-  // Source of truth: SUM(Bill.amount) for this customer.
+  // Source of truth: SUM(Bill.finalAmount) for this customer.
   lifetimeSpend Float @default(0)
 
   // Total qualifying visits (incremented per bill, respecting visit interval).
@@ -104,8 +104,13 @@ model BusinessCustomer {
   currentTierId String?
   currentTier   LoyaltyTier? @relation(fields: [currentTierId], references: [id], onDelete: SetNull)
 
+  // Cumulative cashback (₹) ever given to this customer at this business.
+  // Updated only for CASHBACK and TIER loyalty types. Source of truth: CashbackTransaction.
+  totalCashbackEarned Float @default(0)
+
   // ── Transaction & Activity Relations ───────────────────────────────────
   pointTransactions    PointsTransaction[]
+  cashbackTransactions CashbackTransaction[]
   feedbackResponses    FeedbackResponse[]
   scratchCardResponses ScratchCardResponse[]
   bills                Bill[]

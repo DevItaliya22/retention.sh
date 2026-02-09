@@ -1,6 +1,20 @@
 "use client";
 
-import type { LoyaltyResponse } from "@/hooks/loyalty/useLoyaltySettings";
+import {
+  RewardStageCard,
+  SETTINGS_CONTROL_CLASS,
+  SETTINGS_LABEL_CLASS,
+  SETTINGS_ROW_CLASS,
+} from "@/components/settings/loyalty/common";
+import type {
+  LoyaltyResponse,
+  LoyaltyRewardStage,
+} from "@/hooks/loyalty/useLoyaltySettings";
+import type {
+  LoyaltyRewardType,
+  VisitIntervalUnit,
+} from "@/lib/schemas/loyalty";
+import type { LoyaltyProgramFormValues } from "@/lib/schemas/loyalty-form";
 import {
   Button,
   Card,
@@ -22,14 +36,12 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Separator,
   Switch,
   useForm,
 } from "@reelo/ui/components";
-import {
-  SETTINGS_CONTROL_CLASS,
-  SETTINGS_LABEL_CLASS,
-  SETTINGS_ROW_CLASS,
-} from "./settings-layout";
+import { Plus } from "lucide-react";
+import { useFieldArray } from "react-hook-form";
 
 const VISIT_INTERVAL_UNITS = [
   { value: "MINUTE", label: "Minute(s)", max: 60 },
@@ -39,34 +51,106 @@ const VISIT_INTERVAL_UNITS = [
   { value: "MONTH", label: "Month(s)", max: 12 },
 ] as const;
 
+const DEFAULT_STAGE = {
+  pointsRequired: 0,
+  rewardType: "PERCENTAGE_DISCOUNT" as const,
+  rewardName: "",
+  freeItemSkuId: null as string | null,
+  freeItemName: null as string | null,
+  percentageValue: null as number | null,
+  appliesToEntirePurchase: true,
+  specificProductIds: [] as string[],
+  cashAmount: null as number | null,
+  minPurchaseForRedemptionEnabled: false,
+  minPurchaseForRedemption: null as number | null,
+  maxDiscountCapEnabled: false,
+  maxDiscountCap: null as number | null,
+};
+
+function mapStageToForm(stage: LoyaltyRewardStage) {
+  return {
+    id: stage.id,
+    pointsRequired: stage.pointsRequired,
+    rewardType: stage.rewardType,
+    rewardName: stage.rewardName,
+    freeItemSkuId: stage.freeItemSkuId,
+    freeItemName: stage.freeItemName,
+    percentageValue: stage.percentageValue,
+    appliesToEntirePurchase: stage.appliesToEntirePurchase,
+    specificProductIds: stage.specificProductIds ?? [],
+    cashAmount: stage.cashAmount,
+    minPurchaseForRedemptionEnabled: stage.minPurchaseForRedemptionEnabled,
+    minPurchaseForRedemption: stage.minPurchaseForRedemption,
+    maxDiscountCapEnabled: stage.maxDiscountCapEnabled,
+    maxDiscountCap: stage.maxDiscountCap,
+  };
+}
+
 type VisitMadeConfig = NonNullable<LoyaltyResponse["visitMadeConfig"]>;
 
-interface VisitMadeConfigSettingsCardProps {
+interface VisitMadeSettingsCardProps {
   config: VisitMadeConfig;
-  onSave: (payload: Partial<VisitMadeConfig>) => void;
+  onSave: (
+    data: {
+      visitMadeConfig: Partial<Omit<VisitMadeConfig, "rewardStages">>;
+      rewardStages: Omit<LoyaltyRewardStage, "id">[];
+    },
+    options?: { onSuccess?: () => void },
+  ) => void;
   isSaving: boolean;
 }
 
-export function VisitMadeConfigSettingsCard({
+export function VisitMadeSettingsCard({
   config,
   onSave,
   isSaving,
-}: VisitMadeConfigSettingsCardProps) {
-  const form = useForm({
+}: VisitMadeSettingsCardProps) {
+  const form = useForm<LoyaltyProgramFormValues>({
     defaultValues: {
       pointsPerVisit: config.pointsPerVisit ?? 1,
       visitIntervalEnabled: config.visitIntervalEnabled ?? false,
       visitIntervalValue: config.visitIntervalValue ?? null,
       visitIntervalUnit: config.visitIntervalUnit ?? null,
+      rewardStages:
+        config.rewardStages?.length > 0
+          ? config.rewardStages.map(mapStageToForm)
+          : [DEFAULT_STAGE],
     },
   });
 
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "rewardStages",
+  });
+
   const handleSave = form.handleSubmit((values) => {
-    onSave({
-      pointsPerVisit: values.pointsPerVisit,
-      visitIntervalEnabled: values.visitIntervalEnabled,
-      visitIntervalValue: values.visitIntervalValue,
-      visitIntervalUnit: values.visitIntervalUnit,
+    const payload = {
+      visitMadeConfig: {
+        pointsPerVisit: values.pointsPerVisit ?? 1,
+        visitIntervalEnabled: values.visitIntervalEnabled ?? false,
+        visitIntervalValue: values.visitIntervalValue ?? null,
+        visitIntervalUnit: (values.visitIntervalUnit ??
+          null) as VisitIntervalUnit | null,
+      },
+      rewardStages: (values.rewardStages ?? []).map((s) => ({
+        pointsRequired: s.pointsRequired,
+        rewardType: s.rewardType as LoyaltyRewardType,
+        rewardName: s.rewardName,
+        freeItemSkuId: s.freeItemSkuId ?? null,
+        freeItemName: s.freeItemName ?? null,
+        percentageValue: s.percentageValue ?? null,
+        appliesToEntirePurchase: s.appliesToEntirePurchase ?? true,
+        specificProductIds: s.specificProductIds ?? [],
+        cashAmount: s.cashAmount ?? null,
+        minPurchaseForRedemptionEnabled:
+          s.minPurchaseForRedemptionEnabled ?? false,
+        minPurchaseForRedemption: s.minPurchaseForRedemption ?? null,
+        maxDiscountCapEnabled: s.maxDiscountCapEnabled ?? false,
+        maxDiscountCap: s.maxDiscountCap ?? null,
+      })),
+    };
+    onSave(payload, {
+      onSuccess: () => form.reset(values, { keepDefaultValues: false }),
     });
   });
 
@@ -74,16 +158,16 @@ export function VisitMadeConfigSettingsCard({
     <Card className="gap-0 p-0!">
       <CardHeader className="flex flex-col gap-0 border-b py-2!">
         <CardTitle className="text-base font-medium">
-          Visit configuration
+          Visit & reward stages
         </CardTitle>
         <CardDescription className="text-xs">
-          How customers earn points per visit
+          How customers earn points per visit and redeem for rewards
         </CardDescription>
       </CardHeader>
       <FormProvider {...form}>
         <Form {...form}>
           <form onSubmit={(e) => e.preventDefault()}>
-            <CardContent className="space-y-4 px-6 py-4">
+            <CardContent className="flex flex-col gap-y-4 border-b px-6 py-4 last:border-none">
               <FormField
                 control={form.control}
                 name="pointsPerVisit"
@@ -102,7 +186,6 @@ export function VisitMadeConfigSettingsCard({
                           min={0}
                           step="1"
                           placeholder="1"
-                          {...field}
                           value={field.value ?? ""}
                           onChange={(e) => {
                             const v = e.target.value;
@@ -168,7 +251,6 @@ export function VisitMadeConfigSettingsCard({
                                 type="number"
                                 min={1}
                                 placeholder="e.g. 24"
-                                {...field}
                                 value={field.value ?? ""}
                                 onChange={(e) => {
                                   const v = e.target.value;
@@ -225,8 +307,33 @@ export function VisitMadeConfigSettingsCard({
                   </div>
                 </div>
               )}
+
+              <Separator />
+
+              <p className="text-muted-foreground text-sm">
+                Reward stages — customers redeem points for these rewards.
+              </p>
+              {fields.map((field, index) => (
+                <div key={field.id}>
+                  <RewardStageCard
+                    index={index}
+                    onRemove={() => remove(index)}
+                    canRemove={fields.length > 1}
+                  />
+                  {index < fields.length - 1 && <Separator className="my-4" />}
+                </div>
+              ))}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => append(DEFAULT_STAGE)}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Add reward stage
+              </Button>
             </CardContent>
-            <CardFooter className="flex justify-end border-t px-6 py-4">
+            <CardFooter className="flex justify-end px-6 py-2">
               <Button
                 type="button"
                 onClick={handleSave}

@@ -170,7 +170,7 @@ export const GET = withCustomerAuth<{ businessSlug: string }>(
             id: bill.id,
             date: bill.createdAt.toISOString(),
             billNumber: bill.billNumber,
-            amountSpent: bill.amount ?? 0,
+            amountSpent: bill.finalAmount ?? 0,
             cashbackReceived: ct?.amount ?? 0,
             tierName: meta.tierName ?? null,
             cashbackPercentage: meta.cashbackPercentage ?? null,

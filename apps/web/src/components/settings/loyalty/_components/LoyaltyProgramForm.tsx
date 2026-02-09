@@ -1,5 +1,22 @@
 "use client";
 
+import { AmountSpentConfigStep } from "@/components/settings/loyalty/amount-spent";
+import {
+  CashbackConfigStep,
+  CashbackRedemptionLimitsStep,
+} from "@/components/settings/loyalty/cashback";
+import {
+  BrandingStep,
+  ChannelsTermsStep,
+  ExpiryReminderStep,
+  LoyaltyTypeStep,
+  RewardStageEditorStep,
+} from "@/components/settings/loyalty/common";
+import {
+  TierConfigStep,
+  TierEditorStep,
+} from "@/components/settings/loyalty/tier";
+import { VisitMadeConfigStep } from "@/components/settings/loyalty/visit";
 import { useCreateLoyaltyMutation } from "@/hooks/loyalty/useLoyaltySettings";
 import type {
   LoyaltyCreateInput,
@@ -36,19 +53,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { flushSync } from "react-dom";
 import { toast } from "sonner";
-import {
-  AmountSpentConfigStep,
-  BrandingStep,
-  CashbackConfigStep,
-  CashbackRedemptionLimitsStep,
-  ChannelsTermsStep,
-  ExpiryReminderStep,
-  LoyaltyTypeStep,
-  RewardStageEditorStep,
-  TierConfigStep,
-  TierEditorStep,
-  VisitMadeConfigStep,
-} from "./steps";
 
 interface LoyaltyProgramFormProps {
   initialData: Record<string, unknown> | null;
@@ -219,7 +223,7 @@ function buildSteps(
         {
           id: "tier-config",
           title: "Tier Config",
-          fields: ["pointsPerRupee"],
+          fields: ["pointsPerRupee", "onFinalAmount"],
           schema: tierConfigStepSchema,
           Component: ({
             stepIndex,
@@ -372,6 +376,7 @@ function buildInitialValues(
       return {
         ...base,
         pointsPerRupee: 1,
+        onFinalAmount: false,
         tiers: [
           {
             name: "",
@@ -469,6 +474,7 @@ function valuesToPayload(values: LoyaltyProgramFormValues): LoyaltyCreateInput {
         ...common,
         tierConfig: {
           pointsPerRupee: values.pointsPerRupee ?? 1,
+          onFinalAmount: values.onFinalAmount ?? false,
           tiers: (values.tiers ?? []).map((t) => ({
             name: t.name,
             rank: t.rank,

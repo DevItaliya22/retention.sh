@@ -81,6 +81,7 @@ export interface LoyaltyResponse {
   tierConfig?: {
     id: string;
     pointsPerRupee: number;
+    onFinalAmount: boolean;
     tiers: LoyaltyTier[];
   } | null;
   amountSpentConfig?: {

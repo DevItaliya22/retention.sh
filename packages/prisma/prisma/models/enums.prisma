@@ -139,6 +139,11 @@ enum TransactionSource {
   MANUAL_ADJUSTMENT // Admin manual adjustment
 }
 
+// Source of a cashback transaction (CASHBACK / TIER loyalty types only).
+enum CashbackSource {
+  BILL // Cashback earned from a purchase/bill
+}
+
 enum WalletType {
   POINTS
   STORE_CREDIT

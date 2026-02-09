@@ -8,6 +8,7 @@ import {
   FormMessage,
   Input,
   Label,
+  Switch,
   useFormContext,
 } from "@reelo/ui/components";
 
@@ -35,6 +36,27 @@ export function TierConfigStep() {
                   field.onChange(v === "" ? undefined : Math.max(0, Number(v)));
                 }}
               />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={form.control}
+        name="onFinalAmount"
+        render={({ field }) => (
+          <FormItem className="flex flex-row items-center gap-2">
+            <FormControl>
+              <label className="flex cursor-pointer items-center gap-2">
+                <Switch
+                  checked={field.value ?? false}
+                  onCheckedChange={field.onChange}
+                />
+                <span className="text-sm font-normal">
+                  Calculate cashback on final amount (after store discounts and
+                  tax)
+                </span>
+              </label>
             </FormControl>
             <FormMessage />
           </FormItem>

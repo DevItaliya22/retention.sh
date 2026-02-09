@@ -53,6 +53,7 @@ export const cashbackRedemptionLimitsStepSchema = z.object({
 
 export const tierConfigStepSchema = z.object({
   pointsPerRupee: z.coerce.number().min(0).default(1),
+  onFinalAmount: z.boolean().default(false),
 });
 
 const tierItemSchema = z.object({

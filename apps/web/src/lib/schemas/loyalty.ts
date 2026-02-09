@@ -100,6 +100,7 @@ export type LoyaltyTierInput = z.infer<typeof loyaltyTierSchema>;
 /** Base tier config (no refinements) — use .partial() on this for update schema. */
 const tierConfigSchemaBase = z.object({
   pointsPerRupee: z.coerce.number().min(0).default(1),
+  onFinalAmount: z.boolean().default(false),
   tiers: z.array(loyaltyTierSchema).min(1, "At least one tier is required"),
 });
 

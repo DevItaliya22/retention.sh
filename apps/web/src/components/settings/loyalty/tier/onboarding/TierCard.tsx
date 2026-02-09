@@ -1,5 +1,12 @@
 "use client";
 
+import {
+  MaxCapToggleField,
+  MinPurchaseToggleField,
+  SETTINGS_CONTROL_CLASS,
+  SETTINGS_LABEL_CLASS,
+  SETTINGS_ROW_CLASS,
+} from "@/components/settings/loyalty/common";
 import type { LoyaltyProgramFormValues } from "@/lib/schemas/loyalty-form";
 import {
   Button,
@@ -15,19 +22,11 @@ import {
   useFormContext,
 } from "@reelo/ui/components";
 import { Trash2 } from "lucide-react";
-import {
-  SETTINGS_CONTROL_CLASS,
-  SETTINGS_LABEL_CLASS,
-  SETTINGS_ROW_CLASS,
-} from "../settings/settings-layout";
-import { MaxCapToggleField } from "./MaxCapToggleField";
-import { MinPurchaseToggleField } from "./MinPurchaseToggleField";
 
 interface TierCardProps {
   index: number;
   onRemove: () => void;
   canRemove: boolean;
-  /** When true, this is the highest-rank tier; max is optional and we show an explanatory note. */
   isTopTier?: boolean;
 }
 

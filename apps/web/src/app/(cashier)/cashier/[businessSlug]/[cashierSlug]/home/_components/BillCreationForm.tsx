@@ -15,7 +15,6 @@ import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-  DateDisplay,
   Input,
   Label,
   PhoneInput,
@@ -92,37 +91,60 @@ function BillSuccessCard({
 
         <Separator />
 
-        {/* Amount Summary */}
+        {/* Bill structure: Subtotal → Store discount → Bill total → Cashback → Amount to pay */}
         <div className="space-y-2 text-sm">
-          {bill.amount != null && (
+          <p className="text-muted-foreground mb-2 text-xs font-medium tracking-wider uppercase">
+            Bill breakdown
+          </p>
+          {bill.subtotal != null && (
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Bill Amount</span>
-              <span className="font-medium">₹{bill.amount.toFixed(2)}</span>
+              <span className="text-muted-foreground">Subtotal</span>
+              <span className="font-medium">₹{bill.subtotal.toFixed(2)}</span>
             </div>
           )}
-          {isCashbackType && (loyalty?.cashbackAmount ?? 0) > 0 && (
-            <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
-              <span>Cashback Earned</span>
+          {(bill.storeDiscount ?? 0) > 0 && (
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Store discount</span>
               <span className="font-medium">
-                -₹{(loyalty?.cashbackAmount ?? 0).toFixed(2)}
+                -₹{(bill.storeDiscount ?? 0).toFixed(2)}
               </span>
             </div>
           )}
+          {bill.finalAmount != null && (
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Bill total</span>
+              <span className="font-medium">
+                ₹{bill.finalAmount.toFixed(2)}
+              </span>
+            </div>
+          )}
+          {isCashbackType &&
+            (loyalty?.cashbackAmount ?? bill.cashbackAmount ?? 0) > 0 && (
+              <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
+                <span>Cashback</span>
+                <span className="font-medium">
+                  -₹
+                  {(
+                    loyalty?.cashbackAmount ??
+                    bill.cashbackAmount ??
+                    0
+                  ).toFixed(2)}
+                </span>
+              </div>
+            )}
           {(loyalty?.redeemedPoints ?? 0) > 0 && (
             <div className="flex justify-between text-blue-600 dark:text-blue-400">
-              <span>Points Redeemed</span>
+              <span>Points redeemed</span>
               <span className="font-medium">-₹{loyalty!.redeemedPoints}</span>
             </div>
           )}
-          {bill.finalAmount != null && bill.amount !== bill.finalAmount && (
-            <>
-              <Separator />
-              <div className="flex justify-between text-base font-semibold">
-                <span>Final Amount</span>
-                <span>₹{bill.finalAmount.toFixed(2)}</span>
-              </div>
-            </>
-          )}
+          <Separator />
+          <div className="flex justify-between text-base font-semibold">
+            <span>Amount to pay</span>
+            <span>
+              ₹{(bill.userPaidAmount ?? bill.finalAmount ?? 0).toFixed(2)}
+            </span>
+          </div>
         </div>
 
         {/* Loyalty Info */}
@@ -286,9 +308,9 @@ export function BillCreationForm() {
   const phoneInputRef = useRef<HTMLDivElement>(null);
 
   // ─── Computed Values ────────────────────────────────────────────────────
+  // Subtotal = amount field or computed from line items. Store discount and tax (empty for now).
   const grossAmount = amount ? parseFloat(amount) : 0;
   const discountAmount = storeDiscount ? parseFloat(storeDiscount) : 0;
-  const netAmount = Math.max(0, grossAmount - discountAmount);
 
   const computedSubtotal = useMemo(() => {
     if (lineItems.length === 0) return null;
@@ -305,12 +327,15 @@ export function BillCreationForm() {
     return total > 0 ? total : null;
   }, [lineItems, skuOptions]);
 
+  const subtotalValue = computedSubtotal ?? (grossAmount > 0 ? grossAmount : 0);
+  const finalAmountBeforeLoyalty = Math.max(0, subtotalValue - discountAmount);
+
   // ─── Loyalty Preview ────────────────────────────────────────────────────
   const loyaltyPreviewQuery = useLoyaltyPreview({
     businessId: business.id,
     phone: phoneNumber,
-    billAmount: netAmount || 0,
-    subtotal: computedSubtotal,
+    billAmount: finalAmountBeforeLoyalty || 0,
+    subtotal: subtotalValue > 0 ? subtotalValue : null,
   });
 
   const loyaltyPreview = loyaltyPreviewQuery.data?.preview;
@@ -322,11 +347,9 @@ export function BillCreationForm() {
   const isPointsType =
     loyaltyType === "AMOUNT_SPENT" || loyaltyType === "VISIT_MADE";
 
-  // Estimated final amount after loyalty
-  // Only redeemed points/cashback reduce the current bill.
-  // Earned cashback/points go to the wallet for future use.
+  // Estimated amount user pays after loyalty (redeemed points reduce the bill).
   const redeemValue = redeemPoints ? parseInt(redeemPoints, 10) || 0 : 0;
-  const estimatedFinal = Math.max(0, netAmount - redeemValue);
+  const estimatedUserPays = Math.max(0, finalAmountBeforeLoyalty - redeemValue);
 
   // ─── Handlers ───────────────────────────────────────────────────────────
   const handleReset = useCallback(() => {
@@ -364,15 +387,57 @@ export function BillCreationForm() {
     [],
   );
 
-  // Customer search
+  const phoneDigits = phoneNumber.replace(/\D/g, "");
+  const phoneDigitCount = phoneDigits.length;
+
+  // Customer search when 4+ digits
   useEffect(() => {
-    if (phoneNumber.length >= 4) {
+    if (phoneDigitCount >= 4) {
       searchCustomers(phoneNumber);
+    } else {
+      setShowSuggestions(false);
+    }
+  }, [phoneNumber, phoneDigitCount, searchCustomers]);
+
+  const last10Digits = phoneDigits.slice(-10);
+
+  // Show suggestions only when 4–9 digits (still typing); hide when full number (10+)
+  useEffect(() => {
+    if (
+      phoneDigitCount >= 4 &&
+      phoneDigitCount < 10 &&
+      searchResults.length > 0
+    ) {
       setShowSuggestions(true);
     } else {
       setShowSuggestions(false);
     }
-  }, [phoneNumber, searchCustomers]);
+  }, [phoneDigitCount, searchResults.length]);
+
+  // When full number (10+ digits, e.g. +919925122114) and exactly one match: auto-fill name
+  useEffect(() => {
+    const result = searchResults[0];
+    if (
+      phoneDigitCount >= 10 &&
+      searchResults.length === 1 &&
+      result &&
+      !selectedCustomer
+    ) {
+      const resultLast10 = (result.phoneNumber ?? "")
+        .replace(/\D/g, "")
+        .slice(-10);
+      if (resultLast10.length >= 10 && resultLast10 === last10Digits) {
+        handleCustomerSelect(result);
+        setShowSuggestions(false);
+      }
+    }
+  }, [
+    phoneDigitCount,
+    last10Digits,
+    searchResults,
+    selectedCustomer,
+    handleCustomerSelect,
+  ]);
 
   // Auto-fill name from selected customer
   useEffect(() => {
@@ -442,12 +507,21 @@ export function BillCreationForm() {
       bySku.entries(),
     ).map(([skuId, { qty, unitPrice }]) => ({ skuId, qty, unitPrice }));
 
+    const subtotalForApi =
+      computedSubtotal ?? (grossAmount > 0 ? grossAmount : null);
+    if (!subtotalForApi || subtotalForApi <= 0) {
+      setError("Amount or line items with total are required.");
+      toast.error("Amount or line items with total are required.");
+      return;
+    }
     try {
       const validationResult = billFormSchema.safeParse({
         billNumber,
         phoneNumber,
         name: name || null,
-        amount: netAmount > 0 ? netAmount : null,
+        subtotal: subtotalForApi ?? undefined,
+        storeDiscount: discountAmount,
+        tax: [],
         redeemPoints: redeemPoints ? parseInt(redeemPoints, 10) : undefined,
         notes: notes.trim() || undefined,
         paymentMethod: paymentMethod.trim() || undefined,
@@ -504,7 +578,7 @@ export function BillCreationForm() {
 
           <form
             onSubmit={handleSubmit}
-            className="space-y-4"
+            className="space-y-3"
             autoComplete="off"
           >
             {/* Hidden input to discourage browser autocomplete */}
@@ -519,7 +593,7 @@ export function BillCreationForm() {
             />
 
             {/* ─── Bill Number ──────────────────────────────────────────── */}
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label htmlFor="billNumber">Bill Number *</Label>
               <Input
                 id="billNumber"
@@ -529,12 +603,13 @@ export function BillCreationForm() {
                 required
                 disabled={isCreating}
                 autoComplete="off"
+                className="placeholder:text-muted-foreground/60 text-gray-900 dark:text-white"
               />
             </div>
 
             {/* ─── Phone Number + Search ────────────────────────────────── */}
-            <div className="relative space-y-2">
-              <Label htmlFor="phoneNumber">Customer Phone Number *</Label>
+            <div className="relative space-y-1.5">
+              <Label htmlFor="phoneNumber">Customer Phone *</Label>
               <div className="relative" ref={phoneInputRef}>
                 <PhoneInput
                   id="phoneNumber"
@@ -548,6 +623,7 @@ export function BillCreationForm() {
                   disabled={isCreating || !!selectedCustomer}
                   autoComplete="nope"
                   defaultCountry="IN"
+                  className="[&_input]:placeholder:text-muted-foreground/60 [&_input]:text-gray-900 [&_input]:dark:text-white"
                 />
                 {selectedCustomer && (
                   <button
@@ -594,22 +670,10 @@ export function BillCreationForm() {
                   ))}
                 </div>
               )}
-              {isSearching && (
-                <p className="text-muted-foreground text-sm">Searching...</p>
-              )}
-              {selectedCustomer && (
-                <div className="bg-primary/10 border-primary/20 text-primary flex items-center gap-2 rounded-lg border p-2 text-sm">
-                  <CheckCircle2 className="h-4 w-4" />
-                  <span>
-                    Selected: {selectedCustomer.name} (
-                    {selectedCustomer.phoneNumber})
-                  </span>
-                </div>
-              )}
             </div>
 
             {/* ─── Name ─────────────────────────────────────────────────── */}
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label htmlFor="name">Customer Name</Label>
               <Input
                 id="name"
@@ -618,183 +682,87 @@ export function BillCreationForm() {
                 onChange={(e) => setName(e.target.value)}
                 disabled={isCreating}
                 autoComplete="nope"
+                className="placeholder:text-muted-foreground/60 text-gray-900 dark:text-white"
               />
             </div>
 
-            {/* ─── Amount + Store Discount ──────────────────────────────── */}
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="amount">Amount</Label>
-                <Input
-                  id="amount"
-                  type="number"
-                  step="0.01"
-                  placeholder="0.00"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  disabled={isCreating}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="storeDiscount">Store Discount</Label>
-                <Input
-                  id="storeDiscount"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder="0.00"
-                  value={storeDiscount}
-                  onChange={(e) => setStoreDiscount(e.target.value)}
-                  disabled={isCreating}
-                />
+            {/* ─── Subtotal (full line) ──────────────────────────────────── */}
+            <div className="space-y-1.5">
+              <Label htmlFor="amount">Subtotal</Label>
+              <Input
+                id="amount"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0.00"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                disabled={isCreating}
+                className="placeholder:text-muted-foreground/60 w-full text-gray-900 dark:text-white"
+              />
+            </div>
+
+            {/* ─── Store discount (full line) ─────────────────────────────── */}
+            <div className="space-y-1.5">
+              <Label htmlFor="storeDiscount">Store Discount</Label>
+              <Input
+                id="storeDiscount"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0.00"
+                value={storeDiscount}
+                onChange={(e) => setStoreDiscount(e.target.value)}
+                disabled={isCreating}
+                className="placeholder:text-muted-foreground/60 w-full text-gray-900 dark:text-white"
+              />
+            </div>
+
+            {/* ─── Bill total (full line, disabled) ──────────────────────── */}
+            <div className="space-y-1.5">
+              <Label htmlFor="billTotal">Bill total</Label>
+              <Input
+                id="billTotal"
+                type="text"
+                readOnly
+                disabled
+                value={
+                  subtotalValue > 0
+                    ? `₹${finalAmountBeforeLoyalty.toFixed(2)}`
+                    : "—"
+                }
+                className="bg-muted/60 w-full cursor-default text-gray-900 dark:text-white"
+              />
+            </div>
+
+            {/* ─── Payment method buttons (equal width, full row) ─────────── */}
+            <div className="space-y-1.5">
+              <Label>Payment method</Label>
+              <div className="flex w-full gap-2">
+                {(
+                  [
+                    { value: "card", label: "Card" },
+                    { value: "cash", label: "Cash" },
+                    { value: "upi", label: "UPI" },
+                    { value: "other", label: "Other" },
+                  ] as const
+                ).map(({ value, label }) => (
+                  <Button
+                    key={value}
+                    type="button"
+                    variant={paymentMethod === value ? "default" : "outline"}
+                    size="sm"
+                    className="min-w-0 flex-1"
+                    onClick={() => setPaymentMethod(value)}
+                    disabled={isCreating}
+                  >
+                    {label}
+                  </Button>
+                ))}
               </div>
             </div>
 
-            {/* ─── Net Amount Display ───────────────────────────────────── */}
-            {grossAmount > 0 && discountAmount > 0 && (
-              <div className="bg-muted/50 flex items-center justify-between rounded-lg px-4 py-2.5 text-sm">
-                <span className="text-muted-foreground">Net Amount</span>
-                <span className="font-semibold">₹{netAmount.toFixed(2)}</span>
-              </div>
-            )}
-
-            {/* ─── Loyalty Section ──────────────────────────────────────── */}
-            {loyaltyType !== "NONE" && phoneNumber.length >= 4 && (
-              <div className="space-y-3 rounded-lg border p-4">
-                {/* <p className="text-sm font-medium">Loyalty</p> */}
-
-                {/* CASHBACK / TIER: only show redeem; actual cashback is shown after bill is created (from response) */}
-                {isCashbackType && (
-                  <div className="space-y-2">
-                    Cashback (if any) shown in success state after bill is
-                    created — message commented out
-                    {pointsBalance === 0 && (
-                      <p className="text-muted-foreground text-xs">
-                        Cashback (if any) will be shown after the bill is
-                        created.
-                      </p>
-                    )}
-                    {pointsBalance > 0 && (
-                      <div className="space-y-1.5">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-muted-foreground">
-                            Cashback Balance: ₹{pointsBalance}
-                          </span>
-                          <span className="text-muted-foreground">
-                            Redeemable: ₹{redeemablePoints}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Input
-                            type="number"
-                            min={0}
-                            max={redeemablePoints}
-                            placeholder="Redeem ₹"
-                            value={redeemPoints}
-                            onChange={(e) => setRedeemPoints(e.target.value)}
-                            disabled={isCreating}
-                            className="h-8 text-sm"
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* AMOUNT_SPENT / VISIT_MADE: points + rewards */}
-                {isPointsType && (
-                  <div className="space-y-2">
-                    {loyaltyType === "VISIT_MADE" &&
-                      loyaltyPreview?.visitCount != null && (
-                        <p className="text-muted-foreground text-xs">
-                          Visits: {loyaltyPreview.visitCount}
-                        </p>
-                      )}
-
-                    <div className="text-muted-foreground text-xs">
-                      Points Balance: {pointsBalance}
-                    </div>
-
-                    {/* Available rewards */}
-                    {(loyaltyPreview?.rewardStages ?? []).length > 0 && (
-                      <div className="space-y-1.5">
-                        <p className="text-muted-foreground text-xs font-medium">
-                          Rewards:
-                        </p>
-                        {loyaltyPreview!.rewardStages.map((stage) => (
-                          <div
-                            key={stage.id}
-                            className={`flex items-center justify-between rounded-md px-2.5 py-1.5 text-xs ${
-                              stage.canRedeem
-                                ? "bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-300"
-                                : "bg-muted/50 text-muted-foreground"
-                            }`}
-                          >
-                            <span className="flex items-center gap-1.5">
-                              {stage.canRedeem && (
-                                <Gift className="size-3 shrink-0" />
-                              )}
-                              {stage.rewardName}
-                            </span>
-                            <Badge
-                              variant={stage.canRedeem ? "default" : "outline"}
-                              className="text-[10px]"
-                            >
-                              {stage.pointsRequired} pts
-                            </Badge>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Redeem points */}
-                    {redeemablePoints > 0 && (
-                      <div className="space-y-1.5 pt-1">
-                        <div className="text-muted-foreground text-xs">
-                          Redeemable: {redeemablePoints} pts (₹
-                          {redeemablePoints} off)
-                        </div>
-                        <Input
-                          type="number"
-                          min={0}
-                          max={redeemablePoints}
-                          placeholder="Redeem points"
-                          value={redeemPoints}
-                          onChange={(e) => setRedeemPoints(e.target.value)}
-                          disabled={isCreating}
-                          className="h-8 text-sm"
-                        />
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Expiring soon */}
-                {loyaltyPreview?.expiringBuckets?.length ? (
-                  <div className="text-muted-foreground space-y-0.5 text-xs">
-                    <p className="font-medium">Expiring soon:</p>
-                    {loyaltyPreview.expiringBuckets.map((bucket) => (
-                      <p key={bucket.id}>
-                        {bucket.remainingAmount} pts on{" "}
-                        <DateDisplay date={bucket.expiresAt} />
-                      </p>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-            )}
-
-            {/* ─── Final Amount Display ─────────────────────────────────── */}
-            {netAmount > 0 && (
-              <div className="bg-primary/5 border-primary/20 flex items-center justify-between rounded-lg border px-4 py-3">
-                <span className="text-sm font-medium">Estimated Final</span>
-                <span className="text-lg font-bold">
-                  ₹{estimatedFinal.toFixed(2)}
-                </span>
-              </div>
-            )}
-
-            {/* ─── Collapsible: Line Items, Notes, Payment ──────────────── */}
+            {/* ─── Collapsible: Notes, Line Items, Redeem points ─────────── */}
             <Collapsible open={extrasOpen} onOpenChange={setExtrasOpen}>
               <CollapsibleTrigger asChild>
                 <Button
@@ -803,7 +771,7 @@ export function BillCreationForm() {
                   className="text-muted-foreground hover:text-foreground flex w-full items-center justify-between px-0"
                 >
                   <span className="text-sm">
-                    Additional Details (Notes, Line Items, Payment)
+                    Additional Details (Notes, Line Items)
                   </span>
                   <ChevronDown
                     className={`size-4 transition-transform ${extrasOpen ? "rotate-180" : ""}`}
@@ -811,31 +779,8 @@ export function BillCreationForm() {
                 </Button>
               </CollapsibleTrigger>
               <CollapsibleContent className="space-y-4 pt-2">
-                {/* Payment Method */}
-                <div className="space-y-2">
-                  <Label htmlFor="paymentMethod">Payment Method</Label>
-                  <Select
-                    value={paymentMethod || "__none__"}
-                    onValueChange={(v) =>
-                      setPaymentMethod(v === "__none__" ? "" : v)
-                    }
-                    disabled={isCreating}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select method" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none__">None</SelectItem>
-                      <SelectItem value="cash">Cash</SelectItem>
-                      <SelectItem value="card">Card</SelectItem>
-                      <SelectItem value="upi">UPI</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
                 {/* Notes */}
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <Label htmlFor="notes">Notes</Label>
                   <Textarea
                     id="notes"
@@ -844,10 +789,30 @@ export function BillCreationForm() {
                     onChange={(e) => setNotes(e.target.value)}
                     disabled={isCreating}
                     rows={2}
-                    className="resize-none"
+                    className="placeholder:text-muted-foreground/60 resize-none text-gray-900 dark:text-white"
                     autoComplete="off"
                   />
                 </div>
+
+                {/* Redeem points (loyalty) — only when applicable */}
+                {loyaltyType !== "NONE" &&
+                  phoneNumber.length >= 4 &&
+                  redeemablePoints > 0 && (
+                    <div className="space-y-1.5">
+                      <Label htmlFor="redeemPoints">Redeem (₹ or pts)</Label>
+                      <Input
+                        id="redeemPoints"
+                        type="number"
+                        min={0}
+                        max={redeemablePoints}
+                        placeholder="0"
+                        value={redeemPoints}
+                        onChange={(e) => setRedeemPoints(e.target.value)}
+                        disabled={isCreating}
+                        className="placeholder:text-muted-foreground/60 max-w-32 text-gray-900 dark:text-white"
+                      />
+                    </div>
+                  )}
 
                 {/* Line Items */}
                 <div className="space-y-3 rounded-lg border p-4">
@@ -924,6 +889,7 @@ export function BillCreationForm() {
                               }
                               disabled={isCreating}
                               placeholder="1"
+                              className="placeholder:text-muted-foreground/60 text-gray-900 dark:text-white"
                             />
                           </div>
                           <div className="w-28 space-y-2">
@@ -942,6 +908,7 @@ export function BillCreationForm() {
                               }
                               disabled={isCreating}
                               placeholder="—"
+                              className="placeholder:text-muted-foreground/60 text-gray-900 dark:text-white"
                             />
                           </div>
                           <Button

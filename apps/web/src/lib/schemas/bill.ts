@@ -31,13 +31,22 @@ export const billLineItemsSchema = z.array(billLineItemSchema);
 
 export type BillLineItemInput = z.infer<typeof billLineItemSchema>;
 
+/** Tax array: for now empty; each element contributes to finalAmount. */
+export const taxArraySchema = z
+  .array(z.number().int().min(0))
+  .optional()
+  .default([]);
+
 export const billFormSchema = z.object({
   billNumber: billNumberSchema,
   phoneNumber: phoneNumberSchema,
   name: nameSchema.optional().nullable(),
-  amount: amountSchema,
-  /** Subtotal (line items sum before discounts/tax). Optional; computed from line items when not provided. */
+  /** Subtotal (line items sum before store discount/tax). Required when no line items. */
   subtotal: amountSchema.optional(),
+  /** Store discount (₹). Optional, default 0. */
+  storeDiscount: z.number().min(0).optional().nullable().default(0),
+  /** Tax breakdown (e.g. per rate). For now empty. Optional. */
+  tax: taxArraySchema,
   lineItems: billLineItemsSchema.optional(),
   redeemPoints: z.coerce.number().int().min(0).optional(),
   notes: z
@@ -79,8 +88,10 @@ export const billsQuerySchema = z.object({
   amountMax: z.coerce.number().optional(),
 });
 
-/** Import schema retains email/address fields for bulk CSV import */
+/** Import schema: allows legacy amount (treated as subtotal) and retains email/address. */
 export const billImportItemSchema = billFormSchema.extend({
+  /** Legacy: if provided, used as subtotal when subtotal not set. */
+  amount: amountSchema.optional(),
   email: emailSchema.optional().nullable(),
   addressLine1: z.string().max(255).trim().optional().nullable(),
   addressLine2: z.string().max(255).trim().optional().nullable(),

@@ -203,16 +203,33 @@ export const POST = withAdminAuth(async (request: NextRequest, context) => {
           });
         }
 
-        const billAmount = item.amount ?? 0;
+        const billSubtotal = item.subtotal ?? item.amount ?? null;
+        const storeDiscount = item.storeDiscount ?? 0;
+        const taxArr = item.tax ?? [];
+        const taxSum = taxArr.reduce((a: number, b: number) => a + b, 0);
+        const finalAmountBeforeLoyalty =
+          billSubtotal != null
+            ? Math.max(0, billSubtotal - storeDiscount + taxSum)
+            : null;
         const redeemPoints = item.redeemPoints ?? 0;
-        const billSubtotal = item.subtotal ?? null;
+
+        if (billSubtotal == null || finalAmountBeforeLoyalty == null) {
+          errors.push({
+            row: rowNum,
+            billNumber: item.billNumber,
+            error: "Subtotal or amount is required",
+          });
+          continue;
+        }
 
         await db.$transaction(async (tx) => {
           const bill = await tx.bill.create({
             data: {
               billNumber: item.billNumber,
-              amount: item.amount ?? null,
               subtotal: billSubtotal,
+              storeDiscount,
+              tax: taxArr,
+              finalAmount: finalAmountBeforeLoyalty,
               notes: item.notes ?? null,
               businessId,
               customerId: customer.id,
@@ -224,7 +241,7 @@ export const POST = withAdminAuth(async (request: NextRequest, context) => {
             businessId,
             customerId: customer.id,
             billId: bill.id,
-            billAmount,
+            billAmount: finalAmountBeforeLoyalty,
             billSubtotal,
             redeemPointsRequested: redeemPoints > 0 ? redeemPoints : null,
           });
@@ -232,11 +249,11 @@ export const POST = withAdminAuth(async (request: NextRequest, context) => {
           await tx.bill.update({
             where: { id: bill.id },
             data: {
-              finalAmount: item.amount == null ? null : loyalty.finalAmount,
               cashbackAmount:
                 loyalty.cashbackAmount != null
                   ? loyalty.cashbackAmount
                   : undefined,
+              userPaidAmount: loyalty.finalAmount,
             },
           });
 
