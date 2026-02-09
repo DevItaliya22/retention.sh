@@ -8,6 +8,7 @@ export {
   getExpiryDays,
   isVisitQualifying,
   resolveTierForLifetimeSpend,
+  validateTierRanges,
 } from "./helpers";
 export type {
   AmountSpentContext,
@@ -16,5 +17,7 @@ export type {
   LoyaltyContext,
   ResolvedTier,
   TierContext,
+  TierRangeInput,
+  ValidateTierRangesResult,
   VisitMadeContext,
 } from "./helpers";

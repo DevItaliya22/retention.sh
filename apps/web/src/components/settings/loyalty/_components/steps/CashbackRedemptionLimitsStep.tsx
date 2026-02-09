@@ -2,13 +2,13 @@
 
 import type { LoyaltyProgramFormValues } from "@/lib/schemas/loyalty-form";
 import {
-  Checkbox,
   FormControl,
   FormField,
   FormItem,
   FormMessage,
   Input,
   Label,
+  Switch,
   useFormContext,
 } from "@reelo/ui/components";
 
@@ -31,14 +31,16 @@ export function CashbackRedemptionLimitsStep() {
         render={({ field }) => (
           <FormItem className="flex flex-row items-center gap-2">
             <FormControl>
-              <Checkbox
-                checked={field.value ?? false}
-                onCheckedChange={field.onChange}
-              />
+              <label className="flex cursor-pointer items-center gap-2">
+                <Switch
+                  checked={field.value ?? false}
+                  onCheckedChange={field.onChange}
+                />
+                <span className="text-sm font-normal">
+                  Limit redemption on wallet balance
+                </span>
+              </label>
             </FormControl>
-            <Label className="cursor-pointer text-sm font-normal">
-              Limit redemption on wallet balance
-            </Label>
           </FormItem>
         )}
       />
@@ -114,14 +116,16 @@ export function CashbackRedemptionLimitsStep() {
         render={({ field }) => (
           <FormItem className="flex flex-row items-center gap-2">
             <FormControl>
-              <Checkbox
-                checked={field.value ?? false}
-                onCheckedChange={field.onChange}
-              />
+              <label className="flex cursor-pointer items-center gap-2">
+                <Switch
+                  checked={field.value ?? false}
+                  onCheckedChange={field.onChange}
+                />
+                <span className="text-sm font-normal">
+                  Limit redemption on bill amount
+                </span>
+              </label>
             </FormControl>
-            <Label className="cursor-pointer text-sm font-normal">
-              Limit redemption on bill amount
-            </Label>
           </FormItem>
         )}
       />

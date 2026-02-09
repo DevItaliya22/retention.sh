@@ -9,7 +9,6 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-  Checkbox,
   Form,
   FormControl,
   FormField,
@@ -18,6 +17,7 @@ import {
   FormMessage,
   FormProvider,
   Input,
+  Switch,
   useForm,
 } from "@reelo/ui/components";
 import {
@@ -108,14 +108,18 @@ export function AmountSpentConfigSettingsCard({
                 render={({ field }) => (
                   <FormItem className={SETTINGS_ROW_CLASS}>
                     <div className={SETTINGS_LABEL_CLASS}>
-                      <FormLabel className="text-sm">
+                      <FormLabel
+                        htmlFor="amountSpent-onFinalAmount"
+                        className="cursor-pointer text-sm"
+                      >
                         Earn points on final amount (after store discounts and
                         tax)
                       </FormLabel>
                     </div>
                     <div className={SETTINGS_CONTROL_CLASS}>
                       <FormControl>
-                        <Checkbox
+                        <Switch
+                          id="amountSpent-onFinalAmount"
                           checked={field.value ?? false}
                           onCheckedChange={field.onChange}
                         />

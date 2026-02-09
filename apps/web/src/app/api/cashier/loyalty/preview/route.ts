@@ -34,7 +34,7 @@ export const GET = withCashierAuth(async (request: NextRequest, context) => {
       );
     }
 
-    const { phone, businessId, billAmount } = validation.data;
+    const { phone, businessId, billAmount, subtotal } = validation.data;
 
     if (businessId !== context.business.id) {
       return NextResponse.json(
@@ -70,32 +70,119 @@ export const GET = withCashierAuth(async (request: NextRequest, context) => {
       const loyaltyContext = await getBusinessLoyaltyContext(tx, businessId);
       if (!loyaltyContext) {
         return {
+          loyaltyType: "NONE" as const,
           pointsBalance: 0,
           redeemablePoints: 0,
           earnablePoints: 0,
-          expiringBuckets: [],
+          expiringBuckets: [] as {
+            id: string;
+            remainingAmount: number;
+            expiresAt: string;
+          }[],
           cashbackInFinalAmount: false,
+          tierInfo: null,
+          rewardStages: [] as {
+            id: string;
+            rewardName: string;
+            rewardType: string;
+            pointsRequired: number;
+            canRedeem: boolean;
+            freeItemName: string | null;
+            percentageValue: number | null;
+            cashAmount: number | null;
+          }[],
+          visitCount: null as number | null,
         };
       }
+
+      // Same amount-for-earning logic as applyLoyaltyForBill (no redemption in preview, so use billAmount for final)
+      const amountForEarning =
+        (loyaltyContext.type === "CASHBACK" &&
+          loyaltyContext.config.onFinalAmount) ||
+        (loyaltyContext.type === "AMOUNT_SPENT" &&
+          loyaltyContext.config.onFinalAmount)
+          ? billAmount
+          : subtotal != null && subtotal > 0
+            ? subtotal
+            : billAmount;
 
       const user = await tx.user.findUnique({
         where: { phoneNumber: formattedPhone },
         include: { customer: true },
       });
 
+      // Fetch reward stages for AMOUNT_SPENT / VISIT_MADE
+      let rewardStagesData: Array<{
+        id: string;
+        rewardName: string;
+        rewardType: string;
+        pointsRequired: number;
+        freeItemName: string | null;
+        percentageValue: number | null;
+        cashAmount: number | null;
+      }> = [];
+
+      if (
+        loyaltyContext.type === "AMOUNT_SPENT" ||
+        loyaltyContext.type === "VISIT_MADE"
+      ) {
+        const loyaltyRecord = await tx.loyalty.findUnique({
+          where: { businessId },
+          include: {
+            amountSpentConfig: {
+              include: {
+                rewardStages: { orderBy: { pointsRequired: "asc" } },
+              },
+            },
+            visitMadeConfig: {
+              include: {
+                rewardStages: { orderBy: { pointsRequired: "asc" } },
+              },
+            },
+          },
+        });
+
+        const stages =
+          loyaltyContext.type === "AMOUNT_SPENT"
+            ? (loyaltyRecord?.amountSpentConfig?.rewardStages ?? [])
+            : (loyaltyRecord?.visitMadeConfig?.rewardStages ?? []);
+
+        rewardStagesData = stages.map((s) => ({
+          id: s.id,
+          rewardName: s.rewardName,
+          rewardType: s.rewardType,
+          pointsRequired: s.pointsRequired,
+          freeItemName: s.freeItemName,
+          percentageValue: s.percentageValue,
+          cashAmount: s.cashAmount,
+        }));
+      }
+
       if (!user?.customer) {
+        const earnablePoints = calculatePointsEarnedForBill(
+          amountForEarning,
+          loyaltyContext,
+        );
         return {
+          loyaltyType: loyaltyContext.type,
           pointsBalance: 0,
           redeemablePoints: 0,
-          earnablePoints: calculatePointsEarnedForBill(
-            billAmount,
-            loyaltyContext,
-          ),
-          expiringBuckets: [],
+          earnablePoints,
+          expiringBuckets: [] as {
+            id: string;
+            remainingAmount: number;
+            expiresAt: string;
+          }[],
           cashbackInFinalAmount:
             loyaltyContext.type === "CASHBACK"
               ? loyaltyContext.config.onFinalAmount
               : false,
+          tierInfo: null,
+          rewardStages: rewardStagesData.map((s) => ({
+            ...s,
+            canRedeem: false,
+          })),
+          visitCount: null as number | null,
         };
       }
 
@@ -106,22 +193,39 @@ export const GET = withCashierAuth(async (request: NextRequest, context) => {
             customerId: user.customer.id,
           },
         },
-        select: { pointsBalance: true, lifetimeSpend: true, customerId: true },
+        select: {
+          pointsBalance: true,
+          lifetimeSpend: true,
+          customerId: true,
+          visitCount: true,
+        },
       });
 
       if (!businessCustomer) {
+        const earnablePoints = calculatePointsEarnedForBill(
+          amountForEarning,
+          loyaltyContext,
+        );
         return {
+          loyaltyType: loyaltyContext.type,
           pointsBalance: 0,
           redeemablePoints: 0,
-          earnablePoints: calculatePointsEarnedForBill(
-            billAmount,
-            loyaltyContext,
-          ),
-          expiringBuckets: [],
+          earnablePoints,
+          expiringBuckets: [] as {
+            id: string;
+            remainingAmount: number;
+            expiresAt: string;
+          }[],
           cashbackInFinalAmount:
             loyaltyContext.type === "CASHBACK"
               ? loyaltyContext.config.onFinalAmount
               : false,
+          tierInfo: null,
+          rewardStages: rewardStagesData.map((s) => ({
+            ...s,
+            canRedeem: false,
+          })),
+          visitCount: null as number | null,
         };
       }
 
@@ -173,11 +277,21 @@ export const GET = withCashierAuth(async (request: NextRequest, context) => {
         },
       });
 
+      // Build tier info
+      const tierInfo =
+        loyaltyContext.type === "TIER" && resolvedTier
+          ? {
+              currentTierName: resolvedTier.name,
+              cashbackPercentage: resolvedTier.cashbackPercentage,
+            }
+          : null;
+
       return {
+        loyaltyType: loyaltyContext.type,
         pointsBalance,
         redeemablePoints,
         earnablePoints: calculatePointsEarnedForBill(
-          billAmount,
+          amountForEarning,
           loyaltyContext,
           { resolvedTier },
         ),
@@ -192,6 +306,12 @@ export const GET = withCashierAuth(async (request: NextRequest, context) => {
           loyaltyContext.type === "CASHBACK"
             ? loyaltyContext.config.onFinalAmount
             : false,
+        tierInfo,
+        rewardStages: rewardStagesData.map((s) => ({
+          ...s,
+          canRedeem: s.pointsRequired <= pointsBalance,
+        })),
+        visitCount: businessCustomer.visitCount ?? null,
       };
     });
 

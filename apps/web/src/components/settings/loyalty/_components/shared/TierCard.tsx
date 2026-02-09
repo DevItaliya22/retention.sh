@@ -9,12 +9,17 @@ import {
   FormControl,
   FormField,
   FormItem,
+  FormLabel,
   FormMessage,
   Input,
-  Label,
   useFormContext,
 } from "@reelo/ui/components";
 import { Trash2 } from "lucide-react";
+import {
+  SETTINGS_CONTROL_CLASS,
+  SETTINGS_LABEL_CLASS,
+  SETTINGS_ROW_CLASS,
+} from "../settings/settings-layout";
 import { MaxCapToggleField } from "./MaxCapToggleField";
 import { MinPurchaseToggleField } from "./MinPurchaseToggleField";
 
@@ -22,11 +27,19 @@ interface TierCardProps {
   index: number;
   onRemove: () => void;
   canRemove: boolean;
+  /** When true, this is the highest-rank tier; max is optional and we show an explanatory note. */
+  isTopTier?: boolean;
 }
 
-export function TierCard({ index, onRemove, canRemove }: TierCardProps) {
+export function TierCard({
+  index,
+  onRemove,
+  canRemove,
+  isTopTier = false,
+}: TierCardProps) {
   const form = useFormContext<LoyaltyProgramFormValues>();
   const prefix = `tiers.${index}` as const;
+  const minLifetimeSpend = form.watch(`${prefix}.minLifetimeSpend`) ?? 0;
 
   return (
     <Card>
@@ -49,51 +62,68 @@ export function TierCard({ index, onRemove, canRemove }: TierCardProps) {
           control={form.control}
           name={`${prefix}.name`}
           render={({ field }) => (
-            <FormItem>
-              <Label className="text-sm">Tier name</Label>
-              <FormControl>
-                <Input
-                  variant="underline"
-                  placeholder="e.g. Silver, Gold, Platinum"
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
+            <FormItem className={SETTINGS_ROW_CLASS}>
+              <div className={SETTINGS_LABEL_CLASS}>
+                <FormLabel className="text-sm">Tier name</FormLabel>
+              </div>
+              <div className={SETTINGS_CONTROL_CLASS}>
+                <FormControl>
+                  <Input
+                    variant="underline"
+                    placeholder="e.g. Silver, Gold, Platinum"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </div>
             </FormItem>
           )}
         />
-        <div className="grid gap-4 sm:grid-cols-2">
-          <FormField
-            control={form.control}
-            name={`${prefix}.rank`}
-            render={({ field }) => (
-              <FormItem>
-                <Label className="text-sm">Rank (1 = lowest)</Label>
+        <FormField
+          control={form.control}
+          name={`${prefix}.rank`}
+          render={({ field }) => (
+            <FormItem className={SETTINGS_ROW_CLASS}>
+              <div className={SETTINGS_LABEL_CLASS}>
+                <FormLabel className="text-sm">Rank (1 = lowest)</FormLabel>
+              </div>
+              <div className={SETTINGS_CONTROL_CLASS}>
                 <FormControl>
                   <Input
                     variant="underline"
                     type="number"
                     min={1}
-                    {...field}
-                    value={field.value ?? ""}
+                    placeholder="1"
+                    value={
+                      field.value === undefined || field.value === null
+                        ? ""
+                        : String(field.value)
+                    }
                     onChange={(e) => {
                       const v = e.target.value;
-                      field.onChange(
-                        v === "" ? undefined : Math.max(1, Number(v)),
-                      );
+                      if (v === "") {
+                        field.onChange(1);
+                        return;
+                      }
+                      const n = Number(v);
+                      if (!Number.isNaN(n)) field.onChange(Math.max(1, n));
                     }}
                   />
                 </FormControl>
                 <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name={`${prefix}.cashbackPercentage`}
-            render={({ field }) => (
-              <FormItem>
-                <Label className="text-sm">Cashback %</Label>
+              </div>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name={`${prefix}.cashbackPercentage`}
+          render={({ field }) => (
+            <FormItem className={SETTINGS_ROW_CLASS}>
+              <div className={SETTINGS_LABEL_CLASS}>
+                <FormLabel className="text-sm">Cashback %</FormLabel>
+              </div>
+              <div className={SETTINGS_CONTROL_CLASS}>
                 <FormControl>
                   <Input
                     variant="underline"
@@ -102,30 +132,41 @@ export function TierCard({ index, onRemove, canRemove }: TierCardProps) {
                     max={100}
                     step="0.01"
                     placeholder="5"
-                    {...field}
-                    value={field.value ?? ""}
+                    value={
+                      field.value === undefined ||
+                      field.value === null ||
+                      field.value === 0
+                        ? ""
+                        : String(field.value)
+                    }
                     onChange={(e) => {
                       const v = e.target.value;
-                      field.onChange(
-                        v === ""
-                          ? undefined
-                          : Math.min(100, Math.max(0, Number(v))),
-                      );
+                      if (v === "") {
+                        field.onChange(0);
+                        return;
+                      }
+                      const n = Number(v);
+                      if (!Number.isNaN(n))
+                        field.onChange(Math.min(100, Math.max(0, n)));
                     }}
                   />
                 </FormControl>
                 <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <FormField
-            control={form.control}
-            name={`${prefix}.minLifetimeSpend`}
-            render={({ field }) => (
-              <FormItem>
-                <Label className="text-sm">Min lifetime spend (₹)</Label>
+              </div>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name={`${prefix}.minLifetimeSpend`}
+          render={({ field }) => (
+            <FormItem className={SETTINGS_ROW_CLASS}>
+              <div className={SETTINGS_LABEL_CLASS}>
+                <FormLabel className="text-sm">
+                  Min lifetime spend (₹)
+                </FormLabel>
+              </div>
+              <div className={SETTINGS_CONTROL_CLASS}>
                 <FormControl>
                   <Input
                     variant="underline"
@@ -133,65 +174,89 @@ export function TierCard({ index, onRemove, canRemove }: TierCardProps) {
                     min={0}
                     step="0.01"
                     placeholder="0"
-                    {...field}
-                    value={field.value ?? ""}
+                    value={
+                      field.value === undefined ||
+                      field.value === null ||
+                      field.value === 0
+                        ? ""
+                        : String(field.value)
+                    }
                     onChange={(e) => {
                       const v = e.target.value;
-                      field.onChange(
-                        v === "" ? undefined : Math.max(0, Number(v)),
-                      );
+                      if (v === "") {
+                        field.onChange(0);
+                        return;
+                      }
+                      const n = Number(v);
+                      if (!Number.isNaN(n)) field.onChange(Math.max(0, n));
                     }}
                   />
                 </FormControl>
                 <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name={`${prefix}.maxLifetimeSpend`}
-            render={({ field }) => (
-              <FormItem>
-                <Label className="text-sm">
-                  Max lifetime spend (₹) — leave empty for top tier
-                </Label>
+              </div>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name={`${prefix}.maxLifetimeSpend`}
+          render={({ field }) => (
+            <FormItem className={SETTINGS_ROW_CLASS}>
+              <div className={SETTINGS_LABEL_CLASS}>
+                <FormLabel className="text-sm">
+                  Max lifetime spend (₹)
+                  {isTopTier ? " — leave empty (recommended)" : ""}
+                </FormLabel>
+              </div>
+              <div className={SETTINGS_CONTROL_CLASS}>
                 <FormControl>
                   <Input
                     variant="underline"
                     type="number"
                     min={0}
                     step="0.01"
-                    placeholder="No limit"
-                    {...field}
-                    value={field.value ?? ""}
+                    placeholder={isTopTier ? "No limit" : "e.g. 5000"}
+                    value={
+                      field.value === null || field.value === undefined
+                        ? ""
+                        : String(field.value)
+                    }
                     onChange={(e) => {
                       const v = e.target.value;
-                      field.onChange(v === "" ? null : Math.max(0, Number(v)));
+                      if (v === "") {
+                        field.onChange(null);
+                        return;
+                      }
+                      const n = Number(v);
+                      if (!Number.isNaN(n)) field.onChange(Math.max(0, n));
                     }}
                   />
                 </FormControl>
+                {isTopTier && (
+                  <p className="text-muted-foreground text-xs">
+                    Not needed — all customers with spend ≥ ₹
+                    {Number(minLifetimeSpend).toLocaleString()} will be in this
+                    tier.
+                  </p>
+                )}
                 <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-        <MinPurchaseToggleField<LoyaltyProgramFormValues>
-          enabledName={`${prefix}.minPurchaseForEarningEnabled`}
-          valueName={`${prefix}.minPurchaseForEarning`}
-          label="Min purchase for earning"
-          placeholder="0"
+              </div>
+            </FormItem>
+          )}
         />
         <MinPurchaseToggleField<LoyaltyProgramFormValues>
           enabledName={`${prefix}.minPurchaseForRedemptionEnabled`}
           valueName={`${prefix}.minPurchaseForRedemption`}
           label="Min purchase for redemption"
           placeholder="0"
+          layout="settings"
         />
         <MaxCapToggleField<LoyaltyProgramFormValues>
           enabledName={`${prefix}.maxCashbackCapEnabled`}
           valueName={`${prefix}.maxCashbackCap`}
           label="Max cashback cap per transaction"
           placeholder="No limit"
+          layout="settings"
         />
       </CardContent>
     </Card>

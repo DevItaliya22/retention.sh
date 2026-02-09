@@ -2,13 +2,13 @@
 
 import type { LoyaltyProgramFormValues } from "@/lib/schemas/loyalty-form";
 import {
-  Checkbox,
   FormControl,
   FormField,
   FormItem,
   FormMessage,
   Input,
   Label,
+  Switch,
   useFormContext,
 } from "@reelo/ui/components";
 
@@ -48,14 +48,16 @@ export function AmountSpentConfigStep() {
         render={({ field }) => (
           <FormItem className="flex flex-row items-center gap-2">
             <FormControl>
-              <Checkbox
-                checked={field.value ?? false}
-                onCheckedChange={field.onChange}
-              />
+              <label className="flex cursor-pointer items-center gap-2">
+                <Switch
+                  checked={field.value ?? false}
+                  onCheckedChange={field.onChange}
+                />
+                <span className="text-sm font-normal">
+                  Earn points on final amount (after store discounts and tax)
+                </span>
+              </label>
             </FormControl>
-            <Label className="cursor-pointer text-sm font-normal">
-              Earn points on final amount (after store discounts and tax)
-            </Label>
             <FormMessage />
           </FormItem>
         )}

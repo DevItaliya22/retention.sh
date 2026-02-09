@@ -9,7 +9,6 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-  Checkbox,
   Form,
   FormControl,
   FormField,
@@ -18,6 +17,7 @@ import {
   FormMessage,
   FormProvider,
   Input,
+  Switch,
   useForm,
 } from "@reelo/ui/components";
 import { MinPurchaseToggleField } from "../shared";
@@ -137,14 +137,18 @@ export function CashbackConfigSettingsCard({
                 render={({ field }) => (
                   <FormItem className={SETTINGS_ROW_CLASS}>
                     <div className={SETTINGS_LABEL_CLASS}>
-                      <FormLabel className="text-sm">
+                      <FormLabel
+                        htmlFor="cashback-onFinalAmount"
+                        className="cursor-pointer text-sm"
+                      >
                         Calculate cashback on final amount (after store
                         discounts and tax)
                       </FormLabel>
                     </div>
                     <div className={SETTINGS_CONTROL_CLASS}>
                       <FormControl>
-                        <Checkbox
+                        <Switch
+                          id="cashback-onFinalAmount"
                           checked={field.value ?? false}
                           onCheckedChange={field.onChange}
                         />
@@ -220,14 +224,16 @@ export function CashbackConfigSettingsCard({
                       render={({ field }) => (
                         <FormItem className="flex flex-row items-center gap-2">
                           <FormControl>
-                            <Checkbox
-                              checked={field.value ?? false}
-                              onCheckedChange={field.onChange}
-                            />
+                            <label className="flex cursor-pointer items-center gap-2">
+                              <Switch
+                                checked={field.value ?? false}
+                                onCheckedChange={field.onChange}
+                              />
+                              <span className="text-sm font-normal">
+                                Limit redemption on wallet balance
+                              </span>
+                            </label>
                           </FormControl>
-                          <FormLabel className="cursor-pointer font-normal">
-                            Limit redemption on wallet balance
-                          </FormLabel>
                         </FormItem>
                       )}
                     />
@@ -315,14 +321,16 @@ export function CashbackConfigSettingsCard({
                       render={({ field }) => (
                         <FormItem className="flex flex-row items-center gap-2">
                           <FormControl>
-                            <Checkbox
-                              checked={field.value ?? false}
-                              onCheckedChange={field.onChange}
-                            />
+                            <label className="flex cursor-pointer items-center gap-2">
+                              <Switch
+                                checked={field.value ?? false}
+                                onCheckedChange={field.onChange}
+                              />
+                              <span className="text-sm font-normal">
+                                Limit redemption on bill amount
+                              </span>
+                            </label>
                           </FormControl>
-                          <FormLabel className="cursor-pointer font-normal">
-                            Limit redemption on bill amount
-                          </FormLabel>
                         </FormItem>
                       )}
                     />

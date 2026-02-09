@@ -1,3 +1,4 @@
+import { validateTierRanges } from "@/lib/loyalty/helpers";
 import { z } from "zod";
 
 // ─── Enums ────────────────────────────────────────────────────────────────
@@ -88,9 +89,6 @@ export const loyaltyTierSchema = z.object({
 
   cashbackPercentage: z.coerce.number().min(0).max(100).default(0),
 
-  minPurchaseForEarningEnabled: z.boolean().default(false),
-  minPurchaseForEarning: z.coerce.number().min(0).optional().nullable(),
-
   minPurchaseForRedemptionEnabled: z.boolean().default(false),
   minPurchaseForRedemption: z.coerce.number().min(0).optional().nullable(),
 
@@ -99,12 +97,28 @@ export const loyaltyTierSchema = z.object({
 });
 export type LoyaltyTierInput = z.infer<typeof loyaltyTierSchema>;
 
-export const tierConfigSchema = z.object({
+/** Base tier config (no refinements) — use .partial() on this for update schema. */
+const tierConfigSchemaBase = z.object({
   pointsPerRupee: z.coerce.number().min(0).default(1),
-  maxCashbackCapEnabled: z.boolean().default(false),
-  maxCashbackCap: z.coerce.number().min(0).optional().nullable(),
   tiers: z.array(loyaltyTierSchema).min(1, "At least one tier is required"),
 });
+
+export const tierConfigSchema = tierConfigSchemaBase.superRefine(
+  (data, ctx) => {
+    const result = validateTierRanges(
+      data.tiers.map((t) => ({
+        rank: t.rank,
+        minLifetimeSpend: t.minLifetimeSpend,
+        maxLifetimeSpend: t.maxLifetimeSpend,
+      })),
+    );
+    if (!result.valid) {
+      result.errors.forEach((msg) =>
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: msg }),
+      );
+    }
+  },
+);
 export type TierConfigInput = z.infer<typeof tierConfigSchema>;
 
 // ─── Amount Spent Config ──────────────────────────────────────────────────
@@ -219,7 +233,7 @@ export const loyaltyUpdateSchema = z.object({
   termsAndConditions: loyaltyTermsSchema.optional(),
   branding: loyaltyBrandingSchema.optional(),
   cashbackConfig: cashbackConfigSchema.partial().optional(),
-  tierConfig: tierConfigSchema.partial().optional(),
+  tierConfig: tierConfigSchemaBase.partial().optional(),
   tiers: z.array(loyaltyTierSchema).optional(),
   amountSpentConfig: amountSpentConfigSchema.partial().optional(),
   visitMadeConfig: visitMadeConfigSchema.partial().optional(),
@@ -233,6 +247,8 @@ export const loyaltyPreviewSchema = z.object({
   phone: z.string().min(4),
   businessId: z.string().uuid(),
   billAmount: z.coerce.number().min(0),
+  /** Optional. When provided and program uses subtotal for earning, used for earnable calculation. */
+  subtotal: z.coerce.number().min(0).optional(),
 });
 
 export const loyaltyStatsQuerySchema = z.object({

@@ -41,8 +41,6 @@ export interface CashbackContext {
 
 export interface TierContext {
   pointsPerRupee: number;
-  maxCashbackCapEnabled: boolean;
-  maxCashbackCap: number | null;
   tiers: Array<{
     id: string;
     name: string;
@@ -50,8 +48,6 @@ export interface TierContext {
     minLifetimeSpend: number;
     maxLifetimeSpend: number | null;
     cashbackPercentage: number;
-    minPurchaseForEarningEnabled: boolean;
-    minPurchaseForEarning: number | null;
     minPurchaseForRedemptionEnabled: boolean;
     minPurchaseForRedemption: number | null;
     maxCashbackCapEnabled: boolean;
@@ -85,34 +81,116 @@ export function getExpiryDays(
 
 export type ResolvedTier = TierContext["tiers"][number];
 
-/** Resolve which tier the customer belongs to based on lifetime spend. */
+/** Minimal tier shape for validation (server + client). */
+export interface TierRangeInput {
+  rank: number;
+  minLifetimeSpend: number;
+  maxLifetimeSpend: number | null | undefined;
+}
+
+export interface ValidateTierRangesResult {
+  valid: boolean;
+  errors: string[];
+}
+
+/**
+ * Validate tier ranges: no negative values, no overlaps, contiguous (tier[i].max === tier[i+1].min).
+ * Highest-rank tier's max is optional (leave empty; all customers with spend >= its min stay in that tier).
+ * Use on both client (form) and server (API create/update).
+ */
+export function validateTierRanges(
+  tiers: TierRangeInput[],
+): ValidateTierRangesResult {
+  const errors: string[] = [];
+  if (tiers.length === 0) {
+    return { valid: false, errors: ["At least one tier is required."] };
+  }
+  const sorted = [...tiers].sort((a, b) => a.rank - b.rank);
+
+  for (let i = 0; i < sorted.length; i++) {
+    const t = sorted[i];
+    if (t == null) continue;
+    const min = Number(t.minLifetimeSpend);
+    const max = t.maxLifetimeSpend != null ? Number(t.maxLifetimeSpend) : null;
+    if (min < 0) {
+      errors.push(
+        `Tier (rank ${t.rank}): min lifetime spend cannot be negative.`,
+      );
+    }
+    if (max != null && max < 0) {
+      errors.push(
+        `Tier (rank ${t.rank}): max lifetime spend cannot be negative.`,
+      );
+    }
+    const isLastTier = i === sorted.length - 1;
+    if (!isLastTier) {
+      if (max == null) {
+        errors.push(
+          `Tier (rank ${t.rank}): max lifetime spend is required (leave empty only for the top/highest tier).`,
+        );
+      } else if (min >= max) {
+        errors.push(
+          `Tier (rank ${t.rank}): min must be less than max (min: ${min}, max: ${max}).`,
+        );
+      }
+      const next = sorted[i + 1];
+      if (next != null && max != null) {
+        const nextMin = Number(next.minLifetimeSpend);
+        if (nextMin !== max) {
+          errors.push(
+            `Tiers must be contiguous: tier (rank ${t.rank}) max (${max}) should equal next tier min (${nextMin}).`,
+          );
+        }
+      }
+    }
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+  };
+}
+
+/** Resolve which tier the customer belongs to based on lifetime spend. Highest-rank tier has no upper bound (spend >= its min keeps customer in that tier). */
 export function resolveTierForLifetimeSpend(
   tiers: ResolvedTier[],
   lifetimeSpend: number,
 ): ResolvedTier | null {
+  if (tiers.length === 0) return null;
+  const maxRank = Math.max(...tiers.map((t) => t.rank));
   let best: ResolvedTier | null = null;
   for (const t of tiers) {
     if (lifetimeSpend < t.minLifetimeSpend) continue;
-    if (t.maxLifetimeSpend != null && lifetimeSpend >= t.maxLifetimeSpend)
+    // Highest-rank tier: no upper bound (ignore maxLifetimeSpend so customers above max still get top tier).
+    if (
+      t.rank < maxRank &&
+      t.maxLifetimeSpend != null &&
+      lifetimeSpend >= t.maxLifetimeSpend
+    ) {
       continue;
+    }
     if (!best || t.rank > best.rank) best = t;
   }
-  // First tier always starts at minLifetimeSpend = 0; fallback for new customers.
-  if (!best && tiers.length > 0) {
+  // Fallback: first tier (lowest rank) when no tier matched (e.g. new customer at 0).
+  if (!best) {
     const first = tiers.reduce((a, b) => (a.rank <= b.rank ? a : b));
     if (lifetimeSpend >= first.minLifetimeSpend) best = first;
   }
   return best;
 }
 
-/** TIER: Earned cashback (₹) using tier's cashbackPercentage. Stored as integer (100 = ₹100). */
+/** TIER: Earned cashback (₹) using tier's cashbackPercentage. Bill still counts toward lifetime spend; cashback only when bill >= min purchase for redemption (when enabled). */
 export function calculateTierCashbackEarned(
   amountForEarning: number,
   tier: ResolvedTier,
 ): number {
   if (amountForEarning <= 0 || tier.cashbackPercentage <= 0) return 0;
-  if (tier.minPurchaseForEarningEnabled && tier.minPurchaseForEarning != null) {
-    if (amountForEarning < tier.minPurchaseForEarning) return 0;
+  if (
+    tier.minPurchaseForRedemptionEnabled &&
+    tier.minPurchaseForRedemption != null &&
+    amountForEarning < tier.minPurchaseForRedemption
+  ) {
+    return 0;
   }
   const raw = (amountForEarning * tier.cashbackPercentage) / 100;
   const capped =
@@ -226,16 +304,9 @@ export function calculatePointsEarnedForBill(
         const cashback = calculateTierCashbackEarned(amountForEarning, tier);
         return Math.floor(cashback);
       }
-      // Fallback when tier not resolved (e.g. preview): use global pointsPerRupee
+      // Fallback when tier not resolved (e.g. preview): use pointsPerRupee only (no global cap).
       const pointsPerRupee = context.config.pointsPerRupee ?? 1;
-      let raw = amountForEarning * pointsPerRupee;
-      if (
-        context.config.maxCashbackCapEnabled &&
-        context.config.maxCashbackCap != null
-      ) {
-        raw = Math.min(raw, context.config.maxCashbackCap);
-      }
-      return Math.floor(raw);
+      return Math.floor(amountForEarning * pointsPerRupee);
     }
     case "AMOUNT_SPENT": {
       const pts = amountForEarning * (context.config.pointsPerRupee ?? 1);

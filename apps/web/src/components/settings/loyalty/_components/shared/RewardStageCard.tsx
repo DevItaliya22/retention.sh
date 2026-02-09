@@ -7,13 +7,13 @@ import {
   Card,
   CardContent,
   CardHeader,
-  Checkbox,
   FormControl,
   FormField,
   FormItem,
   FormMessage,
   Input,
   Label,
+  Switch,
   useFormContext,
 } from "@reelo/ui/components";
 import { Trash2 } from "lucide-react";
@@ -194,14 +194,16 @@ export function RewardStageCard({
               render={({ field }) => (
                 <FormItem className="flex flex-row items-center gap-2">
                   <FormControl>
-                    <Checkbox
-                      checked={field.value ?? true}
-                      onCheckedChange={field.onChange}
-                    />
+                    <label className="flex cursor-pointer items-center gap-2">
+                      <Switch
+                        checked={field.value ?? true}
+                        onCheckedChange={field.onChange}
+                      />
+                      <span className="text-sm font-normal">
+                        Apply to entire purchase
+                      </span>
+                    </label>
                   </FormControl>
-                  <Label className="cursor-pointer text-sm font-normal">
-                    Apply to entire purchase
-                  </Label>
                   <FormMessage />
                 </FormItem>
               )}

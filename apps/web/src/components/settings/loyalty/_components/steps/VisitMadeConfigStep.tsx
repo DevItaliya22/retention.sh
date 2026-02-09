@@ -2,7 +2,6 @@
 
 import type { LoyaltyProgramFormValues } from "@/lib/schemas/loyalty-form";
 import {
-  Checkbox,
   FormControl,
   FormField,
   FormItem,
@@ -14,6 +13,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Switch,
   useFormContext,
 } from "@reelo/ui/components";
 
@@ -63,14 +63,17 @@ export function VisitMadeConfigStep() {
         render={({ field }) => (
           <FormItem className="flex flex-row items-center gap-2">
             <FormControl>
-              <Checkbox
-                checked={field.value ?? false}
-                onCheckedChange={field.onChange}
-              />
+              <label className="flex cursor-pointer items-center gap-2">
+                <Switch
+                  checked={field.value ?? false}
+                  onCheckedChange={field.onChange}
+                />
+                <span className="text-sm font-normal">
+                  Require minimum time between visits to count as separate
+                  visits
+                </span>
+              </label>
             </FormControl>
-            <Label className="cursor-pointer text-sm font-normal">
-              Require minimum time between visits to count as separate visits
-            </Label>
             <FormMessage />
           </FormItem>
         )}

@@ -12,8 +12,6 @@ const DEFAULT_TIER = {
   minLifetimeSpend: 0,
   maxLifetimeSpend: null as number | null,
   cashbackPercentage: 0,
-  minPurchaseForEarningEnabled: false,
-  minPurchaseForEarning: null as number | null,
   minPurchaseForRedemptionEnabled: false,
   minPurchaseForRedemption: null as number | null,
   maxCashbackCapEnabled: false,
@@ -26,6 +24,11 @@ export function TierEditorStep() {
     control: form.control,
     name: "tiers",
   });
+  const watchedTiers = form.watch("tiers") ?? [];
+  const maxRank =
+    watchedTiers.length > 0
+      ? Math.max(...watchedTiers.map((t) => Number(t?.rank ?? 0)))
+      : 0;
 
   return (
     <div className="space-y-4">
@@ -40,6 +43,10 @@ export function TierEditorStep() {
             index={index}
             onRemove={() => remove(index)}
             canRemove={fields.length > 1}
+            isTopTier={
+              Number(watchedTiers?.[index]?.rank ?? 0) === maxRank &&
+              maxRank > 0
+            }
           />
         ))}
       </div>

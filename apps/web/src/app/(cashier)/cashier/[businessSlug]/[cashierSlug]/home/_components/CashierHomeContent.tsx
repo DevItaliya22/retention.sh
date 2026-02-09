@@ -6,29 +6,24 @@ import { CashierLogoutButton } from "./CashierLogoutButton";
 import { CashierNav } from "./CashierNav";
 
 export function CashierHomeContent() {
-  const { business, cashier, businessSlug, cashierSlug } = useCashierContext();
+  const { business, businessSlug, cashierSlug } = useCashierContext();
 
   return (
-    <div className="bg-background flex min-h-screen flex-col items-center p-4">
-      <div className="w-full max-w-4xl space-y-6">
-        <div className="space-y-2 text-center">
-          <h1 className="text-3xl font-bold">Cashier Dashboard</h1>
-          <p className="text-muted-foreground">Welcome, {cashier.user.name}!</p>
-          <p className="text-muted-foreground text-sm">
-            Business: {business.name}
-          </p>
-        </div>
-        <div className="flex justify-center">
+    <div className="bg-background flex min-h-screen flex-col">
+      <header className="flex items-center justify-between border-b px-4 py-3 sm:px-6">
+        <div className="flex items-center gap-4">
+          <h1 className="text-lg font-semibold">{business.name}</h1>
           <CashierNav />
         </div>
+        <CashierLogoutButton
+          businessSlug={businessSlug}
+          cashierSlug={cashierSlug}
+        />
+      </header>
+
+      <main className="flex flex-1 flex-col items-center justify-center px-4 py-8">
         <BillCreationForm />
-        <div className="flex justify-center">
-          <CashierLogoutButton
-            businessSlug={businessSlug}
-            cashierSlug={cashierSlug}
-          />
-        </div>
-      </div>
+      </main>
     </div>
   );
 }

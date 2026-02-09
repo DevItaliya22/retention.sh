@@ -27,16 +27,53 @@ export interface SearchCustomerResponse {
   error?: string;
 }
 
+export interface LoyaltyResult {
+  loyaltyType: string;
+  earnedPoints: number;
+  redeemedPoints: number;
+  cashbackAmount: number | null;
+  pointsBalance: number;
+  finalAmount: number;
+  tierUpgrade?: {
+    previousTierName: string | null;
+    newTierName: string | null;
+    wasUpgraded: boolean;
+    newCashbackPercentage: number;
+  } | null;
+  /** Customer's tier after this bill (TIER type); includes range for cashier UI. */
+  currentTier?: {
+    name: string;
+    cashbackPercentage: number;
+    minLifetimeSpend: number;
+    maxLifetimeSpend: number | null;
+  } | null;
+}
+
+export interface RewardStageResult {
+  id: string;
+  rewardName: string;
+  rewardType: string;
+  pointsRequired: number;
+  canRedeem: boolean;
+  freeItemName: string | null;
+  percentageValue: number | null;
+  cashAmount: number | null;
+}
+
 export interface CreateBillResponse {
   bill: {
     id: string;
     billNumber: string;
     amount: number | null;
+    finalAmount: number | null;
+    cashbackAmount: number | null;
     businessId: string;
     customerId: string;
     createdAt: string;
     updatedAt: string;
   } | null;
+  loyalty?: LoyaltyResult;
+  rewardStages?: RewardStageResult[];
   error?: string;
 }
 
@@ -158,6 +195,7 @@ export function useBillCreation(businessId: string) {
     isCreating: createBillMutation.isPending,
     createError: createBillMutation.error,
     createSuccess: createBillMutation.isSuccess,
+    createData: createBillMutation.data ?? null,
     resetMutation: createBillMutation.reset,
   };
 }

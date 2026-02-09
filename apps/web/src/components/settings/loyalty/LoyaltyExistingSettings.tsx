@@ -35,8 +35,7 @@ import {
   AmountSpentConfigSettingsCard,
   CashbackConfigSettingsCard,
   RewardStagesSettingsCard,
-  TierConfigSettingsCard,
-  TiersSettingsCard,
+  TierSettingsCard,
   VisitMadeConfigSettingsCard,
 } from "./_components/settings";
 
@@ -100,34 +99,29 @@ export function LoyaltyExistingSettings() {
       )}
 
       {loyalty.loyaltyType === "TIER" && loyalty.tierConfig && (
-        <>
-          <TierConfigSettingsCard
-            config={loyalty.tierConfig}
-            onSave={(payload) =>
-              updateMutation.mutate(
-                { section: "tierConfig", tierConfig: payload },
-                {
-                  onSuccess: () => toast.success("Tier config saved"),
-                  onError: (e) => toast.error(e.message),
-                },
-              )
+        <TierSettingsCard
+          tierConfig={{
+            pointsPerRupee: loyalty.tierConfig.pointsPerRupee,
+            tiers: loyalty.tierConfig.tiers,
+          }}
+          onSave={async (data, options) => {
+            try {
+              await updateMutation.mutateAsync({
+                section: "tierConfig",
+                tierConfig: { pointsPerRupee: data.pointsPerRupee },
+              });
+              await updateMutation.mutateAsync({
+                section: "tiers",
+                tiers: data.tiers,
+              });
+              toast.success("Tier configuration saved");
+              options?.onSuccess?.();
+            } catch (e) {
+              toast.error(e instanceof Error ? e.message : "Failed to save");
             }
-            isSaving={updateMutation.isPending}
-          />
-          <TiersSettingsCard
-            tiers={loyalty.tierConfig.tiers}
-            onSave={(tiers) =>
-              updateMutation.mutate(
-                { section: "tiers", tiers },
-                {
-                  onSuccess: () => toast.success("Tiers saved"),
-                  onError: (e) => toast.error(e.message),
-                },
-              )
-            }
-            isSaving={updateMutation.isPending}
-          />
-        </>
+          }}
+          isSaving={updateMutation.isPending}
+        />
       )}
 
       {loyalty.loyaltyType === "AMOUNT_SPENT" && loyalty.amountSpentConfig && (
