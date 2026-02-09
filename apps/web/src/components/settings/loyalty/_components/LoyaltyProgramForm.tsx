@@ -219,7 +219,7 @@ function buildSteps(
         {
           id: "tier-config",
           title: "Tier Config",
-          fields: ["pointsPerRupee", "maxCashbackCapEnabled", "maxCashbackCap"],
+          fields: ["pointsPerRupee"],
           schema: tierConfigStepSchema,
           Component: ({
             stepIndex,
@@ -232,7 +232,7 @@ function buildSteps(
               stepIndex={stepIndex}
               totalSteps={totalSteps}
               title="Tier Configuration"
-              description="Default points conversion and global cap."
+              description="Default points conversion (used when tier not resolved, e.g. preview)."
               required
             >
               <TierConfigStep />
@@ -372,8 +372,6 @@ function buildInitialValues(
       return {
         ...base,
         pointsPerRupee: 1,
-        maxCashbackCapEnabled: false,
-        maxCashbackCap: null,
         tiers: [
           {
             name: "",
@@ -381,8 +379,6 @@ function buildInitialValues(
             minLifetimeSpend: 0,
             maxLifetimeSpend: null,
             cashbackPercentage: 0,
-            minPurchaseForEarningEnabled: false,
-            minPurchaseForEarning: null,
             minPurchaseForRedemptionEnabled: false,
             minPurchaseForRedemption: null,
             maxCashbackCapEnabled: false,
@@ -473,17 +469,12 @@ function valuesToPayload(values: LoyaltyProgramFormValues): LoyaltyCreateInput {
         ...common,
         tierConfig: {
           pointsPerRupee: values.pointsPerRupee ?? 1,
-          maxCashbackCapEnabled: values.maxCashbackCapEnabled ?? false,
-          maxCashbackCap: values.maxCashbackCap ?? null,
           tiers: (values.tiers ?? []).map((t) => ({
             name: t.name,
             rank: t.rank,
             minLifetimeSpend: t.minLifetimeSpend,
             maxLifetimeSpend: t.maxLifetimeSpend ?? null,
             cashbackPercentage: t.cashbackPercentage ?? 0,
-            minPurchaseForEarningEnabled:
-              t.minPurchaseForEarningEnabled ?? false,
-            minPurchaseForEarning: t.minPurchaseForEarning ?? null,
             minPurchaseForRedemptionEnabled:
               t.minPurchaseForRedemptionEnabled ?? false,
             minPurchaseForRedemption: t.minPurchaseForRedemption ?? null,

@@ -35,43 +35,6 @@ export const billFormSchema = z.object({
   billNumber: billNumberSchema,
   phoneNumber: phoneNumberSchema,
   name: nameSchema.optional().nullable(),
-  email: emailSchema.optional().nullable(),
-  addressLine1: z
-    .string()
-    .max(255, "Address line 1 is too long (max 255 characters)")
-    .trim()
-    .optional()
-    .nullable(),
-  addressLine2: z
-    .string()
-    .max(255, "Address line 2 is too long (max 255 characters)")
-    .trim()
-    .optional()
-    .nullable(),
-  city: z
-    .string()
-    .max(100, "City is too long (max 100 characters)")
-    .trim()
-    .optional()
-    .nullable(),
-  state: z
-    .string()
-    .max(100, "State is too long (max 100 characters)")
-    .trim()
-    .optional()
-    .nullable(),
-  country: z
-    .string()
-    .max(100, "Country is too long (max 100 characters)")
-    .trim()
-    .optional()
-    .nullable(),
-  postalCode: z
-    .string()
-    .max(20, "Postal code is too long (max 20 characters)")
-    .trim()
-    .optional()
-    .nullable(),
   amount: amountSchema,
   /** Subtotal (line items sum before discounts/tax). Optional; computed from line items when not provided. */
   subtotal: amountSchema.optional(),
@@ -80,6 +43,12 @@ export const billFormSchema = z.object({
   notes: z
     .string()
     .max(2000, "Notes are too long (max 2000 characters)")
+    .trim()
+    .optional()
+    .nullable(),
+  paymentMethod: z
+    .string()
+    .max(50, "Payment method is too long")
     .trim()
     .optional()
     .nullable(),
@@ -110,7 +79,16 @@ export const billsQuerySchema = z.object({
   amountMax: z.coerce.number().optional(),
 });
 
-export const billImportItemSchema = billFormSchema;
+/** Import schema retains email/address fields for bulk CSV import */
+export const billImportItemSchema = billFormSchema.extend({
+  email: emailSchema.optional().nullable(),
+  addressLine1: z.string().max(255).trim().optional().nullable(),
+  addressLine2: z.string().max(255).trim().optional().nullable(),
+  city: z.string().max(100).trim().optional().nullable(),
+  state: z.string().max(100).trim().optional().nullable(),
+  country: z.string().max(100).trim().optional().nullable(),
+  postalCode: z.string().max(20).trim().optional().nullable(),
+});
 
 export const billImportSchema = z.object({
   items: z.array(billImportItemSchema),

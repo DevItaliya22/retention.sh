@@ -10,7 +10,6 @@ import {
   Label,
   useFormContext,
 } from "@reelo/ui/components";
-import { MaxCapToggleField } from "../shared";
 
 export function TierConfigStep() {
   const form = useFormContext<LoyaltyProgramFormValues>();
@@ -40,12 +39,6 @@ export function TierConfigStep() {
             <FormMessage />
           </FormItem>
         )}
-      />
-      <MaxCapToggleField<LoyaltyProgramFormValues>
-        enabledName="maxCashbackCapEnabled"
-        valueName="maxCashbackCap"
-        label="Max cashback cap per transaction (global fallback)"
-        placeholder="No limit"
       />
     </div>
   );

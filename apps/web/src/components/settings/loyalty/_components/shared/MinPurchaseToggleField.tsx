@@ -1,14 +1,13 @@
 "use client";
 
 import {
-  Checkbox,
   FormControl,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
   Input,
-  Label,
+  Switch,
   useFormContext,
 } from "@reelo/ui/components";
 import type { FieldPath, FieldValues } from "react-hook-form";
@@ -48,19 +47,37 @@ export function MinPurchaseToggleField<T extends FieldValues>({
         render={({ field }) => (
           <FormItem className="flex flex-row items-center gap-2">
             <FormControl>
-              <Checkbox
-                checked={field.value ?? false}
-                onCheckedChange={field.onChange}
-              />
+              <label className="flex cursor-pointer items-center gap-2">
+                <Switch
+                  checked={field.value ?? false}
+                  onCheckedChange={(checked) => {
+                    field.onChange(checked);
+                    if (checked) {
+                      const current = form.getValues(valueName as never);
+                      if (
+                        current == null ||
+                        (typeof current === "string" && current === "")
+                      ) {
+                        form.setValue(valueName as never, 0 as never);
+                      }
+                    }
+                  }}
+                />
+                {!isSettings && (
+                  <span className="text-sm font-normal">{label}</span>
+                )}
+                {tooltip && (
+                  <span
+                    className="text-muted-foreground text-xs"
+                    title={tooltip}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    (i)
+                  </span>
+                )}
+              </label>
             </FormControl>
-            <Label className="cursor-pointer text-sm font-normal">
-              {label}
-            </Label>
-            {tooltip && (
-              <span className="text-muted-foreground text-xs" title={tooltip}>
-                (i)
-              </span>
-            )}
+            <FormMessage />
           </FormItem>
         )}
       />

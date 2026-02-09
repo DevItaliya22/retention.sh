@@ -1,3 +1,4 @@
+import { validateTierRanges } from "@/lib/loyalty/helpers";
 import { z } from "zod";
 import {
   loyaltyBrandingSchema,
@@ -52,8 +53,6 @@ export const cashbackRedemptionLimitsStepSchema = z.object({
 
 export const tierConfigStepSchema = z.object({
   pointsPerRupee: z.coerce.number().min(0).default(1),
-  maxCashbackCapEnabled: z.boolean().default(false),
-  maxCashbackCap: z.coerce.number().min(0).optional().nullable(),
 });
 
 const tierItemSchema = z.object({
@@ -63,17 +62,30 @@ const tierItemSchema = z.object({
   minLifetimeSpend: z.coerce.number().min(0),
   maxLifetimeSpend: z.coerce.number().min(0).optional().nullable(),
   cashbackPercentage: z.coerce.number().min(0).max(100).default(0),
-  minPurchaseForEarningEnabled: z.boolean().default(false),
-  minPurchaseForEarning: z.coerce.number().min(0).optional().nullable(),
   minPurchaseForRedemptionEnabled: z.boolean().default(false),
   minPurchaseForRedemption: z.coerce.number().min(0).optional().nullable(),
   maxCashbackCapEnabled: z.boolean().default(false),
   maxCashbackCap: z.coerce.number().min(0).optional().nullable(),
 });
 
-export const tierEditorStepSchema = z.object({
-  tiers: z.array(tierItemSchema).min(1, "At least one tier is required"),
-});
+export const tierEditorStepSchema = z
+  .object({
+    tiers: z.array(tierItemSchema).min(1, "At least one tier is required"),
+  })
+  .superRefine((data, ctx) => {
+    const result = validateTierRanges(
+      data.tiers.map((t) => ({
+        rank: t.rank,
+        minLifetimeSpend: t.minLifetimeSpend,
+        maxLifetimeSpend: t.maxLifetimeSpend,
+      })),
+    );
+    if (!result.valid) {
+      result.errors.forEach((msg) =>
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: msg }),
+      );
+    }
+  });
 
 // ─── Amount Spent Steps ────────────────────────────────────────────────────
 
@@ -156,7 +168,6 @@ export type LoyaltyProgramFormValues = {
 
   // Tier
   pointsPerRupee?: number;
-  maxCashbackCapEnabled?: boolean;
   tiers?: Array<{
     id?: string;
     name: string;
@@ -164,8 +175,6 @@ export type LoyaltyProgramFormValues = {
     minLifetimeSpend: number;
     maxLifetimeSpend?: number | null;
     cashbackPercentage?: number;
-    minPurchaseForEarningEnabled?: boolean;
-    minPurchaseForEarning?: number | null;
     minPurchaseForRedemptionEnabled?: boolean;
     minPurchaseForRedemption?: number | null;
     maxCashbackCapEnabled?: boolean;

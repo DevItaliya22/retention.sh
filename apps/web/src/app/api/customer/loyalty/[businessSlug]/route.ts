@@ -1,5 +1,6 @@
 import { expireBucketsForCustomer } from "@/lib/actions/loyalty";
 import { withCustomerAuth } from "@/lib/auth/middleware";
+import { resolveTierForLifetimeSpend } from "@/lib/loyalty";
 import { businessSlugParamSchema } from "@/lib/schemas/common";
 import {
   sanitizeErrorMessage,
@@ -27,7 +28,24 @@ export const GET = withCustomerAuth<{ businessSlug: string }>(
       const business = await db.business.findUnique({
         where: { slug: businessSlug },
         include: {
-          loyalty: true,
+          loyalty: {
+            include: {
+              cashbackConfig: true,
+              tierConfig: {
+                include: { tiers: { orderBy: { rank: "asc" } } },
+              },
+              amountSpentConfig: {
+                include: {
+                  rewardStages: { orderBy: { pointsRequired: "asc" } },
+                },
+              },
+              visitMadeConfig: {
+                include: {
+                  rewardStages: { orderBy: { pointsRequired: "asc" } },
+                },
+              },
+            },
+          },
         },
       });
 
@@ -57,6 +75,9 @@ export const GET = withCustomerAuth<{ businessSlug: string }>(
             customerId: context.customer.id,
           },
         },
+        include: {
+          currentTier: true,
+        },
       });
 
       if (!businessCustomer) {
@@ -66,6 +87,7 @@ export const GET = withCustomerAuth<{ businessSlug: string }>(
         );
       }
 
+      // Expire points before returning data
       await db.$transaction(async (tx) => {
         await expireBucketsForCustomer(tx, {
           businessId: business.id,
@@ -82,6 +104,12 @@ export const GET = withCustomerAuth<{ businessSlug: string }>(
         },
       });
 
+      const pointsBalance = refreshed?.pointsBalance ?? 0;
+      const totalCashbackEarned = refreshed?.totalCashbackEarned ?? 0;
+      const lifetimeSpend = refreshed?.lifetimeSpend ?? 0;
+      const visitCount = refreshed?.visitCount ?? 0;
+
+      // Expiring points buckets
       const expiringRows = await db.pointsTransaction.findMany({
         where: {
           businessId: business.id,
@@ -95,6 +123,7 @@ export const GET = withCustomerAuth<{ businessSlug: string }>(
         select: { id: true, remainingAmount: true, expiresAt: true },
       });
 
+      // Points transactions (AMOUNT_SPENT / VISIT_MADE)
       const transactions = await db.pointsTransaction.findMany({
         where: {
           businessId: business.id,
@@ -103,6 +132,179 @@ export const GET = withCustomerAuth<{ businessSlug: string }>(
         orderBy: { createdAt: "desc" },
         take: 50,
       });
+
+      // Bill history (CASHBACK / TIER): one row per bill (all bills; cashback 0 when none)
+      let cashbackHistory: Array<{
+        id: string;
+        date: string;
+        billNumber: string;
+        amountSpent: number;
+        cashbackReceived: number;
+        tierName: string | null;
+        cashbackPercentage: number | null;
+      }> = [];
+      const loyaltyType = business.loyalty?.loyaltyType ?? null;
+      if (loyaltyType === "CASHBACK" || loyaltyType === "TIER") {
+        const bills = await db.bill.findMany({
+          where: {
+            businessId: business.id,
+            customerId: businessCustomer.customerId,
+          },
+          include: {
+            cashbackTransactions: {
+              take: 1,
+              orderBy: { createdAt: "desc" },
+            },
+          },
+          orderBy: { createdAt: "desc" },
+          take: 50,
+        });
+        cashbackHistory = bills.map((bill) => {
+          const ct = bill.cashbackTransactions[0];
+          const meta =
+            (ct?.metadata as {
+              tierName?: string;
+              cashbackPercentage?: number;
+            } | null) ?? {};
+          return {
+            id: bill.id,
+            date: bill.createdAt.toISOString(),
+            billNumber: bill.billNumber,
+            amountSpent: bill.amount ?? 0,
+            cashbackReceived: ct?.amount ?? 0,
+            tierName: meta.tierName ?? null,
+            cashbackPercentage: meta.cashbackPercentage ?? null,
+          };
+        });
+      }
+
+      // Build type-specific data
+      let tierInfo = null;
+      let cashbackInfo = null;
+      let amountSpentInfo = null;
+      let visitMadeInfo = null;
+
+      if (loyaltyType === "CASHBACK" && business.loyalty?.cashbackConfig) {
+        cashbackInfo = {
+          cashbackPercentage:
+            business.loyalty.cashbackConfig.cashbackPercentage,
+        };
+      }
+
+      if (loyaltyType === "TIER" && business.loyalty?.tierConfig) {
+        const tiers = business.loyalty.tierConfig.tiers;
+        const resolvedTier = resolveTierForLifetimeSpend(
+          tiers.map((t) => ({
+            id: t.id,
+            name: t.name,
+            rank: t.rank,
+            minLifetimeSpend: t.minLifetimeSpend,
+            maxLifetimeSpend: t.maxLifetimeSpend,
+            cashbackPercentage: t.cashbackPercentage,
+            minPurchaseForRedemptionEnabled: t.minPurchaseForRedemptionEnabled,
+            minPurchaseForRedemption: t.minPurchaseForRedemption,
+            maxCashbackCapEnabled: t.maxCashbackCapEnabled,
+            maxCashbackCap: t.maxCashbackCap,
+          })),
+          lifetimeSpend,
+        );
+
+        // Find next tier
+        const sortedTiers = [...tiers].sort((a, b) => a.rank - b.rank);
+        const currentRank = resolvedTier?.rank ?? 0;
+        const nextTier = sortedTiers.find((t) => t.rank > currentRank) ?? null;
+        const spendToNextTier = nextTier
+          ? Math.max(0, nextTier.minLifetimeSpend - lifetimeSpend)
+          : null;
+
+        tierInfo = {
+          currentTier: resolvedTier
+            ? {
+                name: resolvedTier.name,
+                rank: resolvedTier.rank,
+                cashbackPercentage: resolvedTier.cashbackPercentage,
+              }
+            : null,
+          allTiers: sortedTiers.map((t) => ({
+            id: t.id,
+            name: t.name,
+            rank: t.rank,
+            minLifetimeSpend: t.minLifetimeSpend,
+            maxLifetimeSpend: t.maxLifetimeSpend,
+            cashbackPercentage: t.cashbackPercentage,
+          })),
+          lifetimeSpend,
+          nextTier: nextTier
+            ? {
+                name: nextTier.name,
+                minLifetimeSpend: nextTier.minLifetimeSpend,
+                cashbackPercentage: nextTier.cashbackPercentage,
+              }
+            : null,
+          spendToNextTier,
+        };
+      }
+
+      if (
+        loyaltyType === "AMOUNT_SPENT" &&
+        business.loyalty?.amountSpentConfig
+      ) {
+        const stages = business.loyalty.amountSpentConfig.rewardStages ?? [];
+
+        // Find next unreachable stage
+        const nextStage =
+          stages.find((s) => s.pointsRequired > pointsBalance) ?? null;
+
+        amountSpentInfo = {
+          pointsPerRupee: business.loyalty.amountSpentConfig.pointsPerRupee,
+          rewardStages: stages.map((s) => ({
+            id: s.id,
+            rewardName: s.rewardName,
+            rewardType: s.rewardType,
+            pointsRequired: s.pointsRequired,
+            canRedeem: s.pointsRequired <= pointsBalance,
+            freeItemName: s.freeItemName,
+            percentageValue: s.percentageValue,
+            cashAmount: s.cashAmount,
+          })),
+          nextStage: nextStage
+            ? {
+                rewardName: nextStage.rewardName,
+                pointsRequired: nextStage.pointsRequired,
+                pointsNeeded: nextStage.pointsRequired - pointsBalance,
+              }
+            : null,
+        };
+      }
+
+      if (loyaltyType === "VISIT_MADE" && business.loyalty?.visitMadeConfig) {
+        const stages = business.loyalty.visitMadeConfig.rewardStages ?? [];
+
+        const nextStage =
+          stages.find((s) => s.pointsRequired > pointsBalance) ?? null;
+
+        visitMadeInfo = {
+          visitCount,
+          pointsPerVisit: business.loyalty.visitMadeConfig.pointsPerVisit,
+          rewardStages: stages.map((s) => ({
+            id: s.id,
+            rewardName: s.rewardName,
+            rewardType: s.rewardType,
+            pointsRequired: s.pointsRequired,
+            canRedeem: s.pointsRequired <= pointsBalance,
+            freeItemName: s.freeItemName,
+            percentageValue: s.percentageValue,
+            cashAmount: s.cashAmount,
+          })),
+          nextStage: nextStage
+            ? {
+                rewardName: nextStage.rewardName,
+                pointsRequired: nextStage.pointsRequired,
+                pointsNeeded: nextStage.pointsRequired - pointsBalance,
+              }
+            : null,
+        };
+      }
 
       return NextResponse.json({
         loyalty: {
@@ -113,8 +315,9 @@ export const GET = withCustomerAuth<{ businessSlug: string }>(
             currencySymbol: business.defaultCurrencySymbol,
             currencyCode: business.defaultCurrencyCode,
           },
-          settings: business.loyalty,
-          pointsBalance: refreshed?.pointsBalance ?? 0,
+          loyaltyType,
+          pointsBalance,
+          totalCashbackEarned,
           buckets: expiringRows
             .filter((b) => b.expiresAt)
             .map((b) => ({
@@ -127,10 +330,16 @@ export const GET = withCustomerAuth<{ businessSlug: string }>(
             amount: t.amount,
             type: t.type,
             source: t.source,
+            description: t.description,
             createdAt: t.createdAt.toISOString(),
             expiresAt: t.expiresAt ? t.expiresAt.toISOString() : null,
             metadata: t.metadata,
           })),
+          cashbackHistory,
+          tierInfo,
+          cashbackInfo,
+          amountSpentInfo,
+          visitMadeInfo,
         },
       });
     } catch (error: any) {

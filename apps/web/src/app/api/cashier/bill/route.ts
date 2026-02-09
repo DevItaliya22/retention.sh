@@ -10,19 +10,10 @@ import { formatPhoneNumber } from "@/lib/utils/phone";
 import { db } from "@reelo/db";
 import { NextRequest, NextResponse } from "next/server";
 
-interface CustomerData {
+async function findOrCreateCustomer(data: {
   phoneNumber: string;
   name?: string | null;
-  email?: string | null;
-  addressLine1?: string | null;
-  addressLine2?: string | null;
-  city?: string | null;
-  state?: string | null;
-  country?: string | null;
-  postalCode?: string | null;
-}
-
-async function findOrCreateCustomer(data: CustomerData) {
+}) {
   const formattedPhone = formatPhoneNumber(data.phoneNumber);
   const tempEmail = `${formattedPhone}@${APP_CONSTANTS.CUSTOMER_EMAIL_DOMAIN}`;
 
@@ -48,18 +39,10 @@ async function findOrCreateCustomer(data: CustomerData) {
   let customer = user.customer;
 
   if (!customer) {
-    const customerEmail =
-      data.email && data.email.trim() ? data.email : tempEmail;
     customer = await db.customer.create({
       data: {
         userId: user.id,
-        email: customerEmail,
-        addressLine1: data.addressLine1 || null,
-        addressLine2: data.addressLine2 || null,
-        city: data.city || null,
-        state: data.state || null,
-        country: data.country || null,
-        postalCode: data.postalCode || null,
+        email: tempEmail,
       },
     });
   }
@@ -90,53 +73,19 @@ async function linkCustomerToBusiness(
   }
 }
 
-async function updateCustomerInfo(
+async function updateCustomerName(
   customerId: string,
-  data: Partial<CustomerData>,
+  name: string,
 ): Promise<void> {
-  const updateData: any = {};
+  const customer = await db.customer.findUnique({
+    where: { id: customerId },
+    include: { user: true },
+  });
 
-  if (data.name !== undefined) {
-    const customer = await db.customer.findUnique({
-      where: { id: customerId },
-      include: { user: true },
-    });
-
-    if (customer && data.name) {
-      await db.user.update({
-        where: { id: customer.userId },
-        data: { name: data.name },
-      });
-    }
-  }
-
-  if (data.email !== undefined && data.email) {
-    updateData.email = data.email;
-  }
-
-  if (data.addressLine1 !== undefined) {
-    updateData.addressLine1 = data.addressLine1 || null;
-  }
-  if (data.addressLine2 !== undefined) {
-    updateData.addressLine2 = data.addressLine2 || null;
-  }
-  if (data.city !== undefined) {
-    updateData.city = data.city || null;
-  }
-  if (data.state !== undefined) {
-    updateData.state = data.state || null;
-  }
-  if (data.country !== undefined) {
-    updateData.country = data.country || null;
-  }
-  if (data.postalCode !== undefined) {
-    updateData.postalCode = data.postalCode || null;
-  }
-
-  if (Object.keys(updateData).length > 0) {
-    await db.customer.update({
-      where: { id: customerId },
-      data: updateData,
+  if (customer) {
+    await db.user.update({
+      where: { id: customer.userId },
+      data: { name },
     });
   }
 }
@@ -161,12 +110,13 @@ export const POST = withCashierAuth(async (request: NextRequest, context) => {
     const {
       billNumber,
       phoneNumber,
+      name,
       amount,
       subtotal: subtotalFromRequest,
       redeemPoints,
       notes,
+      paymentMethod,
       lineItems = [],
-      ...customerData
     } = validation.data;
 
     if (!phoneNumber || phoneNumber.trim() === "") {
@@ -180,22 +130,13 @@ export const POST = withCashierAuth(async (request: NextRequest, context) => {
 
     const { customer } = await findOrCreateCustomer({
       phoneNumber: formattedPhone,
-      ...customerData,
+      name,
     });
 
     await linkCustomerToBusiness(customer.id, businessId);
 
-    if (
-      customerData.name ||
-      customerData.email ||
-      customerData.addressLine1 ||
-      customerData.addressLine2 ||
-      customerData.city ||
-      customerData.state ||
-      customerData.country ||
-      customerData.postalCode
-    ) {
-      await updateCustomerInfo(customer.id, customerData);
+    if (name) {
+      await updateCustomerName(customer.id, name);
     }
 
     // Only active SKUs are allowed in billing
@@ -257,6 +198,7 @@ export const POST = withCashierAuth(async (request: NextRequest, context) => {
           amount: amount ?? null,
           subtotal: billSubtotal,
           notes: notes ?? null,
+          paymentMethod: paymentMethod ?? null,
           businessId,
           customerId: customer.id,
           cashierId: context.cashier.id,
@@ -297,7 +239,56 @@ export const POST = withCashierAuth(async (request: NextRequest, context) => {
         },
       });
 
-      return { bill: updatedBill, loyalty };
+      // Fetch reward stages for AMOUNT_SPENT / VISIT_MADE types
+      let rewardStages: Array<{
+        id: string;
+        rewardName: string;
+        rewardType: string;
+        pointsRequired: number;
+        canRedeem: boolean;
+        freeItemName: string | null;
+        percentageValue: number | null;
+        cashAmount: number | null;
+      }> = [];
+
+      if (
+        loyalty.loyaltyType === "AMOUNT_SPENT" ||
+        loyalty.loyaltyType === "VISIT_MADE"
+      ) {
+        const loyaltyRecord = await tx.loyalty.findUnique({
+          where: { businessId },
+          include: {
+            amountSpentConfig: {
+              include: {
+                rewardStages: { orderBy: { pointsRequired: "asc" } },
+              },
+            },
+            visitMadeConfig: {
+              include: {
+                rewardStages: { orderBy: { pointsRequired: "asc" } },
+              },
+            },
+          },
+        });
+
+        const stages =
+          loyalty.loyaltyType === "AMOUNT_SPENT"
+            ? (loyaltyRecord?.amountSpentConfig?.rewardStages ?? [])
+            : (loyaltyRecord?.visitMadeConfig?.rewardStages ?? []);
+
+        rewardStages = stages.map((s) => ({
+          id: s.id,
+          rewardName: s.rewardName,
+          rewardType: s.rewardType,
+          pointsRequired: s.pointsRequired,
+          canRedeem: s.pointsRequired <= loyalty.pointsBalance,
+          freeItemName: s.freeItemName,
+          percentageValue: s.percentageValue,
+          cashAmount: s.cashAmount,
+        }));
+      }
+
+      return { bill: updatedBill, loyalty, rewardStages };
     });
 
     return NextResponse.json(result);

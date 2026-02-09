@@ -44,8 +44,6 @@ export interface LoyaltyTier {
   minLifetimeSpend: number;
   maxLifetimeSpend: number | null;
   cashbackPercentage: number;
-  minPurchaseForEarningEnabled: boolean;
-  minPurchaseForEarning: number | null;
   minPurchaseForRedemptionEnabled: boolean;
   minPurchaseForRedemption: number | null;
   maxCashbackCapEnabled: boolean;
@@ -83,8 +81,6 @@ export interface LoyaltyResponse {
   tierConfig?: {
     id: string;
     pointsPerRupee: number;
-    maxCashbackCapEnabled: boolean;
-    maxCashbackCap: number | null;
     tiers: LoyaltyTier[];
   } | null;
   amountSpentConfig?: {

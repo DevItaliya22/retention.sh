@@ -1,4 +1,5 @@
 import { withAdminAuth } from "@/lib/auth/middleware";
+import { validateTierRanges } from "@/lib/loyalty/helpers";
 import {
   loyaltyCreateSchema,
   loyaltyUpdateSchema,
@@ -166,9 +167,6 @@ export const POST = withAdminAuth(async (request, context) => {
           data: {
             loyaltyId: loyalty.id,
             pointsPerRupee: data.tierConfig.pointsPerRupee ?? 1,
-            maxCashbackCapEnabled:
-              data.tierConfig.maxCashbackCapEnabled ?? false,
-            maxCashbackCap: data.tierConfig.maxCashbackCap ?? null,
           },
         });
         for (const tier of data.tierConfig.tiers) {
@@ -180,9 +178,6 @@ export const POST = withAdminAuth(async (request, context) => {
               minLifetimeSpend: tier.minLifetimeSpend,
               maxLifetimeSpend: tier.maxLifetimeSpend ?? null,
               cashbackPercentage: tier.cashbackPercentage ?? 0,
-              minPurchaseForEarningEnabled:
-                tier.minPurchaseForEarningEnabled ?? false,
-              minPurchaseForEarning: tier.minPurchaseForEarning ?? null,
               minPurchaseForRedemptionEnabled:
                 tier.minPurchaseForRedemptionEnabled ?? false,
               minPurchaseForRedemption: tier.minPurchaseForRedemption ?? null,
@@ -421,13 +416,27 @@ export const PUT = withAdminAuth(async (request, context) => {
         where: { id: existing.tierConfig.id },
         data: {
           pointsPerRupee: data.tierConfig.pointsPerRupee,
-          maxCashbackCapEnabled: data.tierConfig.maxCashbackCapEnabled,
-          maxCashbackCap: data.tierConfig.maxCashbackCap,
         },
       });
     }
 
     if (section === "tiers" && data.tiers && existing.tierConfig) {
+      const tierValidation = validateTierRanges(
+        data.tiers.map((t) => ({
+          rank: t.rank,
+          minLifetimeSpend: t.minLifetimeSpend,
+          maxLifetimeSpend: t.maxLifetimeSpend ?? null,
+        })),
+      );
+      if (!tierValidation.valid) {
+        return NextResponse.json(
+          {
+            loyalty: null,
+            error: tierValidation.errors.join(" "),
+          },
+          { status: 400 },
+        );
+      }
       await db.loyaltyTier.deleteMany({
         where: { tierConfigId: existing.tierConfig.id },
       });
@@ -440,9 +449,6 @@ export const PUT = withAdminAuth(async (request, context) => {
             minLifetimeSpend: tier.minLifetimeSpend,
             maxLifetimeSpend: tier.maxLifetimeSpend ?? null,
             cashbackPercentage: tier.cashbackPercentage ?? 0,
-            minPurchaseForEarningEnabled:
-              tier.minPurchaseForEarningEnabled ?? false,
-            minPurchaseForEarning: tier.minPurchaseForEarning ?? null,
             minPurchaseForRedemptionEnabled:
               tier.minPurchaseForRedemptionEnabled ?? false,
             minPurchaseForRedemption: tier.minPurchaseForRedemption ?? null,

@@ -9,7 +9,6 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-  Checkbox,
   Form,
   FormControl,
   FormField,
@@ -23,6 +22,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Switch,
   useForm,
 } from "@reelo/ui/components";
 import {
@@ -125,13 +125,17 @@ export function VisitMadeConfigSettingsCard({
                 render={({ field }) => (
                   <FormItem className={SETTINGS_ROW_CLASS}>
                     <div className={SETTINGS_LABEL_CLASS}>
-                      <FormLabel className="text-sm">
+                      <FormLabel
+                        htmlFor="visit-visitIntervalEnabled"
+                        className="cursor-pointer text-sm"
+                      >
                         Require minimum time between visits to count as separate
                       </FormLabel>
                     </div>
                     <div className={SETTINGS_CONTROL_CLASS}>
                       <FormControl>
-                        <Checkbox
+                        <Switch
+                          id="visit-visitIntervalEnabled"
                           checked={field.value ?? false}
                           onCheckedChange={field.onChange}
                         />
