@@ -64,9 +64,13 @@ export interface CreateBillResponse {
   bill: {
     id: string;
     billNumber: string;
-    amount: number | null;
+    subtotal: number | null;
+    storeDiscount: number | null;
+    tax: number[];
     finalAmount: number | null;
     cashbackAmount: number | null;
+    userPaidAmount: number | null;
+    amount?: number | null;
     businessId: string;
     customerId: string;
     createdAt: string;

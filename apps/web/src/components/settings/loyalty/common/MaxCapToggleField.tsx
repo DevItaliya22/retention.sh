@@ -15,9 +15,9 @@ import {
   SETTINGS_CONTROL_CLASS,
   SETTINGS_LABEL_CLASS,
   SETTINGS_ROW_CLASS,
-} from "../settings/settings-layout";
+} from "./settings-layout";
 
-interface MinPurchaseToggleFieldProps<T extends FieldValues> {
+interface MaxCapToggleFieldProps<T extends FieldValues> {
   enabledName: FieldPath<T>;
   valueName: FieldPath<T>;
   label: string;
@@ -27,15 +27,15 @@ interface MinPurchaseToggleFieldProps<T extends FieldValues> {
   layout?: "default" | "settings";
 }
 
-/** Toggle + value pattern: when enabled, show number input. */
-export function MinPurchaseToggleField<T extends FieldValues>({
+/** Toggle + value pattern for max cap: when enabled, show number input. */
+export function MaxCapToggleField<T extends FieldValues>({
   enabledName,
   valueName,
   label,
   tooltip,
-  placeholder = "0",
+  placeholder = "No limit",
   layout = "default",
-}: MinPurchaseToggleFieldProps<T>) {
+}: MaxCapToggleFieldProps<T>) {
   const form = useFormContext<T>();
   const isSettings = layout === "settings";
 
@@ -95,9 +95,7 @@ export function MinPurchaseToggleField<T extends FieldValues>({
                 placeholder={placeholder}
                 disabled={!form.watch(enabledName)}
                 value={
-                  field.value === null ||
-                  field.value === undefined ||
-                  field.value === 0
+                  field.value === null || field.value === undefined
                     ? ""
                     : field.value
                 }

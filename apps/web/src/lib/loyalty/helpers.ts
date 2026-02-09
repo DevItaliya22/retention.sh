@@ -41,6 +41,7 @@ export interface CashbackContext {
 
 export interface TierContext {
   pointsPerRupee: number;
+  onFinalAmount: boolean;
   tiers: Array<{
     id: string;
     name: string;

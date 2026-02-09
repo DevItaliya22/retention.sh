@@ -167,6 +167,7 @@ export const POST = withAdminAuth(async (request, context) => {
           data: {
             loyaltyId: loyalty.id,
             pointsPerRupee: data.tierConfig.pointsPerRupee ?? 1,
+            onFinalAmount: data.tierConfig.onFinalAmount ?? false,
           },
         });
         for (const tier of data.tierConfig.tiers) {
@@ -416,6 +417,7 @@ export const PUT = withAdminAuth(async (request, context) => {
         where: { id: existing.tierConfig.id },
         data: {
           pointsPerRupee: data.tierConfig.pointsPerRupee,
+          onFinalAmount: data.tierConfig.onFinalAmount,
         },
       });
     }

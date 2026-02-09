@@ -1,5 +1,11 @@
 "use client";
 
+import {
+  MinPurchaseToggleField,
+  SETTINGS_CONTROL_CLASS,
+  SETTINGS_LABEL_CLASS,
+  SETTINGS_ROW_CLASS,
+} from "@/components/settings/loyalty/common";
 import type { LoyaltyResponse } from "@/hooks/loyalty/useLoyaltySettings";
 import {
   Button,
@@ -20,26 +26,23 @@ import {
   Switch,
   useForm,
 } from "@reelo/ui/components";
-import { MinPurchaseToggleField } from "../shared";
-import {
-  SETTINGS_CONTROL_CLASS,
-  SETTINGS_LABEL_CLASS,
-  SETTINGS_ROW_CLASS,
-} from "./settings-layout";
 
 type CashbackConfig = NonNullable<LoyaltyResponse["cashbackConfig"]>;
 
-interface CashbackConfigSettingsCardProps {
+interface CashbackSettingsCardProps {
   config: CashbackConfig;
-  onSave: (payload: Partial<CashbackConfig>) => void;
+  onSave: (
+    payload: Partial<CashbackConfig>,
+    options?: { onSuccess?: () => void },
+  ) => void;
   isSaving: boolean;
 }
 
-export function CashbackConfigSettingsCard({
+export function CashbackSettingsCard({
   config,
   onSave,
   isSaving,
-}: CashbackConfigSettingsCardProps) {
+}: CashbackSettingsCardProps) {
   const form = useForm({
     defaultValues: {
       cashbackPercentage: config.cashbackPercentage ?? 0,
@@ -64,7 +67,7 @@ export function CashbackConfigSettingsCard({
   });
 
   const handleSave = form.handleSubmit((values) => {
-    onSave({
+    const payload: Partial<CashbackConfig> = {
       cashbackPercentage: values.cashbackPercentage,
       onFinalAmount: values.onFinalAmount,
       maxCashbackCap: values.maxCashbackCap,
@@ -78,6 +81,9 @@ export function CashbackConfigSettingsCard({
       redemptionBillLimitEnabled: values.redemptionBillLimitEnabled,
       redemptionBillLimitAmount: values.redemptionBillLimitAmount,
       redemptionBillLimitPercentage: values.redemptionBillLimitPercentage,
+    };
+    onSave(payload, {
+      onSuccess: () => form.reset(values, { keepDefaultValues: false }),
     });
   });
 

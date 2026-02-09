@@ -1,5 +1,6 @@
 "use client";
 
+import { MinPurchaseToggleField } from "@/components/settings/loyalty/common";
 import type { LoyaltyProgramFormValues } from "@/lib/schemas/loyalty-form";
 import {
   FormControl,
@@ -11,7 +12,6 @@ import {
   Switch,
   useFormContext,
 } from "@reelo/ui/components";
-import { MinPurchaseToggleField } from "../shared";
 
 export function CashbackConfigStep() {
   const form = useFormContext<LoyaltyProgramFormValues>();

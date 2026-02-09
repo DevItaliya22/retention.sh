@@ -3,18 +3,14 @@
 // ========================================================================
 // A bill represents a single purchase/transaction by a customer.
 //
-// Amount fields:
-//   subtotal    — sum of line items before store discounts and tax.
-//   amount      — bill total after store discounts and tax (pre-loyalty).
-//   finalAmount — amount after loyalty adjustments (cashback deducted or
-//                 points redeemed). This is what the customer actually pays.
+// Amount flow:
+//   subtotal - storeDiscount + sum(tax) = finalAmount (bill total before loyalty).
+//   If loyalty onFinalAmount: cashback/points calculated on finalAmount;
+//   else: calculated on subtotal.
+//   userPaidAmount = finalAmount - cashbackAmount (what customer actually pays).
 //
-// For CASHBACK loyalty: cashbackAmount stores the discount applied.
-//   e.g. amount ₹1000, cashback ₹100 → finalAmount ₹900.
-//
-// Points earned/redeemed are NOT stored here — they are derivable from
-// PointsTransaction rows linked via pointsTransactions relation.
-// Query: SUM(amount) WHERE billId = this.id AND type = EARNED / REDEEMED.
+// One CashbackTransaction row is created per bill when cashback is earned.
+// Points earned/redeemed (for AMOUNT_SPENT/VISIT_MADE) from PointsTransaction.
 // ========================================================================
 
 model Bill {
@@ -23,20 +19,28 @@ model Bill {
   billNumber String
 
   // ── Amounts ────────────────────────────────────────────────────────────
-  // subtotal: snapshot of line items total at billing time (before discounts/tax).
-  //   Derivable from BillLineItem but cached for performance and historical accuracy.
-  // amount: bill total after store discounts and tax (what customer owes pre-loyalty).
-  // finalAmount: after loyalty adjustments (the actual payable amount).
-  subtotal    Float?
-  amount      Float?
+  // subtotal: sum of line items at billing time (before store discount/tax).
+  subtotal Float?
+
+  // Store discount (₹) applied to the bill.
+  storeDiscount Float? @default(0)
+
+  // Tax breakdown (e.g. per rate). For now empty; sum contributes to finalAmount.
+  tax Int[] @default([])
+
+  // finalAmount = subtotal - storeDiscount + sum(tax). Bill total before loyalty.
   finalAmount Float?
 
-  // For CASHBACK loyalty type: the cashback amount applied to this bill.
-  // Not derivable (depends on caps, rounding, etc. at time of billing).
+  // Cashback (₹) applied from loyalty. userPaidAmount = finalAmount - cashbackAmount.
   cashbackAmount Float?
+
+  // What the customer actually pays after cashback (and points redemption).
+  userPaidAmount Float?
 
   // Optional notes on the bill.
   notes String?
+
+  paymentMethod String?
 
   // ── Relations ──────────────────────────────────────────────────────────
   businessId       String
@@ -49,9 +53,11 @@ model Bill {
 
   scratchCardResponses ScratchCardResponse[]
 
-  // Point transactions (earned/redeemed) linked to this bill.
-  // Use this to derive loyaltyPointsEarned and loyaltyPointsRedeemed.
+  // Point transactions (earned/redeemed) linked to this bill. AMOUNT_SPENT / VISIT_MADE only.
   pointsTransactions PointsTransaction[]
+
+  // Cashback transactions (one per bill when CASHBACK or TIER loyalty awards cashback).
+  cashbackTransactions CashbackTransaction[]
 
   lineItems BillLineItem[]
 

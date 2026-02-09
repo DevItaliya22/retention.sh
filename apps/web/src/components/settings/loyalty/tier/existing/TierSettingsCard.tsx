@@ -1,5 +1,10 @@
 "use client";
 
+import {
+  SETTINGS_CONTROL_CLASS,
+  SETTINGS_LABEL_CLASS,
+  SETTINGS_ROW_CLASS,
+} from "@/components/settings/loyalty/common";
 import type { LoyaltyTier } from "@/hooks/loyalty/useLoyaltySettings";
 import { validateTierRanges } from "@/lib/loyalty/helpers";
 import {
@@ -19,18 +24,14 @@ import {
   FormProvider,
   Input,
   Separator,
+  Switch,
   useForm,
 } from "@reelo/ui/components";
 import { Plus } from "lucide-react";
 import { useFieldArray } from "react-hook-form";
 import { toast } from "sonner";
-import type { TierSettingsFormValues } from "../shared/TierFieldsSection";
-import { TierFieldsSection } from "../shared/TierFieldsSection";
-import {
-  SETTINGS_CONTROL_CLASS,
-  SETTINGS_LABEL_CLASS,
-  SETTINGS_ROW_CLASS,
-} from "./settings-layout";
+import type { TierSettingsFormValues } from "./TierFieldsSection";
+import { TierFieldsSection } from "./TierFieldsSection";
 
 const DEFAULT_TIER = {
   name: "",
@@ -63,13 +64,18 @@ function mapTierToForm(
 
 type TierConfig = {
   pointsPerRupee: number;
+  onFinalAmount: boolean;
   tiers: LoyaltyTier[];
 };
 
 interface TierSettingsCardProps {
   tierConfig: TierConfig;
   onSave: (
-    data: { pointsPerRupee: number; tiers: Omit<LoyaltyTier, "id">[] },
+    data: {
+      pointsPerRupee: number;
+      onFinalAmount: boolean;
+      tiers: Omit<LoyaltyTier, "id">[];
+    },
     options?: { onSuccess?: () => void },
   ) => void;
   isSaving: boolean;
@@ -84,6 +90,7 @@ export function TierSettingsCard({
   const form = useForm<TierSettingsFormValues>({
     defaultValues: {
       pointsPerRupee: tierConfig.pointsPerRupee ?? 1,
+      onFinalAmount: tierConfig.onFinalAmount ?? false,
       tiers: tierConfig.tiers.map(mapTierToForm),
     },
   });
@@ -114,6 +121,7 @@ export function TierSettingsCard({
     }
     const payload = {
       pointsPerRupee: values.pointsPerRupee,
+      onFinalAmount: values.onFinalAmount,
       tiers: values.tiers.map((t) => ({
         name: t.name,
         rank: t.rank,
@@ -181,6 +189,33 @@ export function TierSettingsCard({
                             if (!Number.isNaN(n))
                               field.onChange(Math.max(0, n));
                           }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </div>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="onFinalAmount"
+                render={({ field }) => (
+                  <FormItem className={SETTINGS_ROW_CLASS}>
+                    <div className={SETTINGS_LABEL_CLASS}>
+                      <FormLabel
+                        htmlFor="tier-onFinalAmount"
+                        className="cursor-pointer text-sm"
+                      >
+                        Calculate cashback on final amount (after store
+                        discounts and tax)
+                      </FormLabel>
+                    </div>
+                    <div className={SETTINGS_CONTROL_CLASS}>
+                      <FormControl>
+                        <Switch
+                          id="tier-onFinalAmount"
+                          checked={field.value ?? false}
+                          onCheckedChange={field.onChange}
                         />
                       </FormControl>
                       <FormMessage />

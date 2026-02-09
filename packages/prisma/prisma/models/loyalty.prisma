@@ -51,7 +51,8 @@ model Loyalty {
   visitMadeConfig   LoyaltyVisitMadeConfig?
 
   // ── Other Relations ────────────────────────────────────────────────────
-  qrs Qr[]
+  qrs                  Qr[]
+  cashbackTransactions CashbackTransaction[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -130,9 +131,8 @@ model LoyaltyCashbackConfig {
 // Tiers are defined by spending ranges:
 //   e.g. ₹0–5k = Silver (3%), ₹5k–20k = Gold (5%), ₹20k+ = Platinum (8%).
 //
-// Each tier has its own minPurchaseForEarning, minPurchaseForRedemption,
-// and maxCashbackCap. The global config holds pointsPerRupee and a global
-// maxCashbackCap as fallback.
+// Each tier has its own minPurchaseForRedemption and maxCashbackCap.
+// No global max cap; no min purchase for earning (every bill earns per tier %).
 //
 // BusinessCustomer.lifetimeSpend tracks the cumulative spend for tier placement.
 // BusinessCustomer.currentTierId points to the customer's active tier.
@@ -144,13 +144,9 @@ model LoyaltyTierConfig {
   loyaltyId String  @unique
   loyalty   Loyalty @relation(fields: [loyaltyId], references: [id], onDelete: Cascade)
 
-  // Default points conversion: 1 rupee spent = X points.
+  // Default points conversion: 1 rupee spent = X points (used when tier not resolved, e.g. preview).
   pointsPerRupee Float @default(1)
-
-  // Global max cashback cap per transaction. Toggle + value.
-  // Guards against huge bills (e.g. party orders) exhausting too many points.
-  maxCashbackCapEnabled Boolean @default(false)
-  maxCashbackCap        Float?
+  onFinalAmount Boolean @default(false)
 
   tiers LoyaltyTier[]
 
@@ -179,11 +175,8 @@ model LoyaltyTier {
   maxLifetimeSpend Float?
 
   // Cashback percentage customers earn in this tier (e.g. 5.0 = 5%).
+  // Every bill earns (no min purchase for earning); tier is from lifetime spend.
   cashbackPercentage Float @default(0)
-
-  // Minimum purchase for earning cashback in this tier. Toggle + value.
-  minPurchaseForEarningEnabled Boolean @default(false)
-  minPurchaseForEarning        Float?
 
   // Minimum purchase for redemption in this tier. Toggle + value.
   minPurchaseForRedemptionEnabled Boolean @default(false)
@@ -353,10 +346,48 @@ model LoyaltyRewardStage {
 }
 
 // ========================================================================
+// CASHBACK TRANSACTIONS (CASHBACK + TIER only)
+// ========================================================================
+// One row per cashback event (per bill). Used by CASHBACK and TIER loyalty
+// types only. AMOUNT_SPENT and VISIT_MADE use PointsTransaction instead.
+// Links to Bill, Loyalty, and BusinessCustomer for audit and history.
+// ========================================================================
+
+model CashbackTransaction {
+  id String @id @default(uuid())
+
+  businessId       String
+  customerId       String
+  businessCustomer BusinessCustomer @relation(fields: [businessId, customerId], references: [businessId, customerId], onDelete: Cascade)
+
+  billId    String
+  bill      Bill     @relation(fields: [billId], references: [id], onDelete: Cascade)
+  loyaltyId String?
+  loyalty   Loyalty? @relation(fields: [loyaltyId], references: [id], onDelete: SetNull)
+
+  // Cashback amount in ₹ for this transaction.
+  amount Float
+
+  source CashbackSource @default(BILL) // BILL = earned from purchase
+
+  description String?
+  metadata    Json? // e.g. tier name/percentage at time of earn (TIER)
+
+  createdAt DateTime @default(now())
+
+  @@index([businessId, customerId])
+  @@index([businessId, customerId, createdAt])
+  @@index([billId])
+  @@index([loyaltyId])
+  @@map("cashback_transaction")
+}
+
+// ========================================================================
 // POINTS TRACKING (Unified Ledger)
 // ========================================================================
-// Single-table ledger for all point movements. Used by TIER, AMOUNT_SPENT,
-// and VISIT_MADE loyalty types. NOT used by CASHBACK (which uses wallet only).
+// Single-table ledger for all point movements. Used by AMOUNT_SPENT and
+// VISIT_MADE loyalty types only. NOT used by CASHBACK or TIER (they use
+// CashbackTransaction and totalCashbackEarned).
 //
 // Every earn, redeem, expire, gift, or adjustment is one row.
 // Running balance is denormalized in balanceAfter for fast reads.

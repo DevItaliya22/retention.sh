@@ -82,12 +82,12 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
     }
 
     if (amountMin !== undefined || amountMax !== undefined) {
-      where.amount = {};
+      where.finalAmount = {};
       if (amountMin !== undefined) {
-        where.amount.gte = amountMin;
+        where.finalAmount.gte = amountMin;
       }
       if (amountMax !== undefined) {
-        where.amount.lte = amountMax;
+        where.finalAmount.lte = amountMax;
       }
     }
 
@@ -96,10 +96,12 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
       const [field, direction] = sort.split(":");
       if (
         field === "billNumber" ||
+        field === "finalAmount" ||
         field === "amount" ||
         field === "createdAt"
       ) {
-        orderBy[field] = direction === "desc" ? "desc" : "asc";
+        const orderField = field === "amount" ? "finalAmount" : field;
+        orderBy[orderField] = direction === "desc" ? "desc" : "asc";
       } else {
         orderBy.createdAt = "desc";
       }
@@ -163,9 +165,13 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
       return {
         id: bill.id,
         billNumber: bill.billNumber,
-        amount: bill.amount,
+        subtotal: bill.subtotal,
+        storeDiscount: bill.storeDiscount,
+        tax: bill.tax,
         finalAmount: bill.finalAmount,
         cashbackAmount: bill.cashbackAmount,
+        userPaidAmount: bill.userPaidAmount,
+        amount: bill.finalAmount,
         loyaltyPointsEarned: earned,
         loyaltyPointsRedeemed: redeemed,
         customerName: bill.businessCustomer.customer.user.name,

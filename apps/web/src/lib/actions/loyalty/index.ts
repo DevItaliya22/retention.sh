@@ -98,6 +98,7 @@ export async function getBusinessLoyaltyContext(
         type: "TIER",
         config: {
           pointsPerRupee: loyalty.tierConfig.pointsPerRupee ?? 1,
+          onFinalAmount: loyalty.tierConfig.onFinalAmount ?? false,
           tiers: loyalty.tierConfig.tiers.map((t) => ({
             id: t.id,
             name: t.name,
@@ -385,9 +386,11 @@ export async function applyLoyaltyForBill(
     finalAmount = Math.max(0, billAmount - redeemedPoints);
   }
 
-  // Earning: amountForEarning = subtotal vs amount based on onFinalAmount
+  // Earning: amountForEarning = subtotal vs final amount based on onFinalAmount
+  // When onFinalAmount true: use final amount (amount - store discount). When false: use subtotal (amount only).
   const amountForEarning =
     (context.type === "CASHBACK" && context.config.onFinalAmount) ||
+    (context.type === "TIER" && context.config.onFinalAmount) ||
     (context.type === "AMOUNT_SPENT" && context.config.onFinalAmount)
       ? finalAmount
       : billSubtotal != null && billSubtotal > 0

@@ -111,8 +111,9 @@ export const POST = withCashierAuth(async (request: NextRequest, context) => {
       billNumber,
       phoneNumber,
       name,
-      amount,
       subtotal: subtotalFromRequest,
+      storeDiscount = 0,
+      tax = [],
       redeemPoints,
       notes,
       paymentMethod,
@@ -166,14 +167,12 @@ export const POST = withCashierAuth(async (request: NextRequest, context) => {
       }
     }
 
-    const billAmount = amount ?? 0;
+    const discount = storeDiscount ?? 0;
+    const taxSum = (tax ?? []).reduce((a: number, b: number) => a + b, 0);
 
     const result = await db.$transaction(async (tx) => {
       let computedSubtotal: number | null = null;
-      if (
-        lineItems.length > 0 &&
-        (subtotalFromRequest == null || subtotalFromRequest === 0)
-      ) {
+      if (lineItems.length > 0) {
         const skuIds = [
           ...new Set(lineItems.map((li: { skuId: string }) => li.skuId)),
         ];
@@ -191,12 +190,24 @@ export const POST = withCashierAuth(async (request: NextRequest, context) => {
         );
       }
       const billSubtotal = subtotalFromRequest ?? computedSubtotal ?? null;
+      const finalAmountBeforeLoyalty =
+        billSubtotal != null
+          ? Math.max(0, billSubtotal - discount + taxSum)
+          : null;
+
+      if (billSubtotal == null || finalAmountBeforeLoyalty == null) {
+        throw new Error(
+          "Subtotal is required (provide subtotal or line items to compute it).",
+        );
+      }
 
       const bill = await tx.bill.create({
         data: {
           billNumber,
-          amount: amount ?? null,
           subtotal: billSubtotal,
+          storeDiscount: discount,
+          tax: tax ?? [],
+          finalAmount: finalAmountBeforeLoyalty,
           notes: notes ?? null,
           paymentMethod: paymentMethod ?? null,
           businessId,
@@ -225,7 +236,7 @@ export const POST = withCashierAuth(async (request: NextRequest, context) => {
         businessId,
         customerId: customer.id,
         billId: bill.id,
-        billAmount,
+        billAmount: finalAmountBeforeLoyalty,
         billSubtotal,
         redeemPointsRequested: redeemPoints ?? null,
       });
@@ -233,9 +244,9 @@ export const POST = withCashierAuth(async (request: NextRequest, context) => {
       const updatedBill = await tx.bill.update({
         where: { id: bill.id },
         data: {
-          finalAmount: amount == null ? null : loyalty.finalAmount,
           cashbackAmount:
             loyalty.cashbackAmount != null ? loyalty.cashbackAmount : undefined,
+          userPaidAmount: loyalty.finalAmount,
         },
       });
 
@@ -295,6 +306,15 @@ export const POST = withCashierAuth(async (request: NextRequest, context) => {
   } catch (error: any) {
     console.error("Failed to create bill:", error);
 
+    if (
+      error?.message ===
+      "Subtotal is required (provide subtotal or line items to compute it)."
+    ) {
+      return NextResponse.json(
+        { error: error.message, bill: null },
+        { status: 400 },
+      );
+    }
     if (error?.message === "Insufficient points for redemption") {
       return NextResponse.json(
         { error: "Insufficient points for redemption", bill: null },

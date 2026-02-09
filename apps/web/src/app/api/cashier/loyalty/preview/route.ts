@@ -99,6 +99,8 @@ export const GET = withCashierAuth(async (request: NextRequest, context) => {
       const amountForEarning =
         (loyaltyContext.type === "CASHBACK" &&
           loyaltyContext.config.onFinalAmount) ||
+        (loyaltyContext.type === "TIER" &&
+          loyaltyContext.config.onFinalAmount) ||
         (loyaltyContext.type === "AMOUNT_SPENT" &&
           loyaltyContext.config.onFinalAmount)
           ? billAmount

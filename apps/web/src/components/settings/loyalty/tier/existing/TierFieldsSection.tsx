@@ -1,6 +1,13 @@
 "use client";
 
 import {
+  MaxCapToggleField,
+  MinPurchaseToggleField,
+  SETTINGS_CONTROL_CLASS,
+  SETTINGS_LABEL_CLASS,
+  SETTINGS_ROW_CLASS,
+} from "@/components/settings/loyalty/common";
+import {
   Button,
   FormControl,
   FormField,
@@ -11,17 +18,11 @@ import {
   useFormContext,
 } from "@reelo/ui/components";
 import { Trash2 } from "lucide-react";
-import {
-  SETTINGS_CONTROL_CLASS,
-  SETTINGS_LABEL_CLASS,
-  SETTINGS_ROW_CLASS,
-} from "../settings/settings-layout";
-import { MaxCapToggleField } from "./MaxCapToggleField";
-import { MinPurchaseToggleField } from "./MinPurchaseToggleField";
 
-/** Form values shape for the single tier settings form (pointsPerRupee + tiers). */
+/** Form values shape for the single tier settings form (pointsPerRupee + onFinalAmount + tiers). */
 export interface TierSettingsFormValues {
   pointsPerRupee: number;
+  onFinalAmount: boolean;
   tiers: Array<{
     id?: string;
     name: string;

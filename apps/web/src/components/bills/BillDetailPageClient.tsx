@@ -95,19 +95,26 @@ export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
     );
   }
 
+  const billTotal =
+    bill?.finalAmount != null ? bill.finalAmount : (bill?.amount ?? null);
+  const amountToPay = bill?.userPaidAmount ?? billTotal;
   const amountFormatted =
-    bill?.amount != null
-      ? `₹${bill.amount.toLocaleString("en-IN", {
+    amountToPay != null
+      ? `₹${amountToPay.toLocaleString("en-IN", {
           minimumFractionDigits: 2,
           maximumFractionDigits: 2,
         })}`
       : "—";
+  const formatRs = (n: number | null | undefined) =>
+    n != null
+      ? `₹${n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+      : "—";
 
   const hasLoyalty =
     (bill?.loyaltyPointsEarned ?? 0) > 0 ||
-    (bill?.loyaltyPointsRedeemed ?? 0) > 0;
-  const paidAmount =
-    bill?.finalAmount != null ? bill.finalAmount : (bill?.amount ?? null);
+    (bill?.loyaltyPointsRedeemed ?? 0) > 0 ||
+    (bill?.cashbackAmount ?? 0) > 0;
+  const paidAmount = bill?.userPaidAmount ?? billTotal;
   const paidFormatted =
     paidAmount != null
       ? `₹${paidAmount.toLocaleString("en-IN", {
@@ -117,6 +124,11 @@ export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
       : "—";
   const loyaltyLogs = bill?.loyaltyLogs ?? [];
   const showLoyaltyLogsTable = loyaltyLogs.length > 0;
+  const hasBreakdown =
+    bill &&
+    (bill.subtotal != null ||
+      (bill.storeDiscount ?? 0) > 0 ||
+      bill.finalAmount != null);
 
   function formatLoyaltyType(type: string) {
     const t = type as BillLoyaltyLog["type"];
@@ -127,7 +139,7 @@ export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
 
   return (
     <div className="space-y-8">
-      {/* Bill header */}
+      {/* Bill header: number + amount to pay */}
       <Card className="bg-muted/30 overflow-hidden border-0 shadow-none">
         <CardContent className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
           <div className="space-y-1">
@@ -142,7 +154,10 @@ export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
               </p>
             )}
           </div>
-          <div className="flex items-baseline gap-2 sm:text-right">
+          <div className="flex flex-col items-end gap-0.5 sm:text-right">
+            <p className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
+              Amount to pay
+            </p>
             {isLoading && !bill ? (
               <Skeleton className="h-8 w-24" />
             ) : (
@@ -154,7 +169,76 @@ export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
         </CardContent>
       </Card>
 
-      {/* Loyalty summary — only when there is any loyalty on this bill */}
+      {/* Amount breakdown: Subtotal → Store discount → Bill total → Cashback → Amount to pay */}
+      {hasBreakdown && !isLoading && bill && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Receipt className="text-muted-foreground size-4" />
+              Amount breakdown
+            </CardTitle>
+            <CardDescription>
+              Subtotal, store discount, bill total, cashback and amount to pay
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-0">
+            {bill.subtotal != null && (
+              <DetailRow
+                label="Subtotal"
+                value={formatRs(bill.subtotal)}
+                icon={Receipt}
+              />
+            )}
+            {(bill.storeDiscount ?? 0) > 0 && (
+              <DetailRow
+                label="Store discount"
+                value={`-${formatRs(bill.storeDiscount ?? 0)}`}
+                icon={Receipt}
+              />
+            )}
+            {bill.finalAmount != null && (
+              <DetailRow
+                label="Bill total"
+                value={formatRs(bill.finalAmount)}
+                icon={Receipt}
+              />
+            )}
+            {(bill.cashbackAmount ?? 0) > 0 && (
+              <DetailRow
+                label="Cashback"
+                value={
+                  <span className="text-emerald-600 dark:text-emerald-400">
+                    -{formatRs(bill.cashbackAmount)}
+                  </span>
+                }
+                icon={Gift}
+              />
+            )}
+            {(bill.loyaltyPointsRedeemed ?? 0) > 0 && (
+              <DetailRow
+                label="Points redeemed"
+                value={
+                  <span className="text-blue-600 dark:text-blue-400">
+                    -₹{bill.loyaltyPointsRedeemed}
+                  </span>
+                }
+                icon={Gift}
+              />
+            )}
+            <DetailRow
+              label="Amount to pay"
+              value={
+                <span className="font-semibold">
+                  {formatRs(bill.userPaidAmount ?? bill.finalAmount)}
+                </span>
+              }
+              icon={Receipt}
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Loyalty summary — points earned/redeemed details */}
       {hasLoyalty && !isLoading && bill && (
         <Card>
           <CardHeader className="pb-2">
@@ -163,24 +247,10 @@ export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
               Loyalty on this bill
             </CardTitle>
             <CardDescription>
-              Bill amount, amount paid, points used and earned
+              Points earned and redeemed on this bill
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-0">
-            <DetailRow
-              label="Bill amount"
-              value={amountFormatted}
-              icon={Receipt}
-            />
-            <DetailRow
-              label="Amount paid"
-              value={
-                bill.finalAmount != null && bill.finalAmount !== bill.amount
-                  ? paidFormatted
-                  : amountFormatted
-              }
-              icon={Receipt}
-            />
             {(bill.loyaltyPointsRedeemed ?? 0) > 0 && (
               <DetailRow
                 label="Points used"
@@ -207,7 +277,7 @@ export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
               <Receipt className="text-muted-foreground size-4" />
               Bill details
             </CardTitle>
-            <CardDescription>Number, amount and date</CardDescription>
+            <CardDescription>Number, amount to pay and date</CardDescription>
           </CardHeader>
           <CardContent className="space-y-0">
             <DetailRow
@@ -218,7 +288,7 @@ export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
               skeletonWidth="w-32"
             />
             <DetailRow
-              label="Amount"
+              label="Amount to pay"
               value={amountFormatted}
               icon={Receipt}
               isLoading={isLoading && !bill}
