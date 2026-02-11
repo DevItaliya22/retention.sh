@@ -5,11 +5,13 @@
 //
 // Amount flow:
 //   subtotal - storeDiscount + sum(tax) = finalAmount (bill total before loyalty).
-//   If loyalty onFinalAmount: cashback/points calculated on finalAmount;
-//   else: calculated on subtotal.
-//   userPaidAmount = finalAmount - cashbackAmount (what customer actually pays).
+//   cashbackRedeemedAmount = discount from wallet (prev cashback) applied this bill.
+//   cashbackAmount = cashback EARNED this bill (added to wallet; not subtracted from bill).
+//   userPaidAmount = finalAmount - cashbackRedeemedAmount (what customer actually pays).
+//   If loyalty onFinalAmount: earning calculated on (finalAmount - cashbackRedeemedAmount);
+//   else: earning calculated on subtotal.
 //
-// One CashbackTransaction row is created per bill when cashback is earned.
+// CashbackTransaction: BILL = earned, REDEEMED = redeemed from wallet.
 // Points earned/redeemed (for AMOUNT_SPENT/VISIT_MADE) from PointsTransaction.
 // ========================================================================
 
@@ -31,8 +33,11 @@ model Bill {
   // finalAmount = subtotal - storeDiscount + sum(tax). Bill total before loyalty.
   finalAmount Float?
 
-  // Cashback (₹) applied from loyalty. userPaidAmount = finalAmount - cashbackAmount.
+  // Cashback (₹) EARNED this bill (added to wallet; for display only).
   cashbackAmount Float?
+
+  // Cashback (₹) REDEEMED from wallet as discount this bill. userPaidAmount = finalAmount - cashbackRedeemedAmount.
+  cashbackRedeemedAmount Float?
 
   // What the customer actually pays after cashback (and points redemption).
   userPaidAmount Float?

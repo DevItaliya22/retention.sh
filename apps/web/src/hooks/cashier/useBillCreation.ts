@@ -32,6 +32,7 @@ export interface LoyaltyResult {
   earnedPoints: number;
   redeemedPoints: number;
   cashbackAmount: number | null;
+  cashbackRedeemedAmount: number | null;
   pointsBalance: number;
   finalAmount: number;
   tierUpgrade?: {
@@ -69,6 +70,7 @@ export interface CreateBillResponse {
     tax: number[];
     finalAmount: number | null;
     cashbackAmount: number | null;
+    cashbackRedeemedAmount: number | null;
     userPaidAmount: number | null;
     amount?: number | null;
     businessId: string;

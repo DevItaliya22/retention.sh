@@ -94,6 +94,7 @@ export const GET = withAdminAuth<{ id: string }>(
         tax: bill.tax,
         finalAmount: bill.finalAmount,
         cashbackAmount: bill.cashbackAmount,
+        cashbackRedeemedAmount: bill.cashbackRedeemedAmount,
         userPaidAmount: bill.userPaidAmount,
         amount: bill.finalAmount,
         loyaltyPointsEarned: earned,

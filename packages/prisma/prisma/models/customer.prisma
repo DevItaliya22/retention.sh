@@ -108,6 +108,9 @@ model BusinessCustomer {
   // Updated only for CASHBACK and TIER loyalty types. Source of truth: CashbackTransaction.
   totalCashbackEarned Float @default(0)
 
+  // Cumulative cashback (₹) redeemed from wallet. Balance = totalCashbackEarned - totalCashbackRedeemed.
+  totalCashbackRedeemed Float @default(0)
+
   // ── Transaction & Activity Relations ───────────────────────────────────
   pointTransactions    PointsTransaction[]
   cashbackTransactions CashbackTransaction[]

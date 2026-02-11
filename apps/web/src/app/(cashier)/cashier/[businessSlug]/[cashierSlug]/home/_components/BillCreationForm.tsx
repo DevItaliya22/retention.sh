@@ -91,7 +91,7 @@ function BillSuccessCard({
 
         <Separator />
 
-        {/* Bill structure: Subtotal → Store discount → Bill total → Cashback → Amount to pay */}
+        {/* Bill structure: Subtotal → Store discount → Bill total → Cashback/Points redeemed → Amount to pay */}
         <div className="space-y-2 text-sm">
           <p className="text-muted-foreground mb-2 text-xs font-medium tracking-wider uppercase">
             Bill breakdown
@@ -119,20 +119,22 @@ function BillSuccessCard({
             </div>
           )}
           {isCashbackType &&
-            (loyalty?.cashbackAmount ?? bill.cashbackAmount ?? 0) > 0 && (
-              <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
-                <span>Cashback</span>
+            (loyalty?.cashbackRedeemedAmount ??
+              bill.cashbackRedeemedAmount ??
+              0) > 0 && (
+              <div className="flex justify-between text-blue-600 dark:text-blue-400">
+                <span>Cashback redeemed</span>
                 <span className="font-medium">
                   -₹
                   {(
-                    loyalty?.cashbackAmount ??
-                    bill.cashbackAmount ??
+                    loyalty?.cashbackRedeemedAmount ??
+                    bill.cashbackRedeemedAmount ??
                     0
                   ).toFixed(2)}
                 </span>
               </div>
             )}
-          {(loyalty?.redeemedPoints ?? 0) > 0 && (
+          {!isCashbackType && (loyalty?.redeemedPoints ?? 0) > 0 && (
             <div className="flex justify-between text-blue-600 dark:text-blue-400">
               <span>Points redeemed</span>
               <span className="font-medium">-₹{loyalty!.redeemedPoints}</span>
@@ -170,7 +172,7 @@ function BillSuccessCard({
                 </div>
               )}
 
-              {/* Cashback / Tier earned */}
+              {/* Cashback / Tier earned (added to wallet) */}
               {isCashbackType && (loyalty?.earnedPoints ?? 0) > 0 && (
                 <div className="flex items-center gap-3 rounded-lg bg-emerald-50 p-3 dark:bg-emerald-900/20">
                   <Sparkles className="size-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
@@ -179,7 +181,7 @@ function BillSuccessCard({
                       ₹{loyalty!.earnedPoints} cashback earned!
                     </p>
                     <p className="text-muted-foreground">
-                      Balance: ₹{loyalty!.pointsBalance}
+                      New wallet balance: ₹{loyalty!.pointsBalance}
                     </p>
                   </div>
                 </div>
@@ -308,9 +310,12 @@ export function BillCreationForm() {
   const phoneInputRef = useRef<HTMLDivElement>(null);
 
   // ─── Computed Values ────────────────────────────────────────────────────
-  // Subtotal = amount field or computed from line items. Store discount and tax (empty for now).
-  const grossAmount = amount ? parseFloat(amount) : 0;
-  const discountAmount = storeDiscount ? parseFloat(storeDiscount) : 0;
+  // Subtotal = amount field or computed from line items. Store discount and tax (empty for now). Never negative.
+  const grossAmount = Math.max(0, amount ? parseFloat(amount) : 0);
+  const discountAmount = Math.max(
+    0,
+    storeDiscount ? parseFloat(storeDiscount) : 0,
+  );
 
   const computedSubtotal = useMemo(() => {
     if (lineItems.length === 0) return null;
@@ -342,13 +347,21 @@ export function BillCreationForm() {
   const loyaltyType = loyaltyPreview?.loyaltyType ?? "NONE";
   const redeemablePoints = loyaltyPreview?.redeemablePoints ?? 0;
   const pointsBalance = loyaltyPreview?.pointsBalance ?? 0;
+  const cashbackBalance = loyaltyPreview?.cashbackBalance ?? 0;
 
   const isCashbackType = loyaltyType === "CASHBACK" || loyaltyType === "TIER";
   const isPointsType =
     loyaltyType === "AMOUNT_SPENT" || loyaltyType === "VISIT_MADE";
 
-  // Estimated amount user pays after loyalty (redeemed points reduce the bill).
-  const redeemValue = redeemPoints ? parseInt(redeemPoints, 10) || 0 : 0;
+  // Estimated amount user pays after loyalty (redeemed points/cashback reduce the bill).
+  const redeemValue = Math.max(
+    0,
+    redeemPoints
+      ? isCashbackType
+        ? parseFloat(redeemPoints) || 0
+        : parseInt(redeemPoints, 10) || 0
+      : 0,
+  );
   const estimatedUserPays = Math.max(0, finalAmountBeforeLoyalty - redeemValue);
 
   // ─── Handlers ───────────────────────────────────────────────────────────
@@ -515,14 +528,22 @@ export function BillCreationForm() {
       return;
     }
     try {
+      const parsedRedeemPoints = redeemPoints
+        ? isPointsType
+          ? Math.max(0, parseInt(redeemPoints, 10) || 0)
+          : Math.max(0, parseFloat(redeemPoints) || 0)
+        : 0;
       const validationResult = billFormSchema.safeParse({
         billNumber,
         phoneNumber,
         name: name || null,
         subtotal: subtotalForApi ?? undefined,
-        storeDiscount: discountAmount,
+        storeDiscount: Math.max(0, discountAmount),
         tax: [],
-        redeemPoints: redeemPoints ? parseInt(redeemPoints, 10) : undefined,
+        redeemPoints:
+          isPointsType && redeemPoints ? parsedRedeemPoints : undefined,
+        redeemCashback:
+          isCashbackType && redeemPoints ? parsedRedeemPoints : undefined,
         notes: notes.trim() || undefined,
         paymentMethod: paymentMethod.trim() || undefined,
         lineItems: parsedLineItems.length > 0 ? parsedLineItems : undefined,
@@ -536,9 +557,18 @@ export function BillCreationForm() {
         return;
       }
 
-      const redeemVal = redeemPoints ? parseInt(redeemPoints, 10) : 0;
+      const redeemVal = redeemPoints
+        ? Math.max(
+            0,
+            isCashbackType
+              ? parseFloat(redeemPoints) || 0
+              : parseInt(redeemPoints, 10) || 0,
+          )
+        : 0;
       if (redeemVal > 0 && redeemVal > redeemablePoints) {
-        const errorMessage = `Cannot redeem more than ${redeemablePoints} points.`;
+        const errorMessage = isCashbackType
+          ? `Cannot redeem more than ₹${redeemablePoints.toFixed(2)} cashback.`
+          : `Cannot redeem more than ${redeemablePoints} points.`;
         setError(errorMessage);
         toast.error(errorMessage);
         return;
@@ -597,13 +627,13 @@ export function BillCreationForm() {
               <Label htmlFor="billNumber">Bill Number *</Label>
               <Input
                 id="billNumber"
+                variant="underline"
                 placeholder="BILL-001"
                 value={billNumber}
                 onChange={(e) => setBillNumber(e.target.value)}
                 required
                 disabled={isCreating}
                 autoComplete="off"
-                className="placeholder:text-muted-foreground/60 text-gray-900 dark:text-white"
               />
             </div>
 
@@ -613,6 +643,7 @@ export function BillCreationForm() {
               <div className="relative" ref={phoneInputRef}>
                 <PhoneInput
                   id="phoneNumber"
+                  variant="underline"
                   placeholder="9876543210"
                   value={phoneNumber}
                   onChange={(value: string) => {
@@ -623,7 +654,6 @@ export function BillCreationForm() {
                   disabled={isCreating || !!selectedCustomer}
                   autoComplete="nope"
                   defaultCountry="IN"
-                  className="[&_input]:placeholder:text-muted-foreground/60 [&_input]:text-gray-900 [&_input]:dark:text-white"
                 />
                 {selectedCustomer && (
                   <button
@@ -677,12 +707,12 @@ export function BillCreationForm() {
               <Label htmlFor="name">Customer Name</Label>
               <Input
                 id="name"
+                variant="underline"
                 placeholder="John Doe"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 disabled={isCreating}
                 autoComplete="nope"
-                className="placeholder:text-muted-foreground/60 text-gray-900 dark:text-white"
               />
             </div>
 
@@ -691,6 +721,7 @@ export function BillCreationForm() {
               <Label htmlFor="amount">Subtotal</Label>
               <Input
                 id="amount"
+                variant="underline"
                 type="number"
                 step="0.01"
                 min="0"
@@ -698,7 +729,7 @@ export function BillCreationForm() {
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 disabled={isCreating}
-                className="placeholder:text-muted-foreground/60 w-full text-gray-900 dark:text-white"
+                className="w-full"
               />
             </div>
 
@@ -707,6 +738,7 @@ export function BillCreationForm() {
               <Label htmlFor="storeDiscount">Store Discount</Label>
               <Input
                 id="storeDiscount"
+                variant="underline"
                 type="number"
                 step="0.01"
                 min="0"
@@ -714,7 +746,7 @@ export function BillCreationForm() {
                 value={storeDiscount}
                 onChange={(e) => setStoreDiscount(e.target.value)}
                 disabled={isCreating}
-                className="placeholder:text-muted-foreground/60 w-full text-gray-900 dark:text-white"
+                className="w-full"
               />
             </div>
 
@@ -723,6 +755,7 @@ export function BillCreationForm() {
               <Label htmlFor="billTotal">Bill total</Label>
               <Input
                 id="billTotal"
+                variant="underline"
                 type="text"
                 readOnly
                 disabled
@@ -731,7 +764,7 @@ export function BillCreationForm() {
                     ? `₹${finalAmountBeforeLoyalty.toFixed(2)}`
                     : "—"
                 }
-                className="bg-muted/60 w-full cursor-default text-gray-900 dark:text-white"
+                className="w-full cursor-default"
               />
             </div>
 
@@ -784,32 +817,39 @@ export function BillCreationForm() {
                   <Label htmlFor="notes">Notes</Label>
                   <Textarea
                     id="notes"
+                    variant="underline"
                     placeholder="Any notes for this bill"
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     disabled={isCreating}
                     rows={2}
-                    className="placeholder:text-muted-foreground/60 resize-none text-gray-900 dark:text-white"
+                    className="resize-none"
                     autoComplete="off"
                   />
                 </div>
 
-                {/* Redeem points (loyalty) — only when applicable */}
+                {/* Redeem points/cashback (loyalty) — only when applicable */}
                 {loyaltyType !== "NONE" &&
                   phoneNumber.length >= 4 &&
                   redeemablePoints > 0 && (
                     <div className="space-y-1.5">
-                      <Label htmlFor="redeemPoints">Redeem (₹ or pts)</Label>
+                      <Label htmlFor="redeemPoints">
+                        {isCashbackType
+                          ? `Redeem cashback (₹) — Balance: ₹${cashbackBalance.toFixed(2)}`
+                          : "Redeem points (₹)"}
+                      </Label>
                       <Input
                         id="redeemPoints"
+                        variant="underline"
                         type="number"
                         min={0}
                         max={redeemablePoints}
+                        step={isCashbackType ? 0.01 : 1}
                         placeholder="0"
                         value={redeemPoints}
                         onChange={(e) => setRedeemPoints(e.target.value)}
                         disabled={isCreating}
-                        className="placeholder:text-muted-foreground/60 max-w-32 text-gray-900 dark:text-white"
+                        className="max-w-32"
                       />
                     </div>
                   )}
@@ -881,6 +921,7 @@ export function BillCreationForm() {
                           <div className="w-24 space-y-2">
                             <Label className="text-xs">Qty</Label>
                             <Input
+                              variant="underline"
                               type="number"
                               min={1}
                               value={row.qty}
@@ -889,12 +930,12 @@ export function BillCreationForm() {
                               }
                               disabled={isCreating}
                               placeholder="1"
-                              className="placeholder:text-muted-foreground/60 text-gray-900 dark:text-white"
                             />
                           </div>
                           <div className="w-28 space-y-2">
                             <Label className="text-xs">Unit price</Label>
                             <Input
+                              variant="underline"
                               type="number"
                               step="0.01"
                               min={0}
@@ -908,7 +949,6 @@ export function BillCreationForm() {
                               }
                               disabled={isCreating}
                               placeholder="—"
-                              className="placeholder:text-muted-foreground/60 text-gray-900 dark:text-white"
                             />
                           </div>
                           <Button

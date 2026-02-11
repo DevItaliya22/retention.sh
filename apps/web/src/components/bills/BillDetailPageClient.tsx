@@ -113,7 +113,8 @@ export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
   const hasLoyalty =
     (bill?.loyaltyPointsEarned ?? 0) > 0 ||
     (bill?.loyaltyPointsRedeemed ?? 0) > 0 ||
-    (bill?.cashbackAmount ?? 0) > 0;
+    (bill?.cashbackAmount ?? 0) > 0 ||
+    (bill?.cashbackRedeemedAmount ?? 0) > 0;
   const paidAmount = bill?.userPaidAmount ?? billTotal;
   const paidFormatted =
     paidAmount != null
@@ -203,12 +204,12 @@ export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
                 icon={Receipt}
               />
             )}
-            {(bill.cashbackAmount ?? 0) > 0 && (
+            {(bill.cashbackRedeemedAmount ?? 0) > 0 && (
               <DetailRow
-                label="Cashback"
+                label="Cashback redeemed"
                 value={
-                  <span className="text-emerald-600 dark:text-emerald-400">
-                    -{formatRs(bill.cashbackAmount)}
+                  <span className="text-blue-600 dark:text-blue-400">
+                    -{formatRs(bill.cashbackRedeemedAmount)}
                   </span>
                 }
                 icon={Gift}

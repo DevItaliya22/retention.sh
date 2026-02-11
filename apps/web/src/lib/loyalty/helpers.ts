@@ -180,7 +180,7 @@ export function resolveTierForLifetimeSpend(
   return best;
 }
 
-/** TIER: Earned cashback (₹) using tier's cashbackPercentage. Bill still counts toward lifetime spend; cashback only when bill >= min purchase for redemption (when enabled). */
+/** TIER: Earned cashback (₹) using tier's cashbackPercentage. When minPurchaseForRedemption is enabled, bill must meet it to earn. */
 export function calculateTierCashbackEarned(
   amountForEarning: number,
   tier: ResolvedTier,
@@ -221,19 +221,27 @@ export function isVisitQualifying(
   return Date.now() - lastVisitAt.getTime() >= intervalMs;
 }
 
+/** Ensure amount is a non-negative finite number; otherwise return 0 (prevents NaN/Infinity abuse). */
+export function safeAmount(value: number): number {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0)
+    return 0;
+  return value;
+}
+
 /** CASHBACK: Earned amount (₹) from bill. 1 unit = ₹1. */
 export function calculateCashbackEarned(
   billAmount: number,
   config: CashbackContext,
 ): number {
-  if (billAmount <= 0 || config.cashbackPercentage <= 0) return 0;
+  const amount = safeAmount(billAmount);
+  if (amount <= 0 || config.cashbackPercentage <= 0) return 0;
   if (
     config.minPurchaseForEarningEnabled &&
     config.minPurchaseForEarning != null
   ) {
-    if (billAmount < config.minPurchaseForEarning) return 0;
+    if (amount < config.minPurchaseForEarning) return 0;
   }
-  const raw = (billAmount * config.cashbackPercentage) / 100;
+  const raw = (amount * config.cashbackPercentage) / 100;
   const capped =
     config.maxCashbackCap != null && config.maxCashbackCap > 0
       ? Math.min(raw, config.maxCashbackCap)
@@ -247,33 +255,32 @@ export function calculateCashbackRedeemable(
   config: CashbackContext,
   balance: number,
 ): number {
-  if (billAmount <= 0 || balance <= 0) return 0;
+  const amt = safeAmount(billAmount);
+  const bal = safeAmount(balance);
+  if (amt <= 0 || bal <= 0) return 0;
   if (
     config.minPurchaseForRedemptionEnabled &&
     config.minPurchaseForRedemption != null
   ) {
-    if (billAmount < config.minPurchaseForRedemption) return 0;
+    if (amt < config.minPurchaseForRedemption) return 0;
   }
-  let cap = balance;
+  let cap = bal;
   if (config.redemptionBalanceLimitEnabled) {
     if (config.redemptionBalanceLimitAmount != null)
       cap = Math.min(cap, config.redemptionBalanceLimitAmount);
     if (config.redemptionBalanceLimitPercentage != null)
       cap = Math.min(
         cap,
-        (balance * config.redemptionBalanceLimitPercentage) / 100,
+        (bal * config.redemptionBalanceLimitPercentage) / 100,
       );
   }
   if (config.redemptionBillLimitEnabled) {
     if (config.redemptionBillLimitAmount != null)
       cap = Math.min(cap, config.redemptionBillLimitAmount);
     if (config.redemptionBillLimitPercentage != null)
-      cap = Math.min(
-        cap,
-        (billAmount * config.redemptionBillLimitPercentage) / 100,
-      );
+      cap = Math.min(cap, (amt * config.redemptionBillLimitPercentage) / 100);
   }
-  return Math.min(balance, cap, billAmount);
+  return Math.min(bal, cap, amt);
 }
 
 export interface CalculateEarnedOptions {
@@ -291,26 +298,24 @@ export function calculatePointsEarnedForBill(
   context: LoyaltyContext,
   options?: CalculateEarnedOptions,
 ): number {
-  if (amountForEarning <= 0) return 0;
+  const amount = safeAmount(amountForEarning);
+  if (amount <= 0) return 0;
 
   switch (context.type) {
     case "CASHBACK":
       // Cashback stored as integer rupees (100 = ₹100)
-      return Math.floor(
-        calculateCashbackEarned(amountForEarning, context.config),
-      );
+      return Math.floor(calculateCashbackEarned(amount, context.config));
     case "TIER": {
       const tier = options?.resolvedTier;
       if (tier) {
-        const cashback = calculateTierCashbackEarned(amountForEarning, tier);
+        const cashback = calculateTierCashbackEarned(amount, tier);
         return Math.floor(cashback);
       }
-      // Fallback when tier not resolved (e.g. preview): use pointsPerRupee only (no global cap).
-      const pointsPerRupee = context.config.pointsPerRupee ?? 1;
-      return Math.floor(amountForEarning * pointsPerRupee);
+      // Customer below first tier (e.g. minLifetimeSpend not yet met): no cashback.
+      return 0;
     }
     case "AMOUNT_SPENT": {
-      const pts = amountForEarning * (context.config.pointsPerRupee ?? 1);
+      const pts = amount * (context.config.pointsPerRupee ?? 1);
       const capped =
         context.config.maxPointsPerPurchase != null &&
         context.config.maxPointsPerPurchase > 0
@@ -337,12 +342,13 @@ export function calculateRedeemable(
   context: LoyaltyContext,
   options?: CalculateRedeemableOptions,
 ): number {
-  if (billAmount <= 0 || balance <= 0) return 0;
+  const amt = safeAmount(billAmount);
+  const bal = safeAmount(balance);
+  if (amt <= 0 || bal <= 0) return 0;
   if (context.type === "CASHBACK") {
     return (
-      Math.floor(
-        calculateCashbackRedeemable(billAmount, context.config, balance) * 100,
-      ) / 100
+      Math.floor(calculateCashbackRedeemable(amt, context.config, bal) * 100) /
+      100
     );
   }
   if (context.type === "TIER" && options?.resolvedTier) {
@@ -351,8 +357,8 @@ export function calculateRedeemable(
       tier.minPurchaseForRedemptionEnabled &&
       tier.minPurchaseForRedemption != null
     ) {
-      if (billAmount < tier.minPurchaseForRedemption) return 0;
+      if (amt < tier.minPurchaseForRedemption) return 0;
     }
   }
-  return Math.min(balance, Math.floor(billAmount));
+  return Math.min(bal, Math.floor(amt));
 }

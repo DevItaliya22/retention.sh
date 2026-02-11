@@ -4,6 +4,7 @@ import {
   getExpiryDays,
   isVisitQualifying,
   resolveTierForLifetimeSpend,
+  safeAmount,
   type LoyaltyContext,
 } from "@/lib/loyalty";
 import {
@@ -158,7 +159,7 @@ export async function expireBucketsForCustomer(
   const { businessId, customerId } = params;
   const now = params.now ?? new Date();
 
-  const expiringRows = await tx.pointsTransaction.findMany({
+  const expiring = await tx.pointsTransaction.findMany({
     where: {
       businessId,
       customerId,
@@ -170,13 +171,13 @@ export async function expireBucketsForCustomer(
     orderBy: { expiresAt: "asc" },
   });
 
-  if (expiringRows.length === 0) {
+  if (expiring.length === 0) {
     return { expiredPoints: 0 };
   }
 
-  const expiredPoints = expiringRows.reduce(
-    (sum, r) => sum + (r.remainingAmount ?? 0),
+  const expiredPoints = Math.max(
     0,
+    expiring.reduce((sum, r) => sum + Math.max(0, r.remainingAmount ?? 0), 0),
   );
 
   const bc = await tx.businessCustomer.findUnique({
@@ -186,9 +187,9 @@ export async function expireBucketsForCustomer(
   const currentBalance = bc?.pointsBalance ?? 0;
   const nextBalance = Math.max(0, currentBalance - expiredPoints);
 
-  for (const row of expiringRows) {
+  for (const r of expiring) {
     await tx.pointsTransaction.update({
-      where: { id: row.id },
+      where: { id: r.id },
       data: { remainingAmount: 0 },
     });
   }
@@ -232,7 +233,10 @@ export interface ApplyLoyaltyResult {
   loyaltyType: string;
   earnedPoints: number;
   redeemedPoints: number;
+  /** Cashback EARNED this bill (added to wallet). For CASHBACK/TIER. */
   cashbackAmount: number | null;
+  /** Cashback REDEEMED from wallet this bill (discount applied). For CASHBACK/TIER. */
+  cashbackRedeemedAmount: number | null;
   pointsBalance: number;
   finalAmount: number;
   tierUpgrade?: TierUpgradeInfo | null;
@@ -251,11 +255,14 @@ export async function applyLoyaltyForBill(
     /** Subtotal (line items sum before discounts/tax). When onFinalAmount=false, used for earning. */
     billSubtotal?: number | null;
     redeemPointsRequested?: number | null;
+    redeemCashbackRequested?: number | null;
   },
 ): Promise<ApplyLoyaltyResult> {
-  const { businessId, customerId, billId, billAmount } = params;
-  const billSubtotal = params.billSubtotal ?? null;
+  const { businessId, customerId, billId } = params;
+  const billAmount = safeAmount(params.billAmount ?? 0);
+  const billSubtotal = safeAmount(params.billSubtotal ?? billAmount);
   const requested = Math.max(0, Math.floor(params.redeemPointsRequested ?? 0));
+  const redeemCashbackReq = Math.max(0, params.redeemCashbackRequested ?? 0);
 
   const business = await tx.business.findUnique({
     where: { id: businessId },
@@ -273,6 +280,7 @@ export async function applyLoyaltyForBill(
       earnedPoints: 0,
       redeemedPoints: 0,
       cashbackAmount: null,
+      cashbackRedeemedAmount: null,
       pointsBalance: 0,
       finalAmount: billAmount,
     };
@@ -285,6 +293,7 @@ export async function applyLoyaltyForBill(
       earnedPoints: 0,
       redeemedPoints: 0,
       cashbackAmount: null,
+      cashbackRedeemedAmount: null,
       pointsBalance: 0,
       finalAmount: billAmount,
     };
@@ -296,11 +305,30 @@ export async function applyLoyaltyForBill(
     where: { businessId_customerId: { businessId, customerId } },
     select: {
       pointsBalance: true,
+      totalCashbackEarned: true,
+      totalCashbackRedeemed: true,
       lifetimeSpend: true,
       lastVisitAt: true,
     },
   });
-  let pointsBalance = bc?.pointsBalance ?? 0;
+
+  if (!bc) {
+    return {
+      loyaltyType: "NONE",
+      earnedPoints: 0,
+      redeemedPoints: 0,
+      cashbackAmount: null,
+      cashbackRedeemedAmount: null,
+      pointsBalance: 0,
+      finalAmount: billAmount,
+    };
+  }
+
+  let pointsBalance = safeAmount(bc.pointsBalance ?? 0);
+  const cashbackBalance = Math.max(
+    0,
+    (bc.totalCashbackEarned ?? 0) - (bc.totalCashbackRedeemed ?? 0),
+  );
 
   const resolvedTier =
     context.type === "TIER"
@@ -309,23 +337,60 @@ export async function applyLoyaltyForBill(
           bc?.lifetimeSpend ?? 0,
         )
       : null;
-  // CASHBACK and TIER do not use points; no redemption for these types.
   const isCashbackType = context.type === "CASHBACK" || context.type === "TIER";
+
+  // Redeemable: for points types use points; for cashback types use ₹ from wallet.
   const redeemable = isCashbackType
-    ? 0
+    ? calculateRedeemable(billAmount, cashbackBalance, context, {
+        resolvedTier,
+      })
     : calculateRedeemable(billAmount, pointsBalance, context, {
         resolvedTier,
       });
   const redeemedPoints = isCashbackType
     ? 0
     : Math.min(requested, Math.floor(redeemable));
+  const redeemedCashback = isCashbackType
+    ? Math.min(redeemCashbackReq, redeemable)
+    : 0;
 
   let finalAmount = billAmount;
   let cashbackAmount: number | null = null;
+  let cashbackRedeemedAmount: number | null = null;
+
+  // Redemption: CASHBACK/TIER — redeem from wallet first, then earn on (final or subtotal).
+  if (redeemedCashback > 0 && isCashbackType) {
+    finalAmount = Math.max(0, billAmount - redeemedCashback);
+    cashbackRedeemedAmount = redeemedCashback;
+
+    const loyalty = await tx.loyalty.findUnique({
+      where: { businessId },
+      select: { id: true },
+    });
+
+    await tx.cashbackTransaction.create({
+      data: {
+        businessId,
+        customerId,
+        billId,
+        loyaltyId: loyalty?.id ?? null,
+        amount: -redeemedCashback,
+        source: CashbackSource.REDEEMED,
+        description: `Redeemed ₹${redeemedCashback} on bill`,
+      },
+    });
+
+    await tx.businessCustomer.update({
+      where: { businessId_customerId: { businessId, customerId } },
+      data: {
+        totalCashbackRedeemed: { increment: redeemedCashback },
+      },
+    });
+  }
 
   // Redemption: deduct from balance using FIFO on PointsTransaction (points types only).
   if (redeemedPoints > 0 && !isCashbackType) {
-    const earnedRows = await tx.pointsTransaction.findMany({
+    const earned = await tx.pointsTransaction.findMany({
       where: {
         businessId,
         customerId,
@@ -337,7 +402,7 @@ export async function applyLoyaltyForBill(
     });
 
     const { allocations, remaining } = allocateRedemptionFIFO(
-      earnedRows.map((r) => ({
+      earned.map((r) => ({
         id: r.id,
         remainingAmount: r.remainingAmount ?? 0,
       })),
@@ -349,10 +414,10 @@ export async function applyLoyaltyForBill(
     }
 
     for (const alloc of allocations) {
-      const row = earnedRows.find((r) => r.id === alloc.transactionId);
+      const r = earned.find((x) => x.id === alloc.transactionId);
       const newRemaining = Math.max(
         0,
-        (row?.remainingAmount ?? 0) - alloc.amount,
+        (r?.remainingAmount ?? 0) - alloc.amount,
       );
       await tx.pointsTransaction.update({
         where: { id: alloc.transactionId },
@@ -387,13 +452,12 @@ export async function applyLoyaltyForBill(
   }
 
   // Earning: amountForEarning = subtotal vs final amount based on onFinalAmount
-  // When onFinalAmount true: use final amount (amount - store discount). When false: use subtotal (amount only).
   const amountForEarning =
     (context.type === "CASHBACK" && context.config.onFinalAmount) ||
     (context.type === "TIER" && context.config.onFinalAmount) ||
     (context.type === "AMOUNT_SPENT" && context.config.onFinalAmount)
       ? finalAmount
-      : billSubtotal != null && billSubtotal > 0
+      : billSubtotal > 0
         ? billSubtotal
         : billAmount;
 
@@ -402,18 +466,18 @@ export async function applyLoyaltyForBill(
     context.type !== "VISIT_MADE" ||
     isVisitQualifying(context.config, bc?.lastVisitAt ?? null);
 
-  const earnedPoints = visitQualifies
+  const rawEarned = visitQualifies
     ? calculatePointsEarnedForBill(amountForEarning, context, {
         resolvedTier,
       })
     : 0;
+  const earnedPoints = Math.max(0, rawEarned);
 
   if (isCashbackType && earnedPoints > 0) {
-    // CASHBACK and TIER: store as cashback (CashbackTransaction + totalCashbackEarned), not points.
+    // CASHBACK and TIER: store earned cashback in wallet (not applied to this bill).
     cashbackAmount = earnedPoints;
-    finalAmount = Math.max(0, billAmount - cashbackAmount);
 
-    const loyaltyRow = await tx.loyalty.findUnique({
+    const loyalty = await tx.loyalty.findUnique({
       where: { businessId },
       select: { id: true },
     });
@@ -423,7 +487,7 @@ export async function applyLoyaltyForBill(
         businessId,
         customerId,
         billId,
-        loyaltyId: loyaltyRow?.id ?? null,
+        loyaltyId: loyalty?.id ?? null,
         amount: cashbackAmount,
         source: CashbackSource.BILL,
         description: `Cashback from bill`,
@@ -531,12 +595,18 @@ export async function applyLoyaltyForBill(
     });
   }
 
+  // For CASHBACK/TIER: pointsBalance is cashback balance (wallet) after this transaction.
+  const effectivePointsBalance = isCashbackType
+    ? cashbackBalance - redeemedCashback + (cashbackAmount ?? 0)
+    : pointsBalance;
+
   return {
     loyaltyType: context.type,
     earnedPoints,
-    redeemedPoints,
+    redeemedPoints: redeemedPoints, // Points types: pts redeemed. Cashback: use cashbackRedeemedAmount for display.
     cashbackAmount,
-    pointsBalance,
+    cashbackRedeemedAmount,
+    pointsBalance: effectivePointsBalance,
     finalAmount,
     tierUpgrade: tierUpgradeInfo,
     currentTier: currentTierInfo,
@@ -561,11 +631,11 @@ export async function expireBucketsForBusiness(params: {
   });
 
   let expiredCustomers = 0;
-  for (const row of expiring) {
+  for (const r of expiring) {
     await db.$transaction(async (tx) => {
       await expireBucketsForCustomer(tx, {
-        businessId: row.businessId,
-        customerId: row.customerId,
+        businessId: r.businessId,
+        customerId: r.customerId,
         now,
       });
     });

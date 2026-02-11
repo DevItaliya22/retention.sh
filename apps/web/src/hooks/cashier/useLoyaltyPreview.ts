@@ -17,6 +17,8 @@ export interface RewardStagePreview {
 export interface LoyaltyPreviewData {
   loyaltyType: string;
   pointsBalance: number;
+  /** Cashback balance (₹) for CASHBACK/TIER types. */
+  cashbackBalance?: number;
   redeemablePoints: number;
   earnablePoints: number;
   expiringBuckets: {
