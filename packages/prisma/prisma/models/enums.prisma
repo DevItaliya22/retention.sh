@@ -142,6 +142,7 @@ enum TransactionSource {
 // Source of a cashback transaction (CASHBACK / TIER loyalty types only).
 enum CashbackSource {
   BILL // Cashback earned from a purchase/bill
+  REDEEMED // Cashback redeemed from wallet (discount on bill)
 }
 
 enum WalletType {

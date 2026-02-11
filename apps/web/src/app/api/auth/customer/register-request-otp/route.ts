@@ -105,7 +105,7 @@ export async function POST(request: Request) {
     );
     const bonusPoints =
       loyaltyEnabled && isNewRegistration
-        ? (business.registrationBonusPoints ?? 0) || 0
+        ? Math.max(0, Number(business.registrationBonusPoints) || 0)
         : 0;
     if (isNewRegistration && bonusPoints > 0) {
       await db.businessCustomer.update({

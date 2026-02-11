@@ -8,6 +8,7 @@ export {
   getExpiryDays,
   isVisitQualifying,
   resolveTierForLifetimeSpend,
+  safeAmount,
   validateTierRanges,
 } from "./helpers";
 export type {

@@ -16,7 +16,7 @@ export const billNumberSchema = z
 
 export const amountSchema = z
   .number()
-  .min(0, "Amount must be positive")
+  .min(0, "Amount must be non-negative")
   .optional()
   .nullable();
 
@@ -41,14 +41,32 @@ export const billFormSchema = z.object({
   billNumber: billNumberSchema,
   phoneNumber: phoneNumberSchema,
   name: nameSchema.optional().nullable(),
-  /** Subtotal (line items sum before store discount/tax). Required when no line items. */
-  subtotal: amountSchema.optional(),
-  /** Store discount (₹). Optional, default 0. */
-  storeDiscount: z.number().min(0).optional().nullable().default(0),
+  /** Subtotal (line items sum before store discount/tax). Required when no line items. Non-negative. */
+  subtotal: z.coerce
+    .number()
+    .min(0, "Subtotal must be non-negative")
+    .optional()
+    .nullable(),
+  /** Store discount (₹). Optional, default 0. Non-negative. */
+  storeDiscount: z.coerce
+    .number()
+    .min(0, "Store discount must be non-negative")
+    .optional()
+    .nullable()
+    .default(0),
   /** Tax breakdown (e.g. per rate). For now empty. Optional. */
   tax: taxArraySchema,
   lineItems: billLineItemsSchema.optional(),
-  redeemPoints: z.coerce.number().int().min(0).optional(),
+  redeemPoints: z.coerce
+    .number()
+    .int()
+    .min(0, "Redeem points must be non-negative")
+    .optional(),
+  /** Cashback (₹) to redeem from wallet. For CASHBACK/TIER loyalty types. */
+  redeemCashback: z.coerce
+    .number()
+    .min(0, "Redeem cashback must be non-negative")
+    .optional(),
   notes: z
     .string()
     .max(2000, "Notes are too long (max 2000 characters)")
@@ -84,8 +102,14 @@ export const billsQuerySchema = z.object({
     .optional(),
   dateFrom: z.string().datetime().optional(),
   dateTo: z.string().datetime().optional(),
-  amountMin: z.coerce.number().optional(),
-  amountMax: z.coerce.number().optional(),
+  amountMin: z.coerce
+    .number()
+    .min(0, "Amount min must be non-negative")
+    .optional(),
+  amountMax: z.coerce
+    .number()
+    .min(0, "Amount max must be non-negative")
+    .optional(),
 });
 
 /** Import schema: allows legacy amount (treated as subtotal) and retains email/address. */

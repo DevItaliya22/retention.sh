@@ -38,6 +38,7 @@ export interface BillDetail {
   tax?: number[];
   finalAmount?: number | null;
   cashbackAmount?: number | null;
+  cashbackRedeemedAmount?: number | null;
   userPaidAmount?: number | null;
   loyaltyPointsEarned?: number;
   loyaltyPointsRedeemed?: number;

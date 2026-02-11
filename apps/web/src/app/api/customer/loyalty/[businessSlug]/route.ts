@@ -106,6 +106,8 @@ export const GET = withCustomerAuth<{ businessSlug: string }>(
 
       const pointsBalance = refreshed?.pointsBalance ?? 0;
       const totalCashbackEarned = refreshed?.totalCashbackEarned ?? 0;
+      const totalCashbackRedeemed = refreshed?.totalCashbackRedeemed ?? 0;
+      const cashbackBalance = totalCashbackEarned - totalCashbackRedeemed;
       const lifetimeSpend = refreshed?.lifetimeSpend ?? 0;
       const visitCount = refreshed?.visitCount ?? 0;
 
@@ -133,13 +135,14 @@ export const GET = withCustomerAuth<{ businessSlug: string }>(
         take: 50,
       });
 
-      // Bill history (CASHBACK / TIER): one row per bill (all bills; cashback 0 when none)
+      // Bill history (CASHBACK / TIER): one row per bill (earned + redeemed from bill fields)
       let cashbackHistory: Array<{
         id: string;
         date: string;
         billNumber: string;
         amountSpent: number;
         cashbackReceived: number;
+        cashbackRedeemed: number;
         tierName: string | null;
         cashbackPercentage: number | null;
       }> = [];
@@ -152,6 +155,7 @@ export const GET = withCustomerAuth<{ businessSlug: string }>(
           },
           include: {
             cashbackTransactions: {
+              where: { source: "BILL" },
               take: 1,
               orderBy: { createdAt: "desc" },
             },
@@ -171,7 +175,8 @@ export const GET = withCustomerAuth<{ businessSlug: string }>(
             date: bill.createdAt.toISOString(),
             billNumber: bill.billNumber,
             amountSpent: bill.finalAmount ?? 0,
-            cashbackReceived: ct?.amount ?? 0,
+            cashbackReceived: bill.cashbackAmount ?? ct?.amount ?? 0,
+            cashbackRedeemed: bill.cashbackRedeemedAmount ?? 0,
             tierName: meta.tierName ?? null,
             cashbackPercentage: meta.cashbackPercentage ?? null,
           };
@@ -318,6 +323,8 @@ export const GET = withCustomerAuth<{ businessSlug: string }>(
           loyaltyType,
           pointsBalance,
           totalCashbackEarned,
+          totalCashbackRedeemed,
+          cashbackBalance,
           buckets: expiringRows
             .filter((b) => b.expiresAt)
             .map((b) => ({

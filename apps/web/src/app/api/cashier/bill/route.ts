@@ -114,11 +114,16 @@ export const POST = withCashierAuth(async (request: NextRequest, context) => {
       subtotal: subtotalFromRequest,
       storeDiscount = 0,
       tax = [],
-      redeemPoints,
+      redeemPoints: redeemPointsRaw,
+      redeemCashback: redeemCashbackRaw,
       notes,
       paymentMethod,
       lineItems = [],
     } = validation.data;
+
+    // Defense: never allow negative redemption (prevents minus-minus = plus hack)
+    const redeemPoints = Math.max(0, Math.floor(Number(redeemPointsRaw) || 0));
+    const redeemCashback = Math.max(0, Number(redeemCashbackRaw) || 0);
 
     if (!phoneNumber || phoneNumber.trim() === "") {
       return NextResponse.json(
@@ -239,6 +244,7 @@ export const POST = withCashierAuth(async (request: NextRequest, context) => {
         billAmount: finalAmountBeforeLoyalty,
         billSubtotal,
         redeemPointsRequested: redeemPoints ?? null,
+        redeemCashbackRequested: redeemCashback ?? null,
       });
 
       const updatedBill = await tx.bill.update({
@@ -246,6 +252,10 @@ export const POST = withCashierAuth(async (request: NextRequest, context) => {
         data: {
           cashbackAmount:
             loyalty.cashbackAmount != null ? loyalty.cashbackAmount : undefined,
+          cashbackRedeemedAmount:
+            loyalty.cashbackRedeemedAmount != null
+              ? loyalty.cashbackRedeemedAmount
+              : undefined,
           userPaidAmount: loyalty.finalAmount,
         },
       });

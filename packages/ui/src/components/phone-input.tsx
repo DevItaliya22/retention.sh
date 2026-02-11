@@ -27,18 +27,45 @@ type PhoneInputProps = Omit<
 > &
   Omit<RPNInput.Props<typeof RPNInput.default>, "onChange"> & {
     onChange?: (value: RPNInput.Value) => void;
+    variant?: "default" | "underline";
   };
 
 const PhoneInput: React.ForwardRefExoticComponent<PhoneInputProps> =
   React.forwardRef<React.ElementRef<typeof RPNInput.default>, PhoneInputProps>(
-    ({ className, onChange, value, ...props }, ref) => {
+    ({ className, onChange, value, variant = "default", ...props }, ref) => {
+      const isUnderline = variant === "underline";
+
+      const UnderlineInputComponent = React.useMemo(
+        () =>
+          React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
+            ({ className: inputClassName, ...inputProps }, inputRef) => (
+              <Input
+                variant="underline"
+                className={cn("h-full min-h-0", inputClassName)}
+                {...inputProps}
+                ref={inputRef}
+              />
+            ),
+          ),
+        [],
+      );
+
       return (
         <RPNInput.default
           ref={ref}
-          className={cn("flex h-10 items-stretch", className)}
+          className={cn(
+            isUnderline
+              ? "flex h-auto items-stretch"
+              : "flex h-10 items-stretch",
+            className,
+          )}
           flagComponent={FlagComponent}
-          countrySelectComponent={CountrySelect}
-          inputComponent={InputComponent}
+          countrySelectComponent={
+            isUnderline ? UnderlineCountrySelect : CountrySelect
+          }
+          inputComponent={
+            isUnderline ? UnderlineInputComponent : InputComponent
+          }
           smartCaret={false}
           value={value || undefined}
           /**
@@ -69,6 +96,88 @@ const InputComponent = React.forwardRef<
   />
 ));
 InputComponent.displayName = "InputComponent";
+
+const UnderlineCountrySelect = ({
+  disabled,
+  value: selectedCountry,
+  options: countryList,
+  onChange,
+}: CountrySelectProps) => {
+  const scrollAreaRef = React.useRef<HTMLDivElement>(null);
+  const [searchValue, setSearchValue] = React.useState("");
+  const [isOpen, setIsOpen] = React.useState(false);
+
+  return (
+    <Popover
+      open={isOpen}
+      modal
+      onOpenChange={(open) => {
+        setIsOpen(open);
+        open && setSearchValue("");
+      }}
+    >
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          className="border-input flex h-auto min-h-0 gap-1 rounded-none border-b px-2 py-3 hover:bg-transparent focus:z-10"
+          disabled={disabled}
+        >
+          <FlagComponent
+            country={selectedCountry}
+            countryName={selectedCountry}
+          />
+          <ChevronsUpDown
+            className={cn(
+              "-mr-2 size-4 opacity-50",
+              disabled ? "hidden" : "opacity-100",
+            )}
+          />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[300px] p-0">
+        <Command>
+          <CommandInput
+            value={searchValue}
+            onValueChange={(value: string) => {
+              setSearchValue(value);
+              setTimeout(() => {
+                if (scrollAreaRef.current) {
+                  const viewportElement = scrollAreaRef.current.querySelector(
+                    "[data-radix-scroll-area-viewport]",
+                  );
+                  if (viewportElement) {
+                    viewportElement.scrollTop = 0;
+                  }
+                }
+              }, 0);
+            }}
+            placeholder="Search country..."
+          />
+          <CommandList>
+            <ScrollArea ref={scrollAreaRef} className="h-72">
+              <CommandEmpty>No country found.</CommandEmpty>
+              <CommandGroup>
+                {countryList.map(({ value, label }) =>
+                  value ? (
+                    <CountrySelectOption
+                      key={value}
+                      country={value}
+                      countryName={label}
+                      selectedCountry={selectedCountry}
+                      onChange={onChange}
+                      onSelectComplete={() => setIsOpen(false)}
+                    />
+                  ) : null,
+                )}
+              </CommandGroup>
+            </ScrollArea>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+};
 
 type CountryEntry = { label: string; value: RPNInput.Country | undefined };
 

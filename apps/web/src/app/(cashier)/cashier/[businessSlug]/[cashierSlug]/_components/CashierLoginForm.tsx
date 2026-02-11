@@ -113,11 +113,14 @@ export function CashierLoginForm({
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+          <div className="space-y-1">
+            <Label htmlFor="email" className="text-muted-foreground text-xs">
+              Email
+            </Label>
             <Input
               id="email"
               type="email"
+              variant="underline"
               placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -126,10 +129,13 @@ export function CashierLoginForm({
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+          <div className="space-y-1">
+            <Label htmlFor="password" className="text-muted-foreground text-xs">
+              Password
+            </Label>
             <PasswordInput
               id="password"
+              variant="underline"
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -138,7 +144,11 @@ export function CashierLoginForm({
             />
           </div>
 
-          <Button type="submit" loading={login.isPending} className="w-full">
+          <Button
+            type="submit"
+            loading={login.isPending}
+            className="mt-2 w-full"
+          >
             {login.isPending ? "Signing in..." : "Sign in"}
           </Button>
         </form>

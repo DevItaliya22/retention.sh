@@ -145,8 +145,8 @@ model LoyaltyTierConfig {
   loyalty   Loyalty @relation(fields: [loyaltyId], references: [id], onDelete: Cascade)
 
   // Default points conversion: 1 rupee spent = X points (used when tier not resolved, e.g. preview).
-  pointsPerRupee Float @default(1)
-  onFinalAmount Boolean @default(false)
+  pointsPerRupee Float   @default(1)
+  onFinalAmount  Boolean @default(false)
 
   tiers LoyaltyTier[]
 
