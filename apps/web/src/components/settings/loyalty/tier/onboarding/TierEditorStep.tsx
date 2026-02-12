@@ -30,12 +30,19 @@ export function TierEditorStep() {
       ? Math.max(...watchedTiers.map((t) => Number(t?.rank ?? 0)))
       : 0;
 
+  const tiersError = form.formState.errors.tiers?.message as string | undefined;
+
   return (
     <div className="space-y-4">
       <p className="text-muted-foreground text-sm">
         Add tiers based on customer lifetime spending. Higher rank = better
         tier.
       </p>
+      {tiersError ? (
+        <p className="text-destructive text-sm" role="alert">
+          {tiersError}
+        </p>
+      ) : null}
       <div className="space-y-4">
         {fields.map((field, index) => (
           <TierCard

@@ -94,7 +94,7 @@ export function TierSettingsCard({
   onSave,
   isSaving,
 }: TierSettingsCardProps) {
-  const maxRank =
+  const initialMaxRank =
     tierConfig.tiers?.length > 0
       ? Math.max(...tierConfig.tiers.map((t) => t.rank))
       : 0;
@@ -103,7 +103,7 @@ export function TierSettingsCard({
       pointsPerRupee: tierConfig.pointsPerRupee ?? 1,
       onFinalAmount: tierConfig.onFinalAmount ?? false,
       tiers: tierConfig.tiers.map((t) =>
-        mapTierToForm(t, t.rank === maxRank && maxRank > 0),
+        mapTierToForm(t, t.rank === initialMaxRank && initialMaxRank > 0),
       ),
     },
   });

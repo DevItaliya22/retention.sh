@@ -1,6 +1,9 @@
 "use client";
 
-import { MinPurchaseToggleField } from "@/components/settings/loyalty/common";
+import {
+  MinPurchaseToggleField,
+  numericInputHandlers,
+} from "@/components/settings/loyalty/common";
 import type { LoyaltyProgramFormValues } from "@/lib/schemas/loyalty-form";
 import {
   FormControl,
@@ -42,6 +45,7 @@ export function CashbackConfigStep() {
                       : Math.min(100, Math.max(0, Number(v))),
                   );
                 }}
+                {...numericInputHandlers}
               />
             </FormControl>
             <FormMessage />
@@ -90,6 +94,7 @@ export function CashbackConfigStep() {
                   const v = e.target.value;
                   field.onChange(v === "" ? null : Math.max(0, Number(v)));
                 }}
+                {...numericInputHandlers}
               />
             </FormControl>
             <FormMessage />

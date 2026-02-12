@@ -5,7 +5,13 @@ import {
   validateSchema,
 } from "@/lib/utils/error-handler";
 import { isServiceEnabled } from "@/lib/utils/service-enabled";
-import { db, Prisma, TransactionSource, TransactionType } from "@reelo/db";
+import {
+  db,
+  Prisma,
+  TransactionSource,
+  TransactionType,
+  TransactionValueKind,
+} from "@reelo/db";
 import { NextRequest, NextResponse } from "next/server";
 
 export interface LoyaltyStatRow {
@@ -75,7 +81,7 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
 
     if (type) where.type = type as TransactionType;
     if (source) where.source = source as TransactionSource;
-    if (valueKind) where.valueKind = valueKind as Prisma.TransactionValueKind;
+    if (valueKind) where.valueKind = valueKind as TransactionValueKind;
     if (billNumber) {
       const matchingBills = await db.bill.findMany({
         where: {

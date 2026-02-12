@@ -593,7 +593,13 @@ export default function LoyaltyDetailPage() {
                   </p>
                   <p className="text-3xl font-bold">
                     {isCashbackType ? (
-                      <>₹{cashbackBalance.toLocaleString()}</>
+                      <>
+                        ₹
+                        {cashbackBalance.toLocaleString("en-IN", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </>
                     ) : (
                       <>
                         {pointsBalance.toLocaleString()}{" "}
@@ -751,13 +757,21 @@ export default function LoyaltyDetailPage() {
                           <TableCell className="font-mono text-sm">
                             {row.billNumber}
                           </TableCell>
-                          <TableCell className="text-right font-medium">
-                            ₹{row.amountSpent.toLocaleString()}
+                          <TableCell className="text-right font-medium tabular-nums">
+                            ₹
+                            {row.amountSpent.toLocaleString("en-IN", {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
                           </TableCell>
-                          <TableCell className="text-right font-medium">
+                          <TableCell className="text-right font-medium tabular-nums">
                             {row.cashbackReceived > 0 ? (
                               <span className="text-emerald-600 dark:text-emerald-400">
-                                +₹{row.cashbackReceived.toLocaleString()}
+                                +₹
+                                {row.cashbackReceived.toLocaleString("en-IN", {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                })}
                               </span>
                             ) : (
                               <span className="text-muted-foreground">—</span>

@@ -70,7 +70,7 @@ export const GET = withCashierAuth(async (request: NextRequest, context) => {
       finalAmount: bill.finalAmount,
       cashbackAmount: bill.cashbackAmount,
       userPaidAmount: bill.userPaidAmount,
-      amount: bill.finalAmount,
+      amount: bill.userPaidAmount ?? bill.finalAmount,
       customerName: bill.businessCustomer.customer.user.name,
       customerPhone: bill.businessCustomer.customer.user.phoneNumber,
       customerEmail: bill.businessCustomer.customer.email,

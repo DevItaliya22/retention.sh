@@ -206,6 +206,17 @@ export function CustomerDetailPageClient({
           </CardHeader>
           <CardContent className="space-y-0">
             <DetailRow
+              label="Cashback balance (₹)"
+              value={
+                customer?.cashbackBalance != null
+                  ? `₹${customer.cashbackBalance.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                  : "—"
+              }
+              icon={Gift}
+              isLoading={isLoading && !customer}
+              skeletonWidth="w-20"
+            />
+            <DetailRow
               label="Points balance"
               value={
                 customer?.pointsBalance != null
@@ -439,43 +450,90 @@ export function CustomerDetailPageClient({
                 <TableRow className="border-b hover:bg-transparent">
                   <TableHead className="font-medium">Bill number</TableHead>
                   <TableHead className="text-right font-medium">
-                    Amount
+                    Amount paid
+                  </TableHead>
+                  <TableHead className="text-right font-medium">
+                    Cashback
                   </TableHead>
                   <TableHead className="font-medium">Date</TableHead>
                   <TableHead className="w-[72px]" />
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {bills.map((bill) => (
-                  <TableRow key={bill.id} className="group">
-                    <TableCell className="font-mono text-sm font-medium">
-                      {bill.billNumber}
-                    </TableCell>
-                    <TableCell className="text-right font-medium tabular-nums">
-                      {bill.amount != null
-                        ? `₹${bill.amount.toLocaleString("en-IN", {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}`
-                        : "—"}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      <DateDisplay date={bill.createdAt} />
-                    </TableCell>
-                    <TableCell>
-                      <Link
-                        href={`/bills/${bill.id}`}
-                        aria-label={`View bill ${bill.billNumber}`}
-                        className={cn(
-                          buttonVariants({ variant: "ghost", size: "xs" }),
-                          "h-8 w-8 p-0 opacity-70 transition-opacity hover:opacity-100",
+                {bills.map((bill) => {
+                  const amount =
+                    bill.amount ??
+                    bill.userPaidAmount ??
+                    bill.finalAmount ??
+                    null;
+                  const hasCashbackEarned = (bill.cashbackAmount ?? 0) > 0;
+                  const hasCashbackRedeemed =
+                    (bill.cashbackRedeemedAmount ?? 0) > 0;
+                  const hasCashback = hasCashbackEarned || hasCashbackRedeemed;
+                  return (
+                    <TableRow key={bill.id} className="group">
+                      <TableCell className="font-mono text-sm font-medium">
+                        {bill.billNumber}
+                      </TableCell>
+                      <TableCell className="text-right font-medium tabular-nums">
+                        {amount != null
+                          ? `₹${amount.toLocaleString("en-IN", {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}`
+                          : "—"}
+                      </TableCell>
+                      <TableCell className="text-right text-sm tabular-nums">
+                        {hasCashback ? (
+                          <span className="text-muted-foreground flex flex-col items-end gap-0.5">
+                            {hasCashbackEarned && (
+                              <span className="text-emerald-600 dark:text-emerald-400">
+                                +₹
+                                {(bill.cashbackAmount ?? 0).toLocaleString(
+                                  "en-IN",
+                                  {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  },
+                                )}{" "}
+                                earned
+                              </span>
+                            )}
+                            {hasCashbackRedeemed && (
+                              <span className="text-blue-600 dark:text-blue-400">
+                                −₹
+                                {(
+                                  bill.cashbackRedeemedAmount ?? 0
+                                ).toLocaleString("en-IN", {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                })}{" "}
+                                redeemed
+                              </span>
+                            )}
+                          </span>
+                        ) : (
+                          "—"
                         )}
-                      >
-                        <Eye className="size-4" />
-                      </Link>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-sm">
+                        <DateDisplay date={bill.createdAt} />
+                      </TableCell>
+                      <TableCell>
+                        <Link
+                          href={`/bills/${bill.id}`}
+                          aria-label={`View bill ${bill.billNumber}`}
+                          className={cn(
+                            buttonVariants({ variant: "ghost", size: "xs" }),
+                            "h-8 w-8 p-0 opacity-70 transition-opacity hover:opacity-100",
+                          )}
+                        >
+                          <Eye className="size-4" />
+                        </Link>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}

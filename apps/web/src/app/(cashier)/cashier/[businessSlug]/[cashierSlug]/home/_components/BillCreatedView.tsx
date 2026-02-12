@@ -9,7 +9,14 @@ import {
   Label,
   Separator,
 } from "@reelo/ui/components";
-import { CheckCircle2, Gift, ReceiptText, Trophy } from "lucide-react";
+import {
+  CheckCircle2,
+  Gift,
+  ReceiptText,
+  Sparkles,
+  TrendingUp,
+  Trophy,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -33,6 +40,8 @@ interface RedeemInfo {
     pointsRequired: number;
     canRedeem: boolean;
   }>;
+  /** True when this bill was already redeemed (one redemption per bill). */
+  alreadyRedeemedOnThisBill?: boolean;
 }
 
 interface RedeemInfoBill {
@@ -42,6 +51,13 @@ interface RedeemInfoBill {
   userPaidAmount: number | null;
   cashbackAmount: number | null;
   cashbackRedeemedAmount: number | null;
+  earnedCashback?: number;
+  earnedPoints?: number;
+  /** Free items redeemed on this bill (points → FREE_ITEM reward). */
+  redeemedFreeItems?: Array<{
+    rewardName: string;
+    freeItemName: string | null;
+  }>;
 }
 
 interface BillCreatedViewProps {
@@ -99,53 +115,65 @@ export function BillCreatedView({
       data.redeemInfo.loyaltyType === "CASHBACK" ||
       data.redeemInfo.loyaltyType === "TIER";
     const cashbackVal = Math.max(0, parseFloat(redeemCashbackValue) || 0);
-    const pointsVal = Math.max(
-      0,
-      Math.floor(parseFloat(redeemPointsValue) || 0),
-    );
-    if (cashbackVal <= 0 && pointsVal <= 0) {
-      toast.error("Enter cashback amount and/or points to redeem");
-      return;
-    }
-    const maxCashback = isCashback
-      ? data.redeemInfo.maxRedeemable
-      : (data.redeemInfo.maxRedeemableFromCashback ?? 0);
-    const maxPoints =
-      data.redeemInfo.maxRedeemableFromPoints ??
-      data.redeemInfo.maxRedeemable ??
-      0;
-    if (cashbackVal > maxCashback) {
+    const wantsConvert = !isCashback && !!selectedRewardStageId;
+    const wantsCashbackOnBill = cashbackVal > 0;
+
+    if (!wantsConvert && !wantsCashbackOnBill) {
       toast.error(
-        `Cannot redeem more than ₹${maxCashback.toFixed(2)} cashback`,
+        isCashback
+          ? "Enter cashback amount to redeem"
+          : "Select a reward to convert points, or enter cashback amount to apply to bill",
       );
       return;
     }
-    if (pointsVal > maxPoints) {
-      toast.error(`Cannot redeem more than ${maxPoints} points`);
+
+    const maxCashback = isCashback
+      ? data.redeemInfo.maxRedeemable
+      : (data.redeemInfo.maxRedeemableFromCashback ?? 0);
+    if (wantsCashbackOnBill && cashbackVal > maxCashback) {
+      toast.error(
+        `Cannot redeem more than ₹${maxCashback.toFixed(2)} cashback on this bill`,
+      );
       return;
     }
+
     setRedeeming(true);
     try {
       const body: {
         redeemCashback?: number;
-        redeemPoints?: number;
         rewardStageId?: string | null;
       } = {};
-      if (cashbackVal > 0) body.redeemCashback = cashbackVal;
-      if (pointsVal > 0) {
-        body.redeemPoints = pointsVal;
-        if (selectedRewardStageId) body.rewardStageId = selectedRewardStageId;
-      }
+      if (wantsCashbackOnBill) body.redeemCashback = cashbackVal;
+      if (wantsConvert) body.rewardStageId = selectedRewardStageId;
+
       const res = await fetcher<{
         bill: object;
-        loyalty: object;
+        convert?: {
+          pointsBalance: number;
+          cashbackBalance: number;
+          redeemedFreeItems?: Array<{
+            rewardName: string;
+            freeItemName: string | null;
+          }>;
+        };
         error?: string;
       }>(`${basePath}/redeem`, {
         method: "POST",
         body: JSON.stringify(body),
       });
       if (res.error) throw new Error(res.error);
-      toast.success("Redemption applied");
+
+      if (wantsConvert && res.convert?.redeemedFreeItems?.length) {
+        toast.success(
+          `Redeemed: ${res.convert.redeemedFreeItems.map((i) => i.freeItemName ?? i.rewardName).join(", ")}`,
+        );
+      } else if (wantsConvert) {
+        toast.success("Points converted to cashback");
+      }
+      if (wantsCashbackOnBill) {
+        toast.success("Cashback applied to bill");
+      }
+
       setRedeemCashbackValue("");
       setRedeemPointsValue("");
       setSelectedRewardStageId(null);
@@ -195,13 +223,17 @@ export function BillCreatedView({
     redeemInfo &&
     (redeemInfo.loyaltyType === "CASHBACK" ||
       redeemInfo.loyaltyType === "TIER");
-  const hasRedeemOptions =
-    redeemInfo &&
-    (redeemInfo.maxRedeemable > 0 ||
-      (redeemInfo.maxRedeemableFromCashback ?? 0) > 0 ||
-      (redeemInfo.maxRedeemableFromPoints ?? 0) > 0);
+  const alreadyRedeemedOnThisBill =
+    redeemInfo?.alreadyRedeemedOnThisBill === true;
   const redeemableRewards =
     redeemInfo?.rewardStages?.filter((r) => r.canRedeem) ?? [];
+  const hasRedeemOptions =
+    redeemInfo &&
+    !alreadyRedeemedOnThisBill &&
+    (redeemInfo.maxRedeemable > 0 ||
+      (redeemInfo.maxRedeemableFromCashback ?? 0) > 0 ||
+      (redeemInfo.maxRedeemableFromPoints ?? 0) > 0 ||
+      redeemableRewards.length > 0);
 
   return (
     <Card className="w-full max-w-md">
@@ -229,6 +261,47 @@ export function BillCreatedView({
           </div>
         </div>
 
+        {(bill.earnedCashback ?? 0) > 0 && (
+          <div className="flex items-center gap-3 rounded-lg bg-emerald-50 p-3 dark:bg-emerald-900/20">
+            <Sparkles className="size-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+            <div className="text-sm">
+              <p className="font-medium text-emerald-700 dark:text-emerald-300">
+                You have earned ₹{(bill.earnedCashback ?? 0).toFixed(2)}{" "}
+                cashback on this bill!
+              </p>
+            </div>
+          </div>
+        )}
+        {(bill.earnedPoints ?? 0) > 0 && (
+          <div className="flex items-center gap-3 rounded-lg bg-blue-50 p-3 dark:bg-blue-900/20">
+            <TrendingUp className="size-5 shrink-0 text-blue-600 dark:text-blue-400" />
+            <div className="text-sm">
+              <p className="font-medium text-blue-700 dark:text-blue-300">
+                You have earned {bill.earnedPoints} points on this bill!
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* AMOUNT_SPENT / VISIT_MADE: show free item(s) they claimed (points → FREE_ITEM) */}
+        {(bill.redeemedFreeItems?.length ?? 0) > 0 && (
+          <div className="flex items-center gap-3 rounded-lg border-2 border-emerald-300 bg-emerald-50 p-4 dark:border-emerald-700 dark:bg-emerald-900/30">
+            <Gift className="size-6 shrink-0 text-emerald-600 dark:text-emerald-400" />
+            <div className="text-sm">
+              <p className="font-semibold text-emerald-800 dark:text-emerald-200">
+                Free item(s) claimed on this bill
+              </p>
+              <p className="mt-1 font-medium text-emerald-700 dark:text-emerald-300">
+                {bill
+                  .redeemedFreeItems!.map(
+                    (item) => item.freeItemName ?? item.rewardName,
+                  )
+                  .join(", ")}
+              </p>
+            </div>
+          </div>
+        )}
+
         {redeemInfo?.tierInfo && (
           <div className="bg-muted/30 flex items-center gap-3 rounded-lg border p-3">
             <Trophy className="size-5 shrink-0 text-amber-600 dark:text-amber-400" />
@@ -253,6 +326,16 @@ export function BillCreatedView({
             </div>
           )}
 
+        {redeemInfo && alreadyRedeemedOnThisBill && (
+          <div className="bg-muted/30 flex items-center gap-3 rounded-lg border border-amber-200 p-3 dark:border-amber-800">
+            <Gift className="size-5 shrink-0 text-amber-600 dark:text-amber-400" />
+            <p className="text-muted-foreground text-sm">
+              This bill has already been redeemed. Redemption can only be done
+              once per bill.
+            </p>
+          </div>
+        )}
+
         {hasRedeemOptions && (
           <>
             <Separator />
@@ -263,8 +346,8 @@ export function BillCreatedView({
               </div>
               <p className="text-muted-foreground text-xs">
                 {isCashback
-                  ? `Available: ₹${(redeemInfo.balance ?? 0).toFixed(2)} · Max redeemable: ₹${redeemInfo.maxRedeemable.toFixed(2)}`
-                  : `Available cashback: ₹${(redeemInfo.cashbackBalance ?? 0).toFixed(2)} · Available points: ${redeemInfo.pointsBalance ?? 0} (from amount spent / visits)`}
+                  ? `Available: ₹${(redeemInfo.balance ?? 0).toFixed(2)} · Max redeemable on bill: ₹${redeemInfo.maxRedeemable.toFixed(2)}`
+                  : `Available cashback: ₹${(redeemInfo.cashbackBalance ?? 0).toFixed(2)} (use below to apply to bill) · Points: ${redeemInfo.pointsBalance ?? 0} (convert via reward stage)`}
               </p>
               <div className="space-y-2">
                 {((isCashback && redeemInfo.maxRedeemable > 0) ||
@@ -355,11 +438,15 @@ export function BillCreatedView({
                   disabled={
                     redeeming ||
                     (parseFloat(redeemCashbackValue || "0") <= 0 &&
-                      parseFloat(redeemPointsValue || "0") <= 0)
+                      !selectedRewardStageId)
                   }
                   loading={redeeming}
                 >
-                  Redeem
+                  {selectedRewardStageId
+                    ? "Convert points"
+                    : parseFloat(redeemCashbackValue || "0") > 0
+                      ? "Apply cashback to bill"
+                      : "Redeem"}
                 </Button>
               </div>
             </div>

@@ -10,4 +10,5 @@ export {
   SETTINGS_CONTROL_CLASS,
   SETTINGS_LABEL_CLASS,
   SETTINGS_ROW_CLASS,
+  numericInputHandlers,
 } from "./settings-layout";

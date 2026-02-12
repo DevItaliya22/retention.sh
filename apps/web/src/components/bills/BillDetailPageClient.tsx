@@ -110,6 +110,10 @@ export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
       ? `₹${n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
       : "—";
 
+  const isCashbackBill =
+    (bill?.cashbackAmount ?? 0) > 0 ||
+    (bill?.cashbackRedeemedAmount ?? 0) > 0 ||
+    (bill?.loyaltyLogs?.some((l) => l.valueKind === "CASHBACK") ?? false);
   const hasLoyalty =
     (bill?.loyaltyPointsEarned ?? 0) > 0 ||
     (bill?.loyaltyPointsRedeemed ?? 0) > 0 ||
@@ -215,17 +219,18 @@ export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
                 icon={Gift}
               />
             )}
-            {(bill.loyaltyPointsRedeemed ?? 0) > 0 && (
-              <DetailRow
-                label="Points redeemed"
-                value={
-                  <span className="text-blue-600 dark:text-blue-400">
-                    -₹{bill.loyaltyPointsRedeemed}
-                  </span>
-                }
-                icon={Gift}
-              />
-            )}
+            {(bill.loyaltyPointsRedeemed ?? 0) > 0 &&
+              !(bill.cashbackRedeemedAmount ?? 0) && (
+                <DetailRow
+                  label="Points redeemed"
+                  value={
+                    <span className="text-blue-600 dark:text-blue-400">
+                      -{bill.loyaltyPointsRedeemed} pts
+                    </span>
+                  }
+                  icon={Gift}
+                />
+              )}
             <DetailRow
               label="Amount to pay"
               value={
@@ -239,7 +244,7 @@ export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
         </Card>
       )}
 
-      {/* Loyalty summary — points earned/redeemed details */}
+      {/* Loyalty summary — cashback/points earned and redeemed */}
       {hasLoyalty && !isLoading && bill && (
         <Card>
           <CardHeader className="pb-2">
@@ -248,23 +253,52 @@ export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
               Loyalty on this bill
             </CardTitle>
             <CardDescription>
-              Points earned and redeemed on this bill
+              {isCashbackBill
+                ? "Cashback earned and redeemed on this bill"
+                : "Points earned and redeemed on this bill"}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-0">
-            {(bill.loyaltyPointsRedeemed ?? 0) > 0 && (
-              <DetailRow
-                label="Points used"
-                value={`${bill.loyaltyPointsRedeemed} pts`}
-                icon={Gift}
-              />
-            )}
-            {(bill.loyaltyPointsEarned ?? 0) > 0 && (
-              <DetailRow
-                label="Points earned"
-                value={`${bill.loyaltyPointsEarned} pts`}
-                icon={Gift}
-              />
+            {isCashbackBill ? (
+              <>
+                {(bill.cashbackRedeemedAmount ?? 0) > 0 && (
+                  <DetailRow
+                    label="Cashback used"
+                    value={
+                      <span className="text-blue-600 dark:text-blue-400">
+                        -{formatRs(bill.cashbackRedeemedAmount)}
+                      </span>
+                    }
+                    icon={Gift}
+                  />
+                )}
+                {(bill.cashbackAmount ?? bill.loyaltyPointsEarned ?? 0) > 0 && (
+                  <DetailRow
+                    label="Cashback earned"
+                    value={formatRs(
+                      bill.cashbackAmount ?? bill.loyaltyPointsEarned ?? 0,
+                    )}
+                    icon={Gift}
+                  />
+                )}
+              </>
+            ) : (
+              <>
+                {(bill.loyaltyPointsRedeemed ?? 0) > 0 && (
+                  <DetailRow
+                    label="Points used"
+                    value={`${bill.loyaltyPointsRedeemed} pts`}
+                    icon={Gift}
+                  />
+                )}
+                {(bill.loyaltyPointsEarned ?? 0) > 0 && (
+                  <DetailRow
+                    label="Points earned"
+                    value={`${bill.loyaltyPointsEarned} pts`}
+                    icon={Gift}
+                  />
+                )}
+              </>
             )}
           </CardContent>
         </Card>

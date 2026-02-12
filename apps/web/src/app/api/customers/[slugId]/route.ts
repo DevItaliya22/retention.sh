@@ -78,6 +78,7 @@ export const GET = withAdminAuth<{ slugId: string }>(
               createdAt: true,
             },
           },
+          wallet: true,
           bills: {
             orderBy: { createdAt: "desc" },
             take: 50,
@@ -114,7 +115,10 @@ export const GET = withAdminAuth<{ slugId: string }>(
         name: businessCustomer.customer.user.name,
         email: businessCustomer.customer.email,
         phone: businessCustomer.customer.user.phoneNumber,
-        pointsBalance: businessCustomer.pointsBalance,
+        pointsBalance:
+          (businessCustomer.wallet?.amountSpentBalance ?? 0) +
+          (businessCustomer.wallet?.visitPointsBalance ?? 0),
+        cashbackBalance: businessCustomer.wallet?.cashbackBalance ?? 0,
         createdAt: businessCustomer.createdAt.toISOString(),
         updatedAt: businessCustomer.updatedAt.toISOString(),
         businessSlug: context.business.slug,
@@ -137,25 +141,32 @@ export const GET = withAdminAuth<{ slugId: string }>(
           becameCustomer: log.becameCustomer,
           createdAt: log.createdAt.toISOString(),
         })),
-        bills: businessCustomer.bills.map((b) => ({
-          id: b.id,
-          billNumber: b.billNumber,
-          amount: b.amount,
-          lineItems: b.lineItems.map((li) => ({
-            id: li.id,
-            skuId: li.skuId,
-            qty: li.qty,
-            unitPrice: li.unitPrice,
-            sku: {
-              id: li.sku.id,
-              sku: li.sku.sku,
-              name: li.sku.name,
-              price: li.sku.price,
-              unit: li.sku.unit,
-            },
-          })),
-          createdAt: b.createdAt.toISOString(),
-        })),
+        bills: businessCustomer.bills.map((b) => {
+          const amountToShow = b.userPaidAmount ?? b.finalAmount ?? null;
+          return {
+            id: b.id,
+            billNumber: b.billNumber,
+            finalAmount: b.finalAmount,
+            userPaidAmount: b.userPaidAmount,
+            amount: amountToShow,
+            cashbackAmount: b.cashbackAmount ?? null,
+            cashbackRedeemedAmount: b.cashbackRedeemedAmount ?? null,
+            lineItems: b.lineItems.map((li) => ({
+              id: li.id,
+              skuId: li.skuId,
+              qty: li.qty,
+              unitPrice: li.unitPrice,
+              sku: {
+                id: li.sku.id,
+                sku: li.sku.sku,
+                name: li.sku.name,
+                price: li.sku.price,
+                unit: li.sku.unit,
+              },
+            })),
+            createdAt: b.createdAt.toISOString(),
+          };
+        }),
       };
 
       return NextResponse.json({ customer });

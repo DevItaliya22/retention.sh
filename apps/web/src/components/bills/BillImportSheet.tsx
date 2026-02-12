@@ -3,7 +3,10 @@
 import type { FileLoadedPayload } from "@/components/common/csv-mapping";
 import { CsvHeaderMapping } from "@/components/common/csv-mapping";
 import { useManageBill } from "@/hooks/bills/useManageBill";
-import { billImportItemSchema } from "@/lib/schemas/bill";
+import {
+  billImportItemSchema,
+  type BillImportItemInput,
+} from "@/lib/schemas/bill";
 import {
   applyMappingToRow,
   getMappingForBackend,
@@ -194,13 +197,13 @@ export function BillImportSheet({ isOpen, onClose }: BillImportSheetProps) {
       return;
     }
 
-    const validItems: typeof items = [];
-    const validationErrors: { row: number; error: any }[] = [];
+    const validItems: BillImportItemInput[] = [];
+    const validationErrors: { row: number; error: unknown }[] = [];
 
     items.forEach((item, index) => {
       const result = billImportItemSchema.safeParse(item);
       if (result.success) {
-        validItems.push(item);
+        validItems.push(result.data);
       } else {
         validationErrors.push({
           row: index + 2,

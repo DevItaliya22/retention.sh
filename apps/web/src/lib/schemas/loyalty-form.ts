@@ -82,9 +82,12 @@ export const tierEditorStepSchema = z
       })),
     );
     if (!result.valid) {
-      result.errors.forEach((msg) =>
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: msg }),
-      );
+      // Path "tiers" so the multi-step form applies this error to the field and it can be shown in UI
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: result.errors.join(" "),
+        path: ["tiers"],
+      });
     }
   });
 

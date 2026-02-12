@@ -178,12 +178,12 @@ export function BillsTable() {
       {
         id: "amount",
         accessorKey: "amount",
-        size: 150,
-        minSize: 120,
-        maxSize: 200,
+        size: 120,
+        minSize: 100,
+        maxSize: 160,
         header: ({ column }) => (
           <div className="flex w-full justify-end">
-            <DataTableColumnHeader column={column} label="Amount" />
+            <DataTableColumnHeader column={column} label="Amount paid" />
           </div>
         ),
         cell: ({ row }) => {
@@ -198,11 +198,12 @@ export function BillsTable() {
               </div>
             );
           }
-          const amount = bill.amount;
+          const amount =
+            bill.amount ?? bill.userPaidAmount ?? bill.finalAmount ?? null;
           return (
             <div className="flex justify-end">
               {amount !== null ? (
-                <div className="font-medium">
+                <div className="font-medium tabular-nums">
                   ₹
                   {amount.toLocaleString("en-IN", {
                     minimumFractionDigits: 2,
@@ -210,7 +211,7 @@ export function BillsTable() {
                   })}
                 </div>
               ) : (
-                <span className="text-muted-foreground">-</span>
+                <span className="text-muted-foreground">—</span>
               )}
             </div>
           );
@@ -218,9 +219,115 @@ export function BillsTable() {
         enableColumnFilter: true,
         enableSorting: true,
         meta: {
-          label: "Amount",
+          label: "Amount paid",
           variant: "range" as const,
         },
+      },
+      {
+        id: "redeemed",
+        size: 130,
+        minSize: 100,
+        maxSize: 180,
+        header: () => (
+          <div className="flex w-full justify-end">
+            <span className="text-xs font-medium">Redeemed</span>
+          </div>
+        ),
+        cell: ({ row }) => {
+          const bill = row.original;
+          if (bill.id === "empty-state") {
+            return null;
+          }
+          if (isLoading && bill.id.startsWith("skeleton-")) {
+            return (
+              <div className="flex justify-end">
+                <Skeleton className="h-4 w-14" />
+              </div>
+            );
+          }
+          const cashbackRedeemed = bill.cashbackRedeemedAmount ?? 0;
+          const pointsRedeemed = bill.loyaltyPointsRedeemed ?? 0;
+          const hasCashback = cashbackRedeemed > 0;
+          const hasPoints = pointsRedeemed > 0;
+          if (!hasCashback && !hasPoints) {
+            return (
+              <div className="text-muted-foreground flex justify-end text-sm">
+                —
+              </div>
+            );
+          }
+          return (
+            <div className="flex justify-end text-sm tabular-nums">
+              {hasCashback ? (
+                <span className="text-blue-600 dark:text-blue-400">
+                  −₹
+                  {cashbackRedeemed.toLocaleString("en-IN", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </span>
+              ) : (
+                <span className="text-blue-600 dark:text-blue-400">
+                  −{pointsRedeemed} pts
+                </span>
+              )}
+            </div>
+          );
+        },
+        enableSorting: false,
+      },
+      {
+        id: "earned",
+        size: 130,
+        minSize: 100,
+        maxSize: 180,
+        header: () => (
+          <div className="flex w-full justify-end">
+            <span className="text-xs font-medium">Earned</span>
+          </div>
+        ),
+        cell: ({ row }) => {
+          const bill = row.original;
+          if (bill.id === "empty-state") {
+            return null;
+          }
+          if (isLoading && bill.id.startsWith("skeleton-")) {
+            return (
+              <div className="flex justify-end">
+                <Skeleton className="h-4 w-14" />
+              </div>
+            );
+          }
+          const cashbackEarned = bill.cashbackAmount ?? 0;
+          const pointsEarned = bill.loyaltyPointsEarned ?? 0;
+          const hasCashback = cashbackEarned > 0;
+          const hasPoints = pointsEarned > 0;
+          if (!hasCashback && !hasPoints) {
+            return (
+              <div className="text-muted-foreground flex justify-end text-sm">
+                —
+              </div>
+            );
+          }
+          return (
+            <div className="flex justify-end text-sm tabular-nums">
+              {hasCashback ? (
+                <span className="text-emerald-600 dark:text-emerald-400">
+                  +₹
+                  {cashbackEarned.toLocaleString("en-IN", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </span>
+              ) : (
+                <span className="text-emerald-600 dark:text-emerald-400">
+                  +{pointsEarned} pts
+                </span>
+              )}
+            </div>
+          );
+        },
+        enableSorting: false,
       },
       {
         id: "createdAt",

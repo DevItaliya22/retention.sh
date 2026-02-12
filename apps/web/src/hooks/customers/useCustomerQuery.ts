@@ -24,6 +24,10 @@ export interface CustomerBillSummary {
   id: string;
   billNumber: string;
   amount: number | null;
+  finalAmount?: number | null;
+  userPaidAmount?: number | null;
+  cashbackAmount?: number | null;
+  cashbackRedeemedAmount?: number | null;
   lineItems?: CustomerBillLineItem[];
   createdAt: string;
 }
@@ -44,6 +48,7 @@ export interface CustomerDetail {
   email: string;
   phone: string | null;
   pointsBalance: number;
+  cashbackBalance?: number;
   createdAt: string;
   updatedAt: string;
   businessSlug?: string;
