@@ -31,6 +31,8 @@ export interface LoyaltyPreviewData {
     currentTierName: string;
     cashbackPercentage: number;
   } | null;
+  /** TIER only: when no tier (below first), message for cashier. */
+  tierMessage?: string | null;
   rewardStages: RewardStagePreview[];
   visitCount: number | null;
 }

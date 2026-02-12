@@ -76,6 +76,8 @@ model ScratchCardResponse {
   customerId       String
   businessCustomer BusinessCustomer @relation(fields: [businessId, customerId], references: [businessId, customerId], onDelete: Cascade)
 
+  transactions Transaction[]
+
   // Optional relation to a bill for "one scratch per bill" logic
   billId String?
   bill   Bill?   @relation(fields: [billId], references: [id], onDelete: SetNull)

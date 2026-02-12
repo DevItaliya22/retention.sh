@@ -87,7 +87,7 @@ interface LoyaltyDetailResponse {
     };
     loyaltyType: string | null;
     pointsBalance: number;
-    totalCashbackEarned: number;
+    cashbackBalance: number;
     buckets: { id: string; remainingAmount: number; expiresAt: string }[];
     transactions: {
       id: string;
@@ -555,7 +555,7 @@ export default function LoyaltyDetailPage() {
   const {
     loyaltyType,
     pointsBalance,
-    totalCashbackEarned,
+    cashbackBalance,
     tierInfo,
     cashbackInfo,
     amountSpentInfo,
@@ -589,13 +589,11 @@ export default function LoyaltyDetailPage() {
                 </div>
                 <div>
                   <p className="text-muted-foreground text-sm">
-                    {isCashbackType
-                      ? "Total Cashback Earned"
-                      : "Points Balance"}
+                    {isCashbackType ? "Cashback Balance" : "Points Balance"}
                   </p>
                   <p className="text-3xl font-bold">
                     {isCashbackType ? (
-                      <>₹{totalCashbackEarned.toLocaleString()}</>
+                      <>₹{cashbackBalance.toLocaleString()}</>
                     ) : (
                       <>
                         {pointsBalance.toLocaleString()}{" "}

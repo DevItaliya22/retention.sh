@@ -48,6 +48,8 @@ export interface LoyaltyResult {
     minLifetimeSpend: number;
     maxLifetimeSpend: number | null;
   } | null;
+  /** TIER only: when no tier (below first), message for cashier. */
+  tierMessage?: string | null;
 }
 
 export interface RewardStageResult {

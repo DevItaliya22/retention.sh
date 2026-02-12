@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "wallet" ADD COLUMN     "lifetimeSpend" DOUBLE PRECISION NOT NULL DEFAULT 0;

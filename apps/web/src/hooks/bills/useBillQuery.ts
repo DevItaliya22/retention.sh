@@ -21,10 +21,10 @@ export interface BillLineItemResponse {
 
 export interface BillLoyaltyLog {
   id: string;
+  valueKind?: string;
   type: string;
   source: string;
   amount: number;
-  balanceAfter: number;
   createdAt: string;
 }
 

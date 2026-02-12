@@ -58,8 +58,8 @@ export function LoyaltyStatsTable() {
         id: `skeleton-${i}`,
         type: "",
         source: "",
+        valueKind: "",
         amount: 0,
-        balanceAfter: 0,
         createdAt: "",
         customerSlugId: "",
         customerName: "",
@@ -74,8 +74,8 @@ export function LoyaltyStatsTable() {
           id: "empty-state",
           type: "",
           source: "",
+          valueKind: "",
           amount: 0,
-          balanceAfter: 0,
           createdAt: "",
           customerSlugId: "",
           customerName: "",
@@ -164,33 +164,36 @@ export function LoyaltyStatsTable() {
         enableSorting: true,
       },
       {
-        id: "balanceAfter",
-        accessorKey: "balanceAfter",
+        id: "valueKind",
+        accessorKey: "valueKind",
         size: 100,
         minSize: 80,
-        maxSize: 120,
+        maxSize: 140,
         header: ({ column }) => (
-          <div className="flex w-full justify-end">
-            <DataTableColumnHeader column={column} label="Bal after" />
-          </div>
+          <DataTableColumnHeader column={column} label="Kind" />
         ),
         cell: ({ row }) => {
           const item = row.original;
           if (item.id === "empty-state") return null;
           if (isLoading && item.id.startsWith("skeleton-")) {
-            return (
-              <div className="flex justify-end">
-                <Skeleton className="h-4 w-10" />
-              </div>
-            );
+            return <Skeleton className="h-4 w-16" />;
           }
-          const val =
-            typeof item.balanceAfter === "number" ? item.balanceAfter : "—";
           return (
-            <div className="flex justify-end">
-              <span className="text-muted-foreground tabular-nums">{val}</span>
-            </div>
+            <span className="text-muted-foreground font-mono text-xs">
+              {item.valueKind ?? "—"}
+            </span>
           );
+        },
+        enableColumnFilter: true,
+        meta: {
+          label: "Kind",
+          variant: "select" as const,
+          placeholder: "All kinds",
+          options: [
+            { value: "CASHBACK", label: "Cashback" },
+            { value: "AMOUNT_SPENT_POINTS", label: "Amount Spent Pts" },
+            { value: "VISIT_POINTS", label: "Visit Pts" },
+          ],
         },
       },
       {

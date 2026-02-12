@@ -6,7 +6,10 @@ import {
   SETTINGS_ROW_CLASS,
 } from "@/components/settings/loyalty/common";
 import type { LoyaltyTier } from "@/hooks/loyalty/useLoyaltySettings";
-import { validateTierRanges } from "@/lib/loyalty/helpers";
+import {
+  TIER_TOP_MAX_LIFETIME_SPEND,
+  validateTierRanges,
+} from "@/lib/loyalty/helpers";
 import {
   Button,
   Card,
@@ -47,13 +50,17 @@ const DEFAULT_TIER = {
 
 function mapTierToForm(
   tier: LoyaltyTier,
+  isTopTier: boolean,
 ): TierSettingsFormValues["tiers"][number] {
   return {
     id: tier.id,
     name: tier.name,
     rank: tier.rank,
     minLifetimeSpend: tier.minLifetimeSpend,
-    maxLifetimeSpend: tier.maxLifetimeSpend,
+    maxLifetimeSpend:
+      isTopTier && tier.maxLifetimeSpend === TIER_TOP_MAX_LIFETIME_SPEND
+        ? null
+        : tier.maxLifetimeSpend,
     cashbackPercentage: tier.cashbackPercentage,
     minPurchaseForRedemptionEnabled: tier.minPurchaseForRedemptionEnabled,
     minPurchaseForRedemption: tier.minPurchaseForRedemption,
@@ -87,11 +94,17 @@ export function TierSettingsCard({
   onSave,
   isSaving,
 }: TierSettingsCardProps) {
+  const maxRank =
+    tierConfig.tiers?.length > 0
+      ? Math.max(...tierConfig.tiers.map((t) => t.rank))
+      : 0;
   const form = useForm<TierSettingsFormValues>({
     defaultValues: {
       pointsPerRupee: tierConfig.pointsPerRupee ?? 1,
       onFinalAmount: tierConfig.onFinalAmount ?? false,
-      tiers: tierConfig.tiers.map(mapTierToForm),
+      tiers: tierConfig.tiers.map((t) =>
+        mapTierToForm(t, t.rank === maxRank && maxRank > 0),
+      ),
     },
   });
 
@@ -119,20 +132,31 @@ export function TierSettingsCard({
       toast.error(message);
       return;
     }
+    const maxRank =
+      values.tiers.length > 0
+        ? Math.max(...values.tiers.map((t) => t.rank))
+        : 0;
     const payload = {
       pointsPerRupee: values.pointsPerRupee,
       onFinalAmount: values.onFinalAmount,
-      tiers: values.tiers.map((t) => ({
-        name: t.name,
-        rank: t.rank,
-        minLifetimeSpend: t.minLifetimeSpend,
-        maxLifetimeSpend: t.maxLifetimeSpend,
-        cashbackPercentage: t.cashbackPercentage,
-        minPurchaseForRedemptionEnabled: t.minPurchaseForRedemptionEnabled,
-        minPurchaseForRedemption: t.minPurchaseForRedemption,
-        maxCashbackCapEnabled: t.maxCashbackCapEnabled,
-        maxCashbackCap: t.maxCashbackCap,
-      })),
+      tiers: values.tiers.map((t) => {
+        const isTopTier = t.rank === maxRank && maxRank > 0;
+        return {
+          name: t.name,
+          rank: t.rank,
+          minLifetimeSpend: t.minLifetimeSpend,
+          maxLifetimeSpend:
+            isTopTier &&
+            (t.maxLifetimeSpend == null || t.maxLifetimeSpend === 0)
+              ? null
+              : t.maxLifetimeSpend,
+          cashbackPercentage: t.cashbackPercentage,
+          minPurchaseForRedemptionEnabled: t.minPurchaseForRedemptionEnabled,
+          minPurchaseForRedemption: t.minPurchaseForRedemption,
+          maxCashbackCapEnabled: t.maxCashbackCapEnabled,
+          maxCashbackCap: t.maxCashbackCap,
+        };
+      }),
     };
     onSave(payload, {
       onSuccess: () => form.reset(values, { keepDefaultValues: false }),
