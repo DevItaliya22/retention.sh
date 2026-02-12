@@ -1,6 +1,7 @@
 import { applyLoyaltyForBill } from "@/lib/actions/loyalty";
 import { withCashierAuth } from "@/lib/auth/middleware";
 import { APP_CONSTANTS } from "@/lib/constants/app";
+import { runTransaction } from "@/lib/db/transaction";
 import { createBillApiSchema } from "@/lib/schemas/bill";
 import {
   sanitizeErrorMessage,
@@ -70,6 +71,12 @@ async function linkCustomerToBusiness(
         customerId,
       },
     });
+    await db.wallet.create({
+      data: {
+        businessId,
+        customerId,
+      },
+    });
   }
 }
 
@@ -114,11 +121,16 @@ export const POST = withCashierAuth(async (request: NextRequest, context) => {
       subtotal: subtotalFromRequest,
       storeDiscount = 0,
       tax = [],
-      redeemPoints,
+      redeemPoints: redeemPointsRaw,
+      redeemCashback: redeemCashbackRaw,
       notes,
       paymentMethod,
       lineItems = [],
     } = validation.data;
+
+    // Defense: never allow negative redemption (prevents minus-minus = plus hack)
+    const redeemPoints = Math.max(0, Math.floor(Number(redeemPointsRaw) || 0));
+    const redeemCashback = Math.max(0, Number(redeemCashbackRaw) || 0);
 
     if (!phoneNumber || phoneNumber.trim() === "") {
       return NextResponse.json(
@@ -170,7 +182,7 @@ export const POST = withCashierAuth(async (request: NextRequest, context) => {
     const discount = storeDiscount ?? 0;
     const taxSum = (tax ?? []).reduce((a: number, b: number) => a + b, 0);
 
-    const result = await db.$transaction(async (tx) => {
+    const result = await runTransaction(async (tx) => {
       let computedSubtotal: number | null = null;
       if (lineItems.length > 0) {
         const skuIds = [
@@ -239,6 +251,8 @@ export const POST = withCashierAuth(async (request: NextRequest, context) => {
         billAmount: finalAmountBeforeLoyalty,
         billSubtotal,
         redeemPointsRequested: redeemPoints ?? null,
+        redeemCashbackRequested: redeemCashback ?? null,
+        rewardStageId: validation.data.rewardStageId ?? null,
       });
 
       const updatedBill = await tx.bill.update({
@@ -246,6 +260,10 @@ export const POST = withCashierAuth(async (request: NextRequest, context) => {
         data: {
           cashbackAmount:
             loyalty.cashbackAmount != null ? loyalty.cashbackAmount : undefined,
+          cashbackRedeemedAmount:
+            loyalty.cashbackRedeemedAmount != null
+              ? loyalty.cashbackRedeemedAmount
+              : undefined,
           userPaidAmount: loyalty.finalAmount,
         },
       });

@@ -51,8 +51,8 @@ model Loyalty {
   visitMadeConfig   LoyaltyVisitMadeConfig?
 
   // ── Other Relations ────────────────────────────────────────────────────
-  qrs                  Qr[]
-  cashbackTransactions CashbackTransaction[]
+  qrs          Qr[]
+  transactions Transaction[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -134,8 +134,7 @@ model LoyaltyCashbackConfig {
 // Each tier has its own minPurchaseForRedemption and maxCashbackCap.
 // No global max cap; no min purchase for earning (every bill earns per tier %).
 //
-// BusinessCustomer.lifetimeSpend tracks the cumulative spend for tier placement.
-// BusinessCustomer.currentTierId points to the customer's active tier.
+// Tier placement: computed from lifetimeSpend (SUM of Bill.finalAmount if onFinalAmount is true else from Bill.subtotal) + tier ranges.
 // ========================================================================
 
 model LoyaltyTierConfig {
@@ -145,8 +144,8 @@ model LoyaltyTierConfig {
   loyalty   Loyalty @relation(fields: [loyaltyId], references: [id], onDelete: Cascade)
 
   // Default points conversion: 1 rupee spent = X points (used when tier not resolved, e.g. preview).
-  pointsPerRupee Float @default(1)
-  onFinalAmount Boolean @default(false)
+  pointsPerRupee Float   @default(1)
+  onFinalAmount  Boolean @default(false)
 
   tiers LoyaltyTier[]
 
@@ -188,7 +187,6 @@ model LoyaltyTier {
 
   // Relations
   termsAndConditions TermsAndConditions[]
-  customers          BusinessCustomer[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -246,7 +244,7 @@ model LoyaltyAmountSpentConfig {
 //
 // Visit interval: optionally require a minimum time gap between visits
 // to prevent gaming (e.g. only count visits that are 24h apart).
-// When enabled, backend checks BusinessCustomer.lastVisitAt.
+// When enabled, backend checks Wallet.lastVisitAt.
 // When disabled, every bill counts as one visit.
 //
 // Reward structure is identical to Amount Spent (free item, %, cash).
@@ -343,119 +341,4 @@ model LoyaltyRewardStage {
   @@index([amountSpentConfigId])
   @@index([visitMadeConfigId])
   @@map("loyalty_reward_stage")
-}
-
-// ========================================================================
-// CASHBACK TRANSACTIONS (CASHBACK + TIER only)
-// ========================================================================
-// One row per cashback event (per bill). Used by CASHBACK and TIER loyalty
-// types only. AMOUNT_SPENT and VISIT_MADE use PointsTransaction instead.
-// Links to Bill, Loyalty, and BusinessCustomer for audit and history.
-// ========================================================================
-
-model CashbackTransaction {
-  id String @id @default(uuid())
-
-  businessId       String
-  customerId       String
-  businessCustomer BusinessCustomer @relation(fields: [businessId, customerId], references: [businessId, customerId], onDelete: Cascade)
-
-  billId    String
-  bill      Bill     @relation(fields: [billId], references: [id], onDelete: Cascade)
-  loyaltyId String?
-  loyalty   Loyalty? @relation(fields: [loyaltyId], references: [id], onDelete: SetNull)
-
-  // Cashback amount in ₹ for this transaction.
-  amount Float
-
-  source CashbackSource @default(BILL) // BILL = earned from purchase
-
-  description String?
-  metadata    Json? // e.g. tier name/percentage at time of earn (TIER)
-
-  createdAt DateTime @default(now())
-
-  @@index([businessId, customerId])
-  @@index([businessId, customerId, createdAt])
-  @@index([billId])
-  @@index([loyaltyId])
-  @@map("cashback_transaction")
-}
-
-// ========================================================================
-// POINTS TRACKING (Unified Ledger)
-// ========================================================================
-// Single-table ledger for all point movements. Used by AMOUNT_SPENT and
-// VISIT_MADE loyalty types only. NOT used by CASHBACK or TIER (they use
-// CashbackTransaction and totalCashbackEarned).
-//
-// Every earn, redeem, expire, gift, or adjustment is one row.
-// Running balance is denormalized in balanceAfter for fast reads.
-//
-// For EARNED entries: remainingAmount tracks unspent points for FIFO
-// expiry and redemption (replaces the old PointsBucket + Allocation tables).
-//
-// ── FIFO Redemption Flow ─────────────────────────────────────────────────
-//   1. Query oldest EARNED rows where remainingAmount > 0.
-//   2. Decrement remainingAmount on those rows (oldest first).
-//   3. Insert a REDEEMED row with negative amount and updated balanceAfter.
-//
-// ── Expiry Flow (cron job) ───────────────────────────────────────────────
-//   1. Find EARNED rows where remainingAmount > 0 AND expiresAt < now().
-//   2. Insert EXPIRED row with negative amount.
-//   3. Set remainingAmount = 0 on expired rows.
-// ========================================================================
-
-model PointsTransaction {
-  id String @id @default(uuid())
-
-  businessId       String
-  customerId       String
-  businessCustomer BusinessCustomer @relation(fields: [businessId, customerId], references: [businessId, customerId], onDelete: Cascade)
-
-  // Points moved in this transaction.
-  // Positive for EARNED, GIFTED, ADJUSTMENT(+).
-  // Negative for REDEEMED, EXPIRED, REFUNDED, ADJUSTMENT(-).
-  amount Int
-
-  // Classification
-  type   TransactionType // EARNED | REDEEMED | EXPIRED | GIFTED | ADJUSTMENT | REFUNDED
-  source TransactionSource // BILL | FEEDBACK | SCRATCH_CARD | CAMPAIGN | REFERRAL | REGISTRATION | MANUAL_ADJUSTMENT
-
-  // Source entity reference (e.g. scratch card response ID, campaign ID).
-  sourceId String?
-
-  // Direct bill FK (convenience — also trackable via source + sourceId).
-  billId String?
-  bill   Bill?   @relation(fields: [billId], references: [id], onDelete: SetNull)
-
-  // ── FIFO Expiry Tracking (EARNED type only) ───────────────────────────
-  // expiresAt: when these earned points expire (computed from Loyalty.pointExpiryDays).
-  //   Null = never expires.
-  // remainingAmount: how many of these earned points are still available.
-  //   Decremented on redeem/expire. 0 = fully consumed.
-  //   Null for non-EARNED rows.
-  expiresAt       DateTime?
-  remainingAmount Int?
-
-  // Running balance after this transaction (denormalized for fast reads).
-  balanceAfter Int @default(0)
-
-  // Human-readable note (e.g. "Earned from bill #1234", "Redeemed for 10% off").
-  description String?
-
-  // Arbitrary metadata (e.g. tier at time of earning, reward stage redeemed).
-  metadata Json?
-
-  createdAt DateTime @default(now())
-
-  @@index([businessId, customerId])
-  @@index([businessId, customerId, createdAt])
-  @@index([source])
-  @@index([source, sourceId])
-  @@index([billId])
-  @@index([type])
-  @@index([expiresAt])
-  @@index([type, remainingAmount]) // For querying redeemable EARNED points (FIFO)
-  @@map("points_transaction")
 }

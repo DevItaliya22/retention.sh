@@ -1,0 +1,40 @@
+// ========================================================================
+// WALLET (Loyalty Balances)
+// ========================================================================
+// Per BusinessCustomer. Holds denormalized balances for loyalty types.
+// One business has one loyalty type; only the relevant field is used.
+//
+//   cashbackBalance    — CASHBACK/TIER: ₹ in wallet (earned - redeemed)
+//   amountSpentBalance — AMOUNT_SPENT: points from bill amount
+//   visitPointsBalance — VISIT_MADE: points from qualifying visits
+//
+// visitCount + lastVisitAt: for VISIT_MADE visit interval check.
+// Updated on each bill when loyalty is applied.
+// ========================================================================
+
+model Wallet {
+  id String @id @default(uuid())
+
+  businessId       String
+  customerId       String
+  businessCustomer BusinessCustomer @relation(fields: [businessId, customerId], references: [businessId, customerId], onDelete: Cascade)
+
+  cashbackBalance    Float @default(0)
+  amountSpentBalance Int   @default(0)
+  visitPointsBalance Int   @default(0)
+
+  // TIER: denormalized lifetime spend (sum of finalized bill amounts).
+  // Updated when loyalty is applied for a bill. Fallback: aggregate from bills.
+  lifetimeSpend Float @default(0)
+
+  // VISIT_MADE: when visit interval enabled, used to check if bill qualifies.
+  visitCount Int         @default(0)
+  lastVisitAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([businessId, customerId])
+  @@index([businessId, customerId])
+  @@map("wallet")
+}

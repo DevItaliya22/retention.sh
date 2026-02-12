@@ -17,6 +17,8 @@ export interface RewardStagePreview {
 export interface LoyaltyPreviewData {
   loyaltyType: string;
   pointsBalance: number;
+  /** Cashback balance (₹) for CASHBACK/TIER types. */
+  cashbackBalance?: number;
   redeemablePoints: number;
   earnablePoints: number;
   expiringBuckets: {
@@ -29,6 +31,8 @@ export interface LoyaltyPreviewData {
     currentTierName: string;
     cashbackPercentage: number;
   } | null;
+  /** TIER only: when no tier (below first), message for cashier. */
+  tierMessage?: string | null;
   rewardStages: RewardStagePreview[];
   visitCount: number | null;
 }

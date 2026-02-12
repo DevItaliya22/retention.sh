@@ -34,6 +34,7 @@ export async function POST(request: Request) {
         id: true,
         registrationBonusPoints: true,
         isServiceEnabled: true,
+        loyalty: { select: { id: true, loyaltyType: true } },
       },
     });
     if (!business) {
@@ -97,6 +98,12 @@ export async function POST(request: Request) {
           customerId: customer.id,
         },
       });
+      await db.wallet.create({
+        data: {
+          businessId: business.id,
+          customerId: customer.id,
+        },
+      });
     }
 
     const loyaltyEnabled = isServiceEnabled(
@@ -105,25 +112,39 @@ export async function POST(request: Request) {
     );
     const bonusPoints =
       loyaltyEnabled && isNewRegistration
-        ? (business.registrationBonusPoints ?? 0) || 0
+        ? Math.max(0, Number(business.registrationBonusPoints) || 0)
         : 0;
     if (isNewRegistration && bonusPoints > 0) {
-      await db.businessCustomer.update({
+      const loyaltyType = business.loyalty?.loyaltyType ?? "AMOUNT_SPENT";
+      await db.wallet.update({
         where: {
           businessId_customerId: {
             businessId: business.id,
             customerId: customer.id,
           },
         },
-        data: { pointsBalance: { increment: bonusPoints } },
+        data:
+          loyaltyType === "CASHBACK" || loyaltyType === "TIER"
+            ? { cashbackBalance: { increment: bonusPoints } }
+            : loyaltyType === "AMOUNT_SPENT"
+              ? { amountSpentBalance: { increment: bonusPoints } }
+              : { visitPointsBalance: { increment: bonusPoints } },
       });
-      await db.pointsTransaction.create({
+      await db.transaction.create({
         data: {
           businessId: business.id,
           customerId: customer.id,
+          valueKind:
+            loyaltyType === "CASHBACK" || loyaltyType === "TIER"
+              ? "CASHBACK"
+              : loyaltyType === "AMOUNT_SPENT"
+                ? "AMOUNT_SPENT_POINTS"
+                : "VISIT_POINTS",
           amount: bonusPoints,
           type: TransactionType.EARNED,
           source: TransactionSource.REGISTRATION,
+          loyaltyId: business.loyalty?.id ?? null,
+          description: "Registration bonus",
         },
       });
     }

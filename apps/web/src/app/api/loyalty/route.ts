@@ -1,5 +1,8 @@
 import { withAdminAuth } from "@/lib/auth/middleware";
-import { validateTierRanges } from "@/lib/loyalty/helpers";
+import {
+  TIER_TOP_MAX_LIFETIME_SPEND,
+  validateTierRanges,
+} from "@/lib/loyalty/helpers";
 import {
   loyaltyCreateSchema,
   loyaltyUpdateSchema,
@@ -170,14 +173,23 @@ export const POST = withAdminAuth(async (request, context) => {
             onFinalAmount: data.tierConfig.onFinalAmount ?? false,
           },
         });
-        for (const tier of data.tierConfig.tiers) {
+        const tiers = data.tierConfig.tiers;
+        const maxRank =
+          tiers.length > 0 ? Math.max(...tiers.map((t) => t.rank)) : 0;
+        for (const tier of tiers) {
+          const isTopTier = tier.rank === maxRank && maxRank > 0;
+          const maxLifetimeSpend =
+            isTopTier &&
+            (tier.maxLifetimeSpend == null || tier.maxLifetimeSpend === 0)
+              ? TIER_TOP_MAX_LIFETIME_SPEND
+              : (tier.maxLifetimeSpend ?? null);
           await tx.loyaltyTier.create({
             data: {
               tierConfigId: tierConfig.id,
               name: tier.name,
               rank: tier.rank,
               minLifetimeSpend: tier.minLifetimeSpend,
-              maxLifetimeSpend: tier.maxLifetimeSpend ?? null,
+              maxLifetimeSpend,
               cashbackPercentage: tier.cashbackPercentage ?? 0,
               minPurchaseForRedemptionEnabled:
                 tier.minPurchaseForRedemptionEnabled ?? false,
@@ -439,17 +451,26 @@ export const PUT = withAdminAuth(async (request, context) => {
           { status: 400 },
         );
       }
+      const tiers = data.tiers;
+      const maxRank =
+        tiers.length > 0 ? Math.max(...tiers.map((t) => t.rank)) : 0;
       await db.loyaltyTier.deleteMany({
         where: { tierConfigId: existing.tierConfig.id },
       });
-      for (const tier of data.tiers) {
+      for (const tier of tiers) {
+        const isTopTier = tier.rank === maxRank && maxRank > 0;
+        const maxLifetimeSpend =
+          isTopTier &&
+          (tier.maxLifetimeSpend == null || tier.maxLifetimeSpend === 0)
+            ? TIER_TOP_MAX_LIFETIME_SPEND
+            : (tier.maxLifetimeSpend ?? null);
         await db.loyaltyTier.create({
           data: {
             tierConfigId: existing.tierConfig.id,
             name: tier.name,
             rank: tier.rank,
             minLifetimeSpend: tier.minLifetimeSpend,
-            maxLifetimeSpend: tier.maxLifetimeSpend ?? null,
+            maxLifetimeSpend,
             cashbackPercentage: tier.cashbackPercentage ?? 0,
             minPurchaseForRedemptionEnabled:
               tier.minPurchaseForRedemptionEnabled ?? false,

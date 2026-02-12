@@ -204,20 +204,23 @@ export const POST = withAdminAuth(async (request: NextRequest, context) => {
         }
 
         const billSubtotal = item.subtotal ?? item.amount ?? null;
-        const storeDiscount = item.storeDiscount ?? 0;
+        const storeDiscount = Math.max(0, Number(item.storeDiscount) ?? 0);
         const taxArr = item.tax ?? [];
         const taxSum = taxArr.reduce((a: number, b: number) => a + b, 0);
         const finalAmountBeforeLoyalty =
           billSubtotal != null
             ? Math.max(0, billSubtotal - storeDiscount + taxSum)
             : null;
-        const redeemPoints = item.redeemPoints ?? 0;
+        const redeemPoints = Math.max(
+          0,
+          Math.floor(Number(item.redeemPoints) ?? 0),
+        );
 
         if (billSubtotal == null || finalAmountBeforeLoyalty == null) {
           errors.push({
             row: rowNum,
             billNumber: item.billNumber,
-            error: "Subtotal or amount is required",
+            message: "Subtotal or amount is required",
           });
           continue;
         }
@@ -252,6 +255,10 @@ export const POST = withAdminAuth(async (request: NextRequest, context) => {
               cashbackAmount:
                 loyalty.cashbackAmount != null
                   ? loyalty.cashbackAmount
+                  : undefined,
+              cashbackRedeemedAmount:
+                loyalty.cashbackRedeemedAmount != null
+                  ? loyalty.cashbackRedeemedAmount
                   : undefined,
               userPaidAmount: loyalty.finalAmount,
             },

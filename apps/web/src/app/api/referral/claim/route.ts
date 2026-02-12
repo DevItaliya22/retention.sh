@@ -1,4 +1,5 @@
 import { APP_CONSTANTS } from "@/lib/constants/app";
+import { runTransaction } from "@/lib/db/transaction";
 import { claimReferralSchema } from "@/lib/schemas/referral";
 import {
   sanitizeErrorMessage,
@@ -92,8 +93,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Use transaction to ensure atomicity
-    const result = await db.$transaction(async (tx) => {
+    const result = await runTransaction(async (tx) => {
       // Find or create user
       let user = await tx.user.findUnique({
         where: { phoneNumber: formattedPhone },
@@ -171,56 +171,100 @@ export async function POST(request: NextRequest) {
       const referrerPoints =
         loyaltyEnabled &&
         referralProgram.existingCustomerBenefitType === "LOYALTY_BONUS"
-          ? referralProgram.existingCustomerBenefitValue
+          ? Math.max(
+              0,
+              Number(referralProgram.existingCustomerBenefitValue) || 0,
+            )
           : 0;
       const referredPoints =
         loyaltyEnabled &&
         referralProgram.newCustomerBenefitType === "LOYALTY_BONUS"
-          ? referralProgram.newCustomerBenefitValue
+          ? Math.max(0, Number(referralProgram.newCustomerBenefitValue) || 0)
           : 0;
 
+      const loyaltyType = business.loyalty?.loyaltyType ?? "AMOUNT_SPENT";
+
       if (referrerPoints > 0) {
-        await tx.businessCustomer.update({
+        await tx.wallet.upsert({
           where: {
             businessId_customerId: {
               businessId: referrer.businessId,
               customerId: referrer.customerId,
             },
           },
-          data: {
-            pointsBalance: { increment: referrerPoints },
+          create: {
+            businessId: referrer.businessId,
+            customerId: referrer.customerId,
+            ...(loyaltyType === "CASHBACK" || loyaltyType === "TIER"
+              ? { cashbackBalance: referrerPoints }
+              : loyaltyType === "AMOUNT_SPENT"
+                ? { amountSpentBalance: referrerPoints }
+                : { visitPointsBalance: referrerPoints }),
+          },
+          update: {
+            ...(loyaltyType === "CASHBACK" || loyaltyType === "TIER"
+              ? { cashbackBalance: { increment: referrerPoints } }
+              : loyaltyType === "AMOUNT_SPENT"
+                ? { amountSpentBalance: { increment: referrerPoints } }
+                : { visitPointsBalance: { increment: referrerPoints } }),
           },
         });
-        await tx.pointsTransaction.create({
+        await tx.transaction.create({
           data: {
             businessId: referrer.businessId,
             customerId: referrer.customerId,
+            valueKind:
+              loyaltyType === "CASHBACK" || loyaltyType === "TIER"
+                ? "CASHBACK"
+                : loyaltyType === "AMOUNT_SPENT"
+                  ? "AMOUNT_SPENT_POINTS"
+                  : "VISIT_POINTS",
             amount: referrerPoints,
             type: "EARNED",
             source: "REFERRAL",
+            loyaltyId: business.loyalty?.id ?? null,
+            description: "Referral bonus",
           },
         });
       }
 
       if (referredPoints > 0) {
-        await tx.businessCustomer.update({
+        await tx.wallet.upsert({
           where: {
-            businessId_customerId: {
-              businessId,
-              customerId: customer.id,
-            },
+            businessId_customerId: { businessId, customerId: customer.id },
           },
-          data: {
-            pointsBalance: { increment: referredPoints },
+          create: {
+            businessId,
+            customerId: customer.id,
+            ...(loyaltyType === "CASHBACK" || loyaltyType === "TIER"
+              ? { cashbackBalance: referredPoints }
+              : loyaltyType === "AMOUNT_SPENT"
+                ? { amountSpentBalance: referredPoints }
+                : { visitPointsBalance: referredPoints }),
+          },
+          update: {
+            ...(loyaltyType === "CASHBACK" || loyaltyType === "TIER"
+              ? { cashbackBalance: { increment: referredPoints } }
+              : loyaltyType === "AMOUNT_SPENT"
+                ? { amountSpentBalance: { increment: referredPoints } }
+                : { visitPointsBalance: { increment: referredPoints } }),
           },
         });
-        await tx.pointsTransaction.create({
+        await tx.transaction.create({
           data: {
             businessId,
             customerId: customer.id,
+            valueKind:
+              loyaltyType === "CASHBACK" || loyaltyType === "TIER"
+                ? "CASHBACK"
+                : loyaltyType === "AMOUNT_SPENT"
+                  ? "AMOUNT_SPENT_POINTS"
+                  : "VISIT_POINTS",
             amount: referredPoints,
             type: "EARNED",
             source: "REFERRAL",
+            loyaltyId: business.loyalty?.id ?? null,
+            description: "Referral bonus",
           },
         });
       }

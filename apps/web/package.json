@@ -12,7 +12,10 @@
     "lint:fix": "eslint . --fix",
     "typecheck": "tsc --noEmit",
     "auth:generate": "npx @better-auth/cli generate --config ./src/lib/auth/auth.ts --output ../../packages/prisma/prisma/schema.prisma --yes",
-    "db:generate": "pnpm --filter=@reelo/db db:generate"
+    "db:generate": "pnpm --filter=@reelo/db db:generate",
+    "test:cashback-e2e": "npx tsx scripts/cashback-scenarios.e2e.ts",
+    "test:tier-e2e": "npx tsx scripts/tier-scenarios.e2e.ts",
+    "test:amount-spent-e2e": "npx tsx scripts/amount-spent-scenarios.e2e.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

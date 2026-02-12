@@ -21,10 +21,10 @@ export interface BillLineItemResponse {
 
 export interface BillLoyaltyLog {
   id: string;
+  valueKind?: string;
   type: string;
   source: string;
   amount: number;
-  balanceAfter: number;
   createdAt: string;
 }
 
@@ -38,6 +38,7 @@ export interface BillDetail {
   tax?: number[];
   finalAmount?: number | null;
   cashbackAmount?: number | null;
+  cashbackRedeemedAmount?: number | null;
   userPaidAmount?: number | null;
   loyaltyPointsEarned?: number;
   loyaltyPointsRedeemed?: number;

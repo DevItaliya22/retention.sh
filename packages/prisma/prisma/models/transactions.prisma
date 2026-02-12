@@ -1,0 +1,60 @@
+// ========================================================================
+// UNIFIED TRANSACTION (Cashback + Points)
+// ========================================================================
+// Single-table ledger for all loyalty value movements.
+// Balances stored denormalized in Wallet; Transaction is audit/history.
+//
+// valueKind: CASHBACK (₹) | AMOUNT_SPENT_POINTS | VISIT_POINTS
+// type: EARNED | REDEEMED | EXPIRED | GIFTED | ADJUSTMENT | REFUNDED
+// No FIFO: wallet balances updated directly; expiresAt for cron expiry only.
+// ========================================================================
+
+model Transaction {
+    id String @id @default(uuid())
+
+    valueKind TransactionValueKind
+    amount    Float
+
+    type   TransactionType
+    source TransactionSource
+
+    // When points expire (EARNED only; cron creates EXPIRED tx).
+    expiresAt DateTime?
+
+    description String?
+    metadata    Json?
+
+    // ── Connections ───────────────────────────────────────────────────────
+    businessId       String
+    customerId       String
+    businessCustomer BusinessCustomer @relation(fields: [businessId, customerId], references: [businessId, customerId], onDelete: Cascade)
+
+    billId String?
+    bill   Bill?   @relation(fields: [billId], references: [id], onDelete: SetNull)
+
+    feedbackResponseId String?
+    feedbackResponse   FeedbackResponse? @relation(fields: [feedbackResponseId], references: [id], onDelete: SetNull)
+
+    scratchCardResponseId String?
+    scratchCardResponse   ScratchCardResponse? @relation(fields: [scratchCardResponseId], references: [id], onDelete: SetNull)
+
+    loyaltyId String?
+    loyalty   Loyalty? @relation(fields: [loyaltyId], references: [id], onDelete: SetNull)
+
+    sourceId String?
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@index([businessId, customerId])
+    @@index([businessId, customerId, createdAt])
+    @@index([billId])
+    @@index([feedbackResponseId])
+    @@index([scratchCardResponseId])
+    @@index([loyaltyId])
+    @@index([type])
+    @@index([source])
+    @@index([valueKind])
+    @@index([expiresAt])
+    @@map("transaction")
+}
