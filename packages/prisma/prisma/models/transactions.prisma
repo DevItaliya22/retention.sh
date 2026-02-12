@@ -5,6 +5,10 @@
 // Balances stored denormalized in Wallet; Transaction is audit/history.
 //
 // valueKind: CASHBACK (₹) | AMOUNT_SPENT_POINTS | VISIT_POINTS
+//   - CASHBACK: amount in rupees; wallet.cashbackBalance.
+//   - AMOUNT_SPENT_POINTS / VISIT_POINTS: points (not ₹); wallet.amountSpentBalance / visitPointsBalance.
+//   For AMOUNT_SPENT/VISIT_MADE, points are earned per spend/visit; redemption uses reward stages
+//   (FREE_ITEM = deduct points only; PERCENTAGE_DISCOUNT/CASH_DISCOUNT = points → cashback value → that cashback is the discount).
 // type: EARNED | REDEEMED | EXPIRED | GIFTED | ADJUSTMENT | REFUNDED
 // No FIFO: wallet balances updated directly; expiresAt for cron expiry only.
 // ========================================================================

@@ -801,31 +801,7 @@ export function BillCreationForm() {
               </div>
             </div>
 
-            {/* ─── Loyalty tier message (TIER type, before bill creation) ─── */}
-            {loyaltyType === "TIER" &&
-              phoneNumber.length >= 4 &&
-              (loyaltyPreview?.tierInfo || loyaltyPreview?.tierMessage) && (
-                <div className="bg-muted/30 flex items-center gap-3 rounded-lg border p-3">
-                  <Trophy className="size-5 shrink-0 text-amber-600 dark:text-amber-400" />
-                  <div className="text-sm">
-                    {loyaltyPreview.tierInfo ? (
-                      <>
-                        <p className="font-medium">
-                          Customer&apos;s tier:{" "}
-                          {loyaltyPreview.tierInfo.currentTierName}
-                        </p>
-                        <p className="text-muted-foreground text-xs">
-                          {loyaltyPreview.tierInfo.cashbackPercentage}% cashback
-                        </p>
-                      </>
-                    ) : (
-                      <p className="text-muted-foreground">
-                        {loyaltyPreview.tierMessage}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )}
+            {/* Tier/cashback % is shown only after bill is created (BillCreatedView), not during creation, to avoid flicker */}
 
             {/* ─── Collapsible: Notes, Line Items, Redeem points ─────────── */}
             <Collapsible open={extrasOpen} onOpenChange={setExtrasOpen}>
@@ -861,7 +837,7 @@ export function BillCreationForm() {
                 </div>
 
                 {/* Redeem points/cashback (loyalty) — only when applicable */}
-                {loyaltyType !== "NONE" &&
+                {/* {loyaltyType !== "NONE" &&
                   phoneNumber.length >= 4 &&
                   redeemablePoints > 0 && (
                     <div className="space-y-1.5">
@@ -884,7 +860,7 @@ export function BillCreationForm() {
                         className="max-w-32"
                       />
                     </div>
-                  )}
+                  )} */}
 
                 {/* Line Items */}
                 <div className="space-y-3 rounded-lg border p-4">

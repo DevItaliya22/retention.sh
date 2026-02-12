@@ -12,6 +12,7 @@ import {
 } from "@reelo/ui/components";
 import type { FieldPath, FieldValues } from "react-hook-form";
 import {
+  numericInputHandlers,
   SETTINGS_CONTROL_CLASS,
   SETTINGS_LABEL_CLASS,
   SETTINGS_ROW_CLASS,
@@ -43,46 +44,6 @@ export function MinPurchaseToggleField<T extends FieldValues>({
     <div className="space-y-2">
       <FormField
         control={form.control}
-        name={enabledName}
-        render={({ field }) => (
-          <FormItem className="flex flex-row items-center gap-2">
-            <FormControl>
-              <label className="flex cursor-pointer items-center gap-2">
-                <Switch
-                  checked={field.value ?? false}
-                  onCheckedChange={(checked) => {
-                    field.onChange(checked);
-                    if (checked) {
-                      const current = form.getValues(valueName as never);
-                      if (
-                        current == null ||
-                        (typeof current === "string" && current === "")
-                      ) {
-                        form.setValue(valueName as never, 0 as never);
-                      }
-                    }
-                  }}
-                />
-                {!isSettings && (
-                  <span className="text-sm font-normal">{label}</span>
-                )}
-                {tooltip && (
-                  <span
-                    className="text-muted-foreground text-xs"
-                    title={tooltip}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    (i)
-                  </span>
-                )}
-              </label>
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-      <FormField
-        control={form.control}
         name={valueName}
         render={({ field }) => (
           <FormItem>
@@ -109,12 +70,55 @@ export function MinPurchaseToggleField<T extends FieldValues>({
                   }
                   field.onChange(Math.max(0, Number(raw)));
                 }}
+                {...numericInputHandlers}
               />
             </FormControl>
             <FormMessage />
           </FormItem>
         )}
       />
+      <div className="pt-2">
+        <FormField
+          control={form.control}
+          name={enabledName}
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center gap-2">
+              <FormControl>
+                <label className="flex cursor-pointer items-center gap-2">
+                  <Switch
+                    checked={field.value ?? false}
+                    onCheckedChange={(checked) => {
+                      field.onChange(checked);
+                      if (checked) {
+                        const current = form.getValues(valueName as never);
+                        if (
+                          current == null ||
+                          (typeof current === "string" && current === "")
+                        ) {
+                          form.setValue(valueName as never, 0 as never);
+                        }
+                      }
+                    }}
+                  />
+                  {!isSettings && (
+                    <span className="text-sm font-normal">{label}</span>
+                  )}
+                  {tooltip && (
+                    <span
+                      className="text-muted-foreground text-xs"
+                      title={tooltip}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      (i)
+                    </span>
+                  )}
+                </label>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </div>
     </div>
   );
 

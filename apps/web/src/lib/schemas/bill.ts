@@ -134,4 +134,5 @@ export const billImportSchema = z.object({
 export type BillFormInput = z.infer<typeof billFormSchema>;
 export type CreateBillApiInput = z.infer<typeof createBillApiSchema>;
 export type BillsQueryInput = z.infer<typeof billsQuerySchema>;
+export type BillImportItemInput = z.infer<typeof billImportItemSchema>;
 export type BillImportInput = z.infer<typeof billImportSchema>;

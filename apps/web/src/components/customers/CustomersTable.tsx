@@ -52,6 +52,7 @@ export function CustomersTable() {
         email: "",
         phone: null,
         pointsBalance: 0,
+        cashbackBalance: 0,
         createdAt: "",
         updatedAt: "",
       })) as Customer[];
@@ -66,6 +67,7 @@ export function CustomersTable() {
           email: "",
           phone: null,
           pointsBalance: 0,
+          cashbackBalance: 0,
           createdAt: "",
           updatedAt: "",
         },
@@ -168,14 +170,50 @@ export function CustomersTable() {
         },
       },
       {
-        id: "pointsBalance",
-        accessorKey: "pointsBalance",
-        size: 150,
-        minSize: 120,
-        maxSize: 200,
+        id: "cashbackBalance",
+        accessorKey: "cashbackBalance",
+        size: 120,
+        minSize: 100,
+        maxSize: 160,
         header: ({ column }) => (
           <div className="flex w-full justify-end">
-            <DataTableColumnHeader column={column} label="Loyalty points" />
+            <DataTableColumnHeader column={column} label="Cashback (₹)" />
+          </div>
+        ),
+        cell: ({ row }) => {
+          const customer = row.original;
+          if (customer.id === "empty-state") {
+            return null;
+          }
+          if (isLoading && customer.id.startsWith("skeleton-")) {
+            return (
+              <div className="flex justify-end">
+                <Skeleton className="h-4 w-16" />
+              </div>
+            );
+          }
+          const cashback = customer.cashbackBalance ?? 0;
+          return (
+            <div className="flex justify-end font-medium tabular-nums">
+              ₹
+              {cashback.toLocaleString("en-IN", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
+            </div>
+          );
+        },
+        enableSorting: true,
+      },
+      {
+        id: "pointsBalance",
+        accessorKey: "pointsBalance",
+        size: 120,
+        minSize: 100,
+        maxSize: 160,
+        header: ({ column }) => (
+          <div className="flex w-full justify-end">
+            <DataTableColumnHeader column={column} label="Points" />
           </div>
         ),
         cell: ({ row }) => {
@@ -191,10 +229,8 @@ export function CustomersTable() {
             );
           }
           return (
-            <div className="flex justify-end">
-              <div className="font-medium">
-                {customer.pointsBalance.toLocaleString("en-IN")}
-              </div>
+            <div className="flex justify-end font-medium tabular-nums">
+              {customer.pointsBalance.toLocaleString("en-IN")}
             </div>
           );
         },

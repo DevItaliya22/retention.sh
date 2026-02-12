@@ -124,6 +124,7 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
               },
             },
           },
+          wallet: true,
         },
       }),
       db.businessCustomer.count({ where }),
@@ -136,7 +137,10 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
       name: bc.customer.user.name,
       email: bc.customer.email,
       phone: bc.customer.user.phoneNumber,
-      pointsBalance: bc.pointsBalance,
+      pointsBalance:
+        (bc.wallet?.amountSpentBalance ?? 0) +
+        (bc.wallet?.visitPointsBalance ?? 0),
+      cashbackBalance: bc.wallet?.cashbackBalance ?? 0,
       createdAt: bc.createdAt.toISOString(),
       updatedAt: bc.updatedAt.toISOString(),
     }));

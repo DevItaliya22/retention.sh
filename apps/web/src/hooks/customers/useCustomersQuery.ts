@@ -17,6 +17,7 @@ export interface Customer {
   email: string;
   phone: string | null;
   pointsBalance: number;
+  cashbackBalance: number;
   createdAt: string;
   updatedAt: string;
 }

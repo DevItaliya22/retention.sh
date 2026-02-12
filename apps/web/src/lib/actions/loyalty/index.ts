@@ -119,6 +119,8 @@ async function recordPointsRedemptionAsCashbackFlow(
     context: LoyaltyContext;
     pointsDec: number;
     cashbackValue: number;
+    /** When redeeming for FREE_ITEM, pass so we can show "You got: X" on the bill. */
+    freeItemReward?: { rewardName: string; freeItemName: string | null };
   },
 ) {
   const {
@@ -129,6 +131,7 @@ async function recordPointsRedemptionAsCashbackFlow(
     context,
     pointsDec,
     cashbackValue,
+    freeItemReward,
   } = params;
   if (pointsDec <= 0 || context.type === "CASHBACK" || context.type === "TIER")
     return;
@@ -146,6 +149,10 @@ async function recordPointsRedemptionAsCashbackFlow(
   }
   const valueKind = pointsValueKind(context);
 
+  const pointsDescription = freeItemReward
+    ? `Redeemed ${pointsDec} points for: ${freeItemReward.freeItemName ?? freeItemReward.rewardName}`
+    : `Redeemed ${pointsDec} points on bill`;
+
   // 1. Points dec
   await tx.transaction.create({
     data: {
@@ -158,12 +165,42 @@ async function recordPointsRedemptionAsCashbackFlow(
       type: TransactionType.REDEEMED,
       source: TransactionSource.BILL,
       sourceId: billId,
-      description: `Redeemed ${pointsDec} points on bill`,
+      description: pointsDescription,
+      metadata: freeItemReward
+        ? {
+            rewardType: "FREE_ITEM",
+            rewardName: freeItemReward.rewardName,
+            freeItemName: freeItemReward.freeItemName,
+          }
+        : undefined,
     },
   });
 
+  // FREE_ITEM: 2nd tx = audit only (free item claimed), no wallet change
+  if (freeItemReward) {
+    await tx.transaction.create({
+      data: {
+        businessId,
+        customerId,
+        billId,
+        loyaltyId,
+        valueKind,
+        amount: 0,
+        type: TransactionType.REDEEMED,
+        source: TransactionSource.BILL,
+        sourceId: billId,
+        description: `Free item claimed: ${freeItemReward.freeItemName ?? freeItemReward.rewardName}`,
+        metadata: {
+          freeItemClaimed: true,
+          rewardName: freeItemReward.rewardName,
+          freeItemName: freeItemReward.freeItemName,
+        },
+      },
+    });
+  }
+
   if (cashbackValue > 0) {
-    // 2. Cashback inc (points converted to cashback)
+    // 2. Cashback inc (points converted to cashback) — stays in wallet until user "redeems cashback on bill"
     await tx.transaction.create({
       data: {
         businessId,
@@ -176,22 +213,7 @@ async function recordPointsRedemptionAsCashbackFlow(
         source: TransactionSource.BILL,
         sourceId: billId,
         description: `Points converted to ₹${cashbackValue} cashback`,
-        metadata: { fromPointsRedemption: true, pointsDeducted: pointsDec },
-      },
-    });
-    // 3. Cashback dec (used on bill)
-    await tx.transaction.create({
-      data: {
-        businessId,
-        customerId,
-        billId,
-        loyaltyId,
-        valueKind: TransactionValueKind.CASHBACK,
-        amount: -cashbackValue,
-        type: TransactionType.REDEEMED,
-        source: TransactionSource.BILL,
-        sourceId: billId,
-        description: `Redeemed ₹${cashbackValue} cashback on bill`,
+        metadata: { fromPointsConversion: true, pointsDeducted: pointsDec },
       },
     });
   }
@@ -200,10 +222,17 @@ async function recordPointsRedemptionAsCashbackFlow(
     context.type === "AMOUNT_SPENT"
       ? { amountSpentBalance: { decrement: pointsDec } }
       : { visitPointsBalance: { decrement: pointsDec } };
-  // Cashback: +cashbackValue - cashbackValue = no net change
+  const data: {
+    amountSpentBalance?: { decrement: number };
+    visitPointsBalance?: { decrement: number };
+    cashbackBalance?: { increment: number };
+  } = pointsField;
+  if (cashbackValue > 0) {
+    data.cashbackBalance = { increment: cashbackValue };
+  }
   await tx.wallet.update({
     where: { businessId_customerId: { businessId, customerId } },
-    data: pointsField,
+    data,
   });
 }
 
@@ -503,7 +532,207 @@ export interface ApplyLoyaltyResult {
   tierMessage?: string | null;
 }
 
-/** Apply redemption only to an existing bill (no earning). For post-creation redeem flow. */
+/** Convert points to cashback or free item only. No bill discount. AMOUNT_SPENT/VISIT_MADE only. */
+export async function convertPointsForBill(
+  tx: Prisma.TransactionClient,
+  params: {
+    businessId: string;
+    customerId: string;
+    billId: string;
+    billAmount: number;
+    rewardStageId: string;
+  },
+): Promise<{
+  pointsBalance: number;
+  cashbackBalance: number;
+  redeemedFreeItems?: Array<{
+    rewardName: string;
+    freeItemName: string | null;
+  }>;
+}> {
+  const { businessId, customerId, billId, billAmount, rewardStageId } = params;
+  const context = await getBusinessLoyaltyContext(tx, businessId);
+  if (
+    !context ||
+    (context.type !== "AMOUNT_SPENT" && context.type !== "VISIT_MADE")
+  ) {
+    throw new Error(
+      "Convert points is only for AMOUNT_SPENT or VISIT_MADE loyalty",
+    );
+  }
+
+  await expirePointsForCustomer(tx, { businessId, customerId });
+  const wallet = await tx.wallet.findUnique({
+    where: { businessId_customerId: { businessId, customerId } },
+  });
+  const pointsBalance =
+    context.type === "AMOUNT_SPENT"
+      ? Math.max(0, wallet?.amountSpentBalance ?? 0)
+      : Math.max(0, wallet?.visitPointsBalance ?? 0);
+
+  const loyalty = await tx.loyalty.findUnique({
+    where: { businessId },
+    include: {
+      amountSpentConfig: { include: { rewardStages: true } },
+      visitMadeConfig: { include: { rewardStages: true } },
+    },
+  });
+  const stages =
+    context.type === "AMOUNT_SPENT"
+      ? (loyalty?.amountSpentConfig?.rewardStages ?? [])
+      : (loyalty?.visitMadeConfig?.rewardStages ?? []);
+  const stage = stages.find((s) => s.id === rewardStageId);
+  if (!stage || stage.pointsRequired > pointsBalance) {
+    throw new Error("Invalid reward stage or insufficient points");
+  }
+
+  let pointsDec = 0;
+  let cashbackValue = 0;
+  let freeItemReward:
+    | { rewardName: string; freeItemName: string | null }
+    | undefined;
+
+  if (stage.rewardType === "FREE_ITEM") {
+    const minOk =
+      !stage.minPurchaseForRedemptionEnabled ||
+      stage.minPurchaseForRedemption == null ||
+      billAmount >= stage.minPurchaseForRedemption;
+    if (!minOk)
+      throw new Error("Bill amount below min purchase for this reward");
+    pointsDec = stage.pointsRequired;
+    freeItemReward = {
+      rewardName: stage.rewardName ?? "Free item",
+      freeItemName: stage.freeItemName ?? null,
+    };
+  } else if (
+    stage.rewardType === "PERCENTAGE_DISCOUNT" ||
+    stage.rewardType === "CASH_DISCOUNT"
+  ) {
+    if (billAmount <= 0) {
+      throw new Error(
+        "Bill amount is 0 or missing. Add items to the bill before converting points.",
+      );
+    }
+    cashbackValue = calculateDiscountFromStage(
+      {
+        id: stage.id,
+        rewardType: stage.rewardType,
+        pointsRequired: stage.pointsRequired,
+        percentageValue: stage.percentageValue,
+        cashAmount: stage.cashAmount,
+        minPurchaseForRedemptionEnabled: stage.minPurchaseForRedemptionEnabled,
+        minPurchaseForRedemption: stage.minPurchaseForRedemption,
+        maxDiscountCapEnabled: stage.maxDiscountCapEnabled,
+        maxDiscountCap: stage.maxDiscountCap,
+      },
+      billAmount,
+    );
+    if (cashbackValue <= 0) {
+      const minMsg =
+        stage.minPurchaseForRedemptionEnabled &&
+        stage.minPurchaseForRedemption != null
+          ? ` Min purchase for this reward: ₹${stage.minPurchaseForRedemption}.`
+          : "";
+      const configMsg =
+        stage.rewardType === "PERCENTAGE_DISCOUNT"
+          ? stage.percentageValue == null || stage.percentageValue <= 0
+            ? " Reward has no percentage set."
+            : ""
+          : stage.cashAmount == null || stage.cashAmount <= 0
+            ? " Reward has no cash amount set."
+            : "";
+      throw new Error(
+        `Discount could not be computed for this bill (₹${billAmount.toFixed(2)}).${minMsg}${configMsg}`,
+      );
+    }
+    pointsDec = stage.pointsRequired;
+  } else {
+    throw new Error("Unsupported reward type");
+  }
+
+  await recordPointsRedemptionAsCashbackFlow(tx, {
+    businessId,
+    customerId,
+    billId,
+    loyaltyId: loyalty?.id ?? null,
+    context,
+    pointsDec,
+    cashbackValue,
+    freeItemReward,
+  });
+
+  const updated = await tx.wallet.findUnique({
+    where: { businessId_customerId: { businessId, customerId } },
+  });
+  return {
+    pointsBalance:
+      context.type === "AMOUNT_SPENT"
+        ? (updated?.amountSpentBalance ?? 0)
+        : (updated?.visitPointsBalance ?? 0),
+    cashbackBalance: updated?.cashbackBalance ?? 0,
+    redeemedFreeItems:
+      freeItemReward != null
+        ? [
+            {
+              rewardName: freeItemReward.rewardName,
+              freeItemName: freeItemReward.freeItemName,
+            },
+          ]
+        : undefined,
+  };
+}
+
+/** Apply only cashback redemption to bill (discount). One cashback redemption per bill. */
+export async function applyCashbackRedemptionForBill(
+  tx: Prisma.TransactionClient,
+  params: {
+    businessId: string;
+    customerId: string;
+    billId: string;
+    billAmount: number;
+    redeemCashbackRequested: number;
+    loyaltyId: string | null;
+  },
+): Promise<{ finalAmount: number; cashbackRedeemedAmount: number }> {
+  const {
+    businessId,
+    customerId,
+    billId,
+    billAmount,
+    redeemCashbackRequested,
+    loyaltyId,
+  } = params;
+  const amount = Math.max(0, redeemCashbackRequested);
+  if (amount <= 0) {
+    return { finalAmount: billAmount, cashbackRedeemedAmount: 0 };
+  }
+
+  const alreadyCashbackRedeemed = await tx.transaction.count({
+    where: {
+      billId,
+      type: TransactionType.REDEEMED,
+      valueKind: TransactionValueKind.CASHBACK,
+    },
+  });
+  if (alreadyCashbackRedeemed > 0) {
+    throw new Error(
+      "This bill has already been redeemed (cashback applied). Redemption can only be done once per bill.",
+    );
+  }
+
+  await recordCashbackRedemption(tx, {
+    businessId,
+    customerId,
+    billId,
+    loyaltyId,
+    amount,
+  });
+
+  const finalAmount = Math.max(0, billAmount - amount);
+  return { finalAmount, cashbackRedeemedAmount: amount };
+}
+
+/** Apply redemption only to an existing bill (no earning). For CASHBACK/TIER: cashback only. For AMOUNT_SPENT/VISIT_MADE use convertPointsForBill + applyCashbackRedemptionForBill separately. */
 export async function applyRedemptionForBill(
   tx: Prisma.TransactionClient,
   params: {
@@ -534,6 +763,30 @@ export async function applyRedemptionForBill(
   const context = await getBusinessLoyaltyContext(tx, businessId);
   if (!context) return noLoyaltyResult(billAmount);
 
+  const isCashbackType = context.type === "CASHBACK" || context.type === "TIER";
+  // Only "cashback applied to bill" counts as "already redeemed" (one per bill)
+  const alreadyCashbackRedeemedCount = await tx.transaction.count({
+    where: {
+      billId,
+      type: TransactionType.REDEEMED,
+      valueKind: TransactionValueKind.CASHBACK,
+    },
+  });
+  if (alreadyCashbackRedeemedCount > 0 && redeemCashbackReq > 0) {
+    throw new Error(
+      "This bill has already been redeemed (cashback applied). Redemption can only be done once per bill.",
+    );
+  }
+
+  // AMOUNT_SPENT/VISIT_MADE: use convertPointsForBill + applyCashbackRedemptionForBill from API; here only handle cashback redeem
+  const pointsTypeOnlyCashback =
+    !isCashbackType &&
+    (requested > 0 || rewardStageId != null) &&
+    redeemCashbackReq === 0;
+  if (pointsTypeOnlyCashback) {
+    return noLoyaltyResult(billAmount);
+  }
+
   await expirePointsForCustomer(tx, { businessId, customerId });
 
   const wallet = await tx.wallet.findUnique({
@@ -558,7 +811,6 @@ export async function applyRedemptionForBill(
     context.type === "TIER"
       ? resolveTierForLifetimeSpend(context.config.tiers, lifetimeSpend)
       : null;
-  const isCashbackType = context.type === "CASHBACK" || context.type === "TIER";
 
   const pointsBalance =
     context.type === "AMOUNT_SPENT"
@@ -590,44 +842,9 @@ export async function applyRedemptionForBill(
     },
   });
 
-  let redeemedPoints = 0;
-  let pointsDiscount = 0; // discount from points (1:1 or from reward stage)
-  if (!isCashbackType && (requested > 0 || rewardStageId)) {
-    if (rewardStageId && loyalty) {
-      const stages =
-        context.type === "AMOUNT_SPENT"
-          ? (loyalty.amountSpentConfig?.rewardStages ?? [])
-          : (loyalty.visitMadeConfig?.rewardStages ?? []);
-      const stage = stages.find((s) => s.id === rewardStageId);
-      if (
-        stage &&
-        stage.pointsRequired <= pointsBalance &&
-        (stage.rewardType === "PERCENTAGE_DISCOUNT" ||
-          stage.rewardType === "CASH_DISCOUNT")
-      ) {
-        pointsDiscount = calculateDiscountFromStage(
-          {
-            id: stage.id,
-            rewardType: stage.rewardType,
-            pointsRequired: stage.pointsRequired,
-            percentageValue: stage.percentageValue,
-            cashAmount: stage.cashAmount,
-            minPurchaseForRedemptionEnabled:
-              stage.minPurchaseForRedemptionEnabled,
-            minPurchaseForRedemption: stage.minPurchaseForRedemption,
-            maxDiscountCapEnabled: stage.maxDiscountCapEnabled,
-            maxDiscountCap: stage.maxDiscountCap,
-          },
-          billAmount,
-        );
-        redeemedPoints = pointsDiscount > 0 ? stage.pointsRequired : 0;
-      }
-    }
-    if (redeemedPoints === 0) {
-      redeemedPoints = Math.min(requested, Math.floor(redeemable));
-      pointsDiscount = redeemedPoints; // 1:1
-    }
-  }
+  // Points conversion (AMOUNT_SPENT/VISIT_MADE) is done via convertPointsForBill (API). Here only cashback redeem.
+  const redeemedPoints = 0;
+  const pointsDiscount = 0;
 
   const redeemedCashback = isCashbackType
     ? Math.min(redeemCashbackReq, redeemable)
@@ -648,19 +865,8 @@ export async function applyRedemptionForBill(
       amount: redeemedCashback,
     });
   }
-  if (redeemedPoints > 0 && !isCashbackType) {
-    await recordPointsRedemptionAsCashbackFlow(tx, {
-      businessId,
-      customerId,
-      billId,
-      loyaltyId: loyalty?.id ?? null,
-      context,
-      pointsDec: redeemedPoints,
-      cashbackValue: pointsDiscount,
-    });
-  }
 
-  finalAmount = Math.max(0, billAmount - redeemedCashback - pointsDiscount);
+  finalAmount = Math.max(0, billAmount - redeemedCashback);
 
   const updatedWallet = await tx.wallet.findUnique({
     where: { businessId_customerId: { businessId, customerId } },
@@ -671,15 +877,12 @@ export async function applyRedemptionForBill(
       ? (updatedWallet?.amountSpentBalance ?? 0)
       : (updatedWallet?.visitPointsBalance ?? 0);
 
-  // Total discount from wallet: direct cashback + points (converted to cashback)
-  const totalCashbackRedeemed = redeemedCashback + pointsDiscount;
-
   return {
     loyaltyType: context.type,
     earnedPoints: 0,
-    redeemedPoints,
+    redeemedPoints: 0,
     cashbackAmount: null,
-    cashbackRedeemedAmount: totalCashbackRedeemed,
+    cashbackRedeemedAmount: redeemedCashback,
     pointsBalance: effectivePointsBalance,
     finalAmount,
   };
@@ -776,8 +979,12 @@ export async function applyLoyaltyForBill(
     },
   });
 
+  // Same semantics as applyRedemptionForBill: points → reward; discount = cashback (FREE_ITEM = points only).
   let redeemedPoints = 0;
   let pointsDiscount = 0;
+  let freeItemReward:
+    | { rewardName: string; freeItemName: string | null }
+    | undefined;
   if (!isCashbackType && (requested > 0 || rewardStageId)) {
     if (rewardStageId && loyalty) {
       const stages =
@@ -785,28 +992,41 @@ export async function applyLoyaltyForBill(
           ? (loyalty.amountSpentConfig?.rewardStages ?? [])
           : (loyalty.visitMadeConfig?.rewardStages ?? []);
       const stage = stages.find((s) => s.id === rewardStageId);
-      if (
-        stage &&
-        stage.pointsRequired <= pointsBalance &&
-        (stage.rewardType === "PERCENTAGE_DISCOUNT" ||
-          stage.rewardType === "CASH_DISCOUNT")
-      ) {
-        pointsDiscount = calculateDiscountFromStage(
-          {
-            id: stage.id,
-            rewardType: stage.rewardType,
-            pointsRequired: stage.pointsRequired,
-            percentageValue: stage.percentageValue,
-            cashAmount: stage.cashAmount,
-            minPurchaseForRedemptionEnabled:
-              stage.minPurchaseForRedemptionEnabled,
-            minPurchaseForRedemption: stage.minPurchaseForRedemption,
-            maxDiscountCapEnabled: stage.maxDiscountCapEnabled,
-            maxDiscountCap: stage.maxDiscountCap,
-          },
-          billAmount,
-        );
-        redeemedPoints = pointsDiscount > 0 ? stage.pointsRequired : 0;
+      if (stage && stage.pointsRequired <= pointsBalance) {
+        if (stage.rewardType === "FREE_ITEM") {
+          const minOk =
+            !stage.minPurchaseForRedemptionEnabled ||
+            stage.minPurchaseForRedemption == null ||
+            billAmount >= stage.minPurchaseForRedemption;
+          if (minOk) {
+            redeemedPoints = stage.pointsRequired;
+            pointsDiscount = 0;
+            freeItemReward = {
+              rewardName: stage.rewardName ?? "Free item",
+              freeItemName: stage.freeItemName ?? null,
+            };
+          }
+        } else if (
+          stage.rewardType === "PERCENTAGE_DISCOUNT" ||
+          stage.rewardType === "CASH_DISCOUNT"
+        ) {
+          pointsDiscount = calculateDiscountFromStage(
+            {
+              id: stage.id,
+              rewardType: stage.rewardType,
+              pointsRequired: stage.pointsRequired,
+              percentageValue: stage.percentageValue,
+              cashAmount: stage.cashAmount,
+              minPurchaseForRedemptionEnabled:
+                stage.minPurchaseForRedemptionEnabled,
+              minPurchaseForRedemption: stage.minPurchaseForRedemption,
+              maxDiscountCapEnabled: stage.maxDiscountCapEnabled,
+              maxDiscountCap: stage.maxDiscountCap,
+            },
+            billAmount,
+          );
+          redeemedPoints = pointsDiscount > 0 ? stage.pointsRequired : 0;
+        }
       }
     }
     if (redeemedPoints === 0) {
@@ -839,8 +1059,7 @@ export async function applyLoyaltyForBill(
     });
   }
   if (redeemedPoints > 0 && !isCashbackType) {
-    finalAmount = Math.max(0, finalAmount - pointsDiscount);
-    cashbackRedeemedAmount = (cashbackRedeemedAmount ?? 0) + pointsDiscount;
+    // Convert points → cashback (or free item). Does NOT reduce bill; cashback stays in wallet until "redeem cashback on bill".
     await recordPointsRedemptionAsCashbackFlow(tx, {
       businessId,
       customerId,
@@ -849,6 +1068,7 @@ export async function applyLoyaltyForBill(
       context,
       pointsDec: redeemedPoints,
       cashbackValue: pointsDiscount,
+      freeItemReward,
     });
   }
 

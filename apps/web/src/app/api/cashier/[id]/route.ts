@@ -32,7 +32,7 @@ export const GET = withAdminAuth<{ id: string }>(
             select: {
               id: true,
               billNumber: true,
-              amount: true,
+              finalAmount: true,
               createdAt: true,
             },
           },
@@ -59,7 +59,7 @@ export const GET = withAdminAuth<{ id: string }>(
           recentBills: cashier.bills.map((b) => ({
             id: b.id,
             billNumber: b.billNumber,
-            amount: b.amount,
+            amount: b.finalAmount ?? 0,
             createdAt: b.createdAt.toISOString(),
           })),
         },

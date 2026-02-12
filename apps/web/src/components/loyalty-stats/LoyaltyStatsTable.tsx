@@ -154,10 +154,12 @@ export function LoyaltyStatsTable() {
           }
           const sign =
             item.type === "REDEEMED" || item.type === "EXPIRED" ? "-" : "+";
+          const absAmount = Math.abs(item.amount);
+          const isCashback = item.valueKind === "CASHBACK";
           return (
             <div className="flex justify-end font-medium tabular-nums">
               {sign}
-              {item.amount}
+              {isCashback ? `₹${absAmount.toFixed(2)}` : absAmount}
             </div>
           );
         },
