@@ -144,7 +144,7 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
               },
             },
           },
-          pointsTransactions: {
+          transactions: {
             where: {
               type: { in: ["EARNED", "REDEEMED"] },
             },
@@ -156,10 +156,10 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
     ]);
 
     const formattedBills = bills.map((bill) => {
-      const earned = bill.pointsTransactions
+      const earned = bill.transactions
         .filter((pt) => pt.type === "EARNED")
         .reduce((s, pt) => s + Math.max(0, pt.amount), 0);
-      const redeemed = bill.pointsTransactions
+      const redeemed = bill.transactions
         .filter((pt) => pt.type === "REDEEMED")
         .reduce((s, pt) => s + Math.abs(pt.amount), 0);
       return {

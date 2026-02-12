@@ -111,6 +111,8 @@ model FeedbackResponse {
   customerId       String
   businessCustomer BusinessCustomer @relation(fields: [businessId, customerId], references: [businessId, customerId], onDelete: Cascade)
 
+  transactions Transaction[]
+
   // Response Data
   rating             Int?
   comment            String?

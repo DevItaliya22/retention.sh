@@ -32,6 +32,7 @@ export interface LoyaltyResult {
   earnedPoints: number;
   redeemedPoints: number;
   cashbackAmount: number | null;
+  cashbackRedeemedAmount: number | null;
   pointsBalance: number;
   finalAmount: number;
   tierUpgrade?: {
@@ -47,6 +48,8 @@ export interface LoyaltyResult {
     minLifetimeSpend: number;
     maxLifetimeSpend: number | null;
   } | null;
+  /** TIER only: when no tier (below first), message for cashier. */
+  tierMessage?: string | null;
 }
 
 export interface RewardStageResult {
@@ -69,6 +72,7 @@ export interface CreateBillResponse {
     tax: number[];
     finalAmount: number | null;
     cashbackAmount: number | null;
+    cashbackRedeemedAmount: number | null;
     userPaidAmount: number | null;
     amount?: number | null;
     businessId: string;

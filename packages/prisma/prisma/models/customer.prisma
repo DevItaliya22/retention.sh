@@ -42,15 +42,8 @@ model Customer {
 // All data specific to a customer within a particular business.
 // Composite PK: (businessId, customerId).
 //
-// Loyalty tracking fields:
-//   pointsBalance  — current redeemable points (denormalized from PointsTransaction).
-//   lifetimeSpend  — cumulative bill total (denormalized; used for TIER placement).
-//   visitCount     — total qualifying visits (denormalized; used for VISIT_MADE).
-//   lastVisitAt    — timestamp of last qualifying visit (used for visit interval check).
-//   currentTierId  — FK to the customer's active LoyaltyTier (for TIER type).
-//
-// These denormalized fields are updated by the billing/loyalty service on each
-// transaction. Source of truth is PointsTransaction + Bill tables.
+// Loyalty balances live in Wallet (cashbackBalance, amountSpentBalance, visitPointsBalance).
+// lifetimeSpend = SUM(Bill.finalAmount); currentTier = resolve from lifetimeSpend + LoyaltyTier.
 // ========================================================================
 
 model BusinessCustomer {
@@ -82,35 +75,10 @@ model BusinessCustomer {
   isBlocked     Boolean  @default(false)
   blockedReason String?
 
-  // ── Loyalty Tracking (denormalized — updated on each transaction) ──────
-  // Current redeemable points balance.
-  // Source of truth: SUM(PointsTransaction.amount) for this customer.
-  pointsBalance Int @default(0)
-
-  // Cumulative bill total across all purchases (₹). Pre-loyalty total per bill.
-  // Used by TIER loyalty type for tier placement.
-  // Source of truth: SUM(Bill.finalAmount) for this customer.
-  lifetimeSpend Float @default(0)
-
-  // Total qualifying visits (incremented per bill, respecting visit interval).
-  // Used by VISIT_MADE loyalty type.
-  visitCount Int @default(0)
-
-  // Timestamp of last qualifying visit (used for visit interval check).
-  // Updated when visitCount is incremented.
-  lastVisitAt DateTime?
-
-  // Current tier for TIER loyalty type. Null if not using tiers.
-  currentTierId String?
-  currentTier   LoyaltyTier? @relation(fields: [currentTierId], references: [id], onDelete: SetNull)
-
-  // Cumulative cashback (₹) ever given to this customer at this business.
-  // Updated only for CASHBACK and TIER loyalty types. Source of truth: CashbackTransaction.
-  totalCashbackEarned Float @default(0)
+  wallet Wallet?
 
   // ── Transaction & Activity Relations ───────────────────────────────────
-  pointTransactions    PointsTransaction[]
-  cashbackTransactions CashbackTransaction[]
+  transactions         Transaction[]
   feedbackResponses    FeedbackResponse[]
   scratchCardResponses ScratchCardResponse[]
   bills                Bill[]
@@ -121,7 +89,6 @@ model BusinessCustomer {
   @@id([businessId, customerId])
   @@index([referralSlug])
   @@index([referredByBusinessId, referredByCustomerId])
-  @@index([currentTierId])
   @@index([slugId])
   @@index([customerId])
   @@map("business_customer")

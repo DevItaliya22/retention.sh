@@ -1,12 +1,13 @@
 import {
-  expireBucketsForCustomer,
+  expirePointsForCustomer,
   getBusinessLoyaltyContext,
 } from "@/lib/actions/loyalty";
 import { withCashierAuth } from "@/lib/auth/middleware";
+import { runTransaction } from "@/lib/db/transaction";
 import {
   calculatePointsEarnedForBill,
-  calculateRedeemable,
-  resolveTierForLifetimeSpend,
+  getAmountForEarning,
+  getRedeemableInfo,
 } from "@/lib/loyalty";
 import { loyaltyPreviewSchema } from "@/lib/schemas/loyalty";
 import {
@@ -18,7 +19,7 @@ import {
   type IsServiceEnabled,
   isServiceEnabled,
 } from "@/lib/utils/service-enabled";
-import { db, TransactionType } from "@reelo/db";
+import { db } from "@reelo/db";
 import { NextRequest, NextResponse } from "next/server";
 
 export const GET = withCashierAuth(async (request: NextRequest, context) => {
@@ -66,7 +67,7 @@ export const GET = withCashierAuth(async (request: NextRequest, context) => {
       });
     }
 
-    const result = await db.$transaction(async (tx) => {
+    const result = await runTransaction(async (tx) => {
       const loyaltyContext = await getBusinessLoyaltyContext(tx, businessId);
       if (!loyaltyContext) {
         return {
@@ -81,6 +82,7 @@ export const GET = withCashierAuth(async (request: NextRequest, context) => {
           }[],
           cashbackInFinalAmount: false,
           tierInfo: null,
+          tierMessage: null as string | null,
           rewardStages: [] as {
             id: string;
             rewardName: string;
@@ -95,70 +97,17 @@ export const GET = withCashierAuth(async (request: NextRequest, context) => {
         };
       }
 
-      // Same amount-for-earning logic as applyLoyaltyForBill (no redemption in preview, so use billAmount for final)
-      const amountForEarning =
-        (loyaltyContext.type === "CASHBACK" &&
-          loyaltyContext.config.onFinalAmount) ||
-        (loyaltyContext.type === "TIER" &&
-          loyaltyContext.config.onFinalAmount) ||
-        (loyaltyContext.type === "AMOUNT_SPENT" &&
-          loyaltyContext.config.onFinalAmount)
-          ? billAmount
-          : subtotal != null && subtotal > 0
-            ? subtotal
-            : billAmount;
-
       const user = await tx.user.findUnique({
         where: { phoneNumber: formattedPhone },
         include: { customer: true },
       });
 
-      // Fetch reward stages for AMOUNT_SPENT / VISIT_MADE
-      let rewardStagesData: Array<{
-        id: string;
-        rewardName: string;
-        rewardType: string;
-        pointsRequired: number;
-        freeItemName: string | null;
-        percentageValue: number | null;
-        cashAmount: number | null;
-      }> = [];
-
-      if (
-        loyaltyContext.type === "AMOUNT_SPENT" ||
-        loyaltyContext.type === "VISIT_MADE"
-      ) {
-        const loyaltyRecord = await tx.loyalty.findUnique({
-          where: { businessId },
-          include: {
-            amountSpentConfig: {
-              include: {
-                rewardStages: { orderBy: { pointsRequired: "asc" } },
-              },
-            },
-            visitMadeConfig: {
-              include: {
-                rewardStages: { orderBy: { pointsRequired: "asc" } },
-              },
-            },
-          },
-        });
-
-        const stages =
-          loyaltyContext.type === "AMOUNT_SPENT"
-            ? (loyaltyRecord?.amountSpentConfig?.rewardStages ?? [])
-            : (loyaltyRecord?.visitMadeConfig?.rewardStages ?? []);
-
-        rewardStagesData = stages.map((s) => ({
-          id: s.id,
-          rewardName: s.rewardName,
-          rewardType: s.rewardType,
-          pointsRequired: s.pointsRequired,
-          freeItemName: s.freeItemName,
-          percentageValue: s.percentageValue,
-          cashAmount: s.cashAmount,
-        }));
-      }
+      const amountForEarning = getAmountForEarning(
+        loyaltyContext,
+        billAmount,
+        subtotal ?? null,
+        billAmount,
+      );
 
       if (!user?.customer) {
         const earnablePoints = calculatePointsEarnedForBill(
@@ -170,40 +119,31 @@ export const GET = withCashierAuth(async (request: NextRequest, context) => {
           pointsBalance: 0,
           redeemablePoints: 0,
           earnablePoints,
-          expiringBuckets: [] as {
-            id: string;
-            remainingAmount: number;
-            expiresAt: string;
-          }[],
+          expiringBuckets: [],
           cashbackInFinalAmount:
             loyaltyContext.type === "CASHBACK"
               ? loyaltyContext.config.onFinalAmount
               : false,
           tierInfo: null,
-          rewardStages: rewardStagesData.map((s) => ({
-            ...s,
-            canRedeem: false,
-          })),
-          visitCount: null as number | null,
+          tierMessage: null,
+          rewardStages: [],
+          visitCount: null,
         };
       }
 
-      const businessCustomer = await tx.businessCustomer.findUnique({
-        where: {
-          businessId_customerId: {
-            businessId,
-            customerId: user.customer.id,
-          },
-        },
-        select: {
-          pointsBalance: true,
-          lifetimeSpend: true,
-          customerId: true,
-          visitCount: true,
-        },
+      await expirePointsForCustomer(tx, {
+        businessId,
+        customerId: user.customer.id,
       });
 
-      if (!businessCustomer) {
+      const redeemInfo = await getRedeemableInfo(tx, {
+        businessId,
+        customerId: user.customer.id,
+        billAmount,
+        billSubtotal: subtotal,
+      });
+
+      if (!redeemInfo) {
         const earnablePoints = calculatePointsEarnedForBill(
           amountForEarning,
           loyaltyContext,
@@ -213,107 +153,40 @@ export const GET = withCashierAuth(async (request: NextRequest, context) => {
           pointsBalance: 0,
           redeemablePoints: 0,
           earnablePoints,
-          expiringBuckets: [] as {
-            id: string;
-            remainingAmount: number;
-            expiresAt: string;
-          }[],
-          cashbackInFinalAmount:
-            loyaltyContext.type === "CASHBACK"
-              ? loyaltyContext.config.onFinalAmount
-              : false,
+          expiringBuckets: [],
+          cashbackInFinalAmount: false,
           tierInfo: null,
-          rewardStages: rewardStagesData.map((s) => ({
-            ...s,
-            canRedeem: false,
-          })),
-          visitCount: null as number | null,
+          tierMessage: null,
+          rewardStages: [],
+          visitCount: null,
         };
       }
 
-      await expireBucketsForCustomer(tx, {
-        businessId,
-        customerId: businessCustomer.customerId,
-      });
+      const earnablePoints = redeemInfo.earnablePoints;
 
-      const refreshed = await tx.businessCustomer.findUnique({
-        where: {
-          businessId_customerId: {
-            businessId,
-            customerId: businessCustomer.customerId,
-          },
-        },
-        select: { pointsBalance: true },
-      });
-
-      const pointsBalance = refreshed?.pointsBalance ?? 0;
-
-      const resolvedTier =
-        loyaltyContext.type === "TIER"
-          ? resolveTierForLifetimeSpend(
-              loyaltyContext.config.tiers,
-              businessCustomer?.lifetimeSpend ?? 0,
-            )
-          : null;
-
-      const redeemablePoints = Math.floor(
-        calculateRedeemable(billAmount, pointsBalance, loyaltyContext, {
-          resolvedTier,
-        }),
-      );
-
-      const expiringRows = await tx.pointsTransaction.findMany({
-        where: {
-          businessId,
-          customerId: businessCustomer.customerId,
-          type: TransactionType.EARNED,
-          remainingAmount: { gt: 0 },
-          expiresAt: { not: null },
-        },
-        orderBy: { expiresAt: "asc" },
-        take: 3,
-        select: {
-          id: true,
-          remainingAmount: true,
-          expiresAt: true,
-        },
-      });
-
-      // Build tier info
-      const tierInfo =
-        loyaltyContext.type === "TIER" && resolvedTier
-          ? {
-              currentTierName: resolvedTier.name,
-              cashbackPercentage: resolvedTier.cashbackPercentage,
-            }
-          : null;
+      const redeemablePoints =
+        redeemInfo.loyaltyType === "CASHBACK" ||
+        redeemInfo.loyaltyType === "TIER"
+          ? Math.floor(redeemInfo.maxRedeemable * 100) / 100
+          : Math.floor(redeemInfo.maxRedeemable);
 
       return {
-        loyaltyType: loyaltyContext.type,
-        pointsBalance,
+        loyaltyType: redeemInfo.loyaltyType,
+        pointsBalance: redeemInfo.pointsBalance ?? 0,
+        cashbackBalance: redeemInfo.cashbackBalance,
         redeemablePoints,
-        earnablePoints: calculatePointsEarnedForBill(
-          amountForEarning,
-          loyaltyContext,
-          { resolvedTier },
-        ),
-        expiringBuckets: expiringRows
-          .filter((r) => r.expiresAt)
-          .map((r) => ({
-            id: r.id,
-            remainingAmount: r.remainingAmount ?? 0,
-            expiresAt: r.expiresAt!.toISOString(),
-          })),
+        earnablePoints,
+        expiringBuckets: [],
         cashbackInFinalAmount:
           loyaltyContext.type === "CASHBACK"
             ? loyaltyContext.config.onFinalAmount
-            : false,
-        tierInfo,
-        rewardStages: rewardStagesData.map((s) => ({
-          ...s,
-          canRedeem: s.pointsRequired <= pointsBalance,
-        })),
-        visitCount: businessCustomer.visitCount ?? null,
+            : loyaltyContext.type === "TIER"
+              ? loyaltyContext.config.onFinalAmount
+              : false,
+        tierInfo: redeemInfo.tierInfo,
+        tierMessage: redeemInfo.tierMessage ?? null,
+        rewardStages: redeemInfo.rewardStages,
+        visitCount: redeemInfo.visitCount,
       };
     });
 

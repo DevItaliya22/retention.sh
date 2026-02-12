@@ -1,5 +1,6 @@
-import { expireBucketsForCustomer } from "@/lib/actions/loyalty";
+import { expirePointsForCustomer } from "@/lib/actions/loyalty";
 import { withCustomerAuth } from "@/lib/auth/middleware";
+import { runTransaction } from "@/lib/db/transaction";
 import { resolveTierForLifetimeSpend } from "@/lib/loyalty";
 import { businessSlugParamSchema } from "@/lib/schemas/common";
 import {
@@ -75,9 +76,6 @@ export const GET = withCustomerAuth<{ businessSlug: string }>(
             customerId: context.customer.id,
           },
         },
-        include: {
-          currentTier: true,
-        },
       });
 
       if (!businessCustomer) {
@@ -87,15 +85,14 @@ export const GET = withCustomerAuth<{ businessSlug: string }>(
         );
       }
 
-      // Expire points before returning data
-      await db.$transaction(async (tx) => {
-        await expireBucketsForCustomer(tx, {
+      await runTransaction(async (tx) => {
+        await expirePointsForCustomer(tx, {
           businessId: business.id,
           customerId: businessCustomer.customerId,
         });
       });
 
-      const refreshed = await db.businessCustomer.findUnique({
+      const wallet = await db.wallet.findUnique({
         where: {
           businessId_customerId: {
             businessId: business.id,
@@ -104,27 +101,25 @@ export const GET = withCustomerAuth<{ businessSlug: string }>(
         },
       });
 
-      const pointsBalance = refreshed?.pointsBalance ?? 0;
-      const totalCashbackEarned = refreshed?.totalCashbackEarned ?? 0;
-      const lifetimeSpend = refreshed?.lifetimeSpend ?? 0;
-      const visitCount = refreshed?.visitCount ?? 0;
+      const amountSpentBalance = wallet?.amountSpentBalance ?? 0;
+      const visitPointsBalance = wallet?.visitPointsBalance ?? 0;
+      const cashbackBalance = wallet?.cashbackBalance ?? 0;
+      const visitCount = wallet?.visitCount ?? 0;
 
-      // Expiring points buckets
-      const expiringRows = await db.pointsTransaction.findMany({
+      const billsAgg = await db.bill.aggregate({
         where: {
           businessId: business.id,
           customerId: businessCustomer.customerId,
-          type: "EARNED",
-          remainingAmount: { gt: 0 },
-          expiresAt: { not: null },
         },
-        orderBy: { expiresAt: "asc" },
-        take: 10,
-        select: { id: true, remainingAmount: true, expiresAt: true },
+        _sum: { finalAmount: true },
       });
+      const aggregateSpend = billsAgg._sum.finalAmount ?? 0;
+      const lifetimeSpend =
+        wallet?.lifetimeSpend != null && wallet.lifetimeSpend > 0
+          ? wallet.lifetimeSpend
+          : aggregateSpend;
 
-      // Points transactions (AMOUNT_SPENT / VISIT_MADE)
-      const transactions = await db.pointsTransaction.findMany({
+      const transactions = await db.transaction.findMany({
         where: {
           businessId: business.id,
           customerId: businessCustomer.customerId,
@@ -133,17 +128,24 @@ export const GET = withCustomerAuth<{ businessSlug: string }>(
         take: 50,
       });
 
-      // Bill history (CASHBACK / TIER): one row per bill (all bills; cashback 0 when none)
       let cashbackHistory: Array<{
         id: string;
         date: string;
         billNumber: string;
         amountSpent: number;
         cashbackReceived: number;
+        cashbackRedeemed: number;
         tierName: string | null;
         cashbackPercentage: number | null;
       }> = [];
       const loyaltyType = business.loyalty?.loyaltyType ?? null;
+      const pointsBalance =
+        loyaltyType === "AMOUNT_SPENT"
+          ? amountSpentBalance
+          : loyaltyType === "VISIT_MADE"
+            ? visitPointsBalance
+            : amountSpentBalance + visitPointsBalance;
+
       if (loyaltyType === "CASHBACK" || loyaltyType === "TIER") {
         const bills = await db.bill.findMany({
           where: {
@@ -151,7 +153,8 @@ export const GET = withCustomerAuth<{ businessSlug: string }>(
             customerId: businessCustomer.customerId,
           },
           include: {
-            cashbackTransactions: {
+            transactions: {
+              where: { valueKind: "CASHBACK", type: "EARNED" },
               take: 1,
               orderBy: { createdAt: "desc" },
             },
@@ -160,7 +163,7 @@ export const GET = withCustomerAuth<{ businessSlug: string }>(
           take: 50,
         });
         cashbackHistory = bills.map((bill) => {
-          const ct = bill.cashbackTransactions[0];
+          const ct = bill.transactions[0];
           const meta =
             (ct?.metadata as {
               tierName?: string;
@@ -171,7 +174,8 @@ export const GET = withCustomerAuth<{ businessSlug: string }>(
             date: bill.createdAt.toISOString(),
             billNumber: bill.billNumber,
             amountSpent: bill.finalAmount ?? 0,
-            cashbackReceived: ct?.amount ?? 0,
+            cashbackReceived: bill.cashbackAmount ?? ct?.amount ?? 0,
+            cashbackRedeemed: bill.cashbackRedeemedAmount ?? 0,
             tierName: meta.tierName ?? null,
             cashbackPercentage: meta.cashbackPercentage ?? null,
           };
@@ -317,16 +321,17 @@ export const GET = withCustomerAuth<{ businessSlug: string }>(
           },
           loyaltyType,
           pointsBalance,
-          totalCashbackEarned,
-          buckets: expiringRows
-            .filter((b) => b.expiresAt)
-            .map((b) => ({
-              id: b.id,
-              remainingAmount: b.remainingAmount ?? 0,
-              expiresAt: b.expiresAt!.toISOString(),
+          cashbackBalance,
+          buckets: transactions
+            .filter((t) => t.expiresAt && t.amount > 0)
+            .map((t) => ({
+              id: t.id,
+              remainingAmount: t.amount,
+              expiresAt: t.expiresAt!.toISOString(),
             })),
           transactions: transactions.map((t) => ({
             id: t.id,
+            valueKind: t.valueKind,
             amount: t.amount,
             type: t.type,
             source: t.source,

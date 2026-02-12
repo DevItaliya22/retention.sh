@@ -1,12 +1,27 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+import { useCallback } from "react";
 import { useCashierContext } from "../_context/CashierContext";
+import { BillCreatedView } from "./BillCreatedView";
 import { BillCreationForm } from "./BillCreationForm";
 import { CashierLogoutButton } from "./CashierLogoutButton";
 import { CashierNav } from "./CashierNav";
 
-export function CashierHomeContent() {
+interface CashierHomeContentProps {
+  billCreatedId?: string;
+}
+
+export function CashierHomeContent({ billCreatedId }: CashierHomeContentProps) {
+  const router = useRouter();
   const { business, businessSlug, cashierSlug } = useCashierContext();
+
+  const handleCreateAnother = useCallback(() => {
+    router.replace(`/cashier/${businessSlug}/${cashierSlug}/home`, {
+      scroll: false,
+    });
+    router.refresh();
+  }, [router, businessSlug, cashierSlug]);
 
   return (
     <div className="bg-background flex min-h-screen flex-col">
@@ -22,7 +37,15 @@ export function CashierHomeContent() {
       </header>
 
       <main className="flex flex-1 flex-col items-center justify-center px-4 py-8">
-        <BillCreationForm />
+        {billCreatedId ? (
+          <BillCreatedView
+            billId={billCreatedId}
+            businessId={business.id}
+            onCreateAnother={handleCreateAnother}
+          />
+        ) : (
+          <BillCreationForm />
+        )}
       </main>
     </div>
   );
