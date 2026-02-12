@@ -12,8 +12,8 @@ export interface LoyaltyStatRow {
   id: string;
   type: string;
   source: string;
+  valueKind: string;
   amount: number;
-  balanceAfter: number;
   createdAt: string;
   customerSlugId: string;
   customerName: string;

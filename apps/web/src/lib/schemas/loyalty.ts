@@ -260,6 +260,9 @@ export const loyaltyStatsQuerySchema = z.object({
     .enum(["EARNED", "REDEEMED", "REFUNDED", "GIFTED", "ADJUSTMENT", "EXPIRED"])
     .optional(),
   source: z.string().max(50).trim().optional(),
+  valueKind: z
+    .enum(["CASHBACK", "AMOUNT_SPENT_POINTS", "VISIT_POINTS"])
+    .optional(),
   customerName: z.string().max(255).trim().optional(),
   billNumber: z.string().max(255).trim().optional(),
   dateFrom: z.string().datetime().optional(),

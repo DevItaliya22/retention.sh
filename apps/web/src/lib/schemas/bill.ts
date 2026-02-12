@@ -62,6 +62,8 @@ export const billFormSchema = z.object({
     .int()
     .min(0, "Redeem points must be non-negative")
     .optional(),
+  /** Reward stage ID for points redemption (PERCENTAGE_DISCOUNT/CASH_DISCOUNT). AMOUNT_SPENT/VISIT_MADE only. */
+  rewardStageId: z.string().uuid().optional().nullable(),
   /** Cashback (₹) to redeem from wallet. For CASHBACK/TIER loyalty types. */
   redeemCashback: z.coerce
     .number()

@@ -58,14 +58,14 @@ export const GET = withAdminAuth<{ id: string }>(
               },
             },
           },
-          pointsTransactions: {
+          transactions: {
             orderBy: { createdAt: "asc" },
             select: {
               id: true,
+              valueKind: true,
               type: true,
               source: true,
               amount: true,
-              balanceAfter: true,
               createdAt: true,
             },
           },
@@ -79,10 +79,10 @@ export const GET = withAdminAuth<{ id: string }>(
         );
       }
 
-      const earned = bill.pointsTransactions
+      const earned = bill.transactions
         .filter((pt) => pt.type === "EARNED")
         .reduce((s, pt) => s + Math.max(0, pt.amount), 0);
-      const redeemed = bill.pointsTransactions
+      const redeemed = bill.transactions
         .filter((pt) => pt.type === "REDEEMED")
         .reduce((s, pt) => s + Math.abs(pt.amount), 0);
 
@@ -118,12 +118,12 @@ export const GET = withAdminAuth<{ id: string }>(
         })),
         createdAt: bill.createdAt.toISOString(),
         updatedAt: bill.updatedAt.toISOString(),
-        loyaltyLogs: bill.pointsTransactions.map((log) => ({
+        loyaltyLogs: bill.transactions.map((log) => ({
           id: log.id,
+          valueKind: log.valueKind,
           type: log.type,
           source: log.source,
           amount: log.amount,
-          balanceAfter: log.balanceAfter,
           createdAt: log.createdAt.toISOString(),
         })),
       };

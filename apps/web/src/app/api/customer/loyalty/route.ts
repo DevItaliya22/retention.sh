@@ -1,5 +1,6 @@
-import { expireBucketsForCustomer } from "@/lib/actions/loyalty";
+import { expirePointsForCustomer } from "@/lib/actions/loyalty";
 import { withCustomerAuth } from "@/lib/auth/middleware";
+import { runTransaction } from "@/lib/db/transaction";
 import { sanitizeErrorMessage } from "@/lib/utils/error-handler";
 import {
   type IsServiceEnabled,
@@ -47,43 +48,55 @@ export const GET = withCustomerAuth(async (_request, context) => {
         continue;
       }
 
-      await db.$transaction(async (tx) => {
-        await expireBucketsForCustomer(tx, {
+      await runTransaction(async (tx) => {
+        await expirePointsForCustomer(tx, {
           businessId: bc.businessId,
           customerId: bc.customerId,
         });
       });
 
-      const refreshed = await db.businessCustomer.findUnique({
+      const wallet = await db.wallet.findUnique({
         where: {
           businessId_customerId: {
             businessId: bc.businessId,
             customerId: bc.customerId,
           },
         },
-        select: { pointsBalance: true },
       });
 
-      const nextExpiring = await db.pointsTransaction.findFirst({
+      const nextExpiring = await db.transaction.findFirst({
         where: {
           businessId: bc.businessId,
           customerId: bc.customerId,
           type: "EARNED",
-          remainingAmount: { gt: 0 },
+          amount: { gt: 0 },
           expiresAt: { not: null },
         },
         orderBy: { expiresAt: "asc" },
-        select: { remainingAmount: true, expiresAt: true },
+        select: { amount: true, expiresAt: true },
       });
+
+      const businessLoyalty = await db.loyalty.findFirst({
+        where: { businessId: bc.businessId },
+      });
+      const loyaltyType = businessLoyalty?.loyaltyType ?? null;
+      const amountSpentBalance = wallet?.amountSpentBalance ?? 0;
+      const visitPointsBalance = wallet?.visitPointsBalance ?? 0;
+      const pointsBalance =
+        loyaltyType === "AMOUNT_SPENT"
+          ? amountSpentBalance
+          : loyaltyType === "VISIT_MADE"
+            ? visitPointsBalance
+            : amountSpentBalance + visitPointsBalance;
 
       items.push({
         businessId: bc.businessId,
         businessName: bc.business.name,
         businessSlug: bc.business.slug,
-        pointsBalance: refreshed?.pointsBalance ?? bc.pointsBalance,
+        pointsBalance,
         nextExpiry: nextExpiring?.expiresAt
           ? {
-              amount: nextExpiring.remainingAmount ?? 0,
+              amount: nextExpiring.amount ?? 0,
               expiresAt: nextExpiring.expiresAt.toISOString(),
             }
           : null,

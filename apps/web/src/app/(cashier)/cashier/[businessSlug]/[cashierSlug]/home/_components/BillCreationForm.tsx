@@ -39,6 +39,7 @@ import {
   Trophy,
   X,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useCashierContext } from "../_context/CashierContext";
@@ -154,7 +155,7 @@ function BillSuccessCard({
           <>
             <Separator />
             <div className="space-y-3">
-              {/* Customer's tier (TIER type) — show name and range */}
+              {/* Customer's tier (TIER type) — show name and range, or message when not in tier yet */}
               {loyalty?.loyaltyType === "TIER" && loyalty?.currentTier && (
                 <div className="bg-muted/30 flex items-center gap-3 rounded-lg border p-3">
                   <Trophy className="size-5 shrink-0 text-amber-600 dark:text-amber-400" />
@@ -171,6 +172,16 @@ function BillSuccessCard({
                   </div>
                 </div>
               )}
+              {loyalty?.loyaltyType === "TIER" &&
+                !loyalty?.currentTier &&
+                loyalty?.tierMessage && (
+                  <div className="bg-muted/30 flex items-center gap-3 rounded-lg border border-amber-200 p-3 dark:border-amber-800">
+                    <Trophy className="size-5 shrink-0 text-amber-600 dark:text-amber-400" />
+                    <p className="text-muted-foreground text-sm">
+                      {loyalty.tierMessage}
+                    </p>
+                  </div>
+                )}
 
               {/* Cashback / Tier earned (added to wallet) */}
               {isCashbackType && (loyalty?.earnedPoints ?? 0) > 0 && (
@@ -272,6 +283,7 @@ function BillSuccessCard({
 // ─── Main Form ──────────────────────────────────────────────────────────────
 
 export function BillCreationForm() {
+  const router = useRouter();
   const { business } = useCashierContext();
   const {
     selectedCustomer,
@@ -379,7 +391,6 @@ export function BillCreationForm() {
     setError(null);
     setShowSuggestions(false);
     setExtrasOpen(false);
-    setShowSuccess(false);
     resetMutation();
   }, [clearSelectedCustomer, resetMutation]);
 
@@ -459,12 +470,15 @@ export function BillCreationForm() {
     }
   }, [selectedCustomer]);
 
-  // Show success state when bill created
+  // Navigate to billCreated URL when bill created (enables redeem options view)
   useEffect(() => {
-    if (createSuccess && createData) {
-      setShowSuccess(true);
+    if (createSuccess && createData?.bill?.id) {
+      const params = new URLSearchParams(window.location.search);
+      params.set("billCreated", createData.bill.id);
+      router.replace(`${window.location.pathname}?${params.toString()}`);
+      router.refresh();
     }
-  }, [createSuccess, createData]);
+  }, [createSuccess, createData, router]);
 
   useEffect(() => {
     if (createError) {
@@ -586,15 +600,7 @@ export function BillCreationForm() {
   };
 
   // ─── Render ─────────────────────────────────────────────────────────────
-
-  if (showSuccess && createData) {
-    return (
-      <div className="w-full max-w-md">
-        <BillSuccessCard data={createData} onCreateAnother={handleReset} />
-      </div>
-    );
-  }
-
+  // Success state: navigates to ?billCreated=billId; BillCreatedView handles display
   return (
     <div className="w-full max-w-md">
       <Card>
@@ -794,6 +800,32 @@ export function BillCreationForm() {
                 ))}
               </div>
             </div>
+
+            {/* ─── Loyalty tier message (TIER type, before bill creation) ─── */}
+            {loyaltyType === "TIER" &&
+              phoneNumber.length >= 4 &&
+              (loyaltyPreview?.tierInfo || loyaltyPreview?.tierMessage) && (
+                <div className="bg-muted/30 flex items-center gap-3 rounded-lg border p-3">
+                  <Trophy className="size-5 shrink-0 text-amber-600 dark:text-amber-400" />
+                  <div className="text-sm">
+                    {loyaltyPreview.tierInfo ? (
+                      <>
+                        <p className="font-medium">
+                          Customer&apos;s tier:{" "}
+                          {loyaltyPreview.tierInfo.currentTierName}
+                        </p>
+                        <p className="text-muted-foreground text-xs">
+                          {loyaltyPreview.tierInfo.cashbackPercentage}% cashback
+                        </p>
+                      </>
+                    ) : (
+                      <p className="text-muted-foreground">
+                        {loyaltyPreview.tierMessage}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
 
             {/* ─── Collapsible: Notes, Line Items, Redeem points ─────────── */}
             <Collapsible open={extrasOpen} onOpenChange={setExtrasOpen}>

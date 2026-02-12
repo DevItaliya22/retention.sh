@@ -8,6 +8,7 @@ interface CashierHomePageProps {
     businessSlug: string;
     cashierSlug: string;
   }>;
+  searchParams: Promise<{ billCreated?: string }>;
 }
 
 export async function generateMetadata({
@@ -19,6 +20,8 @@ export async function generateMetadata({
 
 export default async function CashierHomePage({
   params,
+  searchParams,
 }: CashierHomePageProps) {
-  return <CashierHomeContent />;
+  const { billCreated } = await searchParams;
+  return <CashierHomeContent billCreatedId={billCreated} />;
 }

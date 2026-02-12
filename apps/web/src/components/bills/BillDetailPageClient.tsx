@@ -457,18 +457,19 @@ export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-muted/50 border-b">
+                    <th className="px-4 py-3 text-left font-medium">Kind</th>
                     <th className="px-4 py-3 text-left font-medium">Type</th>
                     <th className="px-4 py-3 text-left font-medium">Source</th>
-                    <th className="px-4 py-3 text-right font-medium">Points</th>
-                    <th className="px-4 py-3 text-right font-medium">
-                      Balance after
-                    </th>
+                    <th className="px-4 py-3 text-right font-medium">Amount</th>
                     <th className="px-4 py-3 text-right font-medium">Date</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loyaltyLogs.map((log) => (
                     <tr key={log.id} className="border-b last:border-b-0">
+                      <td className="px-4 py-3 font-medium">
+                        {log.valueKind ?? "—"}
+                      </td>
                       <td className="px-4 py-3 font-medium">
                         {formatLoyaltyType(log.type)}
                       </td>
@@ -478,9 +479,6 @@ export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
                       <td className="px-4 py-3 text-right tabular-nums">
                         {log.type === "REDEEMED" ? "-" : "+"}
                         {log.amount}
-                      </td>
-                      <td className="px-4 py-3 text-right tabular-nums">
-                        {log.balanceAfter}
                       </td>
                       <td className="text-muted-foreground px-4 py-3 text-right">
                         {new Date(log.createdAt).toLocaleString("en-IN", {

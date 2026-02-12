@@ -12,8 +12,8 @@ export interface LoyaltyStatRow {
   id: string;
   type: string;
   source: string;
+  valueKind: string;
   amount: number;
-  balanceAfter: number;
   createdAt: string;
   customerSlugId: string;
   customerName: string;
@@ -60,6 +60,7 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
       sort,
       type,
       source,
+      valueKind,
       customerName,
       billNumber,
       dateFrom,
@@ -70,10 +71,11 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
     const skip = (page - 1) * perPage;
     const take = perPage;
 
-    const where: Prisma.PointsTransactionWhereInput = { businessId };
+    const where: Prisma.TransactionWhereInput = { businessId };
 
     if (type) where.type = type as TransactionType;
     if (source) where.source = source as TransactionSource;
+    if (valueKind) where.valueKind = valueKind as Prisma.TransactionValueKind;
     if (billNumber) {
       const matchingBills = await db.bill.findMany({
         where: {
@@ -91,7 +93,6 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
           perPage,
         });
       }
-      where.source = "BILL";
       where.billId = { in: ids };
     }
     if (dateFrom || dateTo) {
@@ -109,7 +110,7 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
       };
     }
 
-    const orderBy: Prisma.PointsTransactionOrderByWithRelationInput = sort
+    const orderBy: Prisma.TransactionOrderByWithRelationInput = sort
       ? (() => {
           const [field, direction] = sort.split(":");
           const dir = direction === "desc" ? "desc" : "asc";
@@ -119,7 +120,7 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
         })()
       : { createdAt: "desc" };
 
-    const transactions = await db.pointsTransaction.findMany({
+    const transactions = await db.transaction.findMany({
       where,
       skip,
       take,
@@ -142,7 +143,7 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
       },
     });
 
-    const total = await db.pointsTransaction.count({ where });
+    const total = await db.transaction.count({ where });
 
     // For rows without bill relation (legacy sourceId-only), fetch bill numbers by sourceId
     const legacySourceIds = [
@@ -186,8 +187,8 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
           id: t.id,
           type: t.type,
           source: t.source,
+          valueKind: t.valueKind,
           amount: t.amount,
-          balanceAfter: t.balanceAfter,
           createdAt: t.createdAt.toISOString(),
           customerSlugId: bc?.slugId ?? "",
           customerName: bc?.customer?.user?.name ?? "—",

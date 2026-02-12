@@ -11,8 +11,7 @@
 //   If loyalty onFinalAmount: earning calculated on (finalAmount - cashbackRedeemedAmount);
 //   else: earning calculated on subtotal.
 //
-// CashbackTransaction: BILL = earned, REDEEMED = redeemed from wallet.
-// Points earned/redeemed (for AMOUNT_SPENT/VISIT_MADE) from PointsTransaction.
+// Transaction: type=EARNED/REDEEMED, source=BILL, valueKind=CASHBACK or POINTS.
 // ========================================================================
 
 model Bill {
@@ -58,11 +57,8 @@ model Bill {
 
   scratchCardResponses ScratchCardResponse[]
 
-  // Point transactions (earned/redeemed) linked to this bill. AMOUNT_SPENT / VISIT_MADE only.
-  pointsTransactions PointsTransaction[]
-
-  // Cashback transactions (one per bill when CASHBACK or TIER loyalty awards cashback).
-  cashbackTransactions CashbackTransaction[]
+  // Unified transactions (cashback or points earned/redeemed) linked to this bill.
+  transactions Transaction[]
 
   lineItems BillLineItem[]
 

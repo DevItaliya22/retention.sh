@@ -16,6 +16,9 @@ const VISIT_INTERVAL_MS: Record<string, number> = {
 
 export const DEFAULT_POINT_EXPIRY_DAYS = 180;
 
+/** Top tier upper limit when left empty — ensures customers above config never fall out of tier. */
+export const TIER_TOP_MAX_LIFETIME_SPEND = 10_000_000;
+
 export type LoyaltyContext =
   | { type: "CASHBACK"; config: CashbackContext }
   | { type: "TIER"; config: TierContext }
@@ -70,6 +73,142 @@ export interface VisitMadeContext {
   visitIntervalValue: number | null;
   visitIntervalUnit: string | null;
   pointExpiryDays: number | null;
+}
+
+/** Raw loyalty record shape (from Prisma findUnique/findFirst). */
+export interface LoyaltyRecordInput {
+  loyaltyType: string;
+  pointExpiryDays?: number | null;
+  cashbackConfig?: {
+    cashbackPercentage?: number | null;
+    onFinalAmount?: boolean | null;
+    maxCashbackCap?: number | null;
+    minPurchaseForEarningEnabled?: boolean | null;
+    minPurchaseForEarning?: number | null;
+    minPurchaseForRedemptionEnabled?: boolean | null;
+    minPurchaseForRedemption?: number | null;
+    redemptionBalanceLimitEnabled?: boolean | null;
+    redemptionBalanceLimitAmount?: number | null;
+    redemptionBalanceLimitPercentage?: number | null;
+    redemptionBillLimitEnabled?: boolean | null;
+    redemptionBillLimitAmount?: number | null;
+    redemptionBillLimitPercentage?: number | null;
+  } | null;
+  tierConfig?: {
+    pointsPerRupee?: number | null;
+    onFinalAmount?: boolean | null;
+    tiers?: Array<{
+      id: string;
+      name: string;
+      rank: number;
+      minLifetimeSpend: number;
+      maxLifetimeSpend: number | null;
+      cashbackPercentage?: number | null;
+      minPurchaseForRedemptionEnabled?: boolean | null;
+      minPurchaseForRedemption?: number | null;
+      maxCashbackCapEnabled?: boolean | null;
+      maxCashbackCap?: number | null;
+    }>;
+  } | null;
+  amountSpentConfig?: {
+    pointsPerRupee?: number | null;
+    onFinalAmount?: boolean | null;
+    maxPointsPerPurchase?: number | null;
+  } | null;
+  visitMadeConfig?: {
+    pointsPerVisit?: number | null;
+    visitIntervalEnabled?: boolean | null;
+    visitIntervalValue?: number | null;
+    visitIntervalUnit?: string | null;
+  } | null;
+}
+
+/** Build LoyaltyContext from a Prisma loyalty record. Shared by actions and redeem-info. */
+export function loyaltyRecordToContext(
+  loyalty: LoyaltyRecordInput | null,
+): LoyaltyContext | null {
+  if (!loyalty) return null;
+  const cc = loyalty.cashbackConfig;
+  const tc = loyalty.tierConfig;
+  const ac = loyalty.amountSpentConfig;
+  const vc = loyalty.visitMadeConfig;
+
+  switch (loyalty.loyaltyType) {
+    case "CASHBACK":
+      if (!cc) return null;
+      return {
+        type: "CASHBACK",
+        config: {
+          cashbackPercentage: cc.cashbackPercentage ?? 0,
+          onFinalAmount: cc.onFinalAmount ?? false,
+          maxCashbackCap: cc.maxCashbackCap ?? null,
+          minPurchaseForEarningEnabled:
+            cc.minPurchaseForEarningEnabled ?? false,
+          minPurchaseForEarning: cc.minPurchaseForEarning ?? null,
+          minPurchaseForRedemptionEnabled:
+            cc.minPurchaseForRedemptionEnabled ?? false,
+          minPurchaseForRedemption: cc.minPurchaseForRedemption ?? null,
+          redemptionBalanceLimitEnabled:
+            cc.redemptionBalanceLimitEnabled ?? false,
+          redemptionBalanceLimitAmount: cc.redemptionBalanceLimitAmount ?? null,
+          redemptionBalanceLimitPercentage:
+            cc.redemptionBalanceLimitPercentage ?? null,
+          redemptionBillLimitEnabled: cc.redemptionBillLimitEnabled ?? false,
+          redemptionBillLimitAmount: cc.redemptionBillLimitAmount ?? null,
+          redemptionBillLimitPercentage:
+            cc.redemptionBillLimitPercentage ?? null,
+          pointExpiryDays: loyalty.pointExpiryDays ?? null,
+        },
+      };
+    case "TIER":
+      if (!tc?.tiers) return null;
+      return {
+        type: "TIER",
+        config: {
+          pointsPerRupee: tc.pointsPerRupee ?? 1,
+          onFinalAmount: tc.onFinalAmount ?? false,
+          tiers: tc.tiers.map((t) => ({
+            id: t.id,
+            name: t.name,
+            rank: t.rank,
+            minLifetimeSpend: t.minLifetimeSpend,
+            maxLifetimeSpend: t.maxLifetimeSpend,
+            cashbackPercentage: t.cashbackPercentage ?? 0,
+            minPurchaseForRedemptionEnabled:
+              t.minPurchaseForRedemptionEnabled ?? false,
+            minPurchaseForRedemption: t.minPurchaseForRedemption ?? null,
+            maxCashbackCapEnabled: t.maxCashbackCapEnabled ?? false,
+            maxCashbackCap: t.maxCashbackCap ?? null,
+          })),
+          pointExpiryDays: loyalty.pointExpiryDays ?? null,
+        },
+      };
+    case "AMOUNT_SPENT":
+      if (!ac) return null;
+      return {
+        type: "AMOUNT_SPENT",
+        config: {
+          pointsPerRupee: ac.pointsPerRupee ?? 1,
+          onFinalAmount: ac.onFinalAmount ?? false,
+          maxPointsPerPurchase: ac.maxPointsPerPurchase ?? null,
+          pointExpiryDays: loyalty.pointExpiryDays ?? null,
+        },
+      };
+    case "VISIT_MADE":
+      if (!vc) return null;
+      return {
+        type: "VISIT_MADE",
+        config: {
+          pointsPerVisit: vc.pointsPerVisit ?? 1,
+          visitIntervalEnabled: vc.visitIntervalEnabled ?? false,
+          visitIntervalValue: vc.visitIntervalValue ?? null,
+          visitIntervalUnit: vc.visitIntervalUnit ?? null,
+          pointExpiryDays: loyalty.pointExpiryDays ?? null,
+        },
+      };
+    default:
+      return null;
+  }
 }
 
 export function getExpiryDays(
@@ -180,19 +319,12 @@ export function resolveTierForLifetimeSpend(
   return best;
 }
 
-/** TIER: Earned cashback (₹) using tier's cashbackPercentage. When minPurchaseForRedemption is enabled, bill must meet it to earn. */
+/** TIER: Earned cashback (₹) using tier's cashbackPercentage. minPurchaseForRedemption applies to redemption only, not earning. */
 export function calculateTierCashbackEarned(
   amountForEarning: number,
   tier: ResolvedTier,
 ): number {
   if (amountForEarning <= 0 || tier.cashbackPercentage <= 0) return 0;
-  if (
-    tier.minPurchaseForRedemptionEnabled &&
-    tier.minPurchaseForRedemption != null &&
-    amountForEarning < tier.minPurchaseForRedemption
-  ) {
-    return 0;
-  }
   const raw = (amountForEarning * tier.cashbackPercentage) / 100;
   const capped =
     tier.maxCashbackCapEnabled &&
@@ -211,14 +343,37 @@ export function isVisitQualifying(
   if (!config.visitIntervalEnabled) return true;
   const value = config.visitIntervalValue ?? 1;
   const unit = config.visitIntervalUnit ?? "DAY";
-  const DEFAULT_DAY_MS = 24 * 60 * 60 * 1000;
-  const rawMs = unit
-    ? VISIT_INTERVAL_MS[unit as keyof typeof VISIT_INTERVAL_MS]
-    : undefined;
-  const unitMs = Number(rawMs ?? DEFAULT_DAY_MS);
+  const unitMs = VISIT_INTERVAL_MS[unit as keyof typeof VISIT_INTERVAL_MS];
+  if (unitMs == null || unitMs <= 0) {
+    // Unknown visitIntervalUnit: treat as 1 day (explicit fallback; validate at save time).
+    const fallbackMs = 24 * 60 * 60 * 1000;
+    const intervalMs = fallbackMs * value;
+    if (!lastVisitAt) return true;
+    return Date.now() - lastVisitAt.getTime() >= intervalMs;
+  }
   const intervalMs = unitMs * value;
   if (!lastVisitAt) return true;
   return Date.now() - lastVisitAt.getTime() >= intervalMs;
+}
+
+/** Amount to use for earning calc. When onFinalAmount: use finalAmount; else use subtotal or billAmount. */
+export function getAmountForEarning(
+  context: LoyaltyContext,
+  billAmount: number,
+  billSubtotal: number | null,
+  finalAmount?: number,
+): number {
+  const useFinal =
+    (context.type === "CASHBACK" && context.config.onFinalAmount) ||
+    (context.type === "TIER" && context.config.onFinalAmount) ||
+    (context.type === "AMOUNT_SPENT" && context.config.onFinalAmount);
+  const amt =
+    useFinal && finalAmount != null && finalAmount > 0
+      ? finalAmount
+      : billSubtotal != null && billSubtotal > 0
+        ? billSubtotal
+        : billAmount;
+  return safeAmount(amt);
 }
 
 /** Ensure amount is a non-negative finite number; otherwise return 0 (prevents NaN/Infinity abuse). */
@@ -335,7 +490,7 @@ export interface CalculateRedeemableOptions {
   resolvedTier?: ResolvedTier | null;
 }
 
-/** Max redeemable on this bill. For CASHBACK: ₹. For points types: points (1 pt = ₹1 discount). */
+/** Max redeemable on this bill. For CASHBACK: ₹. For points types: points (1 pt = ₹1 discount). TIER: 0 when no tier resolved. */
 export function calculateRedeemable(
   billAmount: number,
   balance: number,
@@ -351,13 +506,15 @@ export function calculateRedeemable(
       100
     );
   }
-  if (context.type === "TIER" && options?.resolvedTier) {
+  if (context.type === "TIER") {
+    if (!options?.resolvedTier) return 0;
     const tier = options.resolvedTier;
     if (
       tier.minPurchaseForRedemptionEnabled &&
-      tier.minPurchaseForRedemption != null
+      tier.minPurchaseForRedemption != null &&
+      amt < tier.minPurchaseForRedemption
     ) {
-      if (amt < tier.minPurchaseForRedemption) return 0;
+      return 0;
     }
   }
   return Math.min(bal, Math.floor(amt));

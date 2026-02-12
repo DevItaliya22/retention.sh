@@ -51,6 +51,7 @@ export const DATA_TABLE_CONFIG: Record<
     filterKeys: [
       "type",
       "source",
+      "valueKind",
       "customerName",
       "billNumber",
       "dateFrom",

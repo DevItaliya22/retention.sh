@@ -1,6 +1,7 @@
 import { applyLoyaltyForBill } from "@/lib/actions/loyalty";
 import { withCashierAuth } from "@/lib/auth/middleware";
 import { APP_CONSTANTS } from "@/lib/constants/app";
+import { runTransaction } from "@/lib/db/transaction";
 import { createBillApiSchema } from "@/lib/schemas/bill";
 import {
   sanitizeErrorMessage,
@@ -65,6 +66,12 @@ async function linkCustomerToBusiness(
 
   if (!existing) {
     await db.businessCustomer.create({
+      data: {
+        businessId,
+        customerId,
+      },
+    });
+    await db.wallet.create({
       data: {
         businessId,
         customerId,
@@ -175,7 +182,7 @@ export const POST = withCashierAuth(async (request: NextRequest, context) => {
     const discount = storeDiscount ?? 0;
     const taxSum = (tax ?? []).reduce((a: number, b: number) => a + b, 0);
 
-    const result = await db.$transaction(async (tx) => {
+    const result = await runTransaction(async (tx) => {
       let computedSubtotal: number | null = null;
       if (lineItems.length > 0) {
         const skuIds = [
@@ -245,6 +252,7 @@ export const POST = withCashierAuth(async (request: NextRequest, context) => {
         billSubtotal,
         redeemPointsRequested: redeemPoints ?? null,
         redeemCashbackRequested: redeemCashback ?? null,
+        rewardStageId: validation.data.rewardStageId ?? null,
       });
 
       const updatedBill = await tx.bill.update({

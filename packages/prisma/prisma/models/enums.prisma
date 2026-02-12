@@ -118,14 +118,14 @@ enum AutoCampaignTrigger {
   POINTS_EXPIRY
 }
 
-// Point transaction types — what happened to the points.
+// Transaction type — what happened.
 enum TransactionType {
-  EARNED // Points earned (from bill, feedback, scratch card, etc.)
-  REDEEMED // Points spent on a reward or cashback redemption
-  REFUNDED // Points returned (e.g. bill voided or order cancelled)
-  GIFTED // Points gifted by admin or system promotion
-  ADJUSTMENT // Manual adjustment by admin (positive or negative)
-  EXPIRED // Points expired due to inactivity (past pointExpiryDays)
+  EARNED
+  REDEEMED
+  EXPIRED
+  GIFTED
+  ADJUSTMENT
+  REFUNDED
 }
 
 // What triggered the point transaction — the origin event.
@@ -139,10 +139,11 @@ enum TransactionSource {
   MANUAL_ADJUSTMENT // Admin manual adjustment
 }
 
-// Source of a cashback transaction (CASHBACK / TIER loyalty types only).
-enum CashbackSource {
-  BILL // Cashback earned from a purchase/bill
-  REDEEMED // Cashback redeemed from wallet (discount on bill)
+// Value kind for unified Transaction — which wallet bucket.
+enum TransactionValueKind {
+  CASHBACK // Amount in ₹ → wallet.cashbackBalance
+  AMOUNT_SPENT_POINTS // Points → wallet.amountSpentBalance
+  VISIT_POINTS // Points → wallet.visitPointsBalance
 }
 
 enum WalletType {

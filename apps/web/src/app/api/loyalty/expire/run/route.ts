@@ -1,4 +1,4 @@
-import { expireBucketsForBusiness } from "@/lib/actions/loyalty";
+import { expirePointsForBusiness } from "@/lib/actions/loyalty";
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
@@ -10,7 +10,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
     }
 
-    const result = await expireBucketsForBusiness({});
+    const result = await expirePointsForBusiness({});
 
     return NextResponse.json({ success: true, result });
   } catch (error) {
