@@ -1,4 +1,13 @@
 -- CreateEnum
+CREATE TYPE "LoyaltyType" AS ENUM ('CASHBACK', 'TIER', 'AMOUNT_SPENT', 'VISIT_MADE');
+
+-- CreateEnum
+CREATE TYPE "LoyaltyRewardType" AS ENUM ('FREE_ITEM', 'PERCENTAGE_DISCOUNT', 'CASH_DISCOUNT');
+
+-- CreateEnum
+CREATE TYPE "VisitIntervalUnit" AS ENUM ('MINUTE', 'HOUR', 'DAY', 'WEEK', 'MONTH');
+
+-- CreateEnum
 CREATE TYPE "LoyaltyMessageType" AS ENUM ('FIRST_PURCHASE', 'EXPIRE', 'REMINDER', 'SUBSEQUENT_PURCHASE', 'MEMBERSHIP_JOIN');
 
 -- CreateEnum
@@ -44,10 +53,13 @@ CREATE TYPE "CampaignChannel" AS ENUM ('SMS', 'EMAIL', 'WHATSAPP');
 CREATE TYPE "AutoCampaignTrigger" AS ENUM ('BIRTHDAY', 'ANNIVERSARY', 'FIRST_PURCHASE', 'WIN_BACK', 'MEMBERSHIP_EXPIRY', 'POINTS_EXPIRY');
 
 -- CreateEnum
-CREATE TYPE "TransactionType" AS ENUM ('EARNED', 'REDEEMED', 'REFUNDED', 'GIFTED', 'ADJUSTMENT', 'EXPIRED');
+CREATE TYPE "TransactionType" AS ENUM ('EARNED', 'REDEEMED', 'EXPIRED', 'GIFTED', 'ADJUSTMENT', 'REFUNDED');
 
 -- CreateEnum
 CREATE TYPE "TransactionSource" AS ENUM ('BILL', 'FEEDBACK', 'SCRATCH_CARD', 'CAMPAIGN', 'REFERRAL', 'REGISTRATION', 'MANUAL_ADJUSTMENT');
+
+-- CreateEnum
+CREATE TYPE "TransactionValueKind" AS ENUM ('CASHBACK', 'AMOUNT_SPENT_POINTS', 'VISIT_POINTS');
 
 -- CreateEnum
 CREATE TYPE "WalletType" AS ENUM ('POINTS', 'STORE_CREDIT');
@@ -59,11 +71,15 @@ CREATE TYPE "Role" AS ENUM ('CUSTOMER', 'ADMIN', 'CASHIER');
 CREATE TABLE "bill" (
     "id" TEXT NOT NULL,
     "billNumber" TEXT NOT NULL,
-    "amount" DOUBLE PRECISION,
-    "notes" TEXT,
+    "subtotal" DOUBLE PRECISION,
+    "storeDiscount" DOUBLE PRECISION DEFAULT 0,
+    "tax" INTEGER[] DEFAULT ARRAY[]::INTEGER[],
     "finalAmount" DOUBLE PRECISION,
-    "loyaltyPointsEarned" INTEGER NOT NULL DEFAULT 0,
-    "loyaltyPointsRedeemed" INTEGER NOT NULL DEFAULT 0,
+    "cashbackAmount" DOUBLE PRECISION,
+    "cashbackRedeemedAmount" DOUBLE PRECISION,
+    "userPaidAmount" DOUBLE PRECISION,
+    "notes" TEXT,
+    "paymentMethod" TEXT,
     "businessId" TEXT NOT NULL,
     "customerId" TEXT NOT NULL,
     "cashierId" TEXT,
@@ -181,8 +197,6 @@ CREATE TABLE "business_customer" (
     "tags" TEXT[],
     "isBlocked" BOOLEAN NOT NULL DEFAULT false,
     "blockedReason" TEXT,
-    "pointsBalance" INTEGER NOT NULL DEFAULT 0,
-    "currentTierId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -270,16 +284,9 @@ CREATE TABLE "feedback_response" (
 -- CreateTable
 CREATE TABLE "loyalty" (
     "id" TEXT NOT NULL,
+    "loyaltyType" "LoyaltyType" NOT NULL,
     "businessId" TEXT NOT NULL,
     "brandingId" TEXT,
-    "earningPercentage" DOUBLE PRECISION NOT NULL DEFAULT 0,
-    "earnPointsOnPaidAmountOnly" BOOLEAN NOT NULL DEFAULT true,
-    "cashbackInFinalAmount" BOOLEAN NOT NULL DEFAULT false,
-    "cashbackBranding" TEXT,
-    "minPurchaseForEarning" DOUBLE PRECISION NOT NULL DEFAULT 0,
-    "minPurchaseForRedemption" DOUBLE PRECISION NOT NULL DEFAULT 0,
-    "upperLimitBillAmount" DOUBLE PRECISION,
-    "upperLimitClaimableAmount" DOUBLE PRECISION,
     "pointReminderDays" INTEGER,
     "pointExpiryDays" INTEGER,
     "whatsappEnabled" BOOLEAN NOT NULL DEFAULT false,
@@ -292,13 +299,53 @@ CREATE TABLE "loyalty" (
 );
 
 -- CreateTable
+CREATE TABLE "loyalty_cashback_config" (
+    "id" TEXT NOT NULL,
+    "loyaltyId" TEXT NOT NULL,
+    "cashbackPercentage" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "onFinalAmount" BOOLEAN NOT NULL DEFAULT false,
+    "maxCashbackCap" DOUBLE PRECISION,
+    "minPurchaseForEarningEnabled" BOOLEAN NOT NULL DEFAULT false,
+    "minPurchaseForEarning" DOUBLE PRECISION,
+    "minPurchaseForRedemptionEnabled" BOOLEAN NOT NULL DEFAULT false,
+    "minPurchaseForRedemption" DOUBLE PRECISION,
+    "redemptionBalanceLimitEnabled" BOOLEAN NOT NULL DEFAULT false,
+    "redemptionBalanceLimitAmount" DOUBLE PRECISION,
+    "redemptionBalanceLimitPercentage" DOUBLE PRECISION,
+    "redemptionBillLimitEnabled" BOOLEAN NOT NULL DEFAULT false,
+    "redemptionBillLimitAmount" DOUBLE PRECISION,
+    "redemptionBillLimitPercentage" DOUBLE PRECISION,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "loyalty_cashback_config_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "loyalty_tier_config" (
+    "id" TEXT NOT NULL,
+    "loyaltyId" TEXT NOT NULL,
+    "pointsPerRupee" DOUBLE PRECISION NOT NULL DEFAULT 1,
+    "onFinalAmount" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "loyalty_tier_config_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "loyalty_tier" (
     "id" TEXT NOT NULL,
+    "tierConfigId" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "rank" INTEGER NOT NULL,
-    "minPoints" INTEGER NOT NULL DEFAULT 0,
-    "rewards" TEXT[],
-    "loyaltyId" TEXT NOT NULL,
+    "minLifetimeSpend" DOUBLE PRECISION NOT NULL,
+    "maxLifetimeSpend" DOUBLE PRECISION,
+    "cashbackPercentage" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "minPurchaseForRedemptionEnabled" BOOLEAN NOT NULL DEFAULT false,
+    "minPurchaseForRedemption" DOUBLE PRECISION,
+    "maxCashbackCapEnabled" BOOLEAN NOT NULL DEFAULT false,
+    "maxCashbackCap" DOUBLE PRECISION,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -306,48 +353,54 @@ CREATE TABLE "loyalty_tier" (
 );
 
 -- CreateTable
-CREATE TABLE "points_transaction" (
+CREATE TABLE "loyalty_amount_spent_config" (
     "id" TEXT NOT NULL,
-    "businessId" TEXT NOT NULL,
-    "customerId" TEXT NOT NULL,
-    "amount" INTEGER NOT NULL,
-    "type" "TransactionType" NOT NULL,
-    "source" "TransactionSource" NOT NULL,
-    "sourceId" TEXT,
-    "billId" TEXT,
-    "expiresAt" TIMESTAMP(3),
-    "metadata" JSONB,
-    "balanceAfter" INTEGER NOT NULL DEFAULT 0,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "points_transaction_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "points_bucket" (
-    "id" TEXT NOT NULL,
-    "businessId" TEXT NOT NULL,
-    "customerId" TEXT NOT NULL,
-    "earnedTransactionId" TEXT NOT NULL,
-    "originalAmount" INTEGER NOT NULL,
-    "remainingAmount" INTEGER NOT NULL,
-    "expiresAt" TIMESTAMP(3) NOT NULL,
-    "status" TEXT NOT NULL DEFAULT 'ACTIVE',
+    "loyaltyId" TEXT NOT NULL,
+    "pointsPerRupee" DOUBLE PRECISION NOT NULL DEFAULT 1,
+    "onFinalAmount" BOOLEAN NOT NULL DEFAULT false,
+    "maxPointsPerPurchase" INTEGER,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "points_bucket_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "loyalty_amount_spent_config_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "points_redemption_allocation" (
+CREATE TABLE "loyalty_visit_made_config" (
     "id" TEXT NOT NULL,
-    "redeemTransactionId" TEXT NOT NULL,
-    "bucketId" TEXT NOT NULL,
-    "amount" INTEGER NOT NULL,
+    "loyaltyId" TEXT NOT NULL,
+    "pointsPerVisit" INTEGER NOT NULL DEFAULT 1,
+    "visitIntervalEnabled" BOOLEAN NOT NULL DEFAULT false,
+    "visitIntervalValue" INTEGER,
+    "visitIntervalUnit" "VisitIntervalUnit",
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "points_redemption_allocation_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "loyalty_visit_made_config_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "loyalty_reward_stage" (
+    "id" TEXT NOT NULL,
+    "amountSpentConfigId" TEXT,
+    "visitMadeConfigId" TEXT,
+    "pointsRequired" INTEGER NOT NULL,
+    "rewardType" "LoyaltyRewardType" NOT NULL,
+    "rewardName" TEXT NOT NULL,
+    "freeItemSkuId" TEXT,
+    "freeItemName" TEXT,
+    "percentageValue" DOUBLE PRECISION,
+    "appliesToEntirePurchase" BOOLEAN NOT NULL DEFAULT true,
+    "specificProductIds" TEXT[],
+    "cashAmount" DOUBLE PRECISION,
+    "minPurchaseForRedemptionEnabled" BOOLEAN NOT NULL DEFAULT false,
+    "minPurchaseForRedemption" DOUBLE PRECISION,
+    "maxDiscountCapEnabled" BOOLEAN NOT NULL DEFAULT false,
+    "maxDiscountCap" DOUBLE PRECISION,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "loyalty_reward_stage_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -576,6 +629,46 @@ CREATE TABLE "terms_and_conditions" (
 );
 
 -- CreateTable
+CREATE TABLE "transaction" (
+    "id" TEXT NOT NULL,
+    "valueKind" "TransactionValueKind" NOT NULL,
+    "amount" DOUBLE PRECISION NOT NULL,
+    "type" "TransactionType" NOT NULL,
+    "source" "TransactionSource" NOT NULL,
+    "expiresAt" TIMESTAMP(3),
+    "description" TEXT,
+    "metadata" JSONB,
+    "businessId" TEXT NOT NULL,
+    "customerId" TEXT NOT NULL,
+    "billId" TEXT,
+    "feedbackResponseId" TEXT,
+    "scratchCardResponseId" TEXT,
+    "loyaltyId" TEXT,
+    "sourceId" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "transaction_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "wallet" (
+    "id" TEXT NOT NULL,
+    "businessId" TEXT NOT NULL,
+    "customerId" TEXT NOT NULL,
+    "cashbackBalance" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "amountSpentBalance" INTEGER NOT NULL DEFAULT 0,
+    "visitPointsBalance" INTEGER NOT NULL DEFAULT 0,
+    "lifetimeSpend" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "visitCount" INTEGER NOT NULL DEFAULT 0,
+    "lastVisitAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "wallet_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "user" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
@@ -727,9 +820,6 @@ CREATE INDEX "business_customer_referralSlug_idx" ON "business_customer"("referr
 CREATE INDEX "business_customer_referredByBusinessId_referredByCustomerId_idx" ON "business_customer"("referredByBusinessId", "referredByCustomerId");
 
 -- CreateIndex
-CREATE INDEX "business_customer_currentTierId_idx" ON "business_customer"("currentTierId");
-
--- CreateIndex
 CREATE INDEX "business_customer_slugId_idx" ON "business_customer"("slugId");
 
 -- CreateIndex
@@ -763,40 +853,28 @@ CREATE UNIQUE INDEX "loyalty_brandingId_key" ON "loyalty"("brandingId");
 CREATE INDEX "loyalty_businessId_idx" ON "loyalty"("businessId");
 
 -- CreateIndex
-CREATE INDEX "loyalty_tier_loyaltyId_idx" ON "loyalty_tier"("loyaltyId");
+CREATE INDEX "loyalty_loyaltyType_idx" ON "loyalty"("loyaltyType");
 
 -- CreateIndex
-CREATE INDEX "points_transaction_businessId_customerId_idx" ON "points_transaction"("businessId", "customerId");
+CREATE UNIQUE INDEX "loyalty_cashback_config_loyaltyId_key" ON "loyalty_cashback_config"("loyaltyId");
 
 -- CreateIndex
-CREATE INDEX "points_transaction_businessId_customerId_createdAt_idx" ON "points_transaction"("businessId", "customerId", "createdAt");
+CREATE UNIQUE INDEX "loyalty_tier_config_loyaltyId_key" ON "loyalty_tier_config"("loyaltyId");
 
 -- CreateIndex
-CREATE INDEX "points_transaction_source_idx" ON "points_transaction"("source");
+CREATE INDEX "loyalty_tier_tierConfigId_idx" ON "loyalty_tier"("tierConfigId");
 
 -- CreateIndex
-CREATE INDEX "points_transaction_source_sourceId_idx" ON "points_transaction"("source", "sourceId");
+CREATE UNIQUE INDEX "loyalty_amount_spent_config_loyaltyId_key" ON "loyalty_amount_spent_config"("loyaltyId");
 
 -- CreateIndex
-CREATE INDEX "points_transaction_billId_idx" ON "points_transaction"("billId");
+CREATE UNIQUE INDEX "loyalty_visit_made_config_loyaltyId_key" ON "loyalty_visit_made_config"("loyaltyId");
 
 -- CreateIndex
-CREATE INDEX "points_transaction_type_idx" ON "points_transaction"("type");
+CREATE INDEX "loyalty_reward_stage_amountSpentConfigId_idx" ON "loyalty_reward_stage"("amountSpentConfigId");
 
 -- CreateIndex
-CREATE INDEX "points_transaction_expiresAt_idx" ON "points_transaction"("expiresAt");
-
--- CreateIndex
-CREATE INDEX "points_bucket_businessId_customerId_expiresAt_idx" ON "points_bucket"("businessId", "customerId", "expiresAt");
-
--- CreateIndex
-CREATE INDEX "points_bucket_remainingAmount_idx" ON "points_bucket"("remainingAmount");
-
--- CreateIndex
-CREATE INDEX "points_redemption_allocation_redeemTransactionId_idx" ON "points_redemption_allocation"("redeemTransactionId");
-
--- CreateIndex
-CREATE INDEX "points_redemption_allocation_bucketId_idx" ON "points_redemption_allocation"("bucketId");
+CREATE INDEX "loyalty_reward_stage_visitMadeConfigId_idx" ON "loyalty_reward_stage"("visitMadeConfigId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "membership_brandingId_key" ON "membership"("brandingId");
@@ -913,6 +991,42 @@ CREATE UNIQUE INDEX "terms_and_conditions_content_referralProgramNewCustomerId_k
 CREATE UNIQUE INDEX "terms_and_conditions_content_referralProgramExistingCustome_key" ON "terms_and_conditions"("content", "referralProgramExistingCustomerId");
 
 -- CreateIndex
+CREATE INDEX "transaction_businessId_customerId_idx" ON "transaction"("businessId", "customerId");
+
+-- CreateIndex
+CREATE INDEX "transaction_businessId_customerId_createdAt_idx" ON "transaction"("businessId", "customerId", "createdAt");
+
+-- CreateIndex
+CREATE INDEX "transaction_billId_idx" ON "transaction"("billId");
+
+-- CreateIndex
+CREATE INDEX "transaction_feedbackResponseId_idx" ON "transaction"("feedbackResponseId");
+
+-- CreateIndex
+CREATE INDEX "transaction_scratchCardResponseId_idx" ON "transaction"("scratchCardResponseId");
+
+-- CreateIndex
+CREATE INDEX "transaction_loyaltyId_idx" ON "transaction"("loyaltyId");
+
+-- CreateIndex
+CREATE INDEX "transaction_type_idx" ON "transaction"("type");
+
+-- CreateIndex
+CREATE INDEX "transaction_source_idx" ON "transaction"("source");
+
+-- CreateIndex
+CREATE INDEX "transaction_valueKind_idx" ON "transaction"("valueKind");
+
+-- CreateIndex
+CREATE INDEX "transaction_expiresAt_idx" ON "transaction"("expiresAt");
+
+-- CreateIndex
+CREATE INDEX "wallet_businessId_customerId_idx" ON "wallet"("businessId", "customerId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "wallet_businessId_customerId_key" ON "wallet"("businessId", "customerId");
+
+-- CreateIndex
 CREATE INDEX "user_email_idx" ON "user"("email");
 
 -- CreateIndex
@@ -1000,9 +1114,6 @@ ALTER TABLE "business_customer" ADD CONSTRAINT "business_customer_customerId_fke
 ALTER TABLE "business_customer" ADD CONSTRAINT "business_customer_referredByBusinessId_referredByCustomerI_fkey" FOREIGN KEY ("referredByBusinessId", "referredByCustomerId") REFERENCES "business_customer"("businessId", "customerId") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "business_customer" ADD CONSTRAINT "business_customer_currentTierId_fkey" FOREIGN KEY ("currentTierId") REFERENCES "loyalty_tier"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "feedback_config" ADD CONSTRAINT "feedback_branding_fkey" FOREIGN KEY ("brandingId") REFERENCES "branding"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -1027,25 +1138,28 @@ ALTER TABLE "loyalty" ADD CONSTRAINT "loyalty_businessId_fkey" FOREIGN KEY ("bus
 ALTER TABLE "loyalty" ADD CONSTRAINT "loyalty_branding_fkey" FOREIGN KEY ("brandingId") REFERENCES "branding"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "loyalty_tier" ADD CONSTRAINT "loyalty_tier_loyaltyId_fkey" FOREIGN KEY ("loyaltyId") REFERENCES "loyalty"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "loyalty_cashback_config" ADD CONSTRAINT "loyalty_cashback_config_loyaltyId_fkey" FOREIGN KEY ("loyaltyId") REFERENCES "loyalty"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "points_transaction" ADD CONSTRAINT "points_transaction_businessId_customerId_fkey" FOREIGN KEY ("businessId", "customerId") REFERENCES "business_customer"("businessId", "customerId") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "loyalty_tier_config" ADD CONSTRAINT "loyalty_tier_config_loyaltyId_fkey" FOREIGN KEY ("loyaltyId") REFERENCES "loyalty"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "points_transaction" ADD CONSTRAINT "points_transaction_billId_fkey" FOREIGN KEY ("billId") REFERENCES "bill"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "loyalty_tier" ADD CONSTRAINT "loyalty_tier_tierConfigId_fkey" FOREIGN KEY ("tierConfigId") REFERENCES "loyalty_tier_config"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "points_bucket" ADD CONSTRAINT "points_bucket_businessId_customerId_fkey" FOREIGN KEY ("businessId", "customerId") REFERENCES "business_customer"("businessId", "customerId") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "loyalty_amount_spent_config" ADD CONSTRAINT "loyalty_amount_spent_config_loyaltyId_fkey" FOREIGN KEY ("loyaltyId") REFERENCES "loyalty"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "points_bucket" ADD CONSTRAINT "points_bucket_earnedTransactionId_fkey" FOREIGN KEY ("earnedTransactionId") REFERENCES "points_transaction"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "loyalty_visit_made_config" ADD CONSTRAINT "loyalty_visit_made_config_loyaltyId_fkey" FOREIGN KEY ("loyaltyId") REFERENCES "loyalty"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "points_redemption_allocation" ADD CONSTRAINT "points_redemption_allocation_redeemTransactionId_fkey" FOREIGN KEY ("redeemTransactionId") REFERENCES "points_transaction"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "loyalty_reward_stage" ADD CONSTRAINT "loyalty_reward_stage_amountSpentConfigId_fkey" FOREIGN KEY ("amountSpentConfigId") REFERENCES "loyalty_amount_spent_config"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "points_redemption_allocation" ADD CONSTRAINT "points_redemption_allocation_bucketId_fkey" FOREIGN KEY ("bucketId") REFERENCES "points_bucket"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "loyalty_reward_stage" ADD CONSTRAINT "loyalty_reward_stage_visitMadeConfigId_fkey" FOREIGN KEY ("visitMadeConfigId") REFERENCES "loyalty_visit_made_config"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "loyalty_reward_stage" ADD CONSTRAINT "loyalty_reward_stage_freeItemSkuId_fkey" FOREIGN KEY ("freeItemSkuId") REFERENCES "sku"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "membership" ADD CONSTRAINT "membership_businessId_fkey" FOREIGN KEY ("businessId") REFERENCES "business"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -1124,6 +1238,24 @@ ALTER TABLE "terms_and_conditions" ADD CONSTRAINT "terms_and_conditions_referral
 
 -- AddForeignKey
 ALTER TABLE "terms_and_conditions" ADD CONSTRAINT "terms_and_conditions_referralProgramExistingCustomerId_fkey" FOREIGN KEY ("referralProgramExistingCustomerId") REFERENCES "referral_program"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "transaction" ADD CONSTRAINT "transaction_businessId_customerId_fkey" FOREIGN KEY ("businessId", "customerId") REFERENCES "business_customer"("businessId", "customerId") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "transaction" ADD CONSTRAINT "transaction_billId_fkey" FOREIGN KEY ("billId") REFERENCES "bill"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "transaction" ADD CONSTRAINT "transaction_feedbackResponseId_fkey" FOREIGN KEY ("feedbackResponseId") REFERENCES "feedback_response"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "transaction" ADD CONSTRAINT "transaction_scratchCardResponseId_fkey" FOREIGN KEY ("scratchCardResponseId") REFERENCES "scratch_card_response"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "transaction" ADD CONSTRAINT "transaction_loyaltyId_fkey" FOREIGN KEY ("loyaltyId") REFERENCES "loyalty"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "wallet" ADD CONSTRAINT "wallet_businessId_customerId_fkey" FOREIGN KEY ("businessId", "customerId") REFERENCES "business_customer"("businessId", "customerId") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "admin" ADD CONSTRAINT "admin_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
