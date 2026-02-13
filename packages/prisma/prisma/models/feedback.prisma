@@ -1,7 +1,11 @@
 model FeedbackConfig {
   id String @id @default(uuid())
 
-  // Branding
+  // Global config per business (one config per business)
+  businessId String?   @unique
+  business   Business? @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  // Branding (optional styling for feedback experience)
   brandingId String?   @unique
   branding   Branding? @relation(fields: [brandingId], references: [id], onDelete: SetNull, map: "feedback_branding_fkey")
 
@@ -46,9 +50,13 @@ model FeedbackConfig {
   // Responses
   responses FeedbackResponse[]
 
+  // Links generated per bill (when config is set, links use this config)
+  feedbackLinks FeedbackLink[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([businessId])
   @@map("feedback_config")
 }
 
@@ -111,6 +119,8 @@ model FeedbackResponse {
   customerId       String
   businessCustomer BusinessCustomer @relation(fields: [businessId, customerId], references: [businessId, customerId], onDelete: Cascade)
 
+  // One response per feedback link (one bill = one feedback)
+  feedbackLink FeedbackLink?
   transactions Transaction[]
 
   // Response Data
@@ -125,4 +135,31 @@ model FeedbackResponse {
   @@index([configId])
   @@index([customerId])
   @@map("feedback_response")
+}
+
+// One link per bill; created when bill is created. One feedback per link (one bill = one feedback).
+model FeedbackLink {
+  id String @id @default(uuid())
+
+  // Token for public feedback URL (e.g. /feedback/[token])
+  token String @unique @default(uuid())
+
+  // Bill is required: every bill gets a feedback link
+  billId String @unique
+  bill   Bill   @relation(fields: [billId], references: [id], onDelete: Cascade)
+
+  // When business has set feedback config, link uses it for UI/flow
+  configId String?
+  config   FeedbackConfig? @relation(fields: [configId], references: [id], onDelete: SetNull)
+
+  // At most one response per link (feedback already submitted for this bill)
+  feedbackResponseId String?           @unique
+  feedbackResponse   FeedbackResponse? @relation(fields: [feedbackResponseId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([billId])
+  @@index([configId])
+  @@map("feedback_link")
 }

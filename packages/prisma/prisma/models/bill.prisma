@@ -57,6 +57,9 @@ model Bill {
 
   scratchCardResponses ScratchCardResponse[]
 
+  // One feedback link per bill (created when bill is created)
+  feedbackLink FeedbackLink?
+
   // Unified transactions (cashback or points earned/redeemed) linked to this bill.
   transactions Transaction[]
 

@@ -21,6 +21,7 @@ model Business {
 
   memberships     Membership[]
   loyalty         Loyalty?
+  feedbackConfig  FeedbackConfig?
   qrs             Qr[]
   scratchCards    ScratchCard[]
   referralProgram ReferralProgram?
