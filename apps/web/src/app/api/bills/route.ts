@@ -131,6 +131,9 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
               },
             },
           },
+          feedbackLink: {
+            select: { token: true },
+          },
           lineItems: {
             include: {
               sku: {
@@ -178,6 +181,9 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
         customerName: bill.businessCustomer.customer.user.name,
         customerPhone: bill.businessCustomer.customer.user.phoneNumber,
         customerEmail: bill.businessCustomer.customer.email,
+        feedbackLink: bill.feedbackLink
+          ? { token: bill.feedbackLink.token }
+          : null,
         lineItems: bill.lineItems.map((li) => ({
           id: li.id,
           skuId: li.skuId,
@@ -201,6 +207,7 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
       total,
       page,
       perPage,
+      businessSlug: context.business.slug,
     });
   } catch (error: any) {
     console.error("Failed to fetch bills:", error);

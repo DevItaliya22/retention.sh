@@ -47,6 +47,7 @@ export interface BillDetail {
   customerName: string;
   customerPhone: string | null;
   customerEmail: string;
+  feedbackLink: { token: string } | null;
   lineItems: BillLineItemResponse[];
   createdAt: string;
   updatedAt: string;
@@ -55,6 +56,7 @@ export interface BillDetail {
 
 export interface BillDetailResponse {
   bill: BillDetail | null;
+  businessSlug?: string;
   error?: string;
 }
 

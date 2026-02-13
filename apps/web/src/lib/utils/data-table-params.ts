@@ -11,7 +11,8 @@ export type DataTableConfigId =
   | "cashiers"
   | "categories"
   | "referralStats"
-  | "loyaltyStats";
+  | "loyaltyStats"
+  | "feedbackStats";
 
 export interface DataTableConfigEntry {
   prefix: string;
@@ -57,6 +58,10 @@ export const DATA_TABLE_CONFIG: Record<
       "dateFrom",
       "dateTo",
     ],
+  },
+  feedbackStats: {
+    prefix: "feedbackStats",
+    filterKeys: ["rating", "dateFrom", "dateTo"],
   },
 };
 

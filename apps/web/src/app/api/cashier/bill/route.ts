@@ -244,6 +244,18 @@ export const POST = withCashierAuth(async (request: NextRequest, context) => {
         },
       });
 
+      // One feedback link per bill; attach business's feedback config if set
+      const feedbackConfig = await tx.feedbackConfig.findUnique({
+        where: { businessId },
+        select: { id: true },
+      });
+      await tx.feedbackLink.create({
+        data: {
+          billId: bill.id,
+          configId: feedbackConfig?.id ?? undefined,
+        },
+      });
+
       const loyalty = await applyLoyaltyForBill(tx, {
         businessId,
         customerId: customer.id,

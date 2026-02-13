@@ -97,6 +97,14 @@ const ROUTE_METADATA_MAP: Record<string, RouteMetadataConfig> = {
     description:
       "Configure earning, redemption, expiry, and communication for loyalty",
   },
+  "/settings/feedback": {
+    title: "Feedback Settings",
+    description: "Configure when and how to collect customer feedback",
+  },
+  "/feedback-stats": {
+    title: "Feedback stats",
+    description: "Customer feedback responses by rating and date",
+  },
   "/cashier/[businessSlug]/[cashierSlug]": {
     title: (segments) => `Cashier Login - ${formatSlug(segments[1])}`,
     description: "Sign in to your cashier account",

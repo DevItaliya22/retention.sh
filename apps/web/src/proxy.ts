@@ -29,6 +29,7 @@ const protectedAdminRoutes = [
   "/customers",
   "/referral-stats",
   "/loyalty-stats",
+  "/feedback-stats",
 ];
 
 /**

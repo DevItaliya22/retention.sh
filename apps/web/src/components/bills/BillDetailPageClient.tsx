@@ -19,8 +19,10 @@ import {
 import { cn } from "@reelo/ui/lib/utils";
 import {
   CalendarDays,
+  ExternalLink,
   Gift,
   Mail,
+  MessageSquare,
   Package,
   Phone,
   Receipt,
@@ -71,6 +73,11 @@ export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
   const { data, isLoading, isError, error } = useBillQuery(billId);
   const setSegmentLabel = useBreadcrumbOverride()?.setSegmentLabel;
   const bill = data?.bill ?? null;
+  const businessSlug = data?.businessSlug ?? "";
+  const feedbackPath =
+    bill?.feedbackLink && businessSlug
+      ? `/feedback/${businessSlug}/${bill.feedbackLink.token}`
+      : null;
 
   useEffect(() => {
     if (bill?.billNumber) {
@@ -338,6 +345,27 @@ export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
               isLoading={isLoading && !bill}
               skeletonWidth="w-28"
             />
+            {!isLoading && feedbackPath && (
+              <DetailRow
+                label="Feedback link"
+                value={
+                  <Link
+                    href={feedbackPath}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={cn(
+                      buttonVariants({ variant: "link", size: "sm" }),
+                      "h-auto p-0 font-normal",
+                    )}
+                  >
+                    <MessageSquare className="mr-1.5 inline size-3.5" />
+                    Open feedback form
+                    <ExternalLink className="ml-1 inline size-3" />
+                  </Link>
+                }
+                icon={MessageSquare}
+              />
+            )}
           </CardContent>
         </Card>
 
