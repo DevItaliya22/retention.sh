@@ -28,6 +28,7 @@ import {
   FileText,
   Gift,
   Inbox,
+  MessageSquare,
   Settings,
   Users,
 } from "lucide-react";
@@ -136,6 +137,18 @@ export function SimpleSidebar({
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname === "/feedback-stats"}
+                    tooltip="Feedback stats"
+                  >
+                    <Link href="/feedback-stats">
+                      <MessageSquare className="h-4 w-4" />
+                      <span className="sidebar-text">Feedback stats</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
                 <Collapsible
                   asChild
                   defaultOpen={true}
@@ -212,6 +225,14 @@ export function SimpleSidebar({
                             isActive={pathname === "/settings/loyalty"}
                           >
                             <Link href="/settings/loyalty">Loyalty</Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                        <SidebarMenuSubItem>
+                          <SidebarMenuSubButton
+                            asChild
+                            isActive={pathname === "/settings/feedback"}
+                          >
+                            <Link href="/settings/feedback">Feedback</Link>
                           </SidebarMenuSubButton>
                         </SidebarMenuSubItem>
                       </SidebarMenuSub>

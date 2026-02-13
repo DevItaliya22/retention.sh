@@ -13,7 +13,7 @@ import {
 import { useDataTable } from "@reelo/ui/hooks";
 import { cn } from "@reelo/ui/lib/utils";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Eye } from "lucide-react";
+import { Eye, MessageSquare } from "lucide-react";
 import Link from "next/link";
 import { useMemo } from "react";
 
@@ -34,6 +34,7 @@ export function BillsTable() {
   }
 
   const bills = data?.bills ?? [];
+  const businessSlug = data?.businessSlug ?? "";
   const total = data?.total ?? 0;
   const perPage = data?.perPage ?? 10;
   const pageCount = Math.max(1, Math.ceil(total / perPage));
@@ -48,6 +49,7 @@ export function BillsTable() {
         customerName: "",
         customerPhone: null,
         customerEmail: "",
+        feedbackLink: null,
         lineItems: [],
         createdAt: "",
         updatedAt: "",
@@ -62,6 +64,7 @@ export function BillsTable() {
           customerName: "",
           customerPhone: null,
           customerEmail: "",
+          feedbackLink: null,
           lineItems: [],
           createdAt: "",
           updatedAt: "",
@@ -384,7 +387,22 @@ export function BillsTable() {
             );
           }
           return (
-            <div className="flex justify-end">
+            <div className="flex justify-end gap-1">
+              {bill.feedbackLink && businessSlug && (
+                <Link
+                  href={`/feedback/${businessSlug}/${bill.feedbackLink.token}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`Feedback link for bill ${bill.billNumber}`}
+                  className={cn(
+                    buttonVariants({ variant: "ghost", size: "xs" }),
+                    "h-8 w-8 p-0",
+                  )}
+                  title="Feedback link"
+                >
+                  <MessageSquare className="h-4 w-4" />
+                </Link>
+              )}
               <Link
                 href={`/bills/${bill.id}`}
                 aria-label={`View bill ${bill.billNumber}`}
@@ -402,7 +420,7 @@ export function BillsTable() {
         enableHiding: false,
       },
     ],
-    [],
+    [businessSlug],
   );
 
   const { table } = useDataTable({

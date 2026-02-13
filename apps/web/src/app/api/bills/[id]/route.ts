@@ -45,6 +45,9 @@ export const GET = withAdminAuth<{ id: string }>(
               },
             },
           },
+          feedbackLink: {
+            select: { token: true },
+          },
           lineItems: {
             include: {
               sku: {
@@ -103,6 +106,9 @@ export const GET = withAdminAuth<{ id: string }>(
         customerName: bill.businessCustomer.customer.user.name,
         customerPhone: bill.businessCustomer.customer.user.phoneNumber,
         customerEmail: bill.businessCustomer.customer.email,
+        feedbackLink: bill.feedbackLink
+          ? { token: bill.feedbackLink.token }
+          : null,
         lineItems: bill.lineItems.map((li) => ({
           id: li.id,
           skuId: li.skuId,
@@ -128,7 +134,10 @@ export const GET = withAdminAuth<{ id: string }>(
         })),
       };
 
-      return NextResponse.json({ bill: formattedBill });
+      return NextResponse.json({
+        bill: formattedBill,
+        businessSlug: context.business.slug,
+      });
     } catch (error: unknown) {
       console.error("Failed to fetch bill:", error);
       return NextResponse.json(
