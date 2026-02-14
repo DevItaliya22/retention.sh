@@ -10,13 +10,16 @@ export const informationSectionSchema = z.object({
     .max(1000, "Content is too long"),
 });
 
-// Referral benefit type enum
+// Referral benefit type enum: AMOUNT_CASHBACK = cashback in ₹, FREE_ITEM_ON_NEXT_PURCHASE = free item on next visit
 export const referralBenefitTypeSchema = z.enum([
-  "CASH_DISCOUNT",
-  "PERCENTAGE_DISCOUNT",
-  "FREE_ITEM",
-  "LOYALTY_BONUS",
+  "AMOUNT_CASHBACK",
+  "FREE_ITEM_ON_NEXT_PURCHASE",
 ]);
+
+export const REFERRAL_BENEFIT_TYPES = {
+  AMOUNT_CASHBACK: "Amount Cashback",
+  FREE_ITEM_ON_NEXT_PURCHASE: "Free Item on Next Purchase",
+} as const;
 
 // Branding schema for referral program
 export const referralBrandingSchema = z
@@ -38,19 +41,17 @@ export const termsAndConditionsArraySchema = z
   .optional()
   .nullable();
 
-// Create/Update referral program schema
-export const createReferralProgramSchema = z.object({
+// Base referral program schema (no refinements — .partial() requires this)
+const referralProgramBaseSchema = z.object({
   newCustomerBenefitType: referralBenefitTypeSchema,
-  newCustomerBenefitValue: z.coerce
-    .number()
-    .int()
-    .min(0, "Value must be positive"),
+  newCustomerBenefitValue: z.coerce.number().int().min(0).optional(),
   newCustomerBenefitExpiresInDays: z.coerce
     .number()
     .int()
     .min(1)
     .optional()
     .nullable(),
+  newCustomerFreeItemSkuId: z.string().uuid().optional().nullable(),
   informationSections: z
     .array(informationSectionSchema)
     .min(0)
@@ -59,28 +60,73 @@ export const createReferralProgramSchema = z.object({
   sendReminderToCustomer: z.boolean().default(false),
 
   existingCustomerBenefitType: referralBenefitTypeSchema,
-  existingCustomerBenefitValue: z.coerce
-    .number()
-    .int()
-    .min(0, "Value must be positive"),
+  existingCustomerBenefitValue: z.coerce.number().int().min(0).optional(),
   existingCustomerBenefitExpiresInDays: z.coerce
     .number()
     .int()
     .min(1)
     .optional()
     .nullable(),
+  existingCustomerFreeItemSkuId: z.string().uuid().optional().nullable(),
   termsAndConditionsNewCustomer: termsAndConditionsArraySchema,
   termsAndConditionsExistingCustomer: termsAndConditionsArraySchema,
 
   branding: referralBrandingSchema,
 });
 
+// Create schema with refinements for full validation
+export const createReferralProgramSchema =
+  referralProgramBaseSchema.superRefine((data, ctx) => {
+    if (data.newCustomerBenefitType === "AMOUNT_CASHBACK") {
+      if (
+        data.newCustomerBenefitValue == null ||
+        data.newCustomerBenefitValue < 0
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Cashback amount is required",
+          path: ["newCustomerBenefitValue"],
+        });
+      }
+    }
+    if (data.existingCustomerBenefitType === "AMOUNT_CASHBACK") {
+      if (
+        data.existingCustomerBenefitValue == null ||
+        data.existingCustomerBenefitValue < 0
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Cashback amount is required",
+          path: ["existingCustomerBenefitValue"],
+        });
+      }
+    }
+    if (data.newCustomerBenefitType === "FREE_ITEM_ON_NEXT_PURCHASE") {
+      if (!data.newCustomerFreeItemSkuId?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Please select a free item",
+          path: ["newCustomerFreeItemSkuId"],
+        });
+      }
+    }
+    if (data.existingCustomerBenefitType === "FREE_ITEM_ON_NEXT_PURCHASE") {
+      if (!data.existingCustomerFreeItemSkuId?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Please select a free item",
+          path: ["existingCustomerFreeItemSkuId"],
+        });
+      }
+    }
+  });
+
 export type CreateReferralProgramInput = z.infer<
   typeof createReferralProgramSchema
 >;
 
-export const updateReferralProgramSchema =
-  createReferralProgramSchema.partial();
+// Update schema: all fields optional (no refinements — .partial() cannot be used on refined schemas)
+export const updateReferralProgramSchema = referralProgramBaseSchema.partial();
 
 export type UpdateReferralProgramInput = z.infer<
   typeof updateReferralProgramSchema

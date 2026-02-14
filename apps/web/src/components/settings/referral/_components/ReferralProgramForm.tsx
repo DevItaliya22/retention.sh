@@ -47,13 +47,22 @@ export function ReferralProgramForm({
       try {
         const result = await createReferralProgram({
           newCustomerBenefitType: values.newCustomerBenefitType,
-          newCustomerBenefitValue: values.newCustomerBenefitValue,
+          newCustomerBenefitValue: values.newCustomerBenefitValue ?? 0,
           newCustomerBenefitExpiresInDays:
             values.newCustomerBenefitExpiresInDays || null,
+          newCustomerFreeItemSkuId:
+            values.newCustomerBenefitType === "FREE_ITEM_ON_NEXT_PURCHASE"
+              ? values.newCustomerFreeItemSkuId || null
+              : null,
           existingCustomerBenefitType: values.existingCustomerBenefitType,
-          existingCustomerBenefitValue: values.existingCustomerBenefitValue,
+          existingCustomerBenefitValue:
+            values.existingCustomerBenefitValue ?? 0,
           existingCustomerBenefitExpiresInDays:
             values.existingCustomerBenefitExpiresInDays || null,
+          existingCustomerFreeItemSkuId:
+            values.existingCustomerBenefitType === "FREE_ITEM_ON_NEXT_PURCHASE"
+              ? values.existingCustomerFreeItemSkuId || null
+              : null,
           sendReminderToCustomer: values.sendReminderToCustomer,
           informationSections: [], // Information sections temporarily disabled
           branding: values.branding,
@@ -96,6 +105,7 @@ export function ReferralProgramForm({
         fields: [
           "newCustomerBenefitType",
           "newCustomerBenefitValue",
+          "newCustomerFreeItemSkuId",
           "newCustomerBenefitExpiresInDays",
           "sendReminderToCustomer",
         ],
@@ -118,6 +128,7 @@ export function ReferralProgramForm({
         fields: [
           "existingCustomerBenefitType",
           "existingCustomerBenefitValue",
+          "existingCustomerFreeItemSkuId",
           "existingCustomerBenefitExpiresInDays",
           "termsAndConditionsNewCustomer",
           "termsAndConditionsExistingCustomer",
@@ -158,10 +169,18 @@ export function ReferralProgramForm({
     ? {
         newCustomerBenefitType: initialData.newCustomerBenefitType,
         newCustomerBenefitValue: initialData.newCustomerBenefitValue,
+        newCustomerFreeItemSkuId:
+          initialData.newCustomerFreeItemSkuId ??
+          initialData.newCustomerFreeItemSku?.id ??
+          null,
         newCustomerBenefitExpiresInDays:
           initialData.newCustomerBenefitExpiresInDays,
         existingCustomerBenefitType: initialData.existingCustomerBenefitType,
         existingCustomerBenefitValue: initialData.existingCustomerBenefitValue,
+        existingCustomerFreeItemSkuId:
+          initialData.existingCustomerFreeItemSkuId ??
+          initialData.existingCustomerFreeItemSku?.id ??
+          null,
         existingCustomerBenefitExpiresInDays:
           initialData.existingCustomerBenefitExpiresInDays,
         sendReminderToCustomer: initialData.sendReminderToCustomer,
@@ -185,10 +204,12 @@ export function ReferralProgramForm({
           : [],
       }
     : {
-        newCustomerBenefitType: "LOYALTY_BONUS",
+        newCustomerBenefitType: "AMOUNT_CASHBACK",
         newCustomerBenefitValue: 100,
-        existingCustomerBenefitType: "LOYALTY_BONUS",
+        newCustomerFreeItemSkuId: null,
+        existingCustomerBenefitType: "AMOUNT_CASHBACK",
         existingCustomerBenefitValue: 50,
+        existingCustomerFreeItemSkuId: null,
         sendReminderToCustomer: false,
         informationSections: [],
         branding: null,
