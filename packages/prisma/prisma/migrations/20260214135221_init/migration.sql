@@ -1,4 +1,7 @@
 -- CreateEnum
+CREATE TYPE "CampaignRewardType" AS ENUM ('FREE_ITEM', 'PERCENTAGE_DISCOUNT', 'CASH_DISCOUNT', 'NO_REWARD');
+
+-- CreateEnum
 CREATE TYPE "LoyaltyType" AS ENUM ('CASHBACK', 'TIER', 'AMOUNT_SPENT', 'VISIT_MADE');
 
 -- CreateEnum
@@ -20,7 +23,7 @@ CREATE TYPE "BenefitAppliesTo" AS ENUM ('ENTIRE_PURCHASE', 'SPECIFIC_ITEMS');
 CREATE TYPE "QrBenefitType" AS ENUM ('CASH_DISCOUNT', 'PERCENTAGE_DISCOUNT', 'FREE_ITEM', 'LOYALTY_BONUS');
 
 -- CreateEnum
-CREATE TYPE "ReferalBenefitType" AS ENUM ('CASH_DISCOUNT', 'PERCENTAGE_DISCOUNT', 'FREE_ITEM', 'LOYALTY_BONUS');
+CREATE TYPE "ReferalBenefitType" AS ENUM ('AMOUNT_CASHBACK', 'FREE_ITEM_ON_NEXT_PURCHASE');
 
 -- CreateEnum
 CREATE TYPE "MembershipStatus" AS ENUM ('DRAFT', 'ACTIVE', 'INACTIVE');
@@ -59,7 +62,7 @@ CREATE TYPE "TransactionType" AS ENUM ('EARNED', 'REDEEMED', 'EXPIRED', 'GIFTED'
 CREATE TYPE "TransactionSource" AS ENUM ('BILL', 'FEEDBACK', 'SCRATCH_CARD', 'CAMPAIGN', 'REFERRAL', 'REGISTRATION', 'MANUAL_ADJUSTMENT');
 
 -- CreateEnum
-CREATE TYPE "TransactionValueKind" AS ENUM ('CASHBACK', 'AMOUNT_SPENT_POINTS', 'VISIT_POINTS');
+CREATE TYPE "TransactionValueKind" AS ENUM ('CASHBACK', 'AMOUNT_SPENT_POINTS', 'VISIT_POINTS', 'FREE_ITEM');
 
 -- CreateEnum
 CREATE TYPE "WalletType" AS ENUM ('POINTS', 'STORE_CREDIT');
@@ -170,6 +173,21 @@ CREATE TABLE "sku" (
 );
 
 -- CreateTable
+CREATE TABLE "campaign" (
+    "id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "description" TEXT NOT NULL,
+    "rewardType" "CampaignRewardType" NOT NULL DEFAULT 'FREE_ITEM',
+    "whatsappEnabled" BOOLEAN NOT NULL DEFAULT false,
+    "emailEnabled" BOOLEAN NOT NULL DEFAULT false,
+    "businessId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "campaign_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "customer" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
@@ -206,6 +224,7 @@ CREATE TABLE "business_customer" (
 -- CreateTable
 CREATE TABLE "feedback_config" (
     "id" TEXT NOT NULL,
+    "businessId" TEXT,
     "brandingId" TEXT,
     "positiveFollowUp" TEXT,
     "negativeFollowUp" TEXT,
@@ -279,6 +298,19 @@ CREATE TABLE "feedback_response" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "feedback_response_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "feedback_link" (
+    "id" TEXT NOT NULL,
+    "token" TEXT NOT NULL,
+    "billId" TEXT NOT NULL,
+    "configId" TEXT,
+    "feedbackResponseId" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "feedback_link_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -526,9 +558,11 @@ CREATE TABLE "referral_program" (
     "newCustomerBenefitType" "ReferalBenefitType" NOT NULL,
     "newCustomerBenefitValue" INTEGER NOT NULL,
     "newCustomerBenefitExpiresInDays" INTEGER,
+    "newCustomerFreeItemSkuId" TEXT,
     "existingCustomerBenefitType" "ReferalBenefitType" NOT NULL,
     "existingCustomerBenefitValue" INTEGER NOT NULL,
     "existingCustomerBenefitExpiresInDays" INTEGER,
+    "existingCustomerFreeItemSkuId" TEXT,
     "sendReminderToCustomer" BOOLEAN NOT NULL DEFAULT false,
     "informationSections" JSONB NOT NULL,
     "branding" JSONB,
@@ -659,6 +693,7 @@ CREATE TABLE "wallet" (
     "cashbackBalance" DOUBLE PRECISION NOT NULL DEFAULT 0,
     "amountSpentBalance" INTEGER NOT NULL DEFAULT 0,
     "visitPointsBalance" INTEGER NOT NULL DEFAULT 0,
+    "freeItems" JSONB DEFAULT '[]',
     "lifetimeSpend" DOUBLE PRECISION NOT NULL DEFAULT 0,
     "visitCount" INTEGER NOT NULL DEFAULT 0,
     "lastVisitAt" TIMESTAMP(3),
@@ -805,6 +840,9 @@ CREATE INDEX "sku_categoryId_idx" ON "sku"("categoryId");
 CREATE UNIQUE INDEX "sku_businessId_sku_key" ON "sku"("businessId", "sku");
 
 -- CreateIndex
+CREATE INDEX "campaign_businessId_idx" ON "campaign"("businessId");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "customer_userId_key" ON "customer"("userId");
 
 -- CreateIndex
@@ -826,7 +864,13 @@ CREATE INDEX "business_customer_slugId_idx" ON "business_customer"("slugId");
 CREATE INDEX "business_customer_customerId_idx" ON "business_customer"("customerId");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "feedback_config_businessId_key" ON "feedback_config"("businessId");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "feedback_config_brandingId_key" ON "feedback_config"("brandingId");
+
+-- CreateIndex
+CREATE INDEX "feedback_config_businessId_idx" ON "feedback_config"("businessId");
 
 -- CreateIndex
 CREATE INDEX "feedback_question_configId_idx" ON "feedback_question"("configId");
@@ -842,6 +886,21 @@ CREATE INDEX "feedback_response_configId_idx" ON "feedback_response"("configId")
 
 -- CreateIndex
 CREATE INDEX "feedback_response_customerId_idx" ON "feedback_response"("customerId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "feedback_link_token_key" ON "feedback_link"("token");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "feedback_link_billId_key" ON "feedback_link"("billId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "feedback_link_feedbackResponseId_key" ON "feedback_link"("feedbackResponseId");
+
+-- CreateIndex
+CREATE INDEX "feedback_link_billId_idx" ON "feedback_link"("billId");
+
+-- CreateIndex
+CREATE INDEX "feedback_link_configId_idx" ON "feedback_link"("configId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "loyalty_businessId_key" ON "loyalty"("businessId");
@@ -1102,6 +1161,9 @@ ALTER TABLE "sku" ADD CONSTRAINT "sku_businessId_fkey" FOREIGN KEY ("businessId"
 ALTER TABLE "sku" ADD CONSTRAINT "sku_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "category"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "campaign" ADD CONSTRAINT "campaign_businessId_fkey" FOREIGN KEY ("businessId") REFERENCES "business"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "customer" ADD CONSTRAINT "customer_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -1112,6 +1174,9 @@ ALTER TABLE "business_customer" ADD CONSTRAINT "business_customer_customerId_fke
 
 -- AddForeignKey
 ALTER TABLE "business_customer" ADD CONSTRAINT "business_customer_referredByBusinessId_referredByCustomerI_fkey" FOREIGN KEY ("referredByBusinessId", "referredByCustomerId") REFERENCES "business_customer"("businessId", "customerId") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "feedback_config" ADD CONSTRAINT "feedback_config_businessId_fkey" FOREIGN KEY ("businessId") REFERENCES "business"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "feedback_config" ADD CONSTRAINT "feedback_branding_fkey" FOREIGN KEY ("brandingId") REFERENCES "branding"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -1130,6 +1195,15 @@ ALTER TABLE "feedback_response" ADD CONSTRAINT "feedback_response_configId_fkey"
 
 -- AddForeignKey
 ALTER TABLE "feedback_response" ADD CONSTRAINT "feedback_response_businessId_customerId_fkey" FOREIGN KEY ("businessId", "customerId") REFERENCES "business_customer"("businessId", "customerId") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "feedback_link" ADD CONSTRAINT "feedback_link_billId_fkey" FOREIGN KEY ("billId") REFERENCES "bill"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "feedback_link" ADD CONSTRAINT "feedback_link_configId_fkey" FOREIGN KEY ("configId") REFERENCES "feedback_config"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "feedback_link" ADD CONSTRAINT "feedback_link_feedbackResponseId_fkey" FOREIGN KEY ("feedbackResponseId") REFERENCES "feedback_response"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "loyalty" ADD CONSTRAINT "loyalty_businessId_fkey" FOREIGN KEY ("businessId") REFERENCES "business"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -1193,6 +1267,12 @@ ALTER TABLE "qr_action" ADD CONSTRAINT "qr_action_qrId_fkey" FOREIGN KEY ("qrId"
 
 -- AddForeignKey
 ALTER TABLE "referral_program" ADD CONSTRAINT "referral_program_businessId_fkey" FOREIGN KEY ("businessId") REFERENCES "business"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "referral_program" ADD CONSTRAINT "referral_program_newCustomerFreeItemSkuId_fkey" FOREIGN KEY ("newCustomerFreeItemSkuId") REFERENCES "sku"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "referral_program" ADD CONSTRAINT "referral_program_existingCustomerFreeItemSkuId_fkey" FOREIGN KEY ("existingCustomerFreeItemSkuId") REFERENCES "sku"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "referral_log" ADD CONSTRAINT "referral_log_referrerBusinessId_referrerCustomerId_fkey" FOREIGN KEY ("referrerBusinessId", "referrerCustomerId") REFERENCES "business_customer"("businessId", "customerId") ON DELETE CASCADE ON UPDATE CASCADE;

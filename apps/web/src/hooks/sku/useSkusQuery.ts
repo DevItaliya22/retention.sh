@@ -50,3 +50,13 @@ export function useSkusQuery() {
     staleTime: 5000,
   });
 }
+
+/** Fetch active SKUs for dropdowns (e.g. referral free item, loyalty reward stage). */
+export function useActiveSkusForSelect() {
+  return useQuery<SkusResponse, Error>({
+    queryKey: ["skus", "active", "select"],
+    queryFn: () =>
+      fetcher<SkusResponse>("/api/sku?isActive=true&perPage=100&sort=name:asc"),
+    staleTime: 30000,
+  });
+}

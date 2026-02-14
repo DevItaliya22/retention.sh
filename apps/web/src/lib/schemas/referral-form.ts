@@ -5,49 +5,93 @@ import {
   referralBrandingSchema,
 } from "./referral";
 
-export const referralProgramStep1Schema = z.object({
-  newCustomerBenefitType: referralBenefitTypeSchema,
-  newCustomerBenefitValue: z.coerce
-    .number()
-    .int()
-    .min(0, "Value must be positive"),
-  newCustomerBenefitExpiresInDays: z.coerce
-    .number()
-    .int()
-    .min(1)
-    .optional()
-    .nullable(),
-  informationSections: z
-    .array(informationSectionSchema)
-    .min(0)
-    .optional()
-    .default([]),
-  sendReminderToCustomer: z.boolean().default(false),
-});
+export const referralProgramStep1Schema = z
+  .object({
+    newCustomerBenefitType: referralBenefitTypeSchema,
+    newCustomerBenefitValue: z.coerce.number().int().min(0).optional(),
+    newCustomerBenefitExpiresInDays: z.coerce
+      .number()
+      .int()
+      .min(1)
+      .optional()
+      .nullable(),
+    newCustomerFreeItemSkuId: z.string().uuid().optional().nullable(),
+    informationSections: z
+      .array(informationSectionSchema)
+      .min(0)
+      .optional()
+      .default([]),
+    sendReminderToCustomer: z.boolean().default(false),
+  })
+  .superRefine((data, ctx) => {
+    if (data.newCustomerBenefitType === "AMOUNT_CASHBACK") {
+      if (
+        data.newCustomerBenefitValue == null ||
+        data.newCustomerBenefitValue < 0
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Cashback amount is required",
+          path: ["newCustomerBenefitValue"],
+        });
+      }
+    }
+    if (data.newCustomerBenefitType === "FREE_ITEM_ON_NEXT_PURCHASE") {
+      if (!data.newCustomerFreeItemSkuId?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Please select a free item",
+          path: ["newCustomerFreeItemSkuId"],
+        });
+      }
+    }
+  });
 
-export const referralProgramStep2Schema = z.object({
-  existingCustomerBenefitType: referralBenefitTypeSchema,
-  existingCustomerBenefitValue: z.coerce
-    .number()
-    .int()
-    .min(0, "Value must be positive"),
-  existingCustomerBenefitExpiresInDays: z.coerce
-    .number()
-    .int()
-    .min(1)
-    .optional()
-    .nullable(),
-  termsAndConditionsNewCustomer: z
-    .array(z.string().min(1).max(500))
-    .min(0)
-    .optional()
-    .nullable(),
-  termsAndConditionsExistingCustomer: z
-    .array(z.string().min(1).max(500))
-    .min(0)
-    .optional()
-    .nullable(),
-});
+export const referralProgramStep2Schema = z
+  .object({
+    existingCustomerBenefitType: referralBenefitTypeSchema,
+    existingCustomerBenefitValue: z.coerce.number().int().min(0).optional(),
+    existingCustomerBenefitExpiresInDays: z.coerce
+      .number()
+      .int()
+      .min(1)
+      .optional()
+      .nullable(),
+    existingCustomerFreeItemSkuId: z.string().uuid().optional().nullable(),
+    termsAndConditionsNewCustomer: z
+      .array(z.string().min(1).max(500))
+      .min(0)
+      .optional()
+      .nullable(),
+    termsAndConditionsExistingCustomer: z
+      .array(z.string().min(1).max(500))
+      .min(0)
+      .optional()
+      .nullable(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.existingCustomerBenefitType === "AMOUNT_CASHBACK") {
+      if (
+        data.existingCustomerBenefitValue == null ||
+        data.existingCustomerBenefitValue < 0
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Cashback amount is required",
+          path: ["existingCustomerBenefitValue"],
+        });
+      }
+    }
+    if (data.existingCustomerBenefitType === "FREE_ITEM_ON_NEXT_PURCHASE") {
+      if (!data.existingCustomerFreeItemSkuId?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Please select a free item",
+          path: ["existingCustomerFreeItemSkuId"],
+        });
+      }
+    }
+  });
 
 export const referralProgramStep3Schema = z.object({
   branding: referralBrandingSchema,

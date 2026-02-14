@@ -1,0 +1,36 @@
+enum CampaignRewardType {
+    FREE_ITEM
+    PERCENTAGE_DISCOUNT
+    CASH_DISCOUNT
+    NO_REWARD
+}
+
+model Campaign {
+    id          String @id @default(uuid())
+    slug        String @unique
+
+    title       String
+    description String
+
+    contactNumber String
+    expiresAt     DateTime // mainly for saving date (also to display in UI)
+
+    emailSubject String?
+
+    branding Branding? @relation(fields: [brandingId], references: [id], onDelete: SetNull)
+    brandingId String?   @unique
+
+    rewardType CampaignRewardType @default(FREE_ITEM)
+
+    whatsappEnabled Boolean @default(false)
+    emailEnabled    Boolean @default(false)
+
+    businessId String
+    business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)    
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@index([businessId])
+    @@map("campaign")
+}

@@ -23,12 +23,16 @@ model Wallet {
   amountSpentBalance Int   @default(0)
   visitPointsBalance Int   @default(0)
 
+  // Pending free items (e.g. from referral FREE_ITEM_ON_NEXT_PURCHASE). JSON array:
+  // [{ id, skuId, skuName, source, sourceId?, expiresAt?, createdAt }]
+  freeItems Json? @default("[]")
+
   // TIER: denormalized lifetime spend (sum of finalized bill amounts).
   // Updated when loyalty is applied for a bill. Fallback: aggregate from bills.
   lifetimeSpend Float @default(0)
 
   // VISIT_MADE: when visit interval enabled, used to check if bill qualifies.
-  visitCount Int         @default(0)
+  visitCount  Int       @default(0)
   lastVisitAt DateTime?
 
   createdAt DateTime @default(now())

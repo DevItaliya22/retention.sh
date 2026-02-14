@@ -21,6 +21,10 @@ export const GET = withAdminAuth(async (request, context) => {
       include: {
         termsAndConditionsNewCustomer: { orderBy: { createdAt: "asc" } },
         termsAndConditionsExistingCustomer: { orderBy: { createdAt: "asc" } },
+        newCustomerFreeItemSku: { select: { id: true, name: true, sku: true } },
+        existingCustomerFreeItemSku: {
+          select: { id: true, name: true, sku: true },
+        },
       },
     });
 
@@ -110,39 +114,41 @@ export const POST = withAdminAuth(async (request, context) => {
     // }
 
     // Upsert referral program (without terms; we sync terms below)
+    const createData = {
+      businessId,
+      isEnabled: true,
+      newCustomerBenefitType: validatedData.newCustomerBenefitType,
+      newCustomerBenefitValue:
+        validatedData.newCustomerBenefitType === "AMOUNT_CASHBACK"
+          ? (validatedData.newCustomerBenefitValue ?? 0)
+          : 0,
+      newCustomerBenefitExpiresInDays:
+        validatedData.newCustomerBenefitExpiresInDays ?? null,
+      newCustomerFreeItemSkuId:
+        validatedData.newCustomerBenefitType === "FREE_ITEM_ON_NEXT_PURCHASE"
+          ? (validatedData.newCustomerFreeItemSkuId ?? null)
+          : null,
+      existingCustomerBenefitType: validatedData.existingCustomerBenefitType,
+      existingCustomerBenefitValue:
+        validatedData.existingCustomerBenefitType === "AMOUNT_CASHBACK"
+          ? (validatedData.existingCustomerBenefitValue ?? 0)
+          : 0,
+      existingCustomerBenefitExpiresInDays:
+        validatedData.existingCustomerBenefitExpiresInDays ?? null,
+      existingCustomerFreeItemSkuId:
+        validatedData.existingCustomerBenefitType ===
+        "FREE_ITEM_ON_NEXT_PURCHASE"
+          ? (validatedData.existingCustomerFreeItemSkuId ?? null)
+          : null,
+      sendReminderToCustomer: validatedData.sendReminderToCustomer,
+      informationSections: validatedData.informationSections as any,
+      branding: validatedData.branding as any,
+    };
+
     const referralProgram = await db.referralProgram.upsert({
       where: { businessId },
-      create: {
-        businessId,
-        isEnabled: true,
-        newCustomerBenefitType: validatedData.newCustomerBenefitType,
-        newCustomerBenefitValue: validatedData.newCustomerBenefitValue,
-        newCustomerBenefitExpiresInDays:
-          validatedData.newCustomerBenefitExpiresInDays ?? null,
-        existingCustomerBenefitType: validatedData.existingCustomerBenefitType,
-        existingCustomerBenefitValue:
-          validatedData.existingCustomerBenefitValue,
-        existingCustomerBenefitExpiresInDays:
-          validatedData.existingCustomerBenefitExpiresInDays ?? null,
-        sendReminderToCustomer: validatedData.sendReminderToCustomer,
-        informationSections: validatedData.informationSections as any,
-        branding: validatedData.branding as any,
-      },
-      update: {
-        isEnabled: true,
-        newCustomerBenefitType: validatedData.newCustomerBenefitType,
-        newCustomerBenefitValue: validatedData.newCustomerBenefitValue,
-        newCustomerBenefitExpiresInDays:
-          validatedData.newCustomerBenefitExpiresInDays ?? null,
-        existingCustomerBenefitType: validatedData.existingCustomerBenefitType,
-        existingCustomerBenefitValue:
-          validatedData.existingCustomerBenefitValue,
-        existingCustomerBenefitExpiresInDays:
-          validatedData.existingCustomerBenefitExpiresInDays ?? null,
-        sendReminderToCustomer: validatedData.sendReminderToCustomer,
-        informationSections: validatedData.informationSections as any,
-        branding: validatedData.branding as any,
-      },
+      create: createData,
+      update: createData,
     });
 
     // Sync terms: replace all TermsAndConditions for this program
@@ -258,20 +264,57 @@ export const PUT = withAdminAuth(async (request, context) => {
     }
 
     const updateData: Record<string, unknown> = {};
-    if (validatedData.newCustomerBenefitType != null)
+    if (validatedData.newCustomerBenefitType != null) {
       updateData.newCustomerBenefitType = validatedData.newCustomerBenefitType;
-    if (validatedData.newCustomerBenefitValue != null)
+      updateData.newCustomerBenefitValue =
+        validatedData.newCustomerBenefitType === "AMOUNT_CASHBACK"
+          ? (validatedData.newCustomerBenefitValue ?? 0)
+          : 0;
+      updateData.newCustomerFreeItemSkuId =
+        validatedData.newCustomerBenefitType === "FREE_ITEM_ON_NEXT_PURCHASE"
+          ? (validatedData.newCustomerFreeItemSkuId ?? null)
+          : null;
+    }
+    if (
+      validatedData.newCustomerBenefitValue != null &&
+      validatedData.newCustomerBenefitType === "AMOUNT_CASHBACK"
+    )
       updateData.newCustomerBenefitValue =
         validatedData.newCustomerBenefitValue;
+    if (
+      validatedData.newCustomerFreeItemSkuId !== undefined &&
+      validatedData.newCustomerBenefitType === "FREE_ITEM_ON_NEXT_PURCHASE"
+    )
+      updateData.newCustomerFreeItemSkuId =
+        validatedData.newCustomerFreeItemSkuId ?? null;
     if (validatedData.newCustomerBenefitExpiresInDays !== undefined)
       updateData.newCustomerBenefitExpiresInDays =
         validatedData.newCustomerBenefitExpiresInDays ?? null;
-    if (validatedData.existingCustomerBenefitType != null)
+    if (validatedData.existingCustomerBenefitType != null) {
       updateData.existingCustomerBenefitType =
         validatedData.existingCustomerBenefitType;
-    if (validatedData.existingCustomerBenefitValue != null)
+      updateData.existingCustomerBenefitValue =
+        validatedData.existingCustomerBenefitType === "AMOUNT_CASHBACK"
+          ? (validatedData.existingCustomerBenefitValue ?? 0)
+          : 0;
+      updateData.existingCustomerFreeItemSkuId =
+        validatedData.existingCustomerBenefitType ===
+        "FREE_ITEM_ON_NEXT_PURCHASE"
+          ? (validatedData.existingCustomerFreeItemSkuId ?? null)
+          : null;
+    }
+    if (
+      validatedData.existingCustomerBenefitValue != null &&
+      validatedData.existingCustomerBenefitType === "AMOUNT_CASHBACK"
+    )
       updateData.existingCustomerBenefitValue =
         validatedData.existingCustomerBenefitValue;
+    if (
+      validatedData.existingCustomerFreeItemSkuId !== undefined &&
+      validatedData.existingCustomerBenefitType === "FREE_ITEM_ON_NEXT_PURCHASE"
+    )
+      updateData.existingCustomerFreeItemSkuId =
+        validatedData.existingCustomerFreeItemSkuId ?? null;
     if (validatedData.existingCustomerBenefitExpiresInDays !== undefined)
       updateData.existingCustomerBenefitExpiresInDays =
         validatedData.existingCustomerBenefitExpiresInDays ?? null;

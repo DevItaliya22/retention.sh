@@ -29,7 +29,12 @@ export async function GET(
     const business = await db.business.findUnique({
       where: { slug: businessSlug },
       include: {
-        referralProgram: true,
+        referralProgram: {
+          include: {
+            newCustomerFreeItemSku: { select: { id: true, name: true } },
+            existingCustomerFreeItemSku: { select: { id: true, name: true } },
+          },
+        },
         loyalty: true,
       },
     });

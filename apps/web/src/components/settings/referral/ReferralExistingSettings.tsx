@@ -3,6 +3,8 @@
 import { SettingsFieldGroup } from "@/components/common/settings/SettingsFieldGroup";
 import type { ReferralProgram } from "@/hooks/referral/useReferralProgram";
 import { useUpdateReferralProgram } from "@/hooks/referral/useReferralProgram";
+import { useActiveSkusForSelect } from "@/hooks/sku/useSkusQuery";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Button,
   Card,
@@ -18,20 +20,534 @@ import {
   FormLabel,
   FormMessage,
   Input,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   Switch,
   Textarea,
 } from "@reelo/ui/components";
 import { Plus, Trash2 } from "lucide-react";
 import { useEffect, useTransition } from "react";
+import type { Resolver } from "react-hook-form";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import * as z from "zod";
 
 const BENEFIT_TYPE_OPTIONS = [
-  { value: "LOYALTY_BONUS", label: "Loyalty Points" },
-  { value: "CASH_DISCOUNT", label: "Cash Discount" },
-  { value: "PERCENTAGE_DISCOUNT", label: "Percentage Discount" },
-  { value: "FREE_ITEM", label: "Free Item" },
-];
+  { value: "AMOUNT_CASHBACK", label: "Amount Cashback" },
+  { value: "FREE_ITEM_ON_NEXT_PURCHASE", label: "Free Item on Next Visit" },
+] as const;
+
+interface SkuItem {
+  id: string;
+  name: string;
+  sku: string;
+}
+
+const newCustomerBenefitSchema = z
+  .object({
+    newCustomerBenefitType: z.enum([
+      "AMOUNT_CASHBACK",
+      "FREE_ITEM_ON_NEXT_PURCHASE",
+    ]),
+    newCustomerBenefitValue: z.string().default(""),
+    newCustomerFreeItemSkuId: z.string().default(""),
+    newCustomerBenefitExpiresInDays: z.string().default(""),
+  })
+  .superRefine((data, ctx) => {
+    if (
+      data.newCustomerBenefitType === "AMOUNT_CASHBACK" &&
+      (!data.newCustomerBenefitValue ||
+        Number(data.newCustomerBenefitValue) < 0)
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Cashback amount is required",
+        path: ["newCustomerBenefitValue"],
+      });
+    }
+    if (
+      data.newCustomerBenefitType === "FREE_ITEM_ON_NEXT_PURCHASE" &&
+      !data.newCustomerFreeItemSkuId?.trim()
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Please select a free item",
+        path: ["newCustomerFreeItemSkuId"],
+      });
+    }
+  });
+
+const existingCustomerBenefitSchema = z
+  .object({
+    existingCustomerBenefitType: z.enum([
+      "AMOUNT_CASHBACK",
+      "FREE_ITEM_ON_NEXT_PURCHASE",
+    ]),
+    existingCustomerBenefitValue: z.string().default(""),
+    existingCustomerFreeItemSkuId: z.string().default(""),
+    existingCustomerBenefitExpiresInDays: z.string().default(""),
+  })
+  .superRefine((data, ctx) => {
+    if (
+      data.existingCustomerBenefitType === "AMOUNT_CASHBACK" &&
+      (!data.existingCustomerBenefitValue ||
+        Number(data.existingCustomerBenefitValue) < 0)
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Cashback amount is required",
+        path: ["existingCustomerBenefitValue"],
+      });
+    }
+    if (
+      data.existingCustomerBenefitType === "FREE_ITEM_ON_NEXT_PURCHASE" &&
+      !data.existingCustomerFreeItemSkuId?.trim()
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Please select a free item",
+        path: ["existingCustomerFreeItemSkuId"],
+      });
+    }
+  });
+
+type NewCustomerBenefitForm = z.infer<typeof newCustomerBenefitSchema>;
+type ExistingCustomerBenefitForm = z.infer<
+  typeof existingCustomerBenefitSchema
+>;
+
+function NewCustomerBenefitsCard({
+  referralProgram,
+  skus,
+  onSubmit,
+}: {
+  referralProgram: ReferralProgram;
+  skus: SkuItem[];
+  onSubmit: (
+    values: Record<string, string | undefined>,
+  ) => Promise<{ success: boolean; error?: string }>;
+}) {
+  const [isPending, startTransition] = useTransition();
+  const form = useForm<NewCustomerBenefitForm>({
+    resolver: zodResolver(
+      newCustomerBenefitSchema,
+    ) as Resolver<NewCustomerBenefitForm>,
+    defaultValues: {
+      newCustomerBenefitType:
+        (referralProgram.newCustomerBenefitType as
+          | "AMOUNT_CASHBACK"
+          | "FREE_ITEM_ON_NEXT_PURCHASE") || "AMOUNT_CASHBACK",
+      newCustomerBenefitValue: String(referralProgram.newCustomerBenefitValue),
+      newCustomerFreeItemSkuId:
+        referralProgram.newCustomerFreeItemSkuId ??
+        referralProgram.newCustomerFreeItemSku?.id ??
+        "",
+      newCustomerBenefitExpiresInDays:
+        referralProgram.newCustomerBenefitExpiresInDays
+          ? String(referralProgram.newCustomerBenefitExpiresInDays)
+          : "",
+    },
+  });
+
+  const benefitType = form.watch("newCustomerBenefitType");
+
+  useEffect(() => {
+    form.reset({
+      newCustomerBenefitType:
+        (referralProgram.newCustomerBenefitType as
+          | "AMOUNT_CASHBACK"
+          | "FREE_ITEM_ON_NEXT_PURCHASE") || "AMOUNT_CASHBACK",
+      newCustomerBenefitValue: String(referralProgram.newCustomerBenefitValue),
+      newCustomerFreeItemSkuId:
+        referralProgram.newCustomerFreeItemSkuId ??
+        referralProgram.newCustomerFreeItemSku?.id ??
+        "",
+      newCustomerBenefitExpiresInDays:
+        referralProgram.newCustomerBenefitExpiresInDays
+          ? String(referralProgram.newCustomerBenefitExpiresInDays)
+          : "",
+    });
+  }, [referralProgram, form]);
+
+  return (
+    <Card className="gap-0 p-0!">
+      <CardHeader className="flex flex-col gap-0 border-b py-2!">
+        <CardTitle className="text-base font-medium">
+          New Customer Benefits
+        </CardTitle>
+        <CardDescription className="text-xs">
+          Rewards for customers who join through a referral link
+        </CardDescription>
+      </CardHeader>
+      <Form {...form}>
+        <form
+          onSubmit={form.handleSubmit((values) =>
+            startTransition(async () => {
+              const result = await onSubmit(values);
+              if (result.success)
+                toast.success("Settings updated successfully");
+              else toast.error(result.error || "Failed to update");
+            }),
+          )}
+        >
+          <CardContent className="flex flex-col gap-y-4 border-b px-6 py-4">
+            <FormField
+              control={form.control}
+              name="newCustomerBenefitType"
+              render={({ field }) => (
+                <FormItem className="flex flex-col gap-2 md:grid md:grid-cols-12">
+                  <div className="col-span-4">
+                    <FormLabel className="text-sm">Benefit Type</FormLabel>
+                  </div>
+                  <div className="col-span-8">
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="w-full rounded-none border-0 border-b bg-transparent px-0 py-3 shadow-none focus-visible:ring-0">
+                          <SelectValue placeholder="Select benefit type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {BENEFIT_TYPE_OPTIONS.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </div>
+                </FormItem>
+              )}
+            />
+            {benefitType === "AMOUNT_CASHBACK" && (
+              <FormField
+                control={form.control}
+                name="newCustomerBenefitValue"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col gap-2 md:grid md:grid-cols-12">
+                    <div className="col-span-4">
+                      <FormLabel className="text-sm">
+                        Cashback Amount (₹)
+                      </FormLabel>
+                    </div>
+                    <div className="col-span-8">
+                      <FormControl>
+                        <Input
+                          variant="underline"
+                          type="number"
+                          min={0}
+                          placeholder="100"
+                          {...field}
+                          value={field.value}
+                          onChange={(e) =>
+                            field.onChange(
+                              String(
+                                Math.max(0, parseInt(e.target.value) || 0),
+                              ),
+                            )
+                          }
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </div>
+                  </FormItem>
+                )}
+              />
+            )}
+            {benefitType === "FREE_ITEM_ON_NEXT_PURCHASE" && (
+              <FormField
+                control={form.control}
+                name="newCustomerFreeItemSkuId"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col gap-2 md:grid md:grid-cols-12">
+                    <div className="col-span-4">
+                      <FormLabel className="text-sm">Free Item</FormLabel>
+                    </div>
+                    <div className="col-span-8">
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        disabled={skus.length === 0}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="w-full rounded-none border-0 border-b bg-transparent px-0 py-3 shadow-none focus-visible:ring-0">
+                            <SelectValue placeholder="Select item" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {skus.map((s) => (
+                            <SelectItem key={s.id} value={s.id}>
+                              {s.name} {s.sku ? `(${s.sku})` : ""}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </div>
+                  </FormItem>
+                )}
+              />
+            )}
+            <FormField
+              control={form.control}
+              name="newCustomerBenefitExpiresInDays"
+              render={({ field }) => (
+                <FormItem className="flex flex-col gap-2 md:grid md:grid-cols-12">
+                  <div className="col-span-4">
+                    <FormLabel className="text-sm">Expires In (Days)</FormLabel>
+                  </div>
+                  <div className="col-span-8">
+                    <FormControl>
+                      <Input
+                        variant="underline"
+                        type="number"
+                        min={1}
+                        placeholder="Optional"
+                        {...field}
+                        value={field.value}
+                        onChange={(e) => field.onChange(e.target.value)}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </div>
+                </FormItem>
+              )}
+            />
+          </CardContent>
+          <CardFooter className="flex justify-end px-6 py-2">
+            <Button
+              type="submit"
+              disabled={isPending || !form.formState.isDirty}
+              loading={isPending}
+            >
+              Save changes
+            </Button>
+          </CardFooter>
+        </form>
+      </Form>
+    </Card>
+  );
+}
+
+function ExistingCustomerBenefitsCard({
+  referralProgram,
+  skus,
+  onSubmit,
+}: {
+  referralProgram: ReferralProgram;
+  skus: SkuItem[];
+  onSubmit: (
+    values: Record<string, string | undefined>,
+  ) => Promise<{ success: boolean; error?: string }>;
+}) {
+  const [isPending, startTransition] = useTransition();
+  const form = useForm<ExistingCustomerBenefitForm>({
+    resolver: zodResolver(
+      existingCustomerBenefitSchema,
+    ) as Resolver<ExistingCustomerBenefitForm>,
+    defaultValues: {
+      existingCustomerBenefitType:
+        (referralProgram.existingCustomerBenefitType as
+          | "AMOUNT_CASHBACK"
+          | "FREE_ITEM_ON_NEXT_PURCHASE") || "AMOUNT_CASHBACK",
+      existingCustomerBenefitValue: String(
+        referralProgram.existingCustomerBenefitValue,
+      ),
+      existingCustomerFreeItemSkuId:
+        referralProgram.existingCustomerFreeItemSkuId ??
+        referralProgram.existingCustomerFreeItemSku?.id ??
+        "",
+      existingCustomerBenefitExpiresInDays:
+        referralProgram.existingCustomerBenefitExpiresInDays
+          ? String(referralProgram.existingCustomerBenefitExpiresInDays)
+          : "",
+    },
+  });
+
+  const benefitType = form.watch("existingCustomerBenefitType");
+
+  useEffect(() => {
+    form.reset({
+      existingCustomerBenefitType:
+        (referralProgram.existingCustomerBenefitType as
+          | "AMOUNT_CASHBACK"
+          | "FREE_ITEM_ON_NEXT_PURCHASE") || "AMOUNT_CASHBACK",
+      existingCustomerBenefitValue: String(
+        referralProgram.existingCustomerBenefitValue,
+      ),
+      existingCustomerFreeItemSkuId:
+        referralProgram.existingCustomerFreeItemSkuId ??
+        referralProgram.existingCustomerFreeItemSku?.id ??
+        "",
+      existingCustomerBenefitExpiresInDays:
+        referralProgram.existingCustomerBenefitExpiresInDays
+          ? String(referralProgram.existingCustomerBenefitExpiresInDays)
+          : "",
+    });
+  }, [referralProgram, form]);
+
+  return (
+    <Card className="gap-0 p-0!">
+      <CardHeader className="flex flex-col gap-0 border-b py-2!">
+        <CardTitle className="text-base font-medium">
+          Existing Customer Benefits
+        </CardTitle>
+        <CardDescription className="text-xs">
+          Rewards for customers who refer others
+        </CardDescription>
+      </CardHeader>
+      <Form {...form}>
+        <form
+          onSubmit={form.handleSubmit((values) =>
+            startTransition(async () => {
+              const result = await onSubmit(values);
+              if (result.success)
+                toast.success("Settings updated successfully");
+              else toast.error(result.error || "Failed to update");
+            }),
+          )}
+        >
+          <CardContent className="flex flex-col gap-y-4 border-b px-6 py-4">
+            <FormField
+              control={form.control}
+              name="existingCustomerBenefitType"
+              render={({ field }) => (
+                <FormItem className="flex flex-col gap-2 md:grid md:grid-cols-12">
+                  <div className="col-span-4">
+                    <FormLabel className="text-sm">Benefit Type</FormLabel>
+                  </div>
+                  <div className="col-span-8">
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="w-full rounded-none border-0 border-b bg-transparent px-0 py-3 shadow-none focus-visible:ring-0">
+                          <SelectValue placeholder="Select benefit type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {BENEFIT_TYPE_OPTIONS.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </div>
+                </FormItem>
+              )}
+            />
+            {benefitType === "AMOUNT_CASHBACK" && (
+              <FormField
+                control={form.control}
+                name="existingCustomerBenefitValue"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col gap-2 md:grid md:grid-cols-12">
+                    <div className="col-span-4">
+                      <FormLabel className="text-sm">
+                        Cashback Amount (₹)
+                      </FormLabel>
+                    </div>
+                    <div className="col-span-8">
+                      <FormControl>
+                        <Input
+                          variant="underline"
+                          type="number"
+                          min={0}
+                          placeholder="50"
+                          {...field}
+                          value={field.value}
+                          onChange={(e) =>
+                            field.onChange(
+                              String(
+                                Math.max(0, parseInt(e.target.value) || 0),
+                              ),
+                            )
+                          }
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </div>
+                  </FormItem>
+                )}
+              />
+            )}
+            {benefitType === "FREE_ITEM_ON_NEXT_PURCHASE" && (
+              <FormField
+                control={form.control}
+                name="existingCustomerFreeItemSkuId"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col gap-2 md:grid md:grid-cols-12">
+                    <div className="col-span-4">
+                      <FormLabel className="text-sm">Free Item</FormLabel>
+                    </div>
+                    <div className="col-span-8">
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        disabled={skus.length === 0}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="w-full rounded-none border-0 border-b bg-transparent px-0 py-3 shadow-none focus-visible:ring-0">
+                            <SelectValue placeholder="Select item" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {skus.map((s) => (
+                            <SelectItem key={s.id} value={s.id}>
+                              {s.name} {s.sku ? `(${s.sku})` : ""}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </div>
+                  </FormItem>
+                )}
+              />
+            )}
+            <FormField
+              control={form.control}
+              name="existingCustomerBenefitExpiresInDays"
+              render={({ field }) => (
+                <FormItem className="flex flex-col gap-2 md:grid md:grid-cols-12">
+                  <div className="col-span-4">
+                    <FormLabel className="text-sm">Expires In (Days)</FormLabel>
+                  </div>
+                  <div className="col-span-8">
+                    <FormControl>
+                      <Input
+                        variant="underline"
+                        type="number"
+                        min={1}
+                        placeholder="Optional"
+                        {...field}
+                        value={field.value}
+                        onChange={(e) => field.onChange(e.target.value)}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </div>
+                </FormItem>
+              )}
+            />
+          </CardContent>
+          <CardFooter className="flex justify-end px-6 py-2">
+            <Button
+              type="submit"
+              disabled={isPending || !form.formState.isDirty}
+              loading={isPending}
+            >
+              Save changes
+            </Button>
+          </CardFooter>
+        </form>
+      </Form>
+    </Card>
+  );
+}
 
 interface ReferralExistingSettingsProps {
   referralProgram: ReferralProgram;
@@ -42,6 +558,8 @@ export function ReferralExistingSettings({
 }: ReferralExistingSettingsProps) {
   const { mutateAsync: updateReferralProgram } = useUpdateReferralProgram();
   const [reminderPending, startReminderTransition] = useTransition();
+  const { data: skusData } = useActiveSkusForSelect();
+  const skus = skusData?.items ?? [];
 
   const handleUpdateBranding = async (values: Record<string, string>) => {
     try {
@@ -65,12 +583,22 @@ export function ReferralExistingSettings({
   };
 
   const handleUpdateNewCustomerBenefits = async (
-    values: Record<string, string>,
+    values: Record<string, string | undefined>,
   ) => {
     try {
+      const type = values.newCustomerBenefitType as
+        | "AMOUNT_CASHBACK"
+        | "FREE_ITEM_ON_NEXT_PURCHASE";
       await updateReferralProgram({
-        newCustomerBenefitType: values.newCustomerBenefitType as any,
-        newCustomerBenefitValue: Number(values.newCustomerBenefitValue) || 0,
+        newCustomerBenefitType: type,
+        newCustomerBenefitValue:
+          type === "AMOUNT_CASHBACK"
+            ? Number(values.newCustomerBenefitValue) || 0
+            : 0,
+        newCustomerFreeItemSkuId:
+          type === "FREE_ITEM_ON_NEXT_PURCHASE"
+            ? values.newCustomerFreeItemSkuId || null
+            : null,
         newCustomerBenefitExpiresInDays: values.newCustomerBenefitExpiresInDays
           ? Number(values.newCustomerBenefitExpiresInDays)
           : null,
@@ -82,13 +610,22 @@ export function ReferralExistingSettings({
   };
 
   const handleUpdateExistingCustomerBenefits = async (
-    values: Record<string, string>,
+    values: Record<string, string | undefined>,
   ) => {
     try {
+      const type = values.existingCustomerBenefitType as
+        | "AMOUNT_CASHBACK"
+        | "FREE_ITEM_ON_NEXT_PURCHASE";
       await updateReferralProgram({
-        existingCustomerBenefitType: values.existingCustomerBenefitType as any,
+        existingCustomerBenefitType: type,
         existingCustomerBenefitValue:
-          Number(values.existingCustomerBenefitValue) || 0,
+          type === "AMOUNT_CASHBACK"
+            ? Number(values.existingCustomerBenefitValue) || 0
+            : 0,
+        existingCustomerFreeItemSkuId:
+          type === "FREE_ITEM_ON_NEXT_PURCHASE"
+            ? values.existingCustomerFreeItemSkuId || null
+            : null,
         existingCustomerBenefitExpiresInDays:
           values.existingCustomerBenefitExpiresInDays
             ? Number(values.existingCustomerBenefitExpiresInDays)
@@ -113,84 +650,14 @@ export function ReferralExistingSettings({
 
   return (
     <div className="space-y-6">
-      {/* New Customer Benefits */}
-      <SettingsFieldGroup
-        title="New Customer Benefits"
-        description="Rewards for customers who join through a referral link"
-        fields={[
-          {
-            name: "newCustomerBenefitType",
-            label: "Benefit Type",
-            type: "select",
-            options: BENEFIT_TYPE_OPTIONS,
-          },
-          {
-            name: "newCustomerBenefitValue",
-            label: "Benefit Value",
-            type: "number",
-            placeholder: "100",
-            min: 0,
-          },
-          {
-            name: "newCustomerBenefitExpiresInDays",
-            label: "Expires In (Days)",
-            type: "number",
-            placeholder: "Optional",
-            optional: true,
-            min: 1,
-          },
-        ]}
-        defaultValues={{
-          newCustomerBenefitType: referralProgram.newCustomerBenefitType,
-          newCustomerBenefitValue: String(
-            referralProgram.newCustomerBenefitValue,
-          ),
-          newCustomerBenefitExpiresInDays:
-            referralProgram.newCustomerBenefitExpiresInDays
-              ? String(referralProgram.newCustomerBenefitExpiresInDays)
-              : "",
-        }}
+      <NewCustomerBenefitsCard
+        referralProgram={referralProgram}
+        skus={skus}
         onSubmit={handleUpdateNewCustomerBenefits}
       />
-
-      {/* Existing Customer Benefits */}
-      <SettingsFieldGroup
-        title="Existing Customer Benefits"
-        description="Rewards for customers who refer others"
-        fields={[
-          {
-            name: "existingCustomerBenefitType",
-            label: "Benefit Type",
-            type: "select",
-            options: BENEFIT_TYPE_OPTIONS,
-          },
-          {
-            name: "existingCustomerBenefitValue",
-            label: "Benefit Value",
-            type: "number",
-            placeholder: "50",
-            min: 0,
-          },
-          {
-            name: "existingCustomerBenefitExpiresInDays",
-            label: "Expires In (Days)",
-            type: "number",
-            placeholder: "Optional",
-            optional: true,
-            min: 1,
-          },
-        ]}
-        defaultValues={{
-          existingCustomerBenefitType:
-            referralProgram.existingCustomerBenefitType,
-          existingCustomerBenefitValue: String(
-            referralProgram.existingCustomerBenefitValue,
-          ),
-          existingCustomerBenefitExpiresInDays:
-            referralProgram.existingCustomerBenefitExpiresInDays
-              ? String(referralProgram.existingCustomerBenefitExpiresInDays)
-              : "",
-        }}
+      <ExistingCustomerBenefitsCard
+        referralProgram={referralProgram}
+        skus={skus}
         onSubmit={handleUpdateExistingCustomerBenefits}
       />
 

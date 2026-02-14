@@ -48,10 +48,8 @@ enum QrBenefitType {
 }
 
 enum ReferalBenefitType {
-  CASH_DISCOUNT
-  PERCENTAGE_DISCOUNT
-  FREE_ITEM
-  LOYALTY_BONUS
+  AMOUNT_CASHBACK
+  FREE_ITEM_ON_NEXT_PURCHASE
 }
 
 enum MembershipStatus {
@@ -144,6 +142,7 @@ enum TransactionValueKind {
   CASHBACK // Amount in ₹ → wallet.cashbackBalance
   AMOUNT_SPENT_POINTS // Points → wallet.amountSpentBalance
   VISIT_POINTS // Points → wallet.visitPointsBalance
+  FREE_ITEM // Free item (referral) → wallet.freeItems
 }
 
 enum WalletType {

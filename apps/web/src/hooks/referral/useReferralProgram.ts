@@ -36,9 +36,17 @@ export interface ReferralProgram {
   newCustomerBenefitType: string;
   newCustomerBenefitValue: number;
   newCustomerBenefitExpiresInDays: number | null;
+  newCustomerFreeItemSkuId: string | null;
+  newCustomerFreeItemSku?: { id: string; name: string; sku: string } | null;
   existingCustomerBenefitType: string;
   existingCustomerBenefitValue: number;
   existingCustomerBenefitExpiresInDays: number | null;
+  existingCustomerFreeItemSkuId: string | null;
+  existingCustomerFreeItemSku?: {
+    id: string;
+    name: string;
+    sku: string;
+  } | null;
   sendReminderToCustomer: boolean;
   informationSections: Array<{ title: string; content: string }>;
   branding: {

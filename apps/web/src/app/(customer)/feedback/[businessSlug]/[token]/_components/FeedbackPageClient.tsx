@@ -11,7 +11,7 @@ import {
   Textarea,
 } from "@reelo/ui/components";
 import { useQuery } from "@tanstack/react-query";
-import { MessageSquare, Star } from "lucide-react";
+import { ExternalLink, MessageSquare, Star } from "lucide-react";
 import { useCallback, useState } from "react";
 
 interface FeedbackPageClientProps {
@@ -33,12 +33,18 @@ interface PublicFeedbackConfig {
   branding: unknown;
 }
 
+interface OnlineReview {
+  link: string;
+  platform: string | null;
+}
+
 interface PublicFeedbackResponse {
   alreadySubmitted?: boolean;
   config: PublicFeedbackConfig | null;
   billNumber: string | null;
   followUpMessage?: string;
   reward?: { enabled: boolean; amount: number | null };
+  onlineReview?: OnlineReview | null;
   error?: string;
 }
 
@@ -46,6 +52,7 @@ interface SubmitResponse {
   success: boolean;
   followUpMessage?: string;
   reward?: { enabled: boolean; amount: number | null };
+  onlineReview?: OnlineReview | null;
   error?: string;
 }
 
@@ -64,6 +71,10 @@ export function FeedbackPageClient({
   const [reward, setReward] = useState<{
     enabled: boolean;
     amount: number | null;
+  } | null>(null);
+  const [onlineReview, setOnlineReview] = useState<{
+    link: string;
+    platform: string | null;
   } | null>(null);
 
   const { data, isLoading, isError, error } = useQuery<
@@ -86,6 +97,7 @@ export function FeedbackPageClient({
   const alreadySubmitted = data?.alreadySubmitted ?? false;
   const loadedFollowUp = data?.followUpMessage ?? null;
   const loadedReward = data?.reward ?? null;
+  const loadedOnlineReview = data?.onlineReview ?? null;
 
   const submitFeedback = useCallback(async () => {
     setSubmitStatus("submitting");
@@ -115,6 +127,7 @@ export function FeedbackPageClient({
           json.followUpMessage ?? "Thank you for your feedback.",
         );
         setReward(json.reward ?? null);
+        setOnlineReview(json.onlineReview ?? null);
       } else {
         setSubmitStatus("error");
         setFollowUpMessage(json.error ?? "Something went wrong.");
@@ -130,6 +143,36 @@ export function FeedbackPageClient({
       prev.includes(name) ? prev.filter((c) => c !== name) : [...prev, name],
     );
   };
+
+  const platformLabel: Record<string, string> = {
+    GOOGLE: "Google",
+    INSTAGRAM: "Instagram",
+    FACEBOOK: "Facebook",
+    ZOMATO: "Zomato",
+    OTHER: "Leave a review",
+  };
+
+  function OnlineReviewCTA({
+    review,
+  }: {
+    review: { link: string; platform: string | null };
+  }) {
+    const label =
+      review.platform && platformLabel[review.platform]
+        ? `Leave us a review on ${platformLabel[review.platform]}`
+        : "Leave us a review";
+    return (
+      <a
+        href={review.link}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="border-primary/30 bg-primary/5 text-primary hover:bg-primary/10 mt-4 inline-flex items-center gap-2 rounded-md border px-4 py-2 text-sm font-medium transition-colors"
+      >
+        {label}
+        <ExternalLink className="size-4" />
+      </a>
+    );
+  }
 
   if (isLoading || (!data && !isError)) {
     return (
@@ -171,6 +214,7 @@ export function FeedbackPageClient({
   if (alreadySubmitted) {
     const message = loadedFollowUp ?? "Thank you for your feedback.";
     const showReward = loadedReward?.enabled && loadedReward?.amount != null;
+    const showOnlineReview = loadedOnlineReview != null;
     return (
       <div className="bg-muted/30 flex min-h-[50vh] items-center justify-center p-6">
         <Card className="w-full max-w-md">
@@ -184,8 +228,12 @@ export function FeedbackPageClient({
             </p>
             {showReward && (
               <p className="text-foreground mt-3 text-sm font-medium">
-                You’ve earned {loadedReward.amount} points for your feedback.
+                You’ve earned ₹{loadedReward.amount} has been added to your
+                wallet.
               </p>
+            )}
+            {showOnlineReview && (
+              <OnlineReviewCTA review={loadedOnlineReview} />
             )}
           </CardHeader>
         </Card>
@@ -195,6 +243,7 @@ export function FeedbackPageClient({
 
   if (submitStatus === "success") {
     const showReward = reward?.enabled && reward?.amount != null;
+    const showOnlineReview = onlineReview != null;
     return (
       <div className="bg-muted/30 flex min-h-[50vh] items-center justify-center p-6">
         <Card className="w-full max-w-md">
@@ -208,9 +257,10 @@ export function FeedbackPageClient({
             </p>
             {showReward && (
               <p className="text-foreground mt-3 text-sm font-medium">
-                You’ve earned {reward.amount} points for your feedback.
+                You’ve earned ₹{reward.amount} has been added to your wallet.
               </p>
             )}
+            {showOnlineReview && <OnlineReviewCTA review={onlineReview} />}
           </CardHeader>
         </Card>
       </div>

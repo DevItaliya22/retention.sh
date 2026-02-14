@@ -1,5 +1,6 @@
 "use client";
 
+import { useActiveSkusForSelect } from "@/hooks/sku/useSkusQuery";
 import type { ReferralProgramFormValues } from "@/lib/schemas/referral-form";
 import {
   Button,
@@ -19,8 +20,16 @@ import {
 } from "@reelo/ui/components";
 import { Plus, Trash2 } from "lucide-react";
 
+const BENEFIT_TYPE_OPTIONS = [
+  { value: "AMOUNT_CASHBACK", label: "Amount Cashback" },
+  { value: "FREE_ITEM_ON_NEXT_PURCHASE", label: "Free Item on Next Visit" },
+] as const;
+
 export function ReferralProgramStep2() {
   const form = useFormContext<ReferralProgramFormValues>();
+  const existingCustomerBenefitType = form.watch("existingCustomerBenefitType");
+  const { data: skusData } = useActiveSkusForSelect();
+  const skus = skusData?.items ?? [];
 
   const termsNew = form.watch("termsAndConditionsNewCustomer") ?? [];
   const termsExisting = form.watch("termsAndConditionsExistingCustomer") ?? [];
@@ -63,12 +72,11 @@ export function ReferralProgramStep2() {
                 </SelectTrigger>
               </FormControl>
               <SelectContent>
-                <SelectItem value="LOYALTY_BONUS">Loyalty Points</SelectItem>
-                <SelectItem value="CASH_DISCOUNT">Cash Discount</SelectItem>
-                <SelectItem value="PERCENTAGE_DISCOUNT">
-                  Percentage Discount
-                </SelectItem>
-                <SelectItem value="FREE_ITEM">Free Item</SelectItem>
+                {BENEFIT_TYPE_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <FormMessage variant="banner" />
@@ -76,28 +84,65 @@ export function ReferralProgramStep2() {
         )}
       />
 
-      <FormField
-        control={form.control}
-        name="existingCustomerBenefitValue"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>
-              Benefit Value <span className="text-foreground">*</span>
-            </FormLabel>
-            <FormControl>
-              <Input
-                type="number"
-                variant="underline"
-                placeholder="50"
-                {...field}
+      {existingCustomerBenefitType === "AMOUNT_CASHBACK" && (
+        <FormField
+          control={form.control}
+          name="existingCustomerBenefitValue"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>
+                Cashback Amount (₹) <span className="text-foreground">*</span>
+              </FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  variant="underline"
+                  placeholder="50"
+                  {...field}
+                  value={field.value ?? ""}
+                  onChange={(e) =>
+                    field.onChange(Math.max(0, parseInt(e.target.value) || 0))
+                  }
+                />
+              </FormControl>
+              <FormMessage variant="banner" />
+            </FormItem>
+          )}
+        />
+      )}
+
+      {existingCustomerBenefitType === "FREE_ITEM_ON_NEXT_PURCHASE" && (
+        <FormField
+          control={form.control}
+          name="existingCustomerFreeItemSkuId"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>
+                Free Item <span className="text-foreground">*</span>
+              </FormLabel>
+              <Select
+                onValueChange={field.onChange}
                 value={field.value ?? ""}
-                onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-              />
-            </FormControl>
-            <FormMessage variant="banner" />
-          </FormItem>
-        )}
-      />
+                disabled={skus.length === 0}
+              >
+                <FormControl>
+                  <SelectTrigger className="w-full rounded-none border-0 border-b bg-transparent px-0 py-3 shadow-none focus-visible:ring-0 dark:bg-transparent dark:hover:bg-transparent">
+                    <SelectValue placeholder="Select item" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {skus.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.name} {s.sku ? `(${s.sku})` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage variant="banner" />
+            </FormItem>
+          )}
+        />
+      )}
 
       <FormField
         control={form.control}

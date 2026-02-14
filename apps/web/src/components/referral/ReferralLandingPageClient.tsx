@@ -89,13 +89,13 @@ export function ReferralLandingPageClient({
             <div>
               <h2 className="mb-2 text-xl font-semibold">What You Get</h2>
               <p className="text-muted-foreground">
-                {referralProgram.existingCustomerBenefitValue}{" "}
-                {referralProgram.existingCustomerBenefitType === "LOYALTY_BONUS"
-                  ? business.defaultPointsName
+                {referralProgram.existingCustomerBenefitType ===
+                "AMOUNT_CASHBACK"
+                  ? `${business.defaultCurrencySymbol}${referralProgram.existingCustomerBenefitValue} cashback`
                   : referralProgram.existingCustomerBenefitType ===
-                      "CASH_DISCOUNT"
-                    ? business.defaultCurrencySymbol
-                    : ""}
+                      "FREE_ITEM_ON_NEXT_PURCHASE"
+                    ? `Free ${referralProgram.existingCustomerFreeItemSku?.name ?? "item"} on your next visit`
+                    : "—"}
               </p>
             </div>
 
@@ -104,12 +104,12 @@ export function ReferralLandingPageClient({
                 What Your Friend Gets
               </h2>
               <p className="text-muted-foreground">
-                {referralProgram.newCustomerBenefitValue}{" "}
-                {referralProgram.newCustomerBenefitType === "LOYALTY_BONUS"
-                  ? business.defaultPointsName
-                  : referralProgram.newCustomerBenefitType === "CASH_DISCOUNT"
-                    ? business.defaultCurrencySymbol
-                    : ""}
+                {referralProgram.newCustomerBenefitType === "AMOUNT_CASHBACK"
+                  ? `${business.defaultCurrencySymbol}${referralProgram.newCustomerBenefitValue} cashback`
+                  : referralProgram.newCustomerBenefitType ===
+                      "FREE_ITEM_ON_NEXT_PURCHASE"
+                    ? `Free ${referralProgram.newCustomerFreeItemSku?.name ?? "item"} on their next visit`
+                    : "—"}
               </p>
             </div>
           </div>

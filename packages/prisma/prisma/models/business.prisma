@@ -25,6 +25,7 @@ model Business {
   qrs             Qr[]
   scratchCards    ScratchCard[]
   referralProgram ReferralProgram?
+  campaigns       Campaign[]
 
   categories Category[]
   skus       Sku[]
@@ -83,6 +84,9 @@ model Sku {
 
   billLineItems       BillLineItem[]
   loyaltyRewardStages LoyaltyRewardStage[] // FREE_ITEM reward stages referencing this SKU
+
+  referralProgramAsNewCustomerFreeItem      ReferralProgram[] @relation("ReferralNewCustomerFreeItem")
+  referralProgramAsExistingCustomerFreeItem ReferralProgram[] @relation("ReferralExistingCustomerFreeItem")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

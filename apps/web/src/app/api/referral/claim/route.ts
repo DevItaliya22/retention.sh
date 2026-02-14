@@ -34,7 +34,14 @@ export async function POST(request: NextRequest) {
       include: {
         business: {
           include: {
-            referralProgram: true,
+            referralProgram: {
+              include: {
+                newCustomerFreeItemSku: { select: { id: true, name: true } },
+                existingCustomerFreeItemSku: {
+                  select: { id: true, name: true },
+                },
+              },
+            },
             loyalty: true,
           },
         },
@@ -162,117 +169,187 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // Award points when benefit type is LOYALTY_BONUS (only when loyalty is enabled)
       const referralProgram = business.referralProgram!;
-      const loyaltyEnabled = isServiceEnabled(
-        business.isServiceEnabled as IsServiceEnabled | null,
-        "loyalty",
-      );
-      const referrerPoints =
-        loyaltyEnabled &&
-        referralProgram.existingCustomerBenefitType === "LOYALTY_BONUS"
-          ? Math.max(
-              0,
-              Number(referralProgram.existingCustomerBenefitValue) || 0,
-            )
-          : 0;
-      const referredPoints =
-        loyaltyEnabled &&
-        referralProgram.newCustomerBenefitType === "LOYALTY_BONUS"
-          ? Math.max(0, Number(referralProgram.newCustomerBenefitValue) || 0)
-          : 0;
+      const existingType = referralProgram.existingCustomerBenefitType;
+      const newType = referralProgram.newCustomerBenefitType;
 
-      const loyaltyType = business.loyalty?.loyaltyType ?? "AMOUNT_SPENT";
-
-      if (referrerPoints > 0) {
-        await tx.wallet.upsert({
-          where: {
-            businessId_customerId: {
+      // Referrer benefit (existing customer who referred)
+      if (existingType === "AMOUNT_CASHBACK") {
+        const amount = Math.max(
+          0,
+          Number(referralProgram.existingCustomerBenefitValue) || 0,
+        );
+        if (amount > 0) {
+          await tx.wallet.upsert({
+            where: {
+              businessId_customerId: {
+                businessId: referrer.businessId,
+                customerId: referrer.customerId,
+              },
+            },
+            create: {
               businessId: referrer.businessId,
               customerId: referrer.customerId,
+              cashbackBalance: amount,
             },
-          },
-          create: {
-            businessId: referrer.businessId,
-            customerId: referrer.customerId,
-            ...(loyaltyType === "CASHBACK" || loyaltyType === "TIER"
-              ? { cashbackBalance: referrerPoints }
-              : loyaltyType === "AMOUNT_SPENT"
-                ? { amountSpentBalance: referrerPoints }
-                : { visitPointsBalance: referrerPoints }),
-          },
-          update: {
-            ...(loyaltyType === "CASHBACK" || loyaltyType === "TIER"
-              ? { cashbackBalance: { increment: referrerPoints } }
-              : loyaltyType === "AMOUNT_SPENT"
-                ? { amountSpentBalance: { increment: referrerPoints } }
-                : { visitPointsBalance: { increment: referrerPoints } }),
-          },
-        });
-        await tx.transaction.create({
-          data: {
-            businessId: referrer.businessId,
-            customerId: referrer.customerId,
-            valueKind:
-              loyaltyType === "CASHBACK" || loyaltyType === "TIER"
-                ? "CASHBACK"
-                : loyaltyType === "AMOUNT_SPENT"
-                  ? "AMOUNT_SPENT_POINTS"
-                  : "VISIT_POINTS",
-            amount: referrerPoints,
-            type: "EARNED",
+            update: { cashbackBalance: { increment: amount } },
+          });
+          await tx.transaction.create({
+            data: {
+              businessId: referrer.businessId,
+              customerId: referrer.customerId,
+              valueKind: "CASHBACK",
+              amount,
+              type: "EARNED",
+              source: "REFERRAL",
+              loyaltyId: business.loyalty?.id ?? null,
+              description: "Referral cashback",
+            },
+          });
+        }
+      } else if (
+        existingType === "FREE_ITEM_ON_NEXT_PURCHASE" &&
+        referralProgram.existingCustomerFreeItemSkuId
+      ) {
+        const sku =
+          referralProgram.existingCustomerFreeItemSku ??
+          (await tx.sku.findUnique({
+            where: { id: referralProgram.existingCustomerFreeItemSkuId },
+            select: { id: true, name: true },
+          }));
+        if (sku) {
+          const freeItemEntry = {
+            id: crypto.randomUUID(),
+            skuId: sku.id,
+            skuName: sku.name,
             source: "REFERRAL",
-            loyaltyId: business.loyalty?.id ?? null,
-            description: "Referral bonus",
-          },
-        });
+            createdAt: new Date().toISOString(),
+          };
+          const wallet = await tx.wallet.findUnique({
+            where: {
+              businessId_customerId: {
+                businessId: referrer.businessId,
+                customerId: referrer.customerId,
+              },
+            },
+          });
+          const existingItems =
+            (wallet?.freeItems as Array<unknown> | null) ?? [];
+          const updatedItems = [...existingItems, freeItemEntry];
+          await tx.wallet.upsert({
+            where: {
+              businessId_customerId: {
+                businessId: referrer.businessId,
+                customerId: referrer.customerId,
+              },
+            },
+            create: {
+              businessId: referrer.businessId,
+              customerId: referrer.customerId,
+              freeItems: updatedItems as any,
+            },
+            update: { freeItems: updatedItems as any },
+          });
+          await tx.transaction.create({
+            data: {
+              businessId: referrer.businessId,
+              customerId: referrer.customerId,
+              valueKind: "FREE_ITEM",
+              amount: 1,
+              type: "EARNED",
+              source: "REFERRAL",
+              metadata: { skuId: sku.id, skuName: sku.name } as any,
+              description: `Free ${sku.name} on next visit`,
+            },
+          });
+        }
       }
 
-      if (referredPoints > 0) {
-        await tx.wallet.upsert({
-          where: {
-            businessId_customerId: { businessId, customerId: customer.id },
-          },
-          create: {
-            businessId,
-            customerId: customer.id,
-            ...(loyaltyType === "CASHBACK" || loyaltyType === "TIER"
-              ? { cashbackBalance: referredPoints }
-              : loyaltyType === "AMOUNT_SPENT"
-                ? { amountSpentBalance: referredPoints }
-                : { visitPointsBalance: referredPoints }),
-          },
-          update: {
-            ...(loyaltyType === "CASHBACK" || loyaltyType === "TIER"
-              ? { cashbackBalance: { increment: referredPoints } }
-              : loyaltyType === "AMOUNT_SPENT"
-                ? { amountSpentBalance: { increment: referredPoints } }
-                : { visitPointsBalance: { increment: referredPoints } }),
-          },
-        });
-        await tx.transaction.create({
-          data: {
-            businessId,
-            customerId: customer.id,
-            valueKind:
-              loyaltyType === "CASHBACK" || loyaltyType === "TIER"
-                ? "CASHBACK"
-                : loyaltyType === "AMOUNT_SPENT"
-                  ? "AMOUNT_SPENT_POINTS"
-                  : "VISIT_POINTS",
-            amount: referredPoints,
-            type: "EARNED",
+      // Referred customer benefit (new customer who joined via referral)
+      if (newType === "AMOUNT_CASHBACK") {
+        const amount = Math.max(
+          0,
+          Number(referralProgram.newCustomerBenefitValue) || 0,
+        );
+        if (amount > 0) {
+          await tx.wallet.upsert({
+            where: {
+              businessId_customerId: { businessId, customerId: customer.id },
+            },
+            create: {
+              businessId,
+              customerId: customer.id,
+              cashbackBalance: amount,
+            },
+            update: { cashbackBalance: { increment: amount } },
+          });
+          await tx.transaction.create({
+            data: {
+              businessId,
+              customerId: customer.id,
+              valueKind: "CASHBACK",
+              amount,
+              type: "EARNED",
+              source: "REFERRAL",
+              loyaltyId: business.loyalty?.id ?? null,
+              description: "Referral cashback",
+            },
+          });
+        }
+      } else if (
+        newType === "FREE_ITEM_ON_NEXT_PURCHASE" &&
+        referralProgram.newCustomerFreeItemSkuId
+      ) {
+        const sku =
+          referralProgram.newCustomerFreeItemSku ??
+          (await tx.sku.findUnique({
+            where: { id: referralProgram.newCustomerFreeItemSkuId },
+            select: { id: true, name: true },
+          }));
+        if (sku) {
+          const freeItemEntry = {
+            id: crypto.randomUUID(),
+            skuId: sku.id,
+            skuName: sku.name,
             source: "REFERRAL",
-            loyaltyId: business.loyalty?.id ?? null,
-            description: "Referral bonus",
-          },
-        });
+            createdAt: new Date().toISOString(),
+          };
+          const wallet = await tx.wallet.findUnique({
+            where: {
+              businessId_customerId: { businessId, customerId: customer.id },
+            },
+          });
+          const existingItems =
+            (wallet?.freeItems as Array<unknown> | null) ?? [];
+          const updatedItems = [...existingItems, freeItemEntry];
+          await tx.wallet.upsert({
+            where: {
+              businessId_customerId: { businessId, customerId: customer.id },
+            },
+            create: {
+              businessId,
+              customerId: customer.id,
+              freeItems: updatedItems as any,
+            },
+            update: { freeItems: updatedItems as any },
+          });
+          await tx.transaction.create({
+            data: {
+              businessId,
+              customerId: customer.id,
+              valueKind: "FREE_ITEM",
+              amount: 1,
+              type: "EARNED",
+              source: "REFERRAL",
+              metadata: { skuId: sku.id, skuName: sku.name } as any,
+              description: `Free ${sku.name} on next visit`,
+            },
+          });
+        }
       }
 
       return {
         businessCustomer,
-        referrerPoints,
-        referredPoints,
         businessName: business.name,
       };
     });

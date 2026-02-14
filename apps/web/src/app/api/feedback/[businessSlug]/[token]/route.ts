@@ -74,6 +74,9 @@ export async function GET(
         negativeFollowUp: string | null;
         feedbackRewardEnabled: boolean;
         rewardAmount: number | null;
+        askForOnlineReviews: boolean;
+        onlineReviewLink: string | null;
+        onlineReviewPlatform: string | null;
       } | null;
       let followUpRewardConfig: FollowUpReward = link.config
         ? {
@@ -81,6 +84,9 @@ export async function GET(
             negativeFollowUp: link.config.negativeFollowUp,
             feedbackRewardEnabled: link.config.feedbackRewardEnabled,
             rewardAmount: link.config.rewardAmount,
+            askForOnlineReviews: link.config.askForOnlineReviews,
+            onlineReviewLink: link.config.onlineReviewLink,
+            onlineReviewPlatform: link.config.onlineReviewPlatform,
           }
         : null;
       if (!followUpRewardConfig && link.bill.businessId) {
@@ -91,6 +97,9 @@ export async function GET(
             negativeFollowUp: true,
             feedbackRewardEnabled: true,
             rewardAmount: true,
+            askForOnlineReviews: true,
+            onlineReviewLink: true,
+            onlineReviewPlatform: true,
           },
         });
       }
@@ -107,12 +116,21 @@ export async function GET(
         followUpRewardConfig.rewardAmount != null
           ? { enabled: true, amount: followUpRewardConfig.rewardAmount }
           : { enabled: false, amount: null as number | null };
+      const onlineReview =
+        followUpRewardConfig?.askForOnlineReviews &&
+        followUpRewardConfig.onlineReviewLink
+          ? {
+              link: followUpRewardConfig.onlineReviewLink,
+              platform: followUpRewardConfig.onlineReviewPlatform,
+            }
+          : null;
       return NextResponse.json({
         alreadySubmitted: true,
         config: null,
         billNumber: link.bill.billNumber,
         followUpMessage: followUpMessage || "Thank you for your feedback.",
         reward,
+        onlineReview,
       });
     }
 
@@ -267,22 +285,8 @@ export async function POST(
     const { rating, comment, howDidYouHear, selectedCategories } =
       validation.data;
 
-    const response = await db.feedbackResponse.create({
-      data: {
-        configId,
-        businessId: link.bill.businessId,
-        customerId: link.bill.customerId,
-        rating: rating ?? null,
-        comment: comment ?? null,
-        howDidYouHear: howDidYouHear ?? null,
-        selectedCategories: selectedCategories ?? [],
-      },
-    });
-
-    await db.feedbackLink.update({
-      where: { token },
-      data: { feedbackResponseId: response.id },
-    });
+    const businessId = link.bill.businessId;
+    const customerId = link.bill.customerId;
 
     const configFull = await db.feedbackConfig.findUnique({
       where: { id: configId },
@@ -291,7 +295,65 @@ export async function POST(
         negativeFollowUp: true,
         feedbackRewardEnabled: true,
         rewardAmount: true,
+        askForOnlineReviews: true,
+        onlineReviewLink: true,
+        onlineReviewPlatform: true,
       },
+    });
+
+    const rewardAmount =
+      configFull?.feedbackRewardEnabled && configFull.rewardAmount != null
+        ? Math.max(0, configFull.rewardAmount)
+        : 0;
+    const shouldCreditWallet =
+      rewardAmount > 0 && businessId && customerId != null;
+
+    const response = await db.$transaction(async (tx) => {
+      const res = await tx.feedbackResponse.create({
+        data: {
+          configId,
+          businessId,
+          customerId,
+          rating: rating ?? null,
+          comment: comment ?? null,
+          howDidYouHear: howDidYouHear ?? null,
+          selectedCategories: selectedCategories ?? [],
+        },
+      });
+
+      await tx.feedbackLink.update({
+        where: { token },
+        data: { feedbackResponseId: res.id },
+      });
+
+      // Credit cashback to wallet and create Transaction when reward is enabled
+      if (shouldCreditWallet) {
+        await tx.wallet.upsert({
+          where: {
+            businessId_customerId: { businessId, customerId },
+          },
+          create: {
+            businessId,
+            customerId,
+            cashbackBalance: rewardAmount,
+          },
+          update: { cashbackBalance: { increment: rewardAmount } },
+        });
+        await tx.transaction.create({
+          data: {
+            businessId,
+            customerId,
+            valueKind: "CASHBACK",
+            amount: rewardAmount,
+            type: "EARNED",
+            source: "FEEDBACK",
+            feedbackResponseId: res.id,
+            description: "Feedback reward",
+          },
+        });
+      }
+
+      return res;
     });
 
     const isPositive = rating != null && rating >= 4;
@@ -299,14 +361,22 @@ export async function POST(
       ? configFull?.positiveFollowUp
       : (configFull?.negativeFollowUp ?? "Thank you for your feedback.");
     const reward =
-      configFull?.feedbackRewardEnabled && configFull.rewardAmount != null
-        ? { enabled: true, amount: configFull.rewardAmount }
+      rewardAmount > 0
+        ? { enabled: true, amount: rewardAmount }
         : { enabled: false, amount: null as number | null };
+    const onlineReview =
+      configFull?.askForOnlineReviews && configFull.onlineReviewLink
+        ? {
+            link: configFull.onlineReviewLink,
+            platform: configFull.onlineReviewPlatform,
+          }
+        : null;
 
     return NextResponse.json({
       success: true,
       followUpMessage: followUpMessage || "Thank you for your feedback.",
       reward,
+      onlineReview,
     });
   } catch (error: unknown) {
     console.error("Failed to submit feedback:", error);

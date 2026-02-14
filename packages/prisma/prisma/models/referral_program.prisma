@@ -8,14 +8,19 @@ model ReferralProgram {
   isEnabled Boolean @default(false)
 
   // New Customer Benefits (Step 1)
+  // AMOUNT_CASHBACK: value = cashback amount (₹). FREE_ITEM_ON_NEXT_PURCHASE: value ignored, use newCustomerFreeItemSkuId.
   newCustomerBenefitType          ReferalBenefitType
-  newCustomerBenefitValue         Int // discount amount or points
+  newCustomerBenefitValue         Int // cashback amount (₹) when AMOUNT_CASHBACK
   newCustomerBenefitExpiresInDays Int?
+  newCustomerFreeItemSkuId        String?
+  newCustomerFreeItemSku          Sku?               @relation("ReferralNewCustomerFreeItem", fields: [newCustomerFreeItemSkuId], references: [id], onDelete: SetNull)
 
   // Existing Customer Benefits (Step 2)
   existingCustomerBenefitType          ReferalBenefitType
   existingCustomerBenefitValue         Int
   existingCustomerBenefitExpiresInDays Int?
+  existingCustomerFreeItemSkuId        String?
+  existingCustomerFreeItemSku          Sku?               @relation("ReferralExistingCustomerFreeItem", fields: [existingCustomerFreeItemSkuId], references: [id], onDelete: SetNull)
 
   // Reminder Settings
   sendReminderToCustomer Boolean @default(false)
