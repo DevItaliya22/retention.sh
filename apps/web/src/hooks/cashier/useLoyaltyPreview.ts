@@ -14,6 +14,14 @@ export interface RewardStagePreview {
   cashAmount: number | null;
 }
 
+export interface FreeItemPreview {
+  id: string;
+  skuId: string | null;
+  skuName: string;
+  source: string;
+  createdAt: string;
+}
+
 export interface LoyaltyPreviewData {
   loyaltyType: string;
   pointsBalance: number;
@@ -21,6 +29,8 @@ export interface LoyaltyPreviewData {
   cashbackBalance?: number;
   redeemablePoints: number;
   earnablePoints: number;
+  /** Unclaimed free items (e.g. from referral) that can be claimed on this bill. */
+  freeItems: FreeItemPreview[];
   expiringBuckets: {
     id: string;
     remainingAmount: number;

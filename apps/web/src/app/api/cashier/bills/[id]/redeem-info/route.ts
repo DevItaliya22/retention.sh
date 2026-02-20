@@ -2,6 +2,7 @@ import { withCashierAuth } from "@/lib/auth/middleware";
 import { runTransaction } from "@/lib/db/transaction";
 import { getRedeemableInfo } from "@/lib/loyalty";
 import { sanitizeErrorMessage } from "@/lib/utils/error-handler";
+import { parseFreeItems } from "@/lib/utils/free-items";
 import { db } from "@reelo/db";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -42,6 +43,16 @@ export const GET = withCashierAuth<{ id: string }>(
         },
       });
       const alreadyRedeemedOnThisBill = alreadyCashbackRedeemedCount > 0;
+
+      const wallet = await db.wallet.findUnique({
+        where: {
+          businessId_customerId: {
+            businessId: context.business.id,
+            customerId: bill.customerId,
+          },
+        },
+      });
+      const freeItems = parseFreeItems(wallet?.freeItems);
 
       const [redeemInfoRaw, earnedFromTransactions, redeemedFreeItemTxs] =
         await Promise.all([
@@ -144,6 +155,7 @@ export const GET = withCashierAuth<{ id: string }>(
             redeemedFreeItems.length > 0 ? redeemedFreeItems : undefined,
         },
         redeemInfo,
+        freeItems,
       });
     } catch (error: unknown) {
       console.error("Failed to fetch redeem info:", error);

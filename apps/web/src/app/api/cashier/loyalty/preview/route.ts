@@ -14,6 +14,7 @@ import {
   sanitizeErrorMessage,
   validateSchema,
 } from "@/lib/utils/error-handler";
+import { parseFreeItems } from "@/lib/utils/free-items";
 import { formatPhoneNumber } from "@/lib/utils/phone";
 import {
   type IsServiceEnabled,
@@ -94,6 +95,7 @@ export const GET = withCashierAuth(async (request: NextRequest, context) => {
             cashAmount: number | null;
           }[],
           visitCount: null as number | null,
+          freeItems: [],
         };
       }
 
@@ -128,6 +130,7 @@ export const GET = withCashierAuth(async (request: NextRequest, context) => {
           tierMessage: null,
           rewardStages: [],
           visitCount: null,
+          freeItems: [],
         };
       }
 
@@ -159,8 +162,18 @@ export const GET = withCashierAuth(async (request: NextRequest, context) => {
           tierMessage: null,
           rewardStages: [],
           visitCount: null,
+          freeItems: [],
         };
       }
+
+      const wallet = await tx.wallet.findUnique({
+        where: {
+          businessId_customerId: {
+            businessId,
+            customerId: user.customer.id,
+          },
+        },
+      });
 
       const earnablePoints = redeemInfo.earnablePoints;
 
@@ -187,6 +200,7 @@ export const GET = withCashierAuth(async (request: NextRequest, context) => {
         tierMessage: redeemInfo.tierMessage ?? null,
         rewardStages: redeemInfo.rewardStages,
         visitCount: redeemInfo.visitCount,
+        freeItems: parseFreeItems(wallet?.freeItems),
       };
     });
 

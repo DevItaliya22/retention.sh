@@ -44,6 +44,14 @@ interface RedeemInfo {
   alreadyRedeemedOnThisBill?: boolean;
 }
 
+interface FreeItemToClaim {
+  id: string;
+  skuId: string | null;
+  skuName: string;
+  source: string;
+  createdAt: string;
+}
+
 interface RedeemInfoBill {
   id: string;
   billNumber: string;
@@ -75,6 +83,7 @@ export function BillCreatedView({
   const [data, setData] = useState<{
     bill: RedeemInfoBill;
     redeemInfo: RedeemInfo | null;
+    freeItems: FreeItemToClaim[];
   } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -84,6 +93,7 @@ export function BillCreatedView({
     string | null
   >(null);
   const [redeeming, setRedeeming] = useState(false);
+  const [claimingId, setClaimingId] = useState<string | null>(null);
 
   const basePath = `/api/cashier/bills/${billId}`;
 
@@ -94,10 +104,15 @@ export function BillCreatedView({
       const res = await fetcher<{
         bill: RedeemInfoBill;
         redeemInfo: RedeemInfo | null;
+        freeItems?: FreeItemToClaim[];
         error?: string;
       }>(`${basePath}/redeem-info`);
       if (res.error) throw new Error(res.error);
-      setData({ bill: res.bill, redeemInfo: res.redeemInfo });
+      setData({
+        bill: res.bill,
+        redeemInfo: res.redeemInfo,
+        freeItems: res.freeItems ?? [],
+      });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to load bill");
     } finally {
@@ -188,6 +203,26 @@ export function BillCreatedView({
   const handleCreateAnother = () => {
     onCreateAnother();
     router.refresh();
+  };
+
+  const handleClaimFreeItem = async (freeItemId: string) => {
+    setClaimingId(freeItemId);
+    try {
+      const res = await fetcher<{ success: boolean; error?: string }>(
+        `${basePath}/claim-free-item`,
+        {
+          method: "POST",
+          body: JSON.stringify({ freeItemId }),
+        },
+      );
+      if (res.error) throw new Error(res.error);
+      toast.success("Free item claimed");
+      fetchData();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to claim");
+    } finally {
+      setClaimingId(null);
+    }
   };
 
   if (loading) {
@@ -300,6 +335,47 @@ export function BillCreatedView({
                   )
                   .join(", ")}
               </p>
+            </div>
+          </div>
+        )}
+
+        {/* Free items to claim (e.g. from referral) — claim after bill creation */}
+        {(data.freeItems?.length ?? 0) > 0 && (
+          <div className="space-y-2">
+            <p className="flex items-center gap-2 text-sm font-medium">
+              <Gift className="size-4 text-purple-500" />
+              Free items to claim
+            </p>
+            <div className="bg-muted/30 rounded-md border p-3">
+              <ul className="space-y-2">
+                {data.freeItems.map((item) => (
+                  <li
+                    key={item.id}
+                    className="flex items-center justify-between gap-3 text-sm"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <span className="font-medium">{item.skuName}</span>
+                      {item.source !== "OTHER" && (
+                        <span className="text-muted-foreground ml-1.5 text-xs">
+                          (
+                          {item.source === "REFERRAL"
+                            ? "Referral"
+                            : item.source}
+                          )
+                        </span>
+                      )}
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={claimingId !== null}
+                      onClick={() => handleClaimFreeItem(item.id)}
+                    >
+                      {claimingId === item.id ? "Claiming..." : "Claim"}
+                    </Button>
+                  </li>
+                ))}
+              </ul>
             </div>
           </div>
         )}
