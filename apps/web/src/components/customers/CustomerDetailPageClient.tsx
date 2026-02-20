@@ -27,6 +27,7 @@ import { cn } from "@reelo/ui/lib/utils";
 import {
   CalendarDays,
   Copy,
+  ExternalLink,
   Eye,
   Gift,
   Link2,
@@ -289,6 +290,24 @@ export function CustomerDetailPageClient({
                     aria-label="Copy loyalty link"
                   >
                     <Copy className="size-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="shrink-0"
+                    aria-label="Open loyalty link in new tab"
+                    onClick={() => {
+                      if (typeof window !== "undefined") {
+                        window.open(
+                          loyaltyUrl,
+                          "_blank",
+                          "noopener,noreferrer",
+                        );
+                      }
+                    }}
+                  >
+                    <ExternalLink className="size-4" />
                   </Button>
                 </div>
               </CardContent>

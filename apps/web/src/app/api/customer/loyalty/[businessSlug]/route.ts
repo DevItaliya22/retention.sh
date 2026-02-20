@@ -7,6 +7,7 @@ import {
   sanitizeErrorMessage,
   validateSchema,
 } from "@/lib/utils/error-handler";
+import { parseFreeItems } from "@/lib/utils/free-items";
 import {
   type IsServiceEnabled,
   isServiceEnabled,
@@ -322,13 +323,7 @@ export const GET = withCustomerAuth<{ businessSlug: string }>(
           loyaltyType,
           pointsBalance,
           cashbackBalance,
-          buckets: transactions
-            .filter((t) => t.expiresAt && t.amount > 0)
-            .map((t) => ({
-              id: t.id,
-              remainingAmount: t.amount,
-              expiresAt: t.expiresAt!.toISOString(),
-            })),
+          freeItems: parseFreeItems(wallet?.freeItems),
           transactions: transactions.map((t) => ({
             id: t.id,
             valueKind: t.valueKind,

@@ -685,7 +685,7 @@ export function BillCreationForm() {
                     clearSelectedCustomer();
                   }}
                   required
-                  disabled={isCreating || !!selectedCustomer}
+                  disabled={isCreating}
                   autoComplete="nope"
                   defaultCountry="IN"
                 />

@@ -870,10 +870,6 @@ export async function applyRedemptionForBill(
     },
   });
 
-  // Points conversion (AMOUNT_SPENT/VISIT_MADE) is done via convertPointsForBill (API). Here only cashback redeem.
-  const redeemedPoints = 0;
-  const pointsDiscount = 0;
-
   const redeemedCashback = isCashbackType
     ? Math.min(redeemCashbackReq, redeemable)
     : Math.min(

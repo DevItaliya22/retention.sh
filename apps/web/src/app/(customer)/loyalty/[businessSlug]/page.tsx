@@ -39,6 +39,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { useParams } from "next/navigation";
+import { useMemo } from "react";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -88,9 +89,17 @@ interface LoyaltyDetailResponse {
     loyaltyType: string | null;
     pointsBalance: number;
     cashbackBalance: number;
-    buckets: { id: string; remainingAmount: number; expiresAt: string }[];
+    /** Unclaimed free items (e.g. from referral) to claim on next visit. */
+    freeItems: Array<{
+      id: string;
+      skuId: string | null;
+      skuName: string;
+      source: string;
+      createdAt: string;
+    }>;
     transactions: {
       id: string;
+      valueKind: string;
       amount: number;
       type: string;
       source: string;
@@ -472,6 +481,18 @@ export default function LoyaltyDetailPage() {
     enabled: !!businessSlug,
   });
 
+  // Must run before any early return to keep hook order stable (Rules of Hooks)
+  const expiryFromTransactions = useMemo(() => {
+    const transactions = data?.loyalty?.transactions ?? [];
+    return transactions
+      .filter((t) => t.expiresAt != null && t.amount > 0)
+      .map((t) => ({
+        id: t.id,
+        remainingAmount: t.amount,
+        expiresAt: t.expiresAt!,
+      }));
+  }, [data?.loyalty?.transactions]);
+
   if (!businessSlug) {
     return (
       <PageLayout
@@ -688,18 +709,57 @@ export default function LoyaltyDetailPage() {
             </>
           )}
 
-          {/* ─── Expiring Points ───────────────────────────────────────── */}
-          {loyalty.buckets.length > 0 && (
+          {/* ─── Free items to claim (e.g. from referral) ───────────────────────────────────────── */}
+          {(loyalty.freeItems?.length ?? 0) > 0 && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Gift className="size-5 text-purple-500" />
+                  Free items to claim
+                </CardTitle>
+                <CardDescription>
+                  Claim these at the store on your next visit.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2">
+                  {loyalty.freeItems.map((item) => (
+                    <li
+                      key={item.id}
+                      className="flex items-center justify-between rounded-md bg-purple-50 px-3 py-2 text-sm dark:bg-purple-900/20"
+                    >
+                      <span className="font-medium">{item.skuName}</span>
+                      {item.source !== "OTHER" && (
+                        <span className="text-muted-foreground text-xs">
+                          {item.source === "REFERRAL"
+                            ? "Referral"
+                            : item.source}
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* ─── Points / balance expiry (derived from transactions.expiresAt only) ───────────────────────────────────────── */}
+          {expiryFromTransactions.length > 0 && (
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Clock className="size-5 text-amber-500" />
-                  Expiring Soon
+                  {isCashbackType ? "Balance expiry" : "Points expiry"}
                 </CardTitle>
+                <CardDescription>
+                  Unused {isCashbackType ? "cashback" : "points"} and when they
+                  expire. Used or already expired amounts are in transaction
+                  history below.
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {loyalty.buckets.map((bucket) => (
+                  {expiryFromTransactions.map((bucket) => (
                     <div
                       key={bucket.id}
                       className="flex items-center justify-between rounded-md bg-amber-50 px-3 py-2 text-sm dark:bg-amber-900/20"
@@ -725,9 +785,14 @@ export default function LoyaltyDetailPage() {
                 <Receipt className="size-5" />
                 Transaction History
               </CardTitle>
-              {isCashbackType && (
+              {isCashbackType ? (
                 <CardDescription>
                   All your bills; cashback shown when earned on that bill.
+                </CardDescription>
+              ) : (
+                <CardDescription>
+                  Earned, redeemed, and expired (unused) points. Used or expired
+                  amounts appear here.
                 </CardDescription>
               )}
             </CardHeader>
@@ -806,6 +871,9 @@ export default function LoyaltyDetailPage() {
                         <TableHead>Date</TableHead>
                         <TableHead>Type</TableHead>
                         <TableHead className="text-right">Amount</TableHead>
+                        <TableHead className="text-muted-foreground text-xs whitespace-nowrap">
+                          Expires
+                        </TableHead>
                         <TableHead>Description</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -829,6 +897,17 @@ export default function LoyaltyDetailPage() {
                               {tx.amount > 0 ? "+" : ""}
                               {`${tx.amount} pts`}
                             </span>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
+                            {tx.type === "EXPIRED" ? (
+                              <span className="text-red-600 dark:text-red-400">
+                                Expired (unused)
+                              </span>
+                            ) : tx.expiresAt ? (
+                              <DateDisplay date={tx.expiresAt} />
+                            ) : (
+                              "—"
+                            )}
                           </TableCell>
                           <TableCell className="text-muted-foreground max-w-[200px] truncate text-sm">
                             {tx.description || tx.source}

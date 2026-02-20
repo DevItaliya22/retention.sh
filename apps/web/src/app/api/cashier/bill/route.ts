@@ -125,7 +125,7 @@ export const POST = withCashierAuth(async (request: NextRequest, context) => {
       redeemCashback: redeemCashbackRaw,
       notes,
       paymentMethod,
-      lineItems = [],
+      lineItems: lineItemsFromRequest = [],
     } = validation.data;
 
     // Defense: never allow negative redemption (prevents minus-minus = plus hack)
@@ -153,9 +153,11 @@ export const POST = withCashierAuth(async (request: NextRequest, context) => {
     }
 
     // Only active SKUs are allowed in billing
-    if (lineItems.length > 0) {
+    if (lineItemsFromRequest.length > 0) {
       const skuIds = [
-        ...new Set(lineItems.map((li: { skuId: string }) => li.skuId)),
+        ...new Set(
+          lineItemsFromRequest.map((li: { skuId: string }) => li.skuId),
+        ),
       ];
       const validSkus = await db.sku.findMany({
         where: {
@@ -184,16 +186,18 @@ export const POST = withCashierAuth(async (request: NextRequest, context) => {
 
     const result = await runTransaction(async (tx) => {
       let computedSubtotal: number | null = null;
-      if (lineItems.length > 0) {
+      if (lineItemsFromRequest.length > 0) {
         const skuIds = [
-          ...new Set(lineItems.map((li: { skuId: string }) => li.skuId)),
+          ...new Set(
+            lineItemsFromRequest.map((li: { skuId: string }) => li.skuId),
+          ),
         ];
         const skus = await tx.sku.findMany({
           where: { id: { in: skuIds }, businessId },
           select: { id: true, price: true },
         });
         const priceMap = new Map(skus.map((s) => [s.id, s.price]));
-        computedSubtotal = lineItems.reduce(
+        computedSubtotal = lineItemsFromRequest.reduce(
           (
             sum: number,
             li: { skuId: string; qty: number; unitPrice?: number },
@@ -226,9 +230,9 @@ export const POST = withCashierAuth(async (request: NextRequest, context) => {
           customerId: customer.id,
           cashierId: context.cashier.id,
           lineItems:
-            lineItems.length > 0
+            lineItemsFromRequest.length > 0
               ? {
-                  create: lineItems.map(
+                  create: lineItemsFromRequest.map(
                     (li: {
                       skuId: string;
                       qty: number;
