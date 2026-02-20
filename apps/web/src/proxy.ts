@@ -27,6 +27,7 @@ const protectedAdminRoutes = [
   "/welcome",
   "/bills",
   "/customers",
+  "/campaigns",
   "/referral-stats",
   "/loyalty-stats",
   "/feedback-stats",
@@ -169,6 +170,7 @@ export async function proxy(req: NextRequest) {
     protectedAdminRoutes.includes(pathname) ||
     pathname.startsWith("/bills/") ||
     pathname.startsWith("/customers/") ||
+    pathname.startsWith("/campaigns/") ||
     pathname.startsWith("/settings");
 
   // Protected admin routes - require valid session

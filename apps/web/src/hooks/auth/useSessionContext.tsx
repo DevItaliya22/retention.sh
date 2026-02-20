@@ -2,7 +2,7 @@
 
 import { authClient } from "@/lib/auth/auth-client";
 import { User } from "@reelo/db";
-import { createContext, ReactNode, useContext, useMemo } from "react";
+import { createContext, ReactNode, useCallback, useContext } from "react";
 
 type Session = Awaited<ReturnType<typeof authClient.useSession>>["data"];
 
@@ -34,26 +34,17 @@ export function SessionProvider({
 
   const currentSession = session || initialSession;
 
-  const user = useMemo(() => {
-    return currentSession?.user as User | null;
-  }, [currentSession?.user]);
+  const user = (currentSession?.user as User | null) ?? null;
+  const lastActiveOrganizationId =
+    (currentSession?.session as any)?.activeOrganizationId || null;
+  const isAuthenticated = !!user;
 
-  const lastActiveOrganizationId = useMemo(() => {
-    return (currentSession?.session as any)?.activeOrganizationId || null;
-  }, [currentSession?.session]);
-
-  const isAuthenticated = useMemo(() => {
-    return !!user;
-  }, [user]);
-
-  const signOut = useMemo(() => {
-    return async () => {
-      try {
-        await fetch("/api/auth/revoke", { method: "POST" });
-      } finally {
-        window.location.href = "/login";
-      }
-    };
+  const signOut = useCallback(async () => {
+    try {
+      await fetch("/api/auth/revoke", { method: "POST" });
+    } finally {
+      window.location.href = "/login";
+    }
   }, []);
 
   const value: SessionContextType = {

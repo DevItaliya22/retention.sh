@@ -1,5 +1,6 @@
 "use client";
 
+import { FEEDBACK_FORM_DEFAULTS } from "@/lib/constants/forms";
 import {
   Button,
   Card,
@@ -54,6 +55,36 @@ interface SubmitResponse {
   reward?: { enabled: boolean; amount: number | null };
   onlineReview?: OnlineReview | null;
   error?: string;
+}
+
+const platformLabel: Record<string, string> = {
+  GOOGLE: "Google",
+  INSTAGRAM: "Instagram",
+  FACEBOOK: "Facebook",
+  ZOMATO: "Zomato",
+  OTHER: "Leave a review",
+};
+
+function OnlineReviewCTA({
+  review,
+}: {
+  review: { link: string; platform: string | null };
+}) {
+  const label =
+    review.platform && platformLabel[review.platform]
+      ? `Leave us a review on ${platformLabel[review.platform]}`
+      : FEEDBACK_FORM_DEFAULTS.labels.leaveReview;
+  return (
+    <a
+      href={review.link}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="border-primary/30 bg-primary/5 text-primary hover:bg-primary/10 mt-4 inline-flex items-center gap-2 rounded-md border px-4 py-2 text-sm font-medium transition-colors"
+    >
+      {label}
+      <ExternalLink className="size-4" />
+    </a>
+  );
 }
 
 export function FeedbackPageClient({
@@ -124,7 +155,7 @@ export function FeedbackPageClient({
       if (json.success) {
         setSubmitStatus("success");
         setFollowUpMessage(
-          json.followUpMessage ?? "Thank you for your feedback.",
+          json.followUpMessage ?? FEEDBACK_FORM_DEFAULTS.followUpMessage,
         );
         setReward(json.reward ?? null);
         setOnlineReview(json.onlineReview ?? null);
@@ -143,36 +174,6 @@ export function FeedbackPageClient({
       prev.includes(name) ? prev.filter((c) => c !== name) : [...prev, name],
     );
   };
-
-  const platformLabel: Record<string, string> = {
-    GOOGLE: "Google",
-    INSTAGRAM: "Instagram",
-    FACEBOOK: "Facebook",
-    ZOMATO: "Zomato",
-    OTHER: "Leave a review",
-  };
-
-  function OnlineReviewCTA({
-    review,
-  }: {
-    review: { link: string; platform: string | null };
-  }) {
-    const label =
-      review.platform && platformLabel[review.platform]
-        ? `Leave us a review on ${platformLabel[review.platform]}`
-        : "Leave us a review";
-    return (
-      <a
-        href={review.link}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="border-primary/30 bg-primary/5 text-primary hover:bg-primary/10 mt-4 inline-flex items-center gap-2 rounded-md border px-4 py-2 text-sm font-medium transition-colors"
-      >
-        {label}
-        <ExternalLink className="size-4" />
-      </a>
-    );
-  }
 
   if (isLoading || (!data && !isError)) {
     return (
@@ -210,9 +211,9 @@ export function FeedbackPageClient({
     );
   }
 
-  // Already submitted (one feedback per bill): show thank you + reward
+  // Already submitted: reward at top, then thank you + message
   if (alreadySubmitted) {
-    const message = loadedFollowUp ?? "Thank you for your feedback.";
+    const message = loadedFollowUp ?? FEEDBACK_FORM_DEFAULTS.followUpMessage;
     const showReward = loadedReward?.enabled && loadedReward?.amount != null;
     const showOnlineReview = loadedOnlineReview != null;
     return (
@@ -222,16 +223,19 @@ export function FeedbackPageClient({
             <div className="bg-primary/10 text-primary mx-auto mb-2 flex size-12 items-center justify-center rounded-full">
               <MessageSquare className="size-6" />
             </div>
-            <h1 className="text-xl font-semibold">Thank you</h1>
+            {showReward && (
+              <p className="text-foreground mb-2 text-sm font-medium">
+                {FEEDBACK_FORM_DEFAULTS.rewardAddedToWallet(
+                  loadedReward!.amount!,
+                )}
+              </p>
+            )}
+            <h1 className="text-xl font-semibold">
+              {FEEDBACK_FORM_DEFAULTS.thankYouTitle}
+            </h1>
             <p className="text-muted-foreground mt-2 text-sm whitespace-pre-wrap">
               {message}
             </p>
-            {showReward && (
-              <p className="text-foreground mt-3 text-sm font-medium">
-                You’ve earned ₹{loadedReward.amount} has been added to your
-                wallet.
-              </p>
-            )}
             {showOnlineReview && (
               <OnlineReviewCTA review={loadedOnlineReview} />
             )}
@@ -251,15 +255,17 @@ export function FeedbackPageClient({
             <div className="bg-primary/10 text-primary mx-auto mb-2 flex size-12 items-center justify-center rounded-full">
               <MessageSquare className="size-6" />
             </div>
-            <h1 className="text-xl font-semibold">Thank you</h1>
+            {showReward && (
+              <p className="text-foreground mb-2 text-sm font-medium">
+                {FEEDBACK_FORM_DEFAULTS.rewardAddedToWallet(reward!.amount!)}
+              </p>
+            )}
+            <h1 className="text-xl font-semibold">
+              {FEEDBACK_FORM_DEFAULTS.thankYouTitle}
+            </h1>
             <p className="text-muted-foreground mt-2 text-sm whitespace-pre-wrap">
               {followUpMessage}
             </p>
-            {showReward && (
-              <p className="text-foreground mt-3 text-sm font-medium">
-                You’ve earned ₹{reward.amount} has been added to your wallet.
-              </p>
-            )}
             {showOnlineReview && <OnlineReviewCTA review={onlineReview} />}
           </CardHeader>
         </Card>
@@ -301,7 +307,7 @@ export function FeedbackPageClient({
         <CardContent className="space-y-6">
           {/* Rating 1–5 */}
           <div className="space-y-2">
-            <Label>How was your experience?</Label>
+            <Label>{FEEDBACK_FORM_DEFAULTS.labels.howWasExperience}</Label>
             <div className="flex gap-1">
               {[1, 2, 3, 4, 5].map((value) => (
                 <button
@@ -325,10 +331,12 @@ export function FeedbackPageClient({
 
           {/* Comment */}
           <div className="space-y-2">
-            <Label htmlFor="feedback-comment">Comment (optional)</Label>
+            <Label htmlFor="feedback-comment">
+              {FEEDBACK_FORM_DEFAULTS.labels.commentOptional}
+            </Label>
             <Textarea
               id="feedback-comment"
-              placeholder="Tell us more..."
+              placeholder={FEEDBACK_FORM_DEFAULTS.labels.commentPlaceholder}
               value={comment}
               onChange={(e) => setComment(e.target.value)}
               rows={3}
@@ -339,7 +347,7 @@ export function FeedbackPageClient({
           {/* Categories */}
           {config.categories.length > 0 && (
             <div className="space-y-2">
-              <Label>What could we improve? (optional)</Label>
+              <Label>{FEEDBACK_FORM_DEFAULTS.labels.whatCouldWeImprove}</Label>
               <div className="flex flex-wrap gap-3">
                 {config.categories.map((cat) => (
                   <div key={cat.id} className="flex items-center gap-2">
@@ -364,14 +372,18 @@ export function FeedbackPageClient({
           {config.isHowDidYouHearEnabled &&
             config.howDidYouHearOptions.length > 0 && (
               <div className="space-y-2">
-                <Label htmlFor="feedback-how">How did you hear about us?</Label>
+                <Label htmlFor="feedback-how">
+                  {FEEDBACK_FORM_DEFAULTS.labels.howDidYouHear}
+                </Label>
                 <select
                   id="feedback-how"
                   value={howDidYouHear}
                   onChange={(e) => setHowDidYouHear(e.target.value)}
                   className="border-input bg-background focus-visible:ring-ring w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:outline-none"
                 >
-                  <option value="">Select...</option>
+                  <option value="">
+                    {FEEDBACK_FORM_DEFAULTS.labels.selectOption}
+                  </option>
                   {config.howDidYouHearOptions.map((opt) => (
                     <option key={opt.id} value={opt.name}>
                       {opt.name}
@@ -391,7 +403,9 @@ export function FeedbackPageClient({
             disabled={submitStatus === "submitting"}
             className="w-full"
           >
-            {submitStatus === "submitting" ? "Submitting…" : "Submit feedback"}
+            {submitStatus === "submitting"
+              ? FEEDBACK_FORM_DEFAULTS.labels.submittingButton
+              : FEEDBACK_FORM_DEFAULTS.labels.submitButton}
           </Button>
         </CardContent>
       </Card>

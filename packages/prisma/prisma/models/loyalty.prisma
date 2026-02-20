@@ -116,6 +116,10 @@ model LoyaltyCashbackConfig {
   redemptionBillLimitAmount     Float? // Max redeemable (₹) on current bill
   redemptionBillLimitPercentage Float? // Max redeemable as % of bill amount
 
+  // If true: customer can redeem cashback earned on this bill on the same bill.
+  // If false: cashback earned this bill is only available from the next bill onward.
+  allowSameBillRedemption Boolean @default(false)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -146,6 +150,10 @@ model LoyaltyTierConfig {
   // Default points conversion: 1 rupee spent = X points (used when tier not resolved, e.g. preview).
   pointsPerRupee Float   @default(1)
   onFinalAmount  Boolean @default(false)
+
+  // If true: customer can redeem tier cashback earned on this bill on the same bill.
+  // If false: cashback earned this bill is only available from the next bill onward.
+  allowSameBillRedemption Boolean @default(false)
 
   tiers LoyaltyTier[]
 
@@ -227,6 +235,10 @@ model LoyaltyAmountSpentConfig {
   // Max points a customer can earn in a single purchase. Null = no cap.
   maxPointsPerPurchase Int?
 
+  // If true: customer can redeem points earned on this bill on the same bill.
+  // If false: points earned this bill are only available from the next bill onward.
+  allowSameBillRedemption Boolean @default(true)
+
   // Configurable reward stages (e.g. 5000 pts → 10% off, 10000 pts → free item).
   rewardStages LoyaltyRewardStage[]
 
@@ -267,6 +279,10 @@ model LoyaltyVisitMadeConfig {
   visitIntervalEnabled Boolean            @default(false)
   visitIntervalValue   Int? // e.g. 24 (for 24 hours)
   visitIntervalUnit    VisitIntervalUnit? // MINUTE | HOUR | DAY | WEEK | MONTH
+
+  // If true: customer can redeem points earned on this bill on the same bill.
+  // If false: points earned this bill are only available from the next bill onward.
+  allowSameBillRedemption Boolean @default(true)
 
   // Configurable reward stages (same structure as Amount Spent).
   rewardStages LoyaltyRewardStage[]

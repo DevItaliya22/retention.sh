@@ -236,15 +236,15 @@ export function BillCreatedView({
       redeemableRewards.length > 0);
 
   return (
-    <Card className="w-full max-w-md">
-      <CardContent className="space-y-5 p-6 sm:p-8">
-        <div className="flex flex-col items-center gap-3 text-center">
-          <div className="flex size-14 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/30">
-            <CheckCircle2 className="size-7 text-emerald-600 dark:text-emerald-400" />
+    <Card className="w-full max-w-md border-0 shadow-none">
+      <CardContent className="space-y-6 p-6 sm:p-8">
+        <div className="flex flex-col items-center gap-4 text-center">
+          <div className="flex size-16 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/30">
+            <CheckCircle2 className="size-8 text-emerald-600 dark:text-emerald-400" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold">Bill Created Successfully</h3>
-            <p className="text-muted-foreground text-sm">
+            <h3 className="text-xl font-semibold">Bill Created Successfully</h3>
+            <p className="text-muted-foreground mt-1">
               Bill #{bill.billNumber}
             </p>
           </div>
@@ -252,10 +252,12 @@ export function BillCreatedView({
 
         <Separator />
 
-        <div className="space-y-2 text-sm">
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Amount to pay</span>
-            <span className="font-semibold">
+        <div className="bg-muted/40 rounded-lg px-4 py-3">
+          <div className="flex items-center justify-between text-base">
+            <span className="text-muted-foreground font-medium">
+              Amount to pay
+            </span>
+            <span className="text-lg font-semibold">
               ₹{(bill.userPaidAmount ?? bill.finalAmount ?? 0).toFixed(2)}
             </span>
           </div>
@@ -339,38 +341,55 @@ export function BillCreatedView({
         {hasRedeemOptions && (
           <>
             <Separator />
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 text-sm font-medium">
-                <Gift className="size-4" />
-                Redeem on this bill
+            <div className="space-y-5">
+              <div className="flex items-center gap-2">
+                <Gift className="text-primary size-6" />
+                <h4 className="text-base font-semibold">Redeem on this bill</h4>
               </div>
-              <p className="text-muted-foreground text-xs">
+              <p className="text-muted-foreground text-sm">
                 {isCashback
-                  ? `Available: ₹${(redeemInfo.balance ?? 0).toFixed(2)} · Max redeemable on bill: ₹${redeemInfo.maxRedeemable.toFixed(2)}`
-                  : `Available cashback: ₹${(redeemInfo.cashbackBalance ?? 0).toFixed(2)} (use below to apply to bill) · Points: ${redeemInfo.pointsBalance ?? 0} (convert via reward stage)`}
+                  ? `Available: ₹${(redeemInfo.balance ?? 0).toFixed(2)} · Max on this bill: ₹${redeemInfo.maxRedeemable.toFixed(2)}`
+                  : `Cashback: ₹${(redeemInfo.cashbackBalance ?? 0).toFixed(2)} · Points: ${redeemInfo.pointsBalance ?? 0} (convert via reward below)`}
               </p>
-              <div className="space-y-2">
+              <div className="space-y-4">
                 {((isCashback && redeemInfo.maxRedeemable > 0) ||
                   (redeemInfo.maxRedeemableFromCashback ?? 0) > 0) && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-muted-foreground w-20 text-xs">
-                      Cashback ₹
-                    </span>
-                    <Input
-                      type="number"
-                      min={0}
-                      max={
-                        isCashback
-                          ? redeemInfo.maxRedeemable
-                          : (redeemInfo.maxRedeemableFromCashback ?? 0)
-                      }
-                      step={0.01}
-                      placeholder="0.00"
-                      value={redeemCashbackValue}
-                      onChange={(e) => setRedeemCashbackValue(e.target.value)}
-                      disabled={redeeming}
-                      className="max-w-28"
-                    />
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">
+                      Cashback to apply (₹)
+                    </Label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="number"
+                        min={0}
+                        max={
+                          isCashback
+                            ? redeemInfo.maxRedeemable
+                            : (redeemInfo.maxRedeemableFromCashback ?? 0)
+                        }
+                        step={0.01}
+                        placeholder="0.00"
+                        value={redeemCashbackValue}
+                        onChange={(e) => setRedeemCashbackValue(e.target.value)}
+                        disabled={redeeming}
+                        className="h-11 flex-1 text-base"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="default"
+                        className="h-11 shrink-0 px-4 font-medium"
+                        onClick={() => {
+                          const max = isCashback
+                            ? redeemInfo.maxRedeemable
+                            : (redeemInfo.maxRedeemableFromCashback ?? 0);
+                          setRedeemCashbackValue(max.toFixed(2));
+                        }}
+                        disabled={redeeming}
+                      >
+                        Max
+                      </Button>
+                    </div>
                   </div>
                 )}
                 {!isCashback &&
@@ -378,30 +397,52 @@ export function BillCreatedView({
                     redeemInfo.maxRedeemable ??
                     0) > 0 && (
                     <>
-                      <div className="flex items-center gap-2">
-                        <span className="text-muted-foreground w-20 text-xs">
-                          Points
-                        </span>
-                        <Input
-                          type="number"
-                          min={0}
-                          max={
-                            redeemInfo.maxRedeemableFromPoints ??
-                            redeemInfo.maxRedeemable ??
-                            0
-                          }
-                          step={1}
-                          placeholder="0"
-                          value={redeemPointsValue}
-                          onChange={(e) => setRedeemPointsValue(e.target.value)}
-                          disabled={redeeming}
-                          className="max-w-28"
-                        />
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">
+                          Points to use
+                        </Label>
+                        <div className="flex gap-2">
+                          <Input
+                            type="number"
+                            min={0}
+                            max={
+                              redeemInfo.maxRedeemableFromPoints ??
+                              redeemInfo.maxRedeemable ??
+                              0
+                            }
+                            step={1}
+                            placeholder="0"
+                            value={redeemPointsValue}
+                            onChange={(e) =>
+                              setRedeemPointsValue(e.target.value)
+                            }
+                            disabled={redeeming}
+                            className="h-11 flex-1 text-base"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="default"
+                            className="h-11 shrink-0 px-4 font-medium"
+                            onClick={() => {
+                              const max =
+                                redeemInfo.maxRedeemableFromPoints ??
+                                redeemInfo.maxRedeemable ??
+                                0;
+                              setRedeemPointsValue(String(max));
+                            }}
+                            disabled={redeeming}
+                          >
+                            Max
+                          </Button>
+                        </div>
                       </div>
                       {redeemableRewards.length > 0 && (
-                        <div className="space-y-1">
-                          <Label className="text-xs">Or use reward stage</Label>
-                          <div className="flex flex-wrap gap-1">
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium">
+                            Or pick a reward
+                          </Label>
+                          <div className="flex flex-wrap gap-2">
                             {redeemableRewards.map((r) => (
                               <Button
                                 key={r.id}
@@ -411,8 +452,8 @@ export function BillCreatedView({
                                     ? "default"
                                     : "outline"
                                 }
-                                size="sm"
-                                className="text-xs"
+                                size="default"
+                                className="text-sm"
                                 onClick={() => {
                                   if (selectedRewardStageId === r.id) {
                                     setSelectedRewardStageId(null);
@@ -435,6 +476,8 @@ export function BillCreatedView({
                   )}
                 <Button
                   onClick={handleRedeem}
+                  size="lg"
+                  className="w-full"
                   disabled={
                     redeeming ||
                     (parseFloat(redeemCashbackValue || "0") <= 0 &&

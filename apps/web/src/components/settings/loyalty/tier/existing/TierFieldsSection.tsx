@@ -19,10 +19,11 @@ import {
 } from "@reelo/ui/components";
 import { Trash2 } from "lucide-react";
 
-/** Form values shape for the single tier settings form (pointsPerRupee + onFinalAmount + tiers). */
+/** Form values shape for the single tier settings form (pointsPerRupee + onFinalAmount + allowSameBillRedemption + tiers). */
 export interface TierSettingsFormValues {
   pointsPerRupee: number;
   onFinalAmount: boolean;
+  allowSameBillRedemption: boolean;
   tiers: Array<{
     id?: string;
     name: string;

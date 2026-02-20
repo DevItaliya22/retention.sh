@@ -82,11 +82,24 @@ export const GET = withAdminAuth<{ id: string }>(
         );
       }
 
+      const pointValueKinds = ["AMOUNT_SPENT_POINTS", "VISIT_POINTS"] as const;
       const earned = bill.transactions
-        .filter((pt) => pt.type === "EARNED")
+        .filter(
+          (pt) =>
+            pt.type === "EARNED" &&
+            pointValueKinds.includes(
+              pt.valueKind as (typeof pointValueKinds)[number],
+            ),
+        )
         .reduce((s, pt) => s + Math.max(0, pt.amount), 0);
       const redeemed = bill.transactions
-        .filter((pt) => pt.type === "REDEEMED")
+        .filter(
+          (pt) =>
+            pt.type === "REDEEMED" &&
+            pointValueKinds.includes(
+              pt.valueKind as (typeof pointValueKinds)[number],
+            ),
+        )
         .reduce((s, pt) => s + Math.abs(pt.amount), 0);
 
       const formattedBill = {

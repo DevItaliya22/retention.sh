@@ -117,8 +117,8 @@ export function ReferralLandingPageClient({
           {referralProgram.informationSections &&
             referralProgram.informationSections.length > 0 && (
               <div className="space-y-4">
-                {referralProgram.informationSections.map((section, index) => (
-                  <div key={index}>
+                {referralProgram.informationSections.map((section) => (
+                  <div key={section.title}>
                     <h3 className="mb-1 font-semibold">{section.title}</h3>
                     <p className="text-muted-foreground text-sm">
                       {section.content}

@@ -179,21 +179,40 @@ export async function getRedeemableInfo(
     ? calculatePointsEarnedForBill(amountForEarning, context, { resolvedTier })
     : 0;
 
+  const visitQualifies =
+    context.type !== "VISIT_MADE" ||
+    isVisitQualifying(context.config, wallet?.lastVisitAt ?? null);
+  const rawEarnable = visitQualifies
+    ? calculatePointsEarnedForBill(amountForEarning, context, { resolvedTier })
+    : 0;
+
   const cashbackBal = wallet?.cashbackBalance ?? 0;
   const amountSpentBal = wallet?.amountSpentBalance ?? 0;
   const visitPointsBal = wallet?.visitPointsBalance ?? 0;
 
-  // Same-bill rule: cannot redeem cashback just earned on this bill.
-  const availableCashback = Math.max(
-    0,
-    cashbackBal - (cashbackEarnedThisBill || 0),
-  );
+  // Same-bill rule: when allowSameBillRedemption is false, exclude earned this bill from redeemable.
+  const allowSameBill =
+    "allowSameBillRedemption" in context.config
+      ? (context.config.allowSameBillRedemption ??
+        (isCashbackType ? false : true))
+      : isCashbackType
+        ? false
+        : true;
+  const availableCashback =
+    isCashbackType && !allowSameBill
+      ? Math.max(0, cashbackBal - (cashbackEarnedThisBill || 0))
+      : cashbackBal;
+
+  const pointsBal =
+    context.type === "AMOUNT_SPENT" ? amountSpentBal : visitPointsBal;
+  const effectivePointsForRedeem =
+    !isCashbackType && !allowSameBill
+      ? Math.max(0, pointsBal - (rawEarnable > 0 ? rawEarnable : 0))
+      : pointsBal;
 
   const balanceForRedeemable = isCashbackType
     ? availableCashback
-    : context.type === "AMOUNT_SPENT"
-      ? amountSpentBal
-      : visitPointsBal;
+    : effectivePointsForRedeem;
 
   const maxRedeemable = calculateRedeemable(
     safeAmount(billAmount),
@@ -214,26 +233,17 @@ export async function getRedeemableInfo(
         ? (loyalty.visitMadeConfig?.rewardStages ?? [])
         : [];
 
-  const pointsBal =
-    context.type === "AMOUNT_SPENT" ? amountSpentBal : visitPointsBal;
-
   const rewardStages: RewardStageRedeemInfo[] = stages.map((s) => ({
     id: s.id,
     rewardName: s.rewardName,
     rewardType: s.rewardType,
     pointsRequired: s.pointsRequired,
-    canRedeem: s.pointsRequired <= pointsBal,
+    canRedeem: s.pointsRequired <= effectivePointsForRedeem,
     freeItemName: s.freeItemName,
     percentageValue: s.percentageValue,
     cashAmount: s.cashAmount,
   }));
 
-  const visitQualifies =
-    context.type !== "VISIT_MADE" ||
-    isVisitQualifying(context.config, wallet?.lastVisitAt ?? null);
-  const rawEarnable = visitQualifies
-    ? calculatePointsEarnedForBill(amountForEarning, context, { resolvedTier })
-    : 0;
   const earnablePoints = isCashbackType
     ? cashbackEarned
     : Math.max(0, rawEarnable);
@@ -250,7 +260,9 @@ export async function getRedeemableInfo(
 
   return {
     loyaltyType: context.type,
-    availableForRedeem: isCashbackType ? availableCashback : pointsBal,
+    availableForRedeem: isCashbackType
+      ? availableCashback
+      : effectivePointsForRedeem,
     maxRedeemable: isCashbackType ? maxRedeemableCashback : maxRedeemablePoints,
     cashbackEarnedThisBill: cashbackEarned,
     earnablePoints,

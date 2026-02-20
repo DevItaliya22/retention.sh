@@ -6,27 +6,51 @@ enum CampaignRewardType {
 }
 
 model Campaign {
-    id          String @id @default(uuid())
-    slug        String @unique
+    id   String @id @default(uuid())
+    slug String @unique
 
-    title       String
-    description String
+    title       String?
+    description String?
 
-    contactNumber String
+    contactNumber String?
     expiresAt     DateTime // mainly for saving date (also to display in UI)
+
+    targetCustomerTags String[]       @default([])
+    status             CampaignStatus @default(DRAFT)
 
     emailSubject String?
 
-    branding Branding? @relation(fields: [brandingId], references: [id], onDelete: SetNull)
-    brandingId String?   @unique
+    // Campaign-specific branding
+    themeColor  String?
+    textColor   String?
+    logo        String?
+    bannerImage String?
 
-    rewardType CampaignRewardType @default(FREE_ITEM)
+    // Reward configuration
+    rewardType           CampaignRewardType @default(FREE_ITEM)
+    rewardValue          String? // e.g. "10% OFF", "₹200 OFF", "Free Dessert"
+    appliesTo            BenefitAppliesTo   @default(ENTIRE_PURCHASE)
+    maxRedemptionAmount  Float?
+    maxRedemptionEnabled Boolean            @default(false)
+
+    // Minimum purchase requirements (toggle + value pairs)
+    minPurchaseForEarningEnabled    Boolean @default(false)
+    minPurchaseForEarning           Float?
+    minPurchaseForRedemptionEnabled Boolean @default(false)
+    minPurchaseForRedemption        Float?
+
+    // Whether the cashback earned from this campaign is instantly redeemable on the same bill
+    instantCashbackRedeemable Boolean @default(false)
+
+    // Terms & conditions
+    redemptionLimit    RedemptionLimit @default(ONCE)
+    termsAndConditions String[]        @default([])
 
     whatsappEnabled Boolean @default(false)
     emailEnabled    Boolean @default(false)
 
     businessId String
-    business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)    
+    business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
 
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt

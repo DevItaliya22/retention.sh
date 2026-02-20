@@ -69,8 +69,10 @@ function CategoryRow({
         )}
       </span>
       <div
+        role="group"
         className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 [.group:focus-within_&]:opacity-100"
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
       >
         <Button
           variant="ghost"

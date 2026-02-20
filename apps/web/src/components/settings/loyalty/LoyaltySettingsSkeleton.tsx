@@ -126,6 +126,17 @@ function CashbackSkeleton() {
             </div>
           </div>
         </div>
+        <div className={SETTINGS_ROW_CLASS}>
+          <div className={SETTINGS_LABEL_CLASS}>
+            <Label className="text-sm">
+              Allow customers to use cashback earned on this bill on the same
+              bill
+            </Label>
+          </div>
+          <div className={SETTINGS_CONTROL_CLASS}>
+            <Skeleton className="h-6 w-11 rounded-full" />
+          </div>
+        </div>
         <div className="space-y-4 border-t pt-6">
           <div className={SETTINGS_ROW_CLASS}>
             <div className={SETTINGS_LABEL_CLASS}>
@@ -196,14 +207,22 @@ function TierConfigSkeleton() {
         <div className={SETTINGS_ROW_CLASS}>
           <div className={SETTINGS_LABEL_CLASS}>
             <Label className="text-sm">
-              Max cashback cap per transaction (global fallback)
+              Calculate cashback on final amount (after store discounts and tax)
             </Label>
           </div>
           <div className={SETTINGS_CONTROL_CLASS}>
-            <div className="flex items-center gap-2">
-              <Skeleton className="h-6 w-11 rounded-full" />
-              <Skeleton className="h-9 flex-1" />
-            </div>
+            <Skeleton className="h-6 w-11 rounded-full" />
+          </div>
+        </div>
+        <div className={SETTINGS_ROW_CLASS}>
+          <div className={SETTINGS_LABEL_CLASS}>
+            <Label className="text-sm">
+              Allow customers to use cashback earned on this bill on the same
+              bill
+            </Label>
+          </div>
+          <div className={SETTINGS_CONTROL_CLASS}>
+            <Skeleton className="h-6 w-11 rounded-full" />
           </div>
         </div>
       </CardContent>
@@ -280,6 +299,16 @@ function AmountSpentSkeleton() {
             <Skeleton className="h-9 w-full" />
           </div>
         </div>
+        <div className={SETTINGS_ROW_CLASS}>
+          <div className={SETTINGS_LABEL_CLASS}>
+            <Label className="text-sm">
+              Allow customers to use points earned on this bill on the same bill
+            </Label>
+          </div>
+          <div className={SETTINGS_CONTROL_CLASS}>
+            <Skeleton className="h-6 w-11 rounded-full" />
+          </div>
+        </div>
       </CardContent>
       <CardFooter className="flex justify-end border-t px-6 py-4">
         <Skeleton className="h-9 w-32" />
@@ -312,6 +341,16 @@ function VisitMadeSkeleton() {
           <div className={SETTINGS_LABEL_CLASS}>
             <Label className="text-sm">
               Require minimum time between visits to count as separate
+            </Label>
+          </div>
+          <div className={SETTINGS_CONTROL_CLASS}>
+            <Skeleton className="h-6 w-11 rounded-full" />
+          </div>
+        </div>
+        <div className={SETTINGS_ROW_CLASS}>
+          <div className={SETTINGS_LABEL_CLASS}>
+            <Label className="text-sm">
+              Allow customers to use points earned on this bill on the same bill
             </Label>
           </div>
           <div className={SETTINGS_CONTROL_CLASS}>

@@ -95,6 +95,7 @@ export const PUT = withAdminAuth(async (request, context) => {
         defaultCurrencyCode: validatedData.defaultCurrencyCode ?? undefined,
         registrationBonusPoints:
           validatedData.registrationBonusPoints ?? undefined,
+        nextBillNumber: validatedData.nextBillNumber ?? undefined,
         ...(mergedServiceEnabled !== undefined && {
           isServiceEnabled: mergedServiceEnabled,
         }),

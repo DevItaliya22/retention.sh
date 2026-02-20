@@ -1,0 +1,13 @@
+---
+alwaysApply: true
+---
+You never run command such as prisma generate or migrate , or pnpm run dev or build or exec lint or any other kind of command to start some process such as migartion or generation or dev server start unless explcity asked 
+
+you are allowed to run all the command such as cp , ls , cat etc which is req fo coding 
+
+also if you want to move exact copy of file from one place to another in folder system then always use command rather then copy pasting manually the whole file to save tokens 
+
+prisma / db is in packages/prisma/prisma/models for schema 
+
+web is in apps/web which is dashbaord 
+this have 4 parts , business , cashier portal , customer portal , admin-auth all parts are self explanorty 

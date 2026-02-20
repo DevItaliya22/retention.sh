@@ -570,6 +570,24 @@ export async function convertPointsForBill(
       ? Math.max(0, wallet?.amountSpentBalance ?? 0)
       : Math.max(0, wallet?.visitPointsBalance ?? 0);
 
+  const allowSameBill = context.config.allowSameBillRedemption ?? true;
+  let effectivePointsBalance = pointsBalance;
+  if (!allowSameBill) {
+    const earnedOnThisBill = await tx.transaction.aggregate({
+      where: {
+        billId,
+        type: TransactionType.EARNED,
+        valueKind:
+          context.type === "AMOUNT_SPENT"
+            ? TransactionValueKind.AMOUNT_SPENT_POINTS
+            : TransactionValueKind.VISIT_POINTS,
+      },
+      _sum: { amount: true },
+    });
+    const pointsEarnedThisBill = Math.max(0, earnedOnThisBill._sum.amount ?? 0);
+    effectivePointsBalance = Math.max(0, pointsBalance - pointsEarnedThisBill);
+  }
+
   const loyalty = await tx.loyalty.findUnique({
     where: { businessId },
     include: {
@@ -582,7 +600,7 @@ export async function convertPointsForBill(
       ? (loyalty?.amountSpentConfig?.rewardStages ?? [])
       : (loyalty?.visitMadeConfig?.rewardStages ?? []);
   const stage = stages.find((s) => s.id === rewardStageId);
-  if (!stage || stage.pointsRequired > pointsBalance) {
+  if (!stage || stage.pointsRequired > effectivePointsBalance) {
     throw new Error("Invalid reward stage or insufficient points");
   }
 
@@ -819,7 +837,17 @@ export async function applyRedemptionForBill(
         ? visitPointsBal
         : 0;
 
-  const availableCashback = Math.max(0, cashbackBal - cashbackEarnedThisBill);
+  const allowSameBill =
+    "allowSameBillRedemption" in context.config
+      ? (context.config.allowSameBillRedemption ??
+        (isCashbackType ? false : true))
+      : isCashbackType
+        ? false
+        : true;
+  const availableCashback =
+    isCashbackType && !allowSameBill
+      ? Math.max(0, cashbackBal - cashbackEarnedThisBill)
+      : cashbackBal;
   const balanceForRedeemable = isCashbackType
     ? availableCashback
     : pointsBalance;
@@ -1246,6 +1274,7 @@ export async function expirePointsForBusiness(params: {
         in: [
           TransactionValueKind.AMOUNT_SPENT_POINTS,
           TransactionValueKind.VISIT_POINTS,
+          TransactionValueKind.CASHBACK,
         ],
       },
       ...(params.businessId ? { businessId: params.businessId } : {}),

@@ -40,6 +40,7 @@ export interface CashbackContext {
   redemptionBillLimitAmount: number | null;
   redemptionBillLimitPercentage: number | null;
   pointExpiryDays: number | null;
+  allowSameBillRedemption: boolean;
 }
 
 export interface TierContext {
@@ -58,6 +59,7 @@ export interface TierContext {
     maxCashbackCap: number | null;
   }>;
   pointExpiryDays: number | null;
+  allowSameBillRedemption: boolean;
 }
 
 export interface AmountSpentContext {
@@ -65,6 +67,7 @@ export interface AmountSpentContext {
   onFinalAmount: boolean;
   maxPointsPerPurchase: number | null;
   pointExpiryDays: number | null;
+  allowSameBillRedemption: boolean;
 }
 
 export interface VisitMadeContext {
@@ -73,6 +76,7 @@ export interface VisitMadeContext {
   visitIntervalValue: number | null;
   visitIntervalUnit: string | null;
   pointExpiryDays: number | null;
+  allowSameBillRedemption: boolean;
 }
 
 /** Raw loyalty record shape (from Prisma findUnique/findFirst). */
@@ -93,10 +97,12 @@ export interface LoyaltyRecordInput {
     redemptionBillLimitEnabled?: boolean | null;
     redemptionBillLimitAmount?: number | null;
     redemptionBillLimitPercentage?: number | null;
+    allowSameBillRedemption?: boolean | null;
   } | null;
   tierConfig?: {
     pointsPerRupee?: number | null;
     onFinalAmount?: boolean | null;
+    allowSameBillRedemption?: boolean | null;
     tiers?: Array<{
       id: string;
       name: string;
@@ -114,12 +120,14 @@ export interface LoyaltyRecordInput {
     pointsPerRupee?: number | null;
     onFinalAmount?: boolean | null;
     maxPointsPerPurchase?: number | null;
+    allowSameBillRedemption?: boolean | null;
   } | null;
   visitMadeConfig?: {
     pointsPerVisit?: number | null;
     visitIntervalEnabled?: boolean | null;
     visitIntervalValue?: number | null;
     visitIntervalUnit?: string | null;
+    allowSameBillRedemption?: boolean | null;
   } | null;
 }
 
@@ -158,6 +166,7 @@ export function loyaltyRecordToContext(
           redemptionBillLimitPercentage:
             cc.redemptionBillLimitPercentage ?? null,
           pointExpiryDays: loyalty.pointExpiryDays ?? null,
+          allowSameBillRedemption: cc.allowSameBillRedemption ?? false,
         },
       };
     case "TIER":
@@ -181,6 +190,7 @@ export function loyaltyRecordToContext(
             maxCashbackCap: t.maxCashbackCap ?? null,
           })),
           pointExpiryDays: loyalty.pointExpiryDays ?? null,
+          allowSameBillRedemption: tc.allowSameBillRedemption ?? false,
         },
       };
     case "AMOUNT_SPENT":
@@ -192,6 +202,7 @@ export function loyaltyRecordToContext(
           onFinalAmount: ac.onFinalAmount ?? false,
           maxPointsPerPurchase: ac.maxPointsPerPurchase ?? null,
           pointExpiryDays: loyalty.pointExpiryDays ?? null,
+          allowSameBillRedemption: ac.allowSameBillRedemption ?? true,
         },
       };
     case "VISIT_MADE":
@@ -204,6 +215,7 @@ export function loyaltyRecordToContext(
           visitIntervalValue: vc.visitIntervalValue ?? null,
           visitIntervalUnit: vc.visitIntervalUnit ?? null,
           pointExpiryDays: loyalty.pointExpiryDays ?? null,
+          allowSameBillRedemption: vc.allowSameBillRedemption ?? true,
         },
       };
     default:
@@ -234,7 +246,7 @@ export interface ValidateTierRangesResult {
 }
 
 /**
- * Validate tier ranges: no negative values, no overlaps, contiguous (tier[i].max === tier[i+1].min).
+ * Validate tier ranges: no negative values, min < max, and no overlaps (gaps allowed).
  * Highest-rank tier's max is optional (leave empty; all customers with spend >= its min stay in that tier).
  * Use on both client (form) and server (API create/update).
  */
@@ -276,9 +288,9 @@ export function validateTierRanges(
       const next = sorted[i + 1];
       if (next != null && max != null) {
         const nextMin = Number(next.minLifetimeSpend);
-        if (nextMin !== max) {
+        if (max > nextMin) {
           errors.push(
-            `Tiers must be contiguous: tier (rank ${t.rank}) max (${max}) should equal next tier min (${nextMin}).`,
+            `Tiers must not overlap: tier (rank ${t.rank}) max (${max}) must be less than or equal to next tier min (${nextMin}).`,
           );
         }
       }
@@ -291,14 +303,14 @@ export function validateTierRanges(
   };
 }
 
-/** Resolve which tier the customer belongs to based on lifetime spend. Highest-rank tier has no upper bound (spend >= its min keeps customer in that tier). */
+/** Resolve which tier the customer belongs to based on lifetime spend. Highest-rank tier has no upper bound (spend >= its min keeps customer in that tier). When ranges overlap, returns the tier with the lower cashback (conservative). */
 export function resolveTierForLifetimeSpend(
   tiers: ResolvedTier[],
   lifetimeSpend: number,
 ): ResolvedTier | null {
   if (tiers.length === 0) return null;
   const maxRank = Math.max(...tiers.map((t) => t.rank));
-  let best: ResolvedTier | null = null;
+  const matching: ResolvedTier[] = [];
   for (const t of tiers) {
     if (lifetimeSpend < t.minLifetimeSpend) continue;
     // Highest-rank tier: no upper bound (ignore maxLifetimeSpend so customers above max still get top tier).
@@ -309,14 +321,23 @@ export function resolveTierForLifetimeSpend(
     ) {
       continue;
     }
-    if (!best || t.rank > best.rank) best = t;
+    matching.push(t);
   }
-  // Fallback: first tier (lowest rank) when no tier matched (e.g. new customer at 0).
-  if (!best) {
+  if (matching.length === 0) {
     const first = tiers.reduce((a, b) => (a.rank <= b.rank ? a : b));
-    if (lifetimeSpend >= first.minLifetimeSpend) best = first;
+    if (lifetimeSpend >= first.minLifetimeSpend) return first;
+    return null;
   }
-  return best;
+  // When multiple tiers match (e.g. overlapping ranges), use the one with lower cashback (conservative).
+  return matching.reduce((a, b) =>
+    a.cashbackPercentage < b.cashbackPercentage
+      ? a
+      : a.cashbackPercentage > b.cashbackPercentage
+        ? b
+        : a.rank <= b.rank
+          ? a
+          : b,
+  );
 }
 
 /** TIER: Earned cashback (₹) using tier's cashbackPercentage. minPurchaseForRedemption applies to redemption only, not earning. */
@@ -404,7 +425,12 @@ export function calculateCashbackEarned(
   return Math.floor(capped * 100) / 100; // 2 decimal places
 }
 
-/** CASHBACK: Max redeemable (₹) on this bill from balance. */
+/**
+ * CASHBACK: Max redeemable (₹) on this bill from balance.
+ * - Same-bill rule: caller must pass balance = available cashback (e.g. wallet minus earned on this bill).
+ * - Wallet limit: when enabled, applies EITHER fixed amount (₹) OR % of balance, not both.
+ * - Bill limit: when enabled, applies EITHER fixed amount (₹) OR % of bill amount, not both.
+ */
 export function calculateCashbackRedeemable(
   billAmount: number,
   config: CashbackContext,
@@ -420,20 +446,25 @@ export function calculateCashbackRedeemable(
     if (amt < config.minPurchaseForRedemption) return 0;
   }
   let cap = bal;
+  // Wallet limit: mutually exclusive — either fixed amount (₹) or % of balance
   if (config.redemptionBalanceLimitEnabled) {
-    if (config.redemptionBalanceLimitAmount != null)
+    if (config.redemptionBalanceLimitAmount != null) {
       cap = Math.min(cap, config.redemptionBalanceLimitAmount);
-    if (config.redemptionBalanceLimitPercentage != null)
-      cap = Math.min(
-        cap,
-        (bal * config.redemptionBalanceLimitPercentage) / 100,
-      );
+    } else if (config.redemptionBalanceLimitPercentage != null) {
+      const pctCap =
+        Math.floor(bal * config.redemptionBalanceLimitPercentage * 100) / 100;
+      cap = Math.min(cap, pctCap);
+    }
   }
+  // Bill limit: mutually exclusive — either fixed amount (₹) or % of bill
   if (config.redemptionBillLimitEnabled) {
-    if (config.redemptionBillLimitAmount != null)
+    if (config.redemptionBillLimitAmount != null) {
       cap = Math.min(cap, config.redemptionBillLimitAmount);
-    if (config.redemptionBillLimitPercentage != null)
-      cap = Math.min(cap, (amt * config.redemptionBillLimitPercentage) / 100);
+    } else if (config.redemptionBillLimitPercentage != null) {
+      const billPctCap =
+        Math.floor(amt * config.redemptionBillLimitPercentage * 100) / 100;
+      cap = Math.min(cap, billPctCap);
+    }
   }
   return Math.min(bal, cap, amt);
 }
@@ -506,6 +537,7 @@ export function calculateRedeemable(
       100
     );
   }
+  // TIER: minPurchaseForRedemption only limits REDEMPTION (this function). It does NOT affect earning (calculateTierCashbackEarned).
   if (context.type === "TIER") {
     if (!options?.resolvedTier) return 0;
     const tier = options.resolvedTier;

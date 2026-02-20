@@ -77,11 +77,13 @@ export interface LoyaltyResponse {
     redemptionBillLimitEnabled: boolean;
     redemptionBillLimitAmount: number | null;
     redemptionBillLimitPercentage: number | null;
+    allowSameBillRedemption: boolean;
   } | null;
   tierConfig?: {
     id: string;
     pointsPerRupee: number;
     onFinalAmount: boolean;
+    allowSameBillRedemption: boolean;
     tiers: LoyaltyTier[];
   } | null;
   amountSpentConfig?: {
@@ -89,6 +91,7 @@ export interface LoyaltyResponse {
     pointsPerRupee: number;
     onFinalAmount: boolean;
     maxPointsPerPurchase: number | null;
+    allowSameBillRedemption: boolean;
     rewardStages: LoyaltyRewardStage[];
   } | null;
   visitMadeConfig?: {
@@ -97,6 +100,7 @@ export interface LoyaltyResponse {
     visitIntervalEnabled: boolean;
     visitIntervalValue: number | null;
     visitIntervalUnit: VisitIntervalUnit | null;
+    allowSameBillRedemption: boolean;
     rewardStages: LoyaltyRewardStage[];
   } | null;
 }

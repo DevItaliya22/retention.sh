@@ -20,19 +20,6 @@ import { useMemo } from "react";
 export function BillsTable() {
   const { data, isLoading, isError, error } = useBillsQuery();
 
-  if (isError) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12">
-        <p className="text-destructive text-sm font-medium">
-          Failed to load bills
-        </p>
-        <p className="text-muted-foreground mt-1 text-sm">
-          {error?.message || "Please try again later"}
-        </p>
-      </div>
-    );
-  }
-
   const bills = data?.bills ?? [];
   const businessSlug = data?.businessSlug ?? "";
   const total = data?.total ?? 0;
@@ -440,6 +427,19 @@ export function BillsTable() {
     },
     prefix: getDataTableConfig("bills").prefix,
   });
+
+  if (isError) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12">
+        <p className="text-destructive text-sm font-medium">
+          Failed to load bills
+        </p>
+        <p className="text-muted-foreground mt-1 text-sm">
+          {error?.message || "Please try again later"}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <DataTable

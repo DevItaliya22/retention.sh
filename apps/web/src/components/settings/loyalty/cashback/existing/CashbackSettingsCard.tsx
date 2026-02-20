@@ -69,6 +69,7 @@ export function CashbackSettingsCard({
       redemptionBillLimitAmount: config.redemptionBillLimitAmount ?? null,
       redemptionBillLimitPercentage:
         config.redemptionBillLimitPercentage ?? null,
+      allowSameBillRedemption: config.allowSameBillRedemption ?? false,
     },
   });
 
@@ -87,6 +88,7 @@ export function CashbackSettingsCard({
       redemptionBillLimitEnabled: values.redemptionBillLimitEnabled,
       redemptionBillLimitAmount: values.redemptionBillLimitAmount,
       redemptionBillLimitPercentage: values.redemptionBillLimitPercentage,
+      allowSameBillRedemption: values.allowSameBillRedemption,
     };
     onSave(payload, {
       onSuccess: () => form.reset(values, { keepDefaultValues: false }),
@@ -220,6 +222,29 @@ export function CashbackSettingsCard({
                 layout="settings"
               />
 
+              <FormField
+                control={form.control}
+                name="allowSameBillRedemption"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start gap-2">
+                    <FormControl>
+                      <label className="flex cursor-pointer items-center gap-2">
+                        <Switch
+                          checked={field.value ?? false}
+                          onCheckedChange={field.onChange}
+                        />
+                        <span className="text-sm font-normal">
+                          Allow customers to use cashback earned on this bill on
+                          the same bill (if off, cashback is available from the
+                          next bill only)
+                        </span>
+                      </label>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <div className="space-y-4 border-t pt-6">
                 {/* Redemption limits on wallet: label, then spacing, then switch + (when on) kind selector + one input */}
                 <div className={SETTINGS_ROW_CLASS}>
@@ -255,115 +280,109 @@ export function CashbackSettingsCard({
                       />
                     </div>
                     {form.watch("redemptionBalanceLimitEnabled") && (
-                      <div className="mt-4 flex flex-wrap items-end gap-3">
-                        <div className="flex flex-col gap-2">
-                          <FormLabel className="text-sm">
-                            Max redeemable
-                          </FormLabel>
-                          <div className="flex flex-wrap items-center gap-2">
-                            <Select
-                              value={
-                                form.watch("redemptionBalanceLimitAmount") !=
-                                null
-                                  ? "AMOUNT"
-                                  : "PERCENTAGE"
-                              }
-                              onValueChange={(v) => {
-                                if (v === "AMOUNT") {
-                                  form.setValue(
-                                    "redemptionBalanceLimitPercentage",
-                                    null,
-                                  );
-                                } else {
-                                  form.setValue(
-                                    "redemptionBalanceLimitAmount",
-                                    null,
-                                  );
-                                }
-                              }}
-                            >
-                              <SelectTrigger className="w-[130px]">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="PERCENTAGE">
-                                  % of balance
-                                </SelectItem>
-                                <SelectItem value="AMOUNT">
-                                  Cashback (₹)
-                                </SelectItem>
-                              </SelectContent>
-                            </Select>
-                            {form.watch("redemptionBalanceLimitAmount") !=
-                            null ? (
-                              <FormField
-                                control={form.control}
-                                name="redemptionBalanceLimitAmount"
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormControl>
-                                      <Input
-                                        variant="underline"
-                                        type="number"
-                                        min={0}
-                                        step="0.01"
-                                        placeholder="e.g. 500"
-                                        className="max-w-32"
-                                        {...field}
-                                        value={field.value ?? ""}
-                                        onChange={(e) => {
-                                          const v = e.target.value;
-                                          field.onChange(
-                                            v === ""
-                                              ? null
-                                              : Math.max(0, Number(v)),
-                                          );
-                                        }}
-                                        {...numericInputHandlers}
-                                      />
-                                    </FormControl>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
-                            ) : (
-                              <FormField
-                                control={form.control}
-                                name="redemptionBalanceLimitPercentage"
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormControl>
-                                      <Input
-                                        variant="underline"
-                                        type="number"
-                                        min={0}
-                                        max={100}
-                                        step="0.01"
-                                        placeholder="e.g. 50"
-                                        className="max-w-32"
-                                        {...field}
-                                        value={field.value ?? ""}
-                                        onChange={(e) => {
-                                          const v = e.target.value;
-                                          field.onChange(
-                                            v === ""
-                                              ? null
-                                              : Math.min(
-                                                  100,
-                                                  Math.max(0, Number(v)),
-                                                ),
-                                          );
-                                        }}
-                                        {...numericInputHandlers}
-                                      />
-                                    </FormControl>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
+                      <div className="mt-3 flex flex-wrap items-end gap-2">
+                        <Select
+                          value={
+                            form.watch("redemptionBalanceLimitAmount") != null
+                              ? "AMOUNT"
+                              : "PERCENTAGE"
+                          }
+                          onValueChange={(v) => {
+                            if (v === "AMOUNT") {
+                              form.setValue(
+                                "redemptionBalanceLimitPercentage",
+                                null,
+                              );
+                              form.setValue("redemptionBalanceLimitAmount", 0);
+                            } else {
+                              form.setValue(
+                                "redemptionBalanceLimitAmount",
+                                null,
+                              );
+                              form.setValue(
+                                "redemptionBalanceLimitPercentage",
+                                0,
+                              );
+                            }
+                          }}
+                        >
+                          <SelectTrigger className="w-[140px]">
+                            <SelectValue placeholder="Select type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="PERCENTAGE">
+                              % of balance
+                            </SelectItem>
+                            <SelectItem value="AMOUNT">Amount (₹)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {form.watch("redemptionBalanceLimitAmount") != null ? (
+                          <FormField
+                            control={form.control}
+                            name="redemptionBalanceLimitAmount"
+                            render={({ field }) => (
+                              <FormItem className="mb-0">
+                                <FormControl>
+                                  <Input
+                                    variant="underline"
+                                    type="number"
+                                    min={0}
+                                    step="0.01"
+                                    placeholder="e.g. 500"
+                                    className="w-[120px]"
+                                    {...field}
+                                    value={field.value ?? ""}
+                                    onChange={(e) => {
+                                      const v = e.target.value;
+                                      field.onChange(
+                                        v === ""
+                                          ? null
+                                          : Math.max(0, Number(v)),
+                                      );
+                                    }}
+                                    {...numericInputHandlers}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
                             )}
-                          </div>
-                        </div>
+                          />
+                        ) : (
+                          <FormField
+                            control={form.control}
+                            name="redemptionBalanceLimitPercentage"
+                            render={({ field }) => (
+                              <FormItem className="mb-0">
+                                <FormControl>
+                                  <Input
+                                    variant="underline"
+                                    type="number"
+                                    min={0}
+                                    max={100}
+                                    step="0.01"
+                                    placeholder="e.g. 50"
+                                    className="w-[120px]"
+                                    {...field}
+                                    value={field.value ?? ""}
+                                    onChange={(e) => {
+                                      const v = e.target.value;
+                                      field.onChange(
+                                        v === ""
+                                          ? null
+                                          : Math.min(
+                                              100,
+                                              Math.max(0, Number(v)),
+                                            ),
+                                      );
+                                    }}
+                                    {...numericInputHandlers}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        )}
                       </div>
                     )}
                   </div>
@@ -402,113 +421,103 @@ export function CashbackSettingsCard({
                       />
                     </div>
                     {form.watch("redemptionBillLimitEnabled") && (
-                      <div className="mt-4 flex flex-wrap items-end gap-3">
-                        <div className="flex flex-col gap-2">
-                          <FormLabel className="text-sm">
-                            Max redeemable
-                          </FormLabel>
-                          <div className="flex flex-wrap items-center gap-2">
-                            <Select
-                              value={
-                                form.watch("redemptionBillLimitAmount") != null
-                                  ? "AMOUNT"
-                                  : "PERCENTAGE"
-                              }
-                              onValueChange={(v) => {
-                                if (v === "AMOUNT") {
-                                  form.setValue(
-                                    "redemptionBillLimitPercentage",
-                                    null,
-                                  );
-                                } else {
-                                  form.setValue(
-                                    "redemptionBillLimitAmount",
-                                    null,
-                                  );
-                                }
-                              }}
-                            >
-                              <SelectTrigger className="w-[130px]">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="PERCENTAGE">
-                                  % of bill
-                                </SelectItem>
-                                <SelectItem value="AMOUNT">
-                                  Cashback (₹)
-                                </SelectItem>
-                              </SelectContent>
-                            </Select>
-                            {form.watch("redemptionBillLimitAmount") != null ? (
-                              <FormField
-                                control={form.control}
-                                name="redemptionBillLimitAmount"
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormControl>
-                                      <Input
-                                        variant="underline"
-                                        type="number"
-                                        min={0}
-                                        step="0.01"
-                                        placeholder="e.g. 200"
-                                        className="max-w-32"
-                                        {...field}
-                                        value={field.value ?? ""}
-                                        onChange={(e) => {
-                                          const v = e.target.value;
-                                          field.onChange(
-                                            v === ""
-                                              ? null
-                                              : Math.max(0, Number(v)),
-                                          );
-                                        }}
-                                        {...numericInputHandlers}
-                                      />
-                                    </FormControl>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
-                            ) : (
-                              <FormField
-                                control={form.control}
-                                name="redemptionBillLimitPercentage"
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormControl>
-                                      <Input
-                                        variant="underline"
-                                        type="number"
-                                        min={0}
-                                        max={100}
-                                        step="0.01"
-                                        placeholder="e.g. 20"
-                                        className="max-w-32"
-                                        {...field}
-                                        value={field.value ?? ""}
-                                        onChange={(e) => {
-                                          const v = e.target.value;
-                                          field.onChange(
-                                            v === ""
-                                              ? null
-                                              : Math.min(
-                                                  100,
-                                                  Math.max(0, Number(v)),
-                                                ),
-                                          );
-                                        }}
-                                        {...numericInputHandlers}
-                                      />
-                                    </FormControl>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
+                      <div className="mt-3 flex flex-wrap items-end gap-2">
+                        <Select
+                          value={
+                            form.watch("redemptionBillLimitAmount") != null
+                              ? "AMOUNT"
+                              : "PERCENTAGE"
+                          }
+                          onValueChange={(v) => {
+                            if (v === "AMOUNT") {
+                              form.setValue(
+                                "redemptionBillLimitPercentage",
+                                null,
+                              );
+                              form.setValue("redemptionBillLimitAmount", 0);
+                            } else {
+                              form.setValue("redemptionBillLimitAmount", null);
+                              form.setValue("redemptionBillLimitPercentage", 0);
+                            }
+                          }}
+                        >
+                          <SelectTrigger className="w-[140px]">
+                            <SelectValue placeholder="Select type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="PERCENTAGE">
+                              % of bill
+                            </SelectItem>
+                            <SelectItem value="AMOUNT">Amount (₹)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {form.watch("redemptionBillLimitAmount") != null ? (
+                          <FormField
+                            control={form.control}
+                            name="redemptionBillLimitAmount"
+                            render={({ field }) => (
+                              <FormItem className="mb-0">
+                                <FormControl>
+                                  <Input
+                                    variant="underline"
+                                    type="number"
+                                    min={0}
+                                    step="0.01"
+                                    placeholder="e.g. 200"
+                                    className="w-[120px]"
+                                    {...field}
+                                    value={field.value ?? ""}
+                                    onChange={(e) => {
+                                      const v = e.target.value;
+                                      field.onChange(
+                                        v === ""
+                                          ? null
+                                          : Math.max(0, Number(v)),
+                                      );
+                                    }}
+                                    {...numericInputHandlers}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
                             )}
-                          </div>
-                        </div>
+                          />
+                        ) : (
+                          <FormField
+                            control={form.control}
+                            name="redemptionBillLimitPercentage"
+                            render={({ field }) => (
+                              <FormItem className="mb-0">
+                                <FormControl>
+                                  <Input
+                                    variant="underline"
+                                    type="number"
+                                    min={0}
+                                    max={100}
+                                    step="0.01"
+                                    placeholder="e.g. 20"
+                                    className="w-[120px]"
+                                    {...field}
+                                    value={field.value ?? ""}
+                                    onChange={(e) => {
+                                      const v = e.target.value;
+                                      field.onChange(
+                                        v === ""
+                                          ? null
+                                          : Math.min(
+                                              100,
+                                              Math.max(0, Number(v)),
+                                            ),
+                                      );
+                                    }}
+                                    {...numericInputHandlers}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        )}
                       </div>
                     )}
                   </div>

@@ -140,7 +140,7 @@ export function CustomerDetailPageClient({
               <Skeleton className="h-7 w-48" />
             ) : (
               <h2 className="truncate text-xl font-semibold tracking-tight">
-                {customer?.name ?? "—"}
+                {customer?.name || "—"}
               </h2>
             )}
             <div className="flex flex-wrap items-center gap-2">

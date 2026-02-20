@@ -94,6 +94,7 @@ export function AmountSpentSettingsCard({
       pointsPerRupee: config.pointsPerRupee ?? 1,
       onFinalAmount: config.onFinalAmount ?? false,
       maxPointsPerPurchase: config.maxPointsPerPurchase ?? null,
+      allowSameBillRedemption: config.allowSameBillRedemption ?? true,
       rewardStages:
         config.rewardStages?.length > 0
           ? config.rewardStages.map(mapStageToForm)
@@ -112,6 +113,7 @@ export function AmountSpentSettingsCard({
         pointsPerRupee: values.pointsPerRupee ?? 1,
         onFinalAmount: values.onFinalAmount ?? false,
         maxPointsPerPurchase: values.maxPointsPerPurchase ?? null,
+        allowSameBillRedemption: values.allowSameBillRedemption ?? true,
       },
       rewardStages: (values.rewardStages ?? []).map((s) => ({
         pointsRequired: s.pointsRequired,
@@ -239,6 +241,29 @@ export function AmountSpentSettingsCard({
                       </FormControl>
                       <FormMessage />
                     </div>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="allowSameBillRedemption"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center gap-2">
+                    <FormControl>
+                      <label className="flex cursor-pointer items-center gap-2">
+                        <Switch
+                          checked={field.value ?? true}
+                          onCheckedChange={field.onChange}
+                        />
+                        <span className="text-sm font-normal">
+                          Allow customers to use points earned on this bill on
+                          the same bill (if off, points are available from the
+                          next bill only)
+                        </span>
+                      </label>
+                    </FormControl>
+                    <FormMessage />
                   </FormItem>
                 )}
               />
