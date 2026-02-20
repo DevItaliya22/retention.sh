@@ -388,6 +388,7 @@ function valuesToPayload(values: LoyaltyProgramFormValues): LoyaltyCreateInput {
           redemptionBillLimitAmount: values.redemptionBillLimitAmount ?? null,
           redemptionBillLimitPercentage:
             values.redemptionBillLimitPercentage ?? null,
+          allowSameBillRedemption: values.allowSameBillRedemption ?? false,
         },
       };
     case "TIER":
@@ -397,6 +398,7 @@ function valuesToPayload(values: LoyaltyProgramFormValues): LoyaltyCreateInput {
         tierConfig: {
           pointsPerRupee: values.pointsPerRupee ?? 1,
           onFinalAmount: values.onFinalAmount ?? false,
+          allowSameBillRedemption: values.allowSameBillRedemption ?? false,
           tiers: (values.tiers ?? []).map((t) => ({
             name: t.name,
             rank: t.rank,
@@ -419,6 +421,7 @@ function valuesToPayload(values: LoyaltyProgramFormValues): LoyaltyCreateInput {
           pointsPerRupee: values.pointsPerRupee ?? 1,
           onFinalAmount: values.onFinalAmount ?? false,
           maxPointsPerPurchase: values.maxPointsPerPurchase ?? null,
+          allowSameBillRedemption: values.allowSameBillRedemption ?? true,
         },
         rewardStages: (values.rewardStages ?? []).map((s) => ({
           pointsRequired: s.pointsRequired,
@@ -452,6 +455,7 @@ function valuesToPayload(values: LoyaltyProgramFormValues): LoyaltyCreateInput {
               | "DAY"
               | "WEEK"
               | "MONTH") ?? null,
+          allowSameBillRedemption: values.allowSameBillRedemption ?? true,
         },
         rewardStages: (values.rewardStages ?? []).map((s) => ({
           pointsRequired: s.pointsRequired,
