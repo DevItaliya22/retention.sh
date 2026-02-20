@@ -22,19 +22,6 @@ import { useMemo } from "react";
 export function FeedbackStatsTable() {
   const { data, isLoading, isError, error } = useFeedbackStatsQuery();
 
-  if (isError) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12">
-        <p className="text-destructive text-sm font-medium">
-          Failed to load feedback stats
-        </p>
-        <p className="text-muted-foreground mt-1 text-sm">
-          {error?.message || "Please try again later"}
-        </p>
-      </div>
-    );
-  }
-
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
   const perPage = data?.perPage ?? 10;
@@ -239,6 +226,19 @@ export function FeedbackStatsTable() {
     },
     prefix: getDataTableConfig("feedbackStats").prefix,
   });
+
+  if (isError) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12">
+        <p className="text-destructive text-sm font-medium">
+          Failed to load feedback stats
+        </p>
+        <p className="text-muted-foreground mt-1 text-sm">
+          {error?.message || "Please try again later"}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <DataTable

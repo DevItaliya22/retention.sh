@@ -8,6 +8,7 @@ model Business {
   defaultCurrencySymbol   String    @default("₹")
   defaultCurrencyCode     String    @default("INR")
   registrationBonusPoints Int       @default(0) // Bonus points when customer registers from loyalty login page
+  nextBillNumber          Int       @default(1) // Next bill number to use in cashier (auto-incremented on bill create)
   defaultBranding         Branding?
 
   // Service toggles: { referral?: boolean, loyalty?: boolean, ... }

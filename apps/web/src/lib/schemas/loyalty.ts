@@ -75,6 +75,8 @@ export const cashbackConfigSchema = z.object({
     .max(100)
     .optional()
     .nullable(),
+
+  allowSameBillRedemption: z.boolean().default(false),
 });
 export type CashbackConfigInput = z.infer<typeof cashbackConfigSchema>;
 
@@ -101,6 +103,7 @@ export type LoyaltyTierInput = z.infer<typeof loyaltyTierSchema>;
 const tierConfigSchemaBase = z.object({
   pointsPerRupee: z.coerce.number().min(0).default(1),
   onFinalAmount: z.boolean().default(false),
+  allowSameBillRedemption: z.boolean().default(false),
   tiers: z.array(loyaltyTierSchema).min(1, "At least one tier is required"),
 });
 
@@ -128,6 +131,7 @@ export const amountSpentConfigSchema = z.object({
   pointsPerRupee: z.coerce.number().min(0).default(1),
   onFinalAmount: z.boolean().default(false),
   maxPointsPerPurchase: z.coerce.number().int().min(0).optional().nullable(),
+  allowSameBillRedemption: z.boolean().default(true),
 });
 export type AmountSpentConfigInput = z.infer<typeof amountSpentConfigSchema>;
 
@@ -138,6 +142,7 @@ export const visitMadeConfigSchema = z.object({
   visitIntervalEnabled: z.boolean().default(false),
   visitIntervalValue: z.coerce.number().int().min(1).optional().nullable(),
   visitIntervalUnit: visitIntervalUnitSchema.optional().nullable(),
+  allowSameBillRedemption: z.boolean().default(true),
 });
 export type VisitMadeConfigInput = z.infer<typeof visitMadeConfigSchema>;
 

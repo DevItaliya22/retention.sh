@@ -22,6 +22,7 @@ export const updateBusinessSchema = z.object({
     .min(0)
     .max(999999)
     .optional(),
+  nextBillNumber: z.coerce.number().int().min(1).max(999999999).optional(),
   /** Partial service enable updates: { referral?: boolean, loyalty?: boolean } */
   serviceEnabled: isServiceEnabledSchema,
   defaultBranding: z

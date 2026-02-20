@@ -151,19 +151,32 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
             where: {
               type: { in: ["EARNED", "REDEEMED"] },
             },
-            select: { type: true, amount: true },
+            select: { type: true, amount: true, valueKind: true },
           },
         },
       }),
       db.bill.count({ where }),
     ]);
 
+    const pointValueKinds = ["AMOUNT_SPENT_POINTS", "VISIT_POINTS"] as const;
     const formattedBills = bills.map((bill) => {
       const earned = bill.transactions
-        .filter((pt) => pt.type === "EARNED")
+        .filter(
+          (pt) =>
+            pt.type === "EARNED" &&
+            pointValueKinds.includes(
+              pt.valueKind as (typeof pointValueKinds)[number],
+            ),
+        )
         .reduce((s, pt) => s + Math.max(0, pt.amount), 0);
       const redeemed = bill.transactions
-        .filter((pt) => pt.type === "REDEEMED")
+        .filter(
+          (pt) =>
+            pt.type === "REDEEMED" &&
+            pointValueKinds.includes(
+              pt.valueKind as (typeof pointValueKinds)[number],
+            ),
+        )
         .reduce((s, pt) => s + Math.abs(pt.amount), 0);
       return {
         id: bill.id,

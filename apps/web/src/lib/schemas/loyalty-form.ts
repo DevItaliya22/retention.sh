@@ -28,6 +28,7 @@ export const cashbackConfigStepSchema = z.object({
   minPurchaseForEarning: z.coerce.number().min(0).optional().nullable(),
   minPurchaseForRedemptionEnabled: z.boolean().default(false),
   minPurchaseForRedemption: z.coerce.number().min(0).optional().nullable(),
+  allowSameBillRedemption: z.boolean().default(false),
 });
 
 export const cashbackRedemptionLimitsStepSchema = z.object({
@@ -54,6 +55,7 @@ export const cashbackRedemptionLimitsStepSchema = z.object({
 export const tierConfigStepSchema = z.object({
   pointsPerRupee: z.coerce.number().min(0).default(1),
   onFinalAmount: z.boolean().default(false),
+  allowSameBillRedemption: z.boolean().default(false),
 });
 
 const tierItemSchema = z.object({
@@ -97,6 +99,7 @@ export const amountSpentConfigStepSchema = z.object({
   pointsPerRupee: z.coerce.number().min(0).default(1),
   onFinalAmount: z.boolean().default(false),
   maxPointsPerPurchase: z.coerce.number().int().min(0).optional().nullable(),
+  allowSameBillRedemption: z.boolean().default(true),
 });
 
 // ─── Visit Made Step ───────────────────────────────────────────────────────
@@ -106,6 +109,7 @@ export const visitMadeConfigStepSchema = z.object({
   visitIntervalEnabled: z.boolean().default(false),
   visitIntervalValue: z.coerce.number().int().min(1).optional().nullable(),
   visitIntervalUnit: visitIntervalUnitSchema.optional().nullable(),
+  allowSameBillRedemption: z.boolean().default(true),
 });
 
 // ─── Reward Stages (Amount Spent + Visit Made) ──────────────────────────────
@@ -169,6 +173,7 @@ export type LoyaltyProgramFormValues = {
   redemptionBillLimitEnabled?: boolean;
   redemptionBillLimitAmount?: number | null;
   redemptionBillLimitPercentage?: number | null;
+  allowSameBillRedemption?: boolean;
 
   // Tier
   pointsPerRupee?: number;
@@ -188,7 +193,7 @@ export type LoyaltyProgramFormValues = {
   // Amount Spent
   maxPointsPerPurchase?: number | null;
 
-  // Visit Made
+  // Visit Made (allowSameBillRedemption shared by Tier, Amount Spent, Visit Made)
   pointsPerVisit?: number;
   visitIntervalEnabled?: boolean;
   visitIntervalValue?: number | null;

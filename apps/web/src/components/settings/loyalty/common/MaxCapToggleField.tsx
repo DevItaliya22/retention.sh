@@ -68,9 +68,11 @@ export function MaxCapToggleField<T extends FieldValues>({
                 )}
                 {tooltip && (
                   <span
+                    role="note"
                     className="text-muted-foreground text-xs"
                     title={tooltip}
                     onClick={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => e.stopPropagation()}
                   >
                     (i)
                   </span>

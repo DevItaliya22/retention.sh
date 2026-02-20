@@ -23,19 +23,6 @@ import { useMemo } from "react";
 export function CustomersTable() {
   const { data, isLoading, isError, error } = useCustomersQuery();
 
-  if (isError) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12">
-        <p className="text-destructive text-sm font-medium">
-          Failed to load customers
-        </p>
-        <p className="text-muted-foreground mt-1 text-sm">
-          {error?.message || "Please try again later"}
-        </p>
-      </div>
-    );
-  }
-
   const customers = data?.items ?? [];
   const total = data?.total ?? 0;
   const perPage = data?.perPage ?? 10;
@@ -327,6 +314,19 @@ export function CustomersTable() {
     },
     prefix: getDataTableConfig("customers").prefix,
   });
+
+  if (isError) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12">
+        <p className="text-destructive text-sm font-medium">
+          Failed to load customers
+        </p>
+        <p className="text-muted-foreground mt-1 text-sm">
+          {error?.message || "Please try again later"}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <DataTable

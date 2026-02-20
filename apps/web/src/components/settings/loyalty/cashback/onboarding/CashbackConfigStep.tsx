@@ -113,6 +113,28 @@ export function CashbackConfigStep() {
         label="Min purchase for redemption"
         placeholder="0"
       />
+      <FormField
+        control={form.control}
+        name="allowSameBillRedemption"
+        render={({ field }) => (
+          <FormItem className="flex flex-row items-center gap-2">
+            <FormControl>
+              <label className="flex cursor-pointer items-center gap-2">
+                <Switch
+                  checked={field.value ?? false}
+                  onCheckedChange={field.onChange}
+                />
+                <span className="text-sm font-normal">
+                  Allow customers to use cashback earned on this bill on the
+                  same bill (if off, cashback is available from the next bill
+                  only)
+                </span>
+              </label>
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
     </div>
   );
 }

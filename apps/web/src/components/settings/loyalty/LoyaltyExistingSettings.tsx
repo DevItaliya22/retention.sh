@@ -103,6 +103,7 @@ export function LoyaltyExistingSettings() {
           tierConfig={{
             pointsPerRupee: loyalty.tierConfig.pointsPerRupee,
             onFinalAmount: loyalty.tierConfig.onFinalAmount ?? false,
+            allowSameBillRedemption: loyalty.tierConfig.allowSameBillRedemption,
             tiers: loyalty.tierConfig.tiers,
           }}
           onSave={async (data, options) => {
@@ -112,6 +113,7 @@ export function LoyaltyExistingSettings() {
                 tierConfig: {
                   pointsPerRupee: data.pointsPerRupee,
                   onFinalAmount: data.onFinalAmount,
+                  allowSameBillRedemption: data.allowSameBillRedemption,
                 },
               });
               await updateMutation.mutateAsync({

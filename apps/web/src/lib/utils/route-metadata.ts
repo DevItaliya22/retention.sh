@@ -105,6 +105,14 @@ const ROUTE_METADATA_MAP: Record<string, RouteMetadataConfig> = {
     title: "Feedback stats",
     description: "Customer feedback responses by rating and date",
   },
+  "/campaigns": {
+    title: "Campaigns",
+    description: "Create and manage marketing campaigns",
+  },
+  "/campaigns/create/[id]": {
+    title: (segments) => "Edit campaign",
+    description: "Edit your campaign draft",
+  },
   "/cashier/[businessSlug]/[cashierSlug]": {
     title: (segments) => `Cashier Login - ${formatSlug(segments[1])}`,
     description: "Sign in to your cashier account",
@@ -168,6 +176,15 @@ function getRoutePattern(
   // Handle customers detail
   if (filteredSegments[0] === "customers" && filteredSegments.length === 2) {
     return "/customers/[slugId]";
+  }
+
+  // Handle campaign create/edit
+  if (
+    filteredSegments[0] === "campaigns" &&
+    filteredSegments[1] === "create" &&
+    filteredSegments.length === 3
+  ) {
+    return "/campaigns/create/[id]";
   }
 
   // Handle cashier portal routes

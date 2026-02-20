@@ -161,6 +161,8 @@ export const POST = withAdminAuth(async (request, context) => {
               data.cashbackConfig.redemptionBillLimitAmount ?? null,
             redemptionBillLimitPercentage:
               data.cashbackConfig.redemptionBillLimitPercentage ?? null,
+            allowSameBillRedemption:
+              data.cashbackConfig.allowSameBillRedemption ?? false,
           },
         });
       }
@@ -171,6 +173,8 @@ export const POST = withAdminAuth(async (request, context) => {
             loyaltyId: loyalty.id,
             pointsPerRupee: data.tierConfig.pointsPerRupee ?? 1,
             onFinalAmount: data.tierConfig.onFinalAmount ?? false,
+            allowSameBillRedemption:
+              data.tierConfig.allowSameBillRedemption ?? false,
           },
         });
         const tiers = data.tierConfig.tiers;
@@ -209,6 +213,8 @@ export const POST = withAdminAuth(async (request, context) => {
             onFinalAmount: data.amountSpentConfig.onFinalAmount ?? false,
             maxPointsPerPurchase:
               data.amountSpentConfig.maxPointsPerPurchase ?? null,
+            allowSameBillRedemption:
+              data.amountSpentConfig.allowSameBillRedemption ?? true,
           },
         });
         const stages =
@@ -247,6 +253,8 @@ export const POST = withAdminAuth(async (request, context) => {
               data.visitMadeConfig.visitIntervalEnabled ?? false,
             visitIntervalValue: data.visitMadeConfig.visitIntervalValue ?? null,
             visitIntervalUnit: data.visitMadeConfig.visitIntervalUnit ?? null,
+            allowSameBillRedemption:
+              data.visitMadeConfig.allowSameBillRedemption ?? true,
           },
         });
         const stages =
@@ -420,6 +428,7 @@ export const PUT = withAdminAuth(async (request, context) => {
             data.cashbackConfig.redemptionBillLimitAmount,
           redemptionBillLimitPercentage:
             data.cashbackConfig.redemptionBillLimitPercentage,
+          allowSameBillRedemption: data.cashbackConfig.allowSameBillRedemption,
         },
       });
     }
@@ -430,6 +439,7 @@ export const PUT = withAdminAuth(async (request, context) => {
         data: {
           pointsPerRupee: data.tierConfig.pointsPerRupee,
           onFinalAmount: data.tierConfig.onFinalAmount,
+          allowSameBillRedemption: data.tierConfig.allowSameBillRedemption,
         },
       });
     }
@@ -493,6 +503,8 @@ export const PUT = withAdminAuth(async (request, context) => {
           pointsPerRupee: data.amountSpentConfig.pointsPerRupee,
           onFinalAmount: data.amountSpentConfig.onFinalAmount,
           maxPointsPerPurchase: data.amountSpentConfig.maxPointsPerPurchase,
+          allowSameBillRedemption:
+            data.amountSpentConfig.allowSameBillRedemption,
         },
       });
     }
@@ -509,6 +521,7 @@ export const PUT = withAdminAuth(async (request, context) => {
           visitIntervalEnabled: data.visitMadeConfig.visitIntervalEnabled,
           visitIntervalValue: data.visitMadeConfig.visitIntervalValue,
           visitIntervalUnit: data.visitMadeConfig.visitIntervalUnit,
+          allowSameBillRedemption: data.visitMadeConfig.allowSameBillRedemption,
         },
       });
     }

@@ -244,6 +244,12 @@ export const POST = withCashierAuth(async (request: NextRequest, context) => {
         },
       });
 
+      // Advance next bill number for this business
+      await tx.business.update({
+        where: { id: businessId },
+        data: { nextBillNumber: { increment: 1 } },
+      });
+
       // One feedback link per bill; attach business's feedback config if set
       const feedbackConfig = await tx.feedbackConfig.findUnique({
         where: { businessId },

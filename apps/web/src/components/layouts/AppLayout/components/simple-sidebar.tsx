@@ -28,6 +28,7 @@ import {
   FileText,
   Gift,
   Inbox,
+  Megaphone,
   MessageSquare,
   Settings,
   Users,
@@ -37,6 +38,13 @@ import { usePathname } from "next/navigation";
 import * as React from "react";
 import { SidebarHeader } from "./sidebar-header";
 import { UserSidebarFooter } from "./UserSidebarFooter";
+
+/** Render children only after mount to avoid Radix useId() hydration mismatch (React 19.2 / Next.js). */
+function useMounted() {
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => setMounted(true), []);
+  return mounted;
+}
 
 const sidebarVariants = {
   initial: {},
@@ -60,6 +68,7 @@ export function SimpleSidebar({
   const isCollapsed = state === "collapsed";
   const { user } = useSessionContext();
   const [isContactModalOpen, setIsContactModalOpen] = React.useState(false);
+  const mounted = useMounted();
 
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -146,6 +155,21 @@ export function SimpleSidebar({
                     <Link href="/feedback-stats">
                       <MessageSquare className="h-4 w-4" />
                       <span className="sidebar-text">Feedback stats</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={
+                      pathname === "/campaigns" ||
+                      pathname.startsWith("/campaigns/")
+                    }
+                    tooltip="Campaigns"
+                  >
+                    <Link href="/campaigns">
+                      <Megaphone className="h-4 w-4" />
+                      <span className="sidebar-text">Campaigns</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

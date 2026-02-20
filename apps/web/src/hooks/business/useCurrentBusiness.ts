@@ -23,6 +23,7 @@ export interface CurrentBusiness {
   defaultCurrencySymbol: string;
   defaultCurrencyCode: string;
   registrationBonusPoints: number;
+  nextBillNumber: number;
   defaultBranding?: CurrentBusinessBranding | null;
   isServiceEnabled?: IsServiceEnabled | null;
   referralProgram?: { id: string } | null;
@@ -57,6 +58,7 @@ export interface UpdateBusinessInput {
   defaultCurrencySymbol?: string;
   defaultCurrencyCode?: string;
   registrationBonusPoints?: number;
+  nextBillNumber?: number;
   serviceEnabled?: IsServiceEnabled;
   defaultBranding?: UpdateBusinessBrandingInput;
 }

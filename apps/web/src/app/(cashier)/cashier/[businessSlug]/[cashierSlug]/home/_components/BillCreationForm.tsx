@@ -2,6 +2,7 @@
 
 import type { CreateBillResponse } from "@/hooks/cashier/useBillCreation";
 import { useBillCreation } from "@/hooks/cashier/useBillCreation";
+import { useCashierNextBillNumber } from "@/hooks/cashier/useCashierNextBillNumber";
 import { useCashierSkusQuery } from "@/hooks/cashier/useCashierSkusQuery";
 import { useLoyaltyPreview } from "@/hooks/cashier/useLoyaltyPreview";
 import type { BillLineItemInput } from "@/lib/schemas/bill";
@@ -302,6 +303,8 @@ export function BillCreationForm() {
 
   const { data: skusData } = useCashierSkusQuery();
   const skuOptions = skusData?.items ?? [];
+  const { data: nextBillData, refetch: refetchNextBillNumber } =
+    useCashierNextBillNumber();
 
   // ─── Form State ─────────────────────────────────────────────────────────
   const [billNumber, setBillNumber] = useState("");
@@ -347,6 +350,10 @@ export function BillCreationForm() {
   const subtotalValue = computedSubtotal ?? (grossAmount > 0 ? grossAmount : 0);
   const finalAmountBeforeLoyalty = Math.max(0, subtotalValue - discountAmount);
 
+  // Validation: discount must be less than subtotal
+  const discountInvalid =
+    subtotalValue > 0 && discountAmount > 0 && discountAmount >= subtotalValue;
+
   // ─── Loyalty Preview ────────────────────────────────────────────────────
   const loyaltyPreviewQuery = useLoyaltyPreview({
     businessId: business.id,
@@ -378,7 +385,6 @@ export function BillCreationForm() {
 
   // ─── Handlers ───────────────────────────────────────────────────────────
   const handleReset = useCallback(() => {
-    setBillNumber("");
     setPhoneNumber("");
     setName("");
     setAmount("");
@@ -392,7 +398,14 @@ export function BillCreationForm() {
     setShowSuggestions(false);
     setExtrasOpen(false);
     resetMutation();
-  }, [clearSelectedCustomer, resetMutation]);
+    refetchNextBillNumber().then((result) => {
+      const next =
+        result.data?.nextBillNumber != null && result.data.nextBillNumber >= 1
+          ? String(result.data.nextBillNumber)
+          : "";
+      setBillNumber(next);
+    });
+  }, [clearSelectedCustomer, resetMutation, refetchNextBillNumber]);
 
   const addLineItem = useCallback(() => {
     setLineItems((prev) => [...prev, { skuId: "", qty: "1", unitPrice: "" }]);
@@ -470,6 +483,16 @@ export function BillCreationForm() {
     }
   }, [selectedCustomer]);
 
+  // Auto-fill bill number from business nextBillNumber
+  useEffect(() => {
+    if (
+      nextBillData?.nextBillNumber != null &&
+      nextBillData.nextBillNumber >= 1
+    ) {
+      setBillNumber(String(nextBillData.nextBillNumber));
+    }
+  }, [nextBillData?.nextBillNumber]);
+
   // Navigate to billCreated URL when bill created (enables redeem options view)
   useEffect(() => {
     if (createSuccess && createData?.bill?.id) {
@@ -541,6 +564,11 @@ export function BillCreationForm() {
       toast.error("Amount or line items with total are required.");
       return;
     }
+    if (discountAmount >= subtotalForApi) {
+      setError("Store discount must be less than subtotal.");
+      toast.error("Store discount must be less than subtotal.");
+      return;
+    }
     try {
       const parsedRedeemPoints = redeemPoints
         ? isPointsType
@@ -603,7 +631,7 @@ export function BillCreationForm() {
   // Success state: navigates to ?billCreated=billId; BillCreatedView handles display
   return (
     <div className="w-full max-w-md">
-      <Card>
+      <Card className="border-0 shadow-none">
         <CardContent className="p-6 sm:p-8">
           <h2 className="mb-6 text-xl font-semibold">Create Bill</h2>
           {error && (
@@ -741,7 +769,12 @@ export function BillCreationForm() {
 
             {/* ─── Store discount (full line) ─────────────────────────────── */}
             <div className="space-y-1.5">
-              <Label htmlFor="storeDiscount">Store Discount</Label>
+              <Label
+                htmlFor="storeDiscount"
+                className={discountInvalid ? "text-destructive" : undefined}
+              >
+                Store Discount
+              </Label>
               <Input
                 id="storeDiscount"
                 variant="underline"
@@ -752,8 +785,14 @@ export function BillCreationForm() {
                 value={storeDiscount}
                 onChange={(e) => setStoreDiscount(e.target.value)}
                 disabled={isCreating}
-                className="w-full"
+                className={`w-full ${discountInvalid ? "border-destructive text-destructive focus-visible:ring-destructive" : ""}`}
               />
+              {discountInvalid && (
+                <p className="text-destructive text-sm">
+                  Discount must be less than subtotal (₹
+                  {subtotalValue.toFixed(2)}).
+                </p>
+              )}
             </div>
 
             {/* ─── Bill total (full line, disabled) ──────────────────────── */}
@@ -984,7 +1023,7 @@ export function BillCreationForm() {
                 type="submit"
                 loading={isCreating}
                 className="flex-1"
-                disabled={isCreating}
+                disabled={isCreating || discountInvalid}
               >
                 {isCreating ? "Creating..." : "Create Bill"}
               </Button>

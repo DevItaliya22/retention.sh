@@ -111,6 +111,7 @@ export function VisitMadeSettingsCard({
       visitIntervalEnabled: config.visitIntervalEnabled ?? false,
       visitIntervalValue: config.visitIntervalValue ?? null,
       visitIntervalUnit: config.visitIntervalUnit ?? null,
+      allowSameBillRedemption: config.allowSameBillRedemption ?? true,
       rewardStages:
         config.rewardStages?.length > 0
           ? config.rewardStages.map(mapStageToForm)
@@ -131,6 +132,7 @@ export function VisitMadeSettingsCard({
         visitIntervalValue: values.visitIntervalValue ?? null,
         visitIntervalUnit: (values.visitIntervalUnit ??
           null) as VisitIntervalUnit | null,
+        allowSameBillRedemption: values.allowSameBillRedemption ?? true,
       },
       rewardStages: (values.rewardStages ?? []).map((s) => ({
         pointsRequired: s.pointsRequired,
@@ -307,6 +309,29 @@ export function VisitMadeSettingsCard({
                   </div>
                 </div>
               )}
+
+              <FormField
+                control={form.control}
+                name="allowSameBillRedemption"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center gap-2">
+                    <FormControl>
+                      <label className="flex cursor-pointer items-center gap-2">
+                        <Switch
+                          checked={field.value ?? true}
+                          onCheckedChange={field.onChange}
+                        />
+                        <span className="text-sm font-normal">
+                          Allow customers to use points earned on this bill on
+                          the same bill (if off, points are available from the
+                          next bill only)
+                        </span>
+                      </label>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <Separator />
 

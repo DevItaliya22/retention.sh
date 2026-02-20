@@ -52,9 +52,16 @@ export function BusinessExistingSettings({
 
   const handleUpdateBasicInfo = async (values: Record<string, string>) => {
     try {
+      const nextBillNumber =
+        values.nextBillNumber !== undefined && values.nextBillNumber !== ""
+          ? Number(values.nextBillNumber)
+          : undefined;
       await updateBusiness({
         name: values.name,
         website: values.website || null,
+        ...(nextBillNumber !== undefined &&
+          Number.isInteger(nextBillNumber) &&
+          nextBillNumber >= 1 && { nextBillNumber }),
         defaultPointsName: business.defaultPointsName,
         defaultCurrencySymbol: business.defaultCurrencySymbol,
         defaultCurrencyCode: business.defaultCurrencyCode,
@@ -149,7 +156,7 @@ export function BusinessExistingSettings({
         <div className="space-y-6">
           <SettingsFieldGroup
             title="Basic Information"
-            description="Manage your business name, identifier, and website"
+            description="Manage your business name, identifier, website, and next bill number"
             fields={[
               {
                 name: "name",
@@ -169,12 +176,23 @@ export function BusinessExistingSettings({
                 label: "Website",
                 placeholder: "https://www.example.com",
                 helpText: "Your business website URL (optional).",
+                optional: true,
+              },
+              {
+                name: "nextBillNumber",
+                label: "Next Bill Number",
+                placeholder: "1",
+                helpText:
+                  "Auto-fills the bill number in the cashier form. Increments automatically when a bill is created.",
+                type: "number",
+                min: 1,
               },
             ]}
             defaultValues={{
               name: business.name,
               slug: `reelo.in/${business.slug}`,
               website: business.website ?? "",
+              nextBillNumber: String(business.nextBillNumber ?? 1),
             }}
             onSubmit={handleUpdateBasicInfo}
           />

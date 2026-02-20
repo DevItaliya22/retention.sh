@@ -1,6 +1,6 @@
 "use client";
 
-import { LayoutGroup, motion } from "framer-motion";
+import { LayoutGroup, motion, useReducedMotion } from "framer-motion";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ReactNode } from "react";
@@ -9,6 +9,8 @@ import { Badge, Button, NavMenu, NavMenuItem } from "@reelo/ui/components";
 import { cn } from "@reelo/ui/lib/utils";
 import { ScaffoldContainer, ScaffoldSection } from "../Scaffold";
 import { PageHeader } from "./PageHeader";
+
+const EMPTY_NAVIGATION_ITEMS: NavigationItem[] = [];
 
 export interface NavigationItem {
   id?: string;
@@ -64,7 +66,7 @@ const PageLayout = ({
   icon,
   primaryActions,
   secondaryActions,
-  navigationItems = [],
+  navigationItems = EMPTY_NAVIGATION_ITEMS,
   className,
   size = "default",
   isCompact = false,
@@ -73,6 +75,7 @@ const PageLayout = ({
   scaffoldSectionClassName,
 }: PageLayoutProps) => {
   const pathname = usePathname();
+  const prefersReducedMotion = useReducedMotion();
 
   return (
     <div
@@ -116,7 +119,7 @@ const PageLayout = ({
                 <NavMenu
                   className={cn(
                     size === "full" && "border-none",
-                    "relative w-max min-w-full overflow-visible [&>ul]:flex-nowrap [&>ul]:gap-2 [&>ul>li]:shrink-0",
+                    "relative w-max min-w-full overflow-visible pt-4 [&>ul]:flex-nowrap [&>ul]:gap-2 [&>ul>li]:shrink-0",
                   )}
                 >
                   {navigationItems.map((item) => {
@@ -137,12 +140,16 @@ const PageLayout = ({
                           {isActive && (
                             <motion.span
                               layoutId="page-layout-active-tab"
-                              transition={{
-                                type: "spring",
-                                stiffness: 420,
-                                damping: 32,
-                                mass: 0.6,
-                              }}
+                              transition={
+                                prefersReducedMotion
+                                  ? { duration: 0 }
+                                  : {
+                                      type: "spring",
+                                      stiffness: 420,
+                                      damping: 32,
+                                      mass: 0.6,
+                                    }
+                              }
                               className={cn(
                                 "border-primary/30 bg-primary/10 pointer-events-none absolute inset-0 -bottom-px -z-10 rounded-t-xl border shadow-sm",
                               )}

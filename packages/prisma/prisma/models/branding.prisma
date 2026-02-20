@@ -19,8 +19,7 @@ model Branding {
   qr             Qr?
   membership     Membership?
   scratchCard    ScratchCard?
-  campaign       Campaign?
-  
+
   businessId String   @unique
   business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
 

@@ -18,6 +18,7 @@ import {
 } from "@/components/settings/loyalty/tier";
 import { VisitMadeConfigStep } from "@/components/settings/loyalty/visit";
 import { useCreateLoyaltyMutation } from "@/hooks/loyalty/useLoyaltySettings";
+import { getLoyaltyFormDefaults } from "@/lib/constants/forms/loyalty";
 import type {
   LoyaltyCreateInput,
   LoyaltyRewardType,
@@ -58,23 +59,6 @@ interface LoyaltyProgramFormProps {
   initialData: Record<string, unknown> | null;
   embedded?: boolean;
 }
-
-const COMMON_DEFAULTS: Partial<LoyaltyProgramFormValues> = {
-  pointReminderDays: null,
-  pointExpiryDays: null,
-  whatsappEnabled: false,
-  emailEnabled: false,
-  smsEnabled: false,
-  termsAndConditions: [""],
-  branding: {
-    logo: null,
-    themeColor: null,
-    textColor: null,
-    bannerImage: null,
-    header: null,
-    subtitle: null,
-  },
-};
 
 function buildSteps(
   type: LoyaltyType,
@@ -167,6 +151,7 @@ function buildSteps(
             "minPurchaseForEarning",
             "minPurchaseForRedemptionEnabled",
             "minPurchaseForRedemption",
+            "allowSameBillRedemption",
           ],
           schema: cashbackConfigStepSchema,
           Component: ({
@@ -223,7 +208,11 @@ function buildSteps(
         {
           id: "tier-config",
           title: "Tier Config",
-          fields: ["pointsPerRupee", "onFinalAmount"],
+          fields: [
+            "pointsPerRupee",
+            "onFinalAmount",
+            "allowSameBillRedemption",
+          ],
           schema: tierConfigStepSchema,
           Component: ({
             stepIndex,
@@ -267,7 +256,12 @@ function buildSteps(
         {
           id: "amount-spent-config",
           title: "Amount Spent Config",
-          fields: ["pointsPerRupee", "onFinalAmount", "maxPointsPerPurchase"],
+          fields: [
+            "pointsPerRupee",
+            "onFinalAmount",
+            "maxPointsPerPurchase",
+            "allowSameBillRedemption",
+          ],
           schema: amountSpentConfigStepSchema,
           Component: ({ stepIndex, totalSteps }) => (
             <StepContent
@@ -309,6 +303,7 @@ function buildSteps(
             "visitIntervalEnabled",
             "visitIntervalValue",
             "visitIntervalUnit",
+            "allowSameBillRedemption",
           ],
           schema: visitMadeConfigStepSchema,
           Component: ({ stepIndex, totalSteps }) => (
@@ -349,80 +344,7 @@ function buildSteps(
 function buildInitialValues(
   type: LoyaltyType,
 ): Partial<LoyaltyProgramFormValues> {
-  const base: Partial<LoyaltyProgramFormValues> = {
-    loyaltyType: type,
-    ...COMMON_DEFAULTS,
-  };
-
-  switch (type) {
-    case "CASHBACK":
-      return {
-        ...base,
-        cashbackPercentage: 0,
-        onFinalAmount: false,
-        maxCashbackCap: null,
-        minPurchaseForEarningEnabled: false,
-        minPurchaseForEarning: null,
-        minPurchaseForRedemptionEnabled: false,
-        minPurchaseForRedemption: null,
-        redemptionBalanceLimitEnabled: false,
-        redemptionBalanceLimitAmount: null,
-        redemptionBalanceLimitPercentage: null,
-        redemptionBillLimitEnabled: false,
-        redemptionBillLimitAmount: null,
-        redemptionBillLimitPercentage: null,
-      };
-    case "TIER":
-      return {
-        ...base,
-        pointsPerRupee: 1,
-        onFinalAmount: false,
-        tiers: [
-          {
-            name: "",
-            rank: 1,
-            minLifetimeSpend: 0,
-            maxLifetimeSpend: null,
-            cashbackPercentage: 0,
-            minPurchaseForRedemptionEnabled: false,
-            minPurchaseForRedemption: null,
-            maxCashbackCapEnabled: false,
-            maxCashbackCap: null,
-          },
-        ],
-      };
-    case "AMOUNT_SPENT":
-    case "VISIT_MADE":
-      return {
-        ...base,
-        pointsPerRupee: 1,
-        onFinalAmount: false,
-        maxPointsPerPurchase: null,
-        pointsPerVisit: 1,
-        visitIntervalEnabled: false,
-        visitIntervalValue: null,
-        visitIntervalUnit: null,
-        rewardStages: [
-          {
-            pointsRequired: 0,
-            rewardType: "PERCENTAGE_DISCOUNT",
-            rewardName: "",
-            freeItemSkuId: null,
-            freeItemName: null,
-            percentageValue: null,
-            appliesToEntirePurchase: true,
-            specificProductIds: [],
-            cashAmount: null,
-            minPurchaseForRedemptionEnabled: false,
-            minPurchaseForRedemption: null,
-            maxDiscountCapEnabled: false,
-            maxDiscountCap: null,
-          },
-        ],
-      };
-    default:
-      return base;
-  }
+  return getLoyaltyFormDefaults(type);
 }
 
 function valuesToPayload(values: LoyaltyProgramFormValues): LoyaltyCreateInput {

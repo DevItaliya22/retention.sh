@@ -129,19 +129,6 @@ export function ReferralStatsTable() {
     });
   }, []);
 
-  if (isError) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12">
-        <p className="text-destructive text-sm font-medium">
-          Failed to load referral stats
-        </p>
-        <p className="text-muted-foreground mt-1 text-sm">
-          {error?.message || "Please try again later"}
-        </p>
-      </div>
-    );
-  }
-
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
   const perPage = data?.perPage ?? 10;
@@ -318,6 +305,19 @@ export function ReferralStatsTable() {
     },
     prefix: getDataTableConfig("referralStats").prefix,
   });
+
+  if (isError) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12">
+        <p className="text-destructive text-sm font-medium">
+          Failed to load referral stats
+        </p>
+        <p className="text-muted-foreground mt-1 text-sm">
+          {error?.message || "Please try again later"}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <DataTable

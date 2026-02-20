@@ -72,6 +72,7 @@ function mapTierToForm(
 type TierConfig = {
   pointsPerRupee: number;
   onFinalAmount: boolean;
+  allowSameBillRedemption?: boolean;
   tiers: LoyaltyTier[];
 };
 
@@ -81,6 +82,7 @@ interface TierSettingsCardProps {
     data: {
       pointsPerRupee: number;
       onFinalAmount: boolean;
+      allowSameBillRedemption: boolean;
       tiers: Omit<LoyaltyTier, "id">[];
     },
     options?: { onSuccess?: () => void },
@@ -102,6 +104,7 @@ export function TierSettingsCard({
     defaultValues: {
       pointsPerRupee: tierConfig.pointsPerRupee ?? 1,
       onFinalAmount: tierConfig.onFinalAmount ?? false,
+      allowSameBillRedemption: tierConfig.allowSameBillRedemption ?? false,
       tiers: tierConfig.tiers.map((t) =>
         mapTierToForm(t, t.rank === initialMaxRank && initialMaxRank > 0),
       ),
@@ -139,6 +142,7 @@ export function TierSettingsCard({
     const payload = {
       pointsPerRupee: values.pointsPerRupee,
       onFinalAmount: values.onFinalAmount,
+      allowSameBillRedemption: values.allowSameBillRedemption ?? false,
       tiers: values.tiers.map((t) => {
         const isTopTier = t.rank === maxRank && maxRank > 0;
         return {
@@ -238,6 +242,34 @@ export function TierSettingsCard({
                       <FormControl>
                         <Switch
                           id="tier-onFinalAmount"
+                          checked={field.value ?? false}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </div>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="allowSameBillRedemption"
+                render={({ field }) => (
+                  <FormItem className={SETTINGS_ROW_CLASS}>
+                    <div className={SETTINGS_LABEL_CLASS}>
+                      <FormLabel
+                        htmlFor="tier-allowSameBillRedemption"
+                        className="cursor-pointer text-sm"
+                      >
+                        Allow customers to use cashback earned on this bill on
+                        the same bill (if off, cashback is available from the
+                        next bill only)
+                      </FormLabel>
+                    </div>
+                    <div className={SETTINGS_CONTROL_CLASS}>
+                      <FormControl>
+                        <Switch
+                          id="tier-allowSameBillRedemption"
                           checked={field.value ?? false}
                           onCheckedChange={field.onChange}
                         />

@@ -142,6 +142,27 @@ export function VisitMadeConfigStep() {
           />
         </div>
       )}
+      <FormField
+        control={form.control}
+        name="allowSameBillRedemption"
+        render={({ field }) => (
+          <FormItem className="flex flex-row items-center gap-2">
+            <FormControl>
+              <label className="flex cursor-pointer items-center gap-2">
+                <Switch
+                  checked={field.value ?? true}
+                  onCheckedChange={field.onChange}
+                />
+                <span className="text-sm font-normal">
+                  Allow customers to use points earned on this bill on the same
+                  bill (if off, points are available from the next bill only)
+                </span>
+              </label>
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
     </div>
   );
 }

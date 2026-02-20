@@ -17,7 +17,7 @@ export function LoyaltyStatsPageClient() {
       size="full"
       scaffoldSectionClassName="h-full w-full pt-2 pb-0"
     >
-      <ScaffoldContainer className="px-6">
+      <ScaffoldContainer>
         <Suspense
           fallback={
             <div className="space-y-4">
