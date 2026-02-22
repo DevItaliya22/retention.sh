@@ -1,4 +1,5 @@
 import { withAdminAuth } from "@/lib/auth/middleware";
+import { FEEDBACK_FORM_DEFAULTS } from "@/lib/constants/forms/feedback";
 import { feedbackConfigUpdateSchema } from "@/lib/schemas/feedback";
 import {
   sanitizeErrorMessage,
@@ -104,6 +105,8 @@ export const PUT = withAdminAuth(async (request: NextRequest, context) => {
       }),
     };
 
+    const defaultFollowUp = FEEDBACK_FORM_DEFAULTS.followUpMessage;
+
     const config = existing
       ? await db.feedbackConfig.update({
           where: { businessId },
@@ -119,6 +122,14 @@ export const PUT = withAdminAuth(async (request: NextRequest, context) => {
           data: {
             businessId,
             ...updatePayload,
+            positiveFollowUp:
+              (updatePayload.positiveFollowUp?.trim()?.length
+                ? updatePayload.positiveFollowUp
+                : null) ?? defaultFollowUp,
+            negativeFollowUp:
+              (updatePayload.negativeFollowUp?.trim()?.length
+                ? updatePayload.negativeFollowUp
+                : null) ?? defaultFollowUp,
           },
           include: {
             questions: { orderBy: { createdAt: "asc" } },

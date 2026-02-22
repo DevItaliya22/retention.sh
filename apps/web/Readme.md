@@ -19,9 +19,11 @@ Tier
 Membership
 
 analytics
+
 email
 sms
 whatsapp
+
 gamification
 billing
 SKU adding

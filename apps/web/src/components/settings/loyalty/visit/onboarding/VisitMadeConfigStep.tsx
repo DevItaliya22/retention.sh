@@ -5,9 +5,9 @@ import {
   FormControl,
   FormField,
   FormItem,
+  FormLabel,
   FormMessage,
   Input,
-  Label,
   Select,
   SelectContent,
   SelectItem,
@@ -29,13 +29,13 @@ export function VisitMadeConfigStep() {
   const form = useFormContext<LoyaltyProgramFormValues>();
 
   return (
-    <div className="space-y-4">
+    <div className="grid gap-6">
       <FormField
         control={form.control}
         name="pointsPerVisit"
         render={({ field }) => (
           <FormItem>
-            <Label className="text-sm">Points per visit</Label>
+            <FormLabel>Points per visit</FormLabel>
             <FormControl>
               <Input
                 variant="underline"
@@ -57,22 +57,23 @@ export function VisitMadeConfigStep() {
           </FormItem>
         )}
       />
+
       <FormField
         control={form.control}
         name="visitIntervalEnabled"
         render={({ field }) => (
-          <FormItem className="flex flex-row items-center gap-2">
+          <FormItem className="border-input flex flex-row items-center justify-between border-b py-4">
+            <div className="space-y-0.5">
+              <FormLabel>Minimum time between visits</FormLabel>
+              <p className="text-muted-foreground text-sm">
+                Require a minimum interval to count as separate visits
+              </p>
+            </div>
             <FormControl>
-              <label className="flex cursor-pointer items-center gap-2">
-                <Switch
-                  checked={field.value ?? false}
-                  onCheckedChange={field.onChange}
-                />
-                <span className="text-sm font-normal">
-                  Require minimum time between visits to count as separate
-                  visits
-                </span>
-              </label>
+              <Switch
+                checked={field.value ?? false}
+                onCheckedChange={field.onChange}
+              />
             </FormControl>
             <FormMessage />
           </FormItem>
@@ -85,7 +86,7 @@ export function VisitMadeConfigStep() {
             name="visitIntervalValue"
             render={({ field }) => (
               <FormItem>
-                <Label className="text-sm">Interval value</Label>
+                <FormLabel>Interval value</FormLabel>
                 <FormControl>
                   <Input
                     variant="underline"
@@ -118,7 +119,7 @@ export function VisitMadeConfigStep() {
             name="visitIntervalUnit"
             render={({ field }) => (
               <FormItem>
-                <Label className="text-sm">Interval unit</Label>
+                <FormLabel>Interval unit</FormLabel>
                 <Select
                   value={field.value ?? ""}
                   onValueChange={(v) => field.onChange(v || null)}
@@ -142,22 +143,23 @@ export function VisitMadeConfigStep() {
           />
         </div>
       )}
+
       <FormField
         control={form.control}
         name="allowSameBillRedemption"
         render={({ field }) => (
-          <FormItem className="flex flex-row items-center gap-2">
+          <FormItem className="border-input flex flex-row items-center justify-between border-b py-4">
+            <div className="space-y-0.5">
+              <FormLabel>Use points on same bill</FormLabel>
+              <p className="text-muted-foreground text-sm">
+                If off, points are available from the next bill only
+              </p>
+            </div>
             <FormControl>
-              <label className="flex cursor-pointer items-center gap-2">
-                <Switch
-                  checked={field.value ?? true}
-                  onCheckedChange={field.onChange}
-                />
-                <span className="text-sm font-normal">
-                  Allow customers to use points earned on this bill on the same
-                  bill (if off, points are available from the next bill only)
-                </span>
-              </label>
+              <Switch
+                checked={field.value ?? true}
+                onCheckedChange={field.onChange}
+              />
             </FormControl>
             <FormMessage />
           </FormItem>

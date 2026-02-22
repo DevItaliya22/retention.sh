@@ -65,6 +65,11 @@ const platformLabel: Record<string, string> = {
   OTHER: "Leave a review",
 };
 
+const pageWrapperClass =
+  "bg-muted/30 flex min-h-screen min-h-[100dvh] w-full items-center justify-center p-4 py-6 sm:p-6";
+
+const cardClass = "w-full max-w-md rounded-xl border shadow-sm";
+
 function OnlineReviewCTA({
   review,
 }: {
@@ -79,10 +84,10 @@ function OnlineReviewCTA({
       href={review.link}
       target="_blank"
       rel="noopener noreferrer"
-      className="border-primary/30 bg-primary/5 text-primary hover:bg-primary/10 mt-4 inline-flex items-center gap-2 rounded-md border px-4 py-2 text-sm font-medium transition-colors"
+      className="border-primary/30 bg-primary/5 text-primary hover:bg-primary/10 mt-4 inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg border px-5 py-3 text-sm font-medium transition-colors active:scale-[0.98]"
     >
       {label}
-      <ExternalLink className="size-4" />
+      <ExternalLink className="size-4 shrink-0" />
     </a>
   );
 }
@@ -177,14 +182,14 @@ export function FeedbackPageClient({
 
   if (isLoading || (!data && !isError)) {
     return (
-      <div className="bg-muted/30 flex min-h-[50vh] items-center justify-center p-6">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
+      <div className={pageWrapperClass}>
+        <Card className={cardClass}>
+          <CardHeader className="px-4 pt-6 pb-4 text-center sm:px-6">
             <Skeleton className="bg-primary/10 mx-auto mb-2 size-12 rounded-full" />
             <Skeleton className="mx-auto h-6 w-24" />
             <Skeleton className="mx-auto mt-2 h-4 w-64" />
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 px-4 pb-6 sm:px-6">
             <Skeleton className="h-10 w-full" />
             <Skeleton className="h-24 w-full" />
           </CardContent>
@@ -195,14 +200,16 @@ export function FeedbackPageClient({
 
   if (isError || !data) {
     return (
-      <div className="bg-muted/30 flex min-h-[50vh] items-center justify-center p-6">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
+      <div className={pageWrapperClass}>
+        <Card className={cardClass}>
+          <CardHeader className="px-4 pt-6 pb-6 text-center sm:px-6">
             <div className="bg-destructive/10 text-destructive mx-auto mb-2 flex size-12 items-center justify-center rounded-full">
               <MessageSquare className="size-6" />
             </div>
-            <h1 className="text-xl font-semibold">Feedback link invalid</h1>
-            <p className="text-muted-foreground text-sm">
+            <h1 className="text-lg font-semibold sm:text-xl">
+              Feedback link invalid
+            </h1>
+            <p className="text-muted-foreground mt-2 text-sm">
               {error?.message ?? "This link may have expired or is incorrect."}
             </p>
           </CardHeader>
@@ -217,9 +224,9 @@ export function FeedbackPageClient({
     const showReward = loadedReward?.enabled && loadedReward?.amount != null;
     const showOnlineReview = loadedOnlineReview != null;
     return (
-      <div className="bg-muted/30 flex min-h-[50vh] items-center justify-center p-6">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
+      <div className={pageWrapperClass}>
+        <Card className={cardClass}>
+          <CardHeader className="px-4 pt-6 pb-6 text-center sm:px-6">
             <div className="bg-primary/10 text-primary mx-auto mb-2 flex size-12 items-center justify-center rounded-full">
               <MessageSquare className="size-6" />
             </div>
@@ -230,7 +237,7 @@ export function FeedbackPageClient({
                 )}
               </p>
             )}
-            <h1 className="text-xl font-semibold">
+            <h1 className="text-lg font-semibold sm:text-xl">
               {FEEDBACK_FORM_DEFAULTS.thankYouTitle}
             </h1>
             <p className="text-muted-foreground mt-2 text-sm whitespace-pre-wrap">
@@ -249,9 +256,9 @@ export function FeedbackPageClient({
     const showReward = reward?.enabled && reward?.amount != null;
     const showOnlineReview = onlineReview != null;
     return (
-      <div className="bg-muted/30 flex min-h-[50vh] items-center justify-center p-6">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
+      <div className={pageWrapperClass}>
+        <Card className={cardClass}>
+          <CardHeader className="px-4 pt-6 pb-6 text-center sm:px-6">
             <div className="bg-primary/10 text-primary mx-auto mb-2 flex size-12 items-center justify-center rounded-full">
               <MessageSquare className="size-6" />
             </div>
@@ -260,7 +267,7 @@ export function FeedbackPageClient({
                 {FEEDBACK_FORM_DEFAULTS.rewardAddedToWallet(reward!.amount!)}
               </p>
             )}
-            <h1 className="text-xl font-semibold">
+            <h1 className="text-lg font-semibold sm:text-xl">
               {FEEDBACK_FORM_DEFAULTS.thankYouTitle}
             </h1>
             <p className="text-muted-foreground mt-2 text-sm whitespace-pre-wrap">
@@ -275,14 +282,14 @@ export function FeedbackPageClient({
 
   if (!config) {
     return (
-      <div className="bg-muted/30 flex min-h-[50vh] items-center justify-center p-6">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
+      <div className={pageWrapperClass}>
+        <Card className={cardClass}>
+          <CardHeader className="px-4 pt-6 pb-6 text-center sm:px-6">
             <div className="bg-muted text-muted-foreground mx-auto mb-2 flex size-12 items-center justify-center rounded-full">
               <MessageSquare className="size-6" />
             </div>
-            <h1 className="text-xl font-semibold">Feedback</h1>
-            <p className="text-muted-foreground text-sm">
+            <h1 className="text-lg font-semibold sm:text-xl">Feedback</h1>
+            <p className="text-muted-foreground mt-2 text-sm">
               Feedback is not configured for this link yet. Please check back
               later.
             </p>
@@ -293,32 +300,38 @@ export function FeedbackPageClient({
   }
 
   return (
-    <div className="bg-muted/30 flex min-h-[50vh] items-center justify-center p-6">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
+    <div className={pageWrapperClass}>
+      <Card className={cardClass}>
+        <CardHeader className="px-4 pt-6 pb-2 text-center sm:px-6">
           <div className="bg-primary/10 text-primary mx-auto mb-2 flex size-12 items-center justify-center rounded-full">
             <MessageSquare className="size-6" />
           </div>
-          <h1 className="text-xl font-semibold">We’d love your feedback</h1>
+          <h1 className="text-lg font-semibold sm:text-xl">
+            We'd love your feedback
+          </h1>
           {billNumber && (
-            <p className="text-muted-foreground text-sm">Bill #{billNumber}</p>
+            <p className="text-muted-foreground mt-1 text-sm">
+              Bill #{billNumber}
+            </p>
           )}
         </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Rating 1–5 */}
+        <CardContent className="space-y-6 px-4 pt-4 pb-6 sm:px-6">
+          {/* Rating 1–5: touch-friendly stars */}
           <div className="space-y-2">
-            <Label>{FEEDBACK_FORM_DEFAULTS.labels.howWasExperience}</Label>
-            <div className="flex gap-1">
+            <Label className="text-sm">
+              {FEEDBACK_FORM_DEFAULTS.labels.howWasExperience}
+            </Label>
+            <div className="flex justify-center gap-1 sm:gap-2">
               {[1, 2, 3, 4, 5].map((value) => (
                 <button
                   key={value}
                   type="button"
                   onClick={() => setRating(value)}
-                  className="focus-visible:ring-ring rounded p-1 focus-visible:ring-2 focus-visible:outline-none"
+                  className="focus-visible:ring-ring flex min-h-[44px] min-w-[44px] touch-manipulation items-center justify-center rounded-lg p-2 focus-visible:ring-2 focus-visible:outline-none"
                   aria-label={`${value} star${value > 1 ? "s" : ""}`}
                 >
                   <Star
-                    className={`size-8 ${
+                    className={`size-9 sm:size-10 ${
                       rating !== null && value <= rating
                         ? "fill-amber-400 text-amber-400"
                         : "text-muted-foreground"
@@ -331,7 +344,7 @@ export function FeedbackPageClient({
 
           {/* Comment */}
           <div className="space-y-2">
-            <Label htmlFor="feedback-comment">
+            <Label htmlFor="feedback-comment" className="text-sm">
               {FEEDBACK_FORM_DEFAULTS.labels.commentOptional}
             </Label>
             <Textarea
@@ -340,25 +353,31 @@ export function FeedbackPageClient({
               value={comment}
               onChange={(e) => setComment(e.target.value)}
               rows={3}
-              className="resize-none"
+              className="min-h-[88px] resize-none text-base"
             />
           </div>
 
           {/* Categories */}
           {config.categories.length > 0 && (
             <div className="space-y-2">
-              <Label>{FEEDBACK_FORM_DEFAULTS.labels.whatCouldWeImprove}</Label>
+              <Label className="text-sm">
+                {FEEDBACK_FORM_DEFAULTS.labels.whatCouldWeImprove}
+              </Label>
               <div className="flex flex-wrap gap-3">
                 {config.categories.map((cat) => (
-                  <div key={cat.id} className="flex items-center gap-2">
+                  <div
+                    key={cat.id}
+                    className="flex min-h-[44px] items-center gap-2"
+                  >
                     <Checkbox
                       id={`cat-${cat.id}`}
                       checked={selectedCategories.includes(cat.name)}
                       onCheckedChange={() => toggleCategory(cat.name)}
+                      className="touch-manipulation"
                     />
                     <Label
                       htmlFor={`cat-${cat.id}`}
-                      className="cursor-pointer text-sm font-normal"
+                      className="cursor-pointer touch-manipulation text-sm font-normal"
                     >
                       {cat.name}
                     </Label>
@@ -372,14 +391,14 @@ export function FeedbackPageClient({
           {config.isHowDidYouHearEnabled &&
             config.howDidYouHearOptions.length > 0 && (
               <div className="space-y-2">
-                <Label htmlFor="feedback-how">
+                <Label htmlFor="feedback-how" className="text-sm">
                   {FEEDBACK_FORM_DEFAULTS.labels.howDidYouHear}
                 </Label>
                 <select
                   id="feedback-how"
                   value={howDidYouHear}
                   onChange={(e) => setHowDidYouHear(e.target.value)}
-                  className="border-input bg-background focus-visible:ring-ring w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:outline-none"
+                  className="border-input bg-background focus-visible:ring-ring min-h-[44px] w-full rounded-lg border px-3 py-3 text-base focus-visible:ring-2 focus-visible:outline-none"
                 >
                   <option value="">
                     {FEEDBACK_FORM_DEFAULTS.labels.selectOption}
@@ -401,7 +420,7 @@ export function FeedbackPageClient({
             type="button"
             onClick={submitFeedback}
             disabled={submitStatus === "submitting"}
-            className="w-full"
+            className="min-h-[48px] w-full touch-manipulation text-base font-medium"
           >
             {submitStatus === "submitting"
               ? FEEDBACK_FORM_DEFAULTS.labels.submittingButton

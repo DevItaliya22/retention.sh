@@ -7,7 +7,6 @@ import {
   FormField,
   FormItem,
   FormMessage,
-  Label,
   RadioGroup,
   RadioGroupItem,
   useFormContext,
@@ -55,7 +54,7 @@ export function LoyaltyTypeStep() {
   const form = useFormContext<LoyaltyProgramFormValues>();
 
   return (
-    <div className="space-y-4">
+    <div className="grid gap-6">
       <FormField
         control={form.control}
         name="loyaltyType"
@@ -65,32 +64,31 @@ export function LoyaltyTypeStep() {
               <RadioGroup
                 value={field.value ?? ""}
                 onValueChange={(v) => v && field.onChange(v as LoyaltyType)}
-                className="space-y-4"
+                className="space-y-3"
               >
                 {TYPES.map((t) => (
-                  <div key={t.value} className="space-y-2">
+                  <label
+                    key={t.value}
+                    htmlFor={t.value}
+                    className="border-border hover:bg-muted/50 focus-within:bg-muted/50 has-[:focus-visible]:ring-ring ring-offset-background flex cursor-pointer flex-col rounded-lg border px-4 py-3 transition-colors outline-none has-[:focus-visible]:ring-2"
+                  >
                     <div className="flex items-start gap-3">
                       <RadioGroupItem
                         value={t.value}
                         id={t.value}
-                        className="mt-0.5"
+                        className="mt-0.5 shrink-0"
                       />
-                      <div className="flex-1 space-y-1">
-                        <Label
-                          htmlFor={t.value}
-                          className="cursor-pointer text-sm font-medium"
-                        >
-                          {t.label}
-                        </Label>
+                      <div className="min-w-0 flex-1 space-y-0.5">
+                        <span className="text-base font-medium">{t.label}</span>
                         <p className="text-muted-foreground text-sm">
                           {t.description}
                         </p>
-                        <p className="text-muted-foreground text-xs">
+                        <p className="text-muted-foreground text-sm">
                           {t.summary}
                         </p>
                       </div>
                     </div>
-                  </div>
+                  </label>
                 ))}
               </RadioGroup>
             </FormControl>

@@ -12,6 +12,7 @@ import {
 } from "@reelo/ui/components";
 import type { FieldPath, FieldValues } from "react-hook-form";
 import {
+  numericInputHandlers,
   SETTINGS_CONTROL_CLASS,
   SETTINGS_LABEL_CLASS,
   SETTINGS_ROW_CLASS,
@@ -21,17 +22,20 @@ interface MaxCapToggleFieldProps<T extends FieldValues> {
   enabledName: FieldPath<T>;
   valueName: FieldPath<T>;
   label: string;
+  /** Label for the value input (e.g. "Maximum amount (₹)") */
+  valueLabel?: string;
   tooltip?: string;
   placeholder?: string;
   /** Use label-left, value-right layout like general settings page */
   layout?: "default" | "settings";
 }
 
-/** Toggle + value pattern for max cap: when enabled, show number input. */
+/** Referral-style: left heading + optional subheading, right switch; then labeled value input. */
 export function MaxCapToggleField<T extends FieldValues>({
   enabledName,
   valueName,
   label,
+  valueLabel = "Limit (₹)",
   tooltip,
   placeholder = "No limit",
   layout = "default",
@@ -40,44 +44,36 @@ export function MaxCapToggleField<T extends FieldValues>({
   const isSettings = layout === "settings";
 
   const controlContent = (
-    <div className="space-y-2">
+    <div className="space-y-4">
       <FormField
         control={form.control}
         name={enabledName}
         render={({ field }) => (
-          <FormItem className="flex flex-row items-center gap-2">
+          <FormItem className="border-input flex flex-row items-center justify-between border-b py-4">
+            <div className="space-y-0.5">
+              <FormLabel>{label}</FormLabel>
+              {!isSettings && tooltip && (
+                <p className="text-muted-foreground text-sm" title={tooltip}>
+                  {tooltip}
+                </p>
+              )}
+            </div>
             <FormControl>
-              <label className="flex cursor-pointer items-center gap-2">
-                <Switch
-                  checked={field.value ?? false}
-                  onCheckedChange={(checked) => {
-                    field.onChange(checked);
-                    if (checked) {
-                      const current = form.getValues(valueName as never);
-                      if (
-                        current == null ||
-                        (typeof current === "string" && current === "")
-                      ) {
-                        form.setValue(valueName as never, 0 as never);
-                      }
+              <Switch
+                checked={field.value ?? false}
+                onCheckedChange={(checked) => {
+                  field.onChange(checked);
+                  if (checked) {
+                    const current = form.getValues(valueName as never);
+                    if (
+                      current == null ||
+                      (typeof current === "string" && current === "")
+                    ) {
+                      form.setValue(valueName as never, 0 as never);
                     }
-                  }}
-                />
-                {!isSettings && (
-                  <span className="text-sm font-normal">{label}</span>
-                )}
-                {tooltip && (
-                  <span
-                    role="note"
-                    className="text-muted-foreground text-xs"
-                    title={tooltip}
-                    onClick={(e) => e.stopPropagation()}
-                    onKeyDown={(e) => e.stopPropagation()}
-                  >
-                    (i)
-                  </span>
-                )}
-              </label>
+                  }
+                }}
+              />
             </FormControl>
             <FormMessage />
           </FormItem>
@@ -88,6 +84,7 @@ export function MaxCapToggleField<T extends FieldValues>({
         name={valueName}
         render={({ field }) => (
           <FormItem>
+            <FormLabel>{valueLabel}</FormLabel>
             <FormControl>
               <Input
                 variant="underline"
@@ -109,6 +106,7 @@ export function MaxCapToggleField<T extends FieldValues>({
                   }
                   field.onChange(Math.max(0, Number(raw)));
                 }}
+                {...numericInputHandlers}
               />
             </FormControl>
             <FormMessage />

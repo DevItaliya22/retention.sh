@@ -600,38 +600,61 @@ export default function LoyaltyDetailPage() {
           {/* ─── Balance Header ────────────────────────────────────────── */}
           <Card>
             <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="bg-primary/10 flex size-14 items-center justify-center rounded-full">
-                  {isCashbackType ? (
+              {isCashbackType ? (
+                <div className="flex items-center gap-4">
+                  <div className="bg-primary/10 flex size-14 items-center justify-center rounded-full">
                     <Wallet className="text-primary size-7" />
-                  ) : (
-                    <Coins className="text-primary size-7" />
-                  )}
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground text-sm">
+                      Cashback Balance
+                    </p>
+                    <p className="text-3xl font-bold">
+                      ₹
+                      {cashbackBalance.toLocaleString("en-IN", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-muted-foreground text-sm">
-                    {isCashbackType ? "Cashback Balance" : "Points Balance"}
-                  </p>
-                  <p className="text-3xl font-bold">
-                    {isCashbackType ? (
-                      <>
+              ) : (
+                <div className="flex flex-wrap items-start gap-6">
+                  <div className="flex items-center gap-4">
+                    <div className="bg-primary/10 flex size-14 items-center justify-center rounded-full">
+                      <Coins className="text-primary size-7" />
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-sm">
+                        Points Balance
+                      </p>
+                      <p className="text-3xl font-bold">
+                        {pointsBalance.toLocaleString()}{" "}
+                        <span className="text-muted-foreground text-base font-normal">
+                          pts
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4 border-l pl-6">
+                    <div className="flex size-14 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/30">
+                      <Wallet className="size-7 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-sm">
+                        Cashback Balance
+                      </p>
+                      <p className="text-2xl font-bold tabular-nums">
                         ₹
                         {cashbackBalance.toLocaleString("en-IN", {
                           minimumFractionDigits: 2,
                           maximumFractionDigits: 2,
                         })}
-                      </>
-                    ) : (
-                      <>
-                        {pointsBalance.toLocaleString()}{" "}
-                        <span className="text-muted-foreground text-base font-normal">
-                          pts
-                        </span>
-                      </>
-                    )}
-                  </p>
+                      </p>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* CASHBACK / TIER type badge */}
               {loyaltyType === "CASHBACK" && cashbackInfo && (
@@ -869,6 +892,7 @@ export default function LoyaltyDetailPage() {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Date</TableHead>
+                        <TableHead>Kind</TableHead>
                         <TableHead>Type</TableHead>
                         <TableHead className="text-right">Amount</TableHead>
                         <TableHead className="text-muted-foreground text-xs whitespace-nowrap">
@@ -878,42 +902,59 @@ export default function LoyaltyDetailPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {loyalty.transactions.map((tx) => (
-                        <TableRow key={tx.id}>
-                          <TableCell className="text-sm whitespace-nowrap">
-                            <DateDisplay date={tx.createdAt} />
-                          </TableCell>
-                          <TableCell>
-                            <TransactionTypeBadge type={tx.type} />
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <span
-                              className={`font-medium ${
-                                tx.amount > 0
-                                  ? "text-emerald-600 dark:text-emerald-400"
-                                  : "text-red-600 dark:text-red-400"
-                              }`}
-                            >
-                              {tx.amount > 0 ? "+" : ""}
-                              {`${tx.amount} pts`}
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
-                            {tx.type === "EXPIRED" ? (
-                              <span className="text-red-600 dark:text-red-400">
-                                Expired (unused)
+                      {loyalty.transactions.map((tx) => {
+                        const isCashback = tx.valueKind === "CASHBACK";
+                        const amountStr = isCashback
+                          ? `₹${Math.abs(tx.amount).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                          : `${Math.abs(tx.amount)} pts`;
+                        return (
+                          <TableRow key={tx.id}>
+                            <TableCell className="text-sm whitespace-nowrap">
+                              <DateDisplay date={tx.createdAt} />
+                            </TableCell>
+                            <TableCell>
+                              <span
+                                className={
+                                  isCashback
+                                    ? "font-medium text-emerald-600 dark:text-emerald-400"
+                                    : "font-medium text-blue-600 dark:text-blue-400"
+                                }
+                              >
+                                {isCashback ? "Cashback" : "Points"}
                               </span>
-                            ) : tx.expiresAt ? (
-                              <DateDisplay date={tx.expiresAt} />
-                            ) : (
-                              "—"
-                            )}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground max-w-[200px] truncate text-sm">
-                            {tx.description || tx.source}
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                            </TableCell>
+                            <TableCell>
+                              <TransactionTypeBadge type={tx.type} />
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <span
+                                className={`font-medium ${
+                                  tx.amount > 0
+                                    ? "text-emerald-600 dark:text-emerald-400"
+                                    : "text-red-600 dark:text-red-400"
+                                }`}
+                              >
+                                {tx.amount > 0 ? "+" : "-"}
+                                {amountStr}
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
+                              {tx.type === "EXPIRED" ? (
+                                <span className="text-red-600 dark:text-red-400">
+                                  Expired (unused)
+                                </span>
+                              ) : tx.expiresAt ? (
+                                <DateDisplay date={tx.expiresAt} />
+                              ) : (
+                                "—"
+                              )}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground max-w-[200px] truncate text-sm">
+                              {tx.description || tx.source}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 </div>

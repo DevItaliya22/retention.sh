@@ -27,6 +27,7 @@ export function BusinessExistingSettings({
   const { mutateAsync: updateBusiness } = useUpdateBusiness();
   const [referralPending, startReferralTransition] = useTransition();
   const [loyaltyPending, startLoyaltyTransition] = useTransition();
+  const [feedbackPending, startFeedbackTransition] = useTransition();
 
   const handleLoyaltyEnabledChange = (enabled: boolean) => {
     startLoyaltyTransition(async () => {
@@ -43,6 +44,17 @@ export function BusinessExistingSettings({
     startReferralTransition(async () => {
       try {
         await updateBusiness({ serviceEnabled: { referral: enabled } });
+        toast.success("Settings updated successfully");
+      } catch (error: any) {
+        toast.error(error?.message || "Failed to update");
+      }
+    });
+  };
+
+  const handleFeedbackEnabledChange = (enabled: boolean) => {
+    startFeedbackTransition(async () => {
+      try {
+        await updateBusiness({ serviceEnabled: { feedback: enabled } });
         toast.success("Settings updated successfully");
       } catch (error: any) {
         toast.error(error?.message || "Failed to update");
@@ -294,29 +306,33 @@ export function BusinessExistingSettings({
 
           <Card className="gap-0 p-0!">
             <CardHeader className="flex flex-col gap-0 border-b py-2!">
-              <CardTitle className="text-base font-medium">Loyalty</CardTitle>
+              <CardTitle className="text-base font-medium">Services</CardTitle>
               <CardDescription className="text-xs">
-                Enable loyalty points and rewards for your business
+                Enable or disable loyalty, referral, and feedback for your
+                business
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex flex-col gap-2 px-6 py-4">
-              <div className="flex flex-row items-center justify-between">
-                <span className="text-sm">Loyalty enabled</span>
-                <Switch
-                  checked={
-                    isServiceEnabled(business.isServiceEnabled, "loyalty") ??
-                    false
-                  }
-                  onCheckedChange={handleLoyaltyEnabledChange}
-                  disabled={loyaltyPending}
-                />
-              </div>
-              {!isServiceEnabled(business.isServiceEnabled, "loyalty") && (
-                <p className="text-muted-foreground text-xs">
-                  {business.loyalty ? (
-                    "Already setup but it's off."
-                  ) : (
-                    <>
+            <CardContent className="flex flex-col divide-y px-6 py-0">
+              <div className="flex flex-col gap-1 py-4">
+                <div className="flex flex-row items-center justify-between">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-sm font-medium">Loyalty</span>
+                    <span className="text-muted-foreground text-xs">
+                      Points and rewards
+                    </span>
+                  </div>
+                  <Switch
+                    checked={
+                      isServiceEnabled(business.isServiceEnabled, "loyalty") ??
+                      false
+                    }
+                    onCheckedChange={handleLoyaltyEnabledChange}
+                    disabled={loyaltyPending}
+                  />
+                </div>
+                {!isServiceEnabled(business.isServiceEnabled, "loyalty") &&
+                  !business.loyalty && (
+                    <p className="text-muted-foreground text-xs">
                       Not set up yet.{" "}
                       <Link
                         href="/settings/loyalty"
@@ -324,39 +340,30 @@ export function BusinessExistingSettings({
                       >
                         Set up loyalty
                       </Link>
-                    </>
+                    </p>
                   )}
-                </p>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="gap-0 p-0!">
-            <CardHeader className="flex flex-col gap-0 border-b py-2!">
-              <CardTitle className="text-base font-medium">Referral</CardTitle>
-              <CardDescription className="text-xs">
-                Enable referral program for your business (requires loyalty to
-                be set up first)
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-2 px-6 py-4">
-              <div className="flex flex-row items-center justify-between">
-                <span className="text-sm">Referral enabled</span>
-                <Switch
-                  checked={
-                    isServiceEnabled(business.isServiceEnabled, "referral") ??
-                    false
-                  }
-                  onCheckedChange={handleReferralEnabledChange}
-                  disabled={referralPending}
-                />
               </div>
-              {!isServiceEnabled(business.isServiceEnabled, "referral") && (
-                <p className="text-muted-foreground text-xs">
-                  {business.referralProgram ? (
-                    "Already setup but it's off."
-                  ) : (
-                    <>
+
+              <div className="flex flex-col gap-1 py-4">
+                <div className="flex flex-row items-center justify-between">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-sm font-medium">Referral</span>
+                    <span className="text-muted-foreground text-xs">
+                      Referral program (requires loyalty)
+                    </span>
+                  </div>
+                  <Switch
+                    checked={
+                      isServiceEnabled(business.isServiceEnabled, "referral") ??
+                      false
+                    }
+                    onCheckedChange={handleReferralEnabledChange}
+                    disabled={referralPending}
+                  />
+                </div>
+                {!isServiceEnabled(business.isServiceEnabled, "referral") &&
+                  !business.referralProgram && (
+                    <p className="text-muted-foreground text-xs">
                       Not set up yet.{" "}
                       <Link
                         href="/settings/referral"
@@ -364,10 +371,40 @@ export function BusinessExistingSettings({
                       >
                         Set up referral
                       </Link>
-                    </>
+                    </p>
                   )}
-                </p>
-              )}
+              </div>
+
+              <div className="flex flex-col gap-1 py-4">
+                <div className="flex flex-row items-center justify-between">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-sm font-medium">Feedback</span>
+                    <span className="text-muted-foreground text-xs">
+                      Feedback links on bills
+                    </span>
+                  </div>
+                  <Switch
+                    checked={
+                      isServiceEnabled(business.isServiceEnabled, "feedback") ??
+                      false
+                    }
+                    onCheckedChange={handleFeedbackEnabledChange}
+                    disabled={feedbackPending}
+                  />
+                </div>
+                {!isServiceEnabled(business.isServiceEnabled, "feedback") &&
+                  !business.feedbackConfig && (
+                    <p className="text-muted-foreground text-xs">
+                      Not set up yet.{" "}
+                      <Link
+                        href="/settings/feedback"
+                        className="text-primary underline underline-offset-2 hover:no-underline"
+                      >
+                        Set up feedback
+                      </Link>
+                    </p>
+                  )}
+              </div>
             </CardContent>
           </Card>
         </div>

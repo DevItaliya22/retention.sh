@@ -1,7 +1,7 @@
 "use client";
 
 import type { LoyaltyProgramFormValues } from "@/lib/schemas/loyalty-form";
-import { Button, useFormContext } from "@reelo/ui/components";
+import { Button, Separator, useFormContext } from "@reelo/ui/components";
 import { Plus } from "lucide-react";
 import { useFieldArray } from "react-hook-form";
 import { RewardStageCard } from "./RewardStageCard";
@@ -30,18 +30,22 @@ export function RewardStageEditorStep() {
   });
 
   return (
-    <div className="space-y-4">
-      <p className="text-muted-foreground text-sm">
+    <div className="grid gap-4">
+      <p className="text-muted-foreground max-w-md text-sm">
         Add reward stages. Customers redeem points for these rewards.
       </p>
-      <div className="space-y-4">
+      <div className="space-y-0">
         {fields.map((field, index) => (
-          <RewardStageCard
-            key={field.id}
-            index={index}
-            onRemove={() => remove(index)}
-            canRemove={fields.length > 1}
-          />
+          <div key={field.id}>
+            <RewardStageCard
+              index={index}
+              onRemove={() => remove(index)}
+              canRemove={fields.length > 1}
+            />
+            {index < fields.length - 1 && (
+              <Separator className="bg-border my-6" />
+            )}
+          </div>
         ))}
       </div>
       <Button

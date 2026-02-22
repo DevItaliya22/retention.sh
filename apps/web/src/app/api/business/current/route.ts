@@ -27,6 +27,7 @@ export const GET = withAdminAuthOptionalBusiness(async (request, context) => {
         defaultBranding: true,
         referralProgram: { select: { id: true } },
         loyalty: { select: { id: true } },
+        feedbackConfig: { select: { id: true } },
       },
     });
 
@@ -127,6 +128,8 @@ export const PUT = withAdminAuth(async (request, context) => {
       include: {
         defaultBranding: true,
         referralProgram: { select: { id: true } },
+        loyalty: { select: { id: true } },
+        feedbackConfig: { select: { id: true } },
       },
     });
 

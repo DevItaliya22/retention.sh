@@ -5,9 +5,9 @@ import {
   FormControl,
   FormField,
   FormItem,
+  FormLabel,
   FormMessage,
   Input,
-  Label,
   Switch,
   useFormContext,
 } from "@reelo/ui/components";
@@ -15,13 +15,13 @@ import {
 export function TierConfigStep() {
   const form = useFormContext<LoyaltyProgramFormValues>();
   return (
-    <div className="space-y-4">
+    <div className="grid gap-6">
       <FormField
         control={form.control}
         name="pointsPerRupee"
         render={({ field }) => (
           <FormItem>
-            <Label className="text-sm">Points per rupee spent (default)</Label>
+            <FormLabel>Points per rupee spent (default)</FormLabel>
             <FormControl>
               <Input
                 variant="underline"
@@ -41,44 +41,45 @@ export function TierConfigStep() {
           </FormItem>
         )}
       />
+
       <FormField
         control={form.control}
         name="onFinalAmount"
         render={({ field }) => (
-          <FormItem className="flex flex-row items-center gap-2">
+          <FormItem className="border-input flex flex-row items-center justify-between border-b py-4">
+            <div className="space-y-0.5">
+              <FormLabel>Calculate cashback on final amount</FormLabel>
+              <p className="text-muted-foreground text-sm">
+                After store discounts and tax
+              </p>
+            </div>
             <FormControl>
-              <label className="flex cursor-pointer items-center gap-2">
-                <Switch
-                  checked={field.value ?? false}
-                  onCheckedChange={field.onChange}
-                />
-                <span className="text-sm font-normal">
-                  Calculate cashback on final amount (after store discounts and
-                  tax)
-                </span>
-              </label>
+              <Switch
+                checked={field.value ?? false}
+                onCheckedChange={field.onChange}
+              />
             </FormControl>
             <FormMessage />
           </FormItem>
         )}
       />
+
       <FormField
         control={form.control}
         name="allowSameBillRedemption"
         render={({ field }) => (
-          <FormItem className="flex flex-row items-center gap-2">
+          <FormItem className="border-input flex flex-row items-center justify-between border-b py-4">
+            <div className="space-y-0.5">
+              <FormLabel>Use cashback on same bill</FormLabel>
+              <p className="text-muted-foreground text-sm">
+                If off, cashback is available from the next bill only
+              </p>
+            </div>
             <FormControl>
-              <label className="flex cursor-pointer items-center gap-2">
-                <Switch
-                  checked={field.value ?? false}
-                  onCheckedChange={field.onChange}
-                />
-                <span className="text-sm font-normal">
-                  Allow customers to use cashback earned on this bill on the
-                  same bill (if off, cashback is available from the next bill
-                  only)
-                </span>
-              </label>
+              <Switch
+                checked={field.value ?? false}
+                onCheckedChange={field.onChange}
+              />
             </FormControl>
             <FormMessage />
           </FormItem>

@@ -4,7 +4,7 @@ import { z } from "zod";
  * Service keys - add new ones here when adding services.
  * Used for isServiceEnabled JSON on Business model.
  */
-export const SERVICE_KEYS = ["referral", "loyalty"] as const;
+export const SERVICE_KEYS = ["referral", "loyalty", "feedback"] as const;
 export type ServiceKey = (typeof SERVICE_KEYS)[number];
 
 /**
@@ -14,6 +14,7 @@ export type ServiceKey = (typeof SERVICE_KEYS)[number];
 export const DEFAULT_SERVICE_VALUES: Record<ServiceKey, boolean> = {
   referral: false,
   loyalty: false,
+  feedback: false,
 };
 
 /**
