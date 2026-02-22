@@ -5,13 +5,15 @@ import { FeedbackExistingSettings } from "@/components/settings/feedback/Feedbac
 import { FeedbackSettingsSkeleton } from "@/components/settings/feedback/FeedbackSettingsSkeleton";
 import type { FeedbackConfigDto } from "@/hooks/feedback/useFeedbackConfig";
 import { useFeedbackConfigQuery } from "@/hooks/feedback/useFeedbackConfig";
+import { FEEDBACK_FORM_DEFAULTS } from "@/lib/constants/forms/feedback";
 
 function getDefaultConfig(): FeedbackConfigDto {
+  const defaultFollowUp = FEEDBACK_FORM_DEFAULTS.followUpMessage;
   return {
     id: "",
     businessId: null,
-    positiveFollowUp: null,
-    negativeFollowUp: null,
+    positiveFollowUp: defaultFollowUp,
+    negativeFollowUp: defaultFollowUp,
     timing: "IMMEDIATELY",
     delaySeconds: null,
     collectionChannel: "WHATSAPP",

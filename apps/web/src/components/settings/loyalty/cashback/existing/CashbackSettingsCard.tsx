@@ -245,7 +245,7 @@ export function CashbackSettingsCard({
                 )}
               />
 
-              <div className="space-y-4 border-t pt-6">
+              <div className="space-y-4 pt-6">
                 {/* Redemption limits on wallet: label, then spacing, then switch + (when on) kind selector + one input */}
                 <div className={SETTINGS_ROW_CLASS}>
                   <div className={SETTINGS_LABEL_CLASS}>

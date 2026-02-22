@@ -1,8 +1,11 @@
+import { FEEDBACK_FORM_DEFAULTS } from "@/lib/constants/forms/feedback";
 import { feedbackSubmitSchema } from "@/lib/schemas/feedback";
 import {
   sanitizeErrorMessage,
   validateSchema,
 } from "@/lib/utils/error-handler";
+import type { IsServiceEnabled } from "@/lib/utils/service-enabled";
+import { isServiceEnabled } from "@/lib/utils/service-enabled";
 import { db } from "@reelo/db";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -65,6 +68,26 @@ export async function GET(
         { error: "Invalid link", config: null, billNumber: null },
         { status: 404 },
       );
+    }
+
+    const businessId = link.bill.businessId;
+    if (businessId) {
+      const business = await db.business.findUnique({
+        where: { id: businessId },
+        select: { isServiceEnabled: true },
+      });
+      if (
+        !isServiceEnabled(
+          (business?.isServiceEnabled ?? null) as IsServiceEnabled | null,
+          "feedback",
+        )
+      ) {
+        return NextResponse.json({
+          alreadySubmitted: false,
+          config: null,
+          billNumber: link.bill.billNumber,
+        });
+      }
     }
 
     // One feedback per bill: already submitted → return thank you + reward only
@@ -148,11 +171,12 @@ export async function GET(
       });
     }
 
+    const defaultFollowUp = FEEDBACK_FORM_DEFAULTS.followUpMessage;
     const config = configToUse
       ? {
           id: configToUse.id,
-          positiveFollowUp: configToUse.positiveFollowUp,
-          negativeFollowUp: configToUse.negativeFollowUp,
+          positiveFollowUp: configToUse.positiveFollowUp ?? defaultFollowUp,
+          negativeFollowUp: configToUse.negativeFollowUp ?? defaultFollowUp,
           questions: configToUse.questions.map((q) => ({
             id: q.id,
             question: q.question,
@@ -172,7 +196,19 @@ export async function GET(
           onlineReviewPlatform: configToUse.onlineReviewPlatform,
           branding: configToUse.branding,
         }
-      : null;
+      : {
+          id: "",
+          positiveFollowUp: defaultFollowUp,
+          negativeFollowUp: defaultFollowUp,
+          questions: [],
+          categories: [],
+          isHowDidYouHearEnabled: false,
+          howDidYouHearOptions: [],
+          askForOnlineReviews: false,
+          onlineReviewLink: null,
+          onlineReviewPlatform: null,
+          branding: null,
+        };
 
     return NextResponse.json({
       alreadySubmitted: false,
@@ -250,6 +286,30 @@ export async function POST(
         { error: "Invalid link", success: false },
         { status: 404 },
       );
+    }
+
+    const businessIdForPost = link.bill.businessId;
+    if (businessIdForPost) {
+      const businessForPost = await db.business.findUnique({
+        where: { id: businessIdForPost },
+        select: { isServiceEnabled: true },
+      });
+      if (
+        !isServiceEnabled(
+          (businessForPost?.isServiceEnabled ??
+            null) as IsServiceEnabled | null,
+          "feedback",
+        )
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "Feedback is not configured for this link yet. Please check back later.",
+            success: false,
+          },
+          { status: 400 },
+        );
+      }
     }
 
     // One feedback per bill: reject if already submitted
@@ -348,7 +408,7 @@ export async function POST(
             type: "EARNED",
             source: "FEEDBACK",
             feedbackResponseId: res.id,
-            description: "Feedback reward",
+            description: "Feedback cashback",
           },
         });
       }

@@ -22,31 +22,73 @@ interface MinPurchaseToggleFieldProps<T extends FieldValues> {
   enabledName: FieldPath<T>;
   valueName: FieldPath<T>;
   label: string;
+  /** Optional subheading below the label (referral-style) */
+  valueLabel?: string;
   tooltip?: string;
   placeholder?: string;
   /** Use label-left, value-right layout like general settings page */
   layout?: "default" | "settings";
 }
 
-/** Toggle + value pattern: when enabled, show number input. */
+/** Referral-style: left heading + subheading, right switch; then labeled amount input. */
 export function MinPurchaseToggleField<T extends FieldValues>({
   enabledName,
   valueName,
   label,
+  valueLabel = "Minimum amount (₹)",
   tooltip,
   placeholder = "0",
   layout = "default",
 }: MinPurchaseToggleFieldProps<T>) {
   const form = useFormContext<T>();
   const isSettings = layout === "settings";
+  const enabled = form.watch(enabledName);
 
   const controlContent = (
-    <div className="space-y-2">
+    <div className="space-y-4">
+      <FormField
+        control={form.control}
+        name={enabledName}
+        render={({ field }) => (
+          <FormItem className="border-input flex flex-row items-center justify-between gap-4 border-b py-4">
+            <div className="min-w-0 space-y-0.5">
+              <FormLabel>{label}</FormLabel>
+              {!isSettings && tooltip && (
+                <p
+                  className="text-muted-foreground max-w-md text-sm"
+                  title={tooltip}
+                >
+                  {tooltip}
+                </p>
+              )}
+            </div>
+            <FormControl>
+              <Switch
+                checked={field.value ?? false}
+                onCheckedChange={(checked) => {
+                  field.onChange(checked);
+                  if (checked) {
+                    const current = form.getValues(valueName as never);
+                    if (
+                      current == null ||
+                      (typeof current === "string" && current === "")
+                    ) {
+                      form.setValue(valueName as never, 0 as never);
+                    }
+                  }
+                }}
+              />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
       <FormField
         control={form.control}
         name={valueName}
         render={({ field }) => (
           <FormItem>
+            <FormLabel>{valueLabel}</FormLabel>
             <FormControl>
               <Input
                 variant="underline"
@@ -54,7 +96,7 @@ export function MinPurchaseToggleField<T extends FieldValues>({
                 min={0}
                 step="0.01"
                 placeholder={placeholder}
-                disabled={!form.watch(enabledName)}
+                disabled={!enabled}
                 value={
                   field.value === null ||
                   field.value === undefined ||
@@ -77,48 +119,6 @@ export function MinPurchaseToggleField<T extends FieldValues>({
           </FormItem>
         )}
       />
-      <div className="pt-2">
-        <FormField
-          control={form.control}
-          name={enabledName}
-          render={({ field }) => (
-            <FormItem className="flex flex-row items-center gap-2">
-              <FormControl>
-                <label className="flex cursor-pointer items-center gap-2">
-                  <Switch
-                    checked={field.value ?? false}
-                    onCheckedChange={(checked) => {
-                      field.onChange(checked);
-                      if (checked) {
-                        const current = form.getValues(valueName as never);
-                        if (
-                          current == null ||
-                          (typeof current === "string" && current === "")
-                        ) {
-                          form.setValue(valueName as never, 0 as never);
-                        }
-                      }
-                    }}
-                  />
-                  {!isSettings && (
-                    <span className="text-sm font-normal">{label}</span>
-                  )}
-                  {tooltip && (
-                    <span
-                      className="text-muted-foreground text-xs"
-                      title={tooltip}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      (i)
-                    </span>
-                  )}
-                </label>
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      </div>
     </div>
   );
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { fetcher } from "@/lib/fetcher";
+import type { FreeItemEntry } from "@/lib/utils/free-items";
 import type { IsServiceEnabled } from "@/lib/utils/service-enabled";
 import { useQuery } from "@tanstack/react-query";
 
@@ -49,6 +50,8 @@ export interface CustomerDetail {
   phone: string | null;
   pointsBalance: number;
   cashbackBalance?: number;
+  /** Unclaimed free items (e.g. from referral) to claim on next visit. */
+  freeItems?: FreeItemEntry[];
   createdAt: string;
   updatedAt: string;
   businessSlug?: string;

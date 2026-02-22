@@ -4,6 +4,7 @@ import {
   sanitizeErrorMessage,
   validateSchema,
 } from "@/lib/utils/error-handler";
+import { parseFreeItems } from "@/lib/utils/free-items";
 import { db } from "@reelo/db";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -119,6 +120,7 @@ export const GET = withAdminAuth<{ slugId: string }>(
           (businessCustomer.wallet?.amountSpentBalance ?? 0) +
           (businessCustomer.wallet?.visitPointsBalance ?? 0),
         cashbackBalance: businessCustomer.wallet?.cashbackBalance ?? 0,
+        freeItems: parseFreeItems(businessCustomer.wallet?.freeItems),
         createdAt: businessCustomer.createdAt.toISOString(),
         updatedAt: businessCustomer.updatedAt.toISOString(),
         businessSlug: context.business.slug,

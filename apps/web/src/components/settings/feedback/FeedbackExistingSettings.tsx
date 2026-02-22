@@ -3,16 +3,6 @@
 import { SettingsFieldGroup } from "@/components/common/settings/SettingsFieldGroup";
 import type { FeedbackConfigDto } from "@/hooks/feedback/useFeedbackConfig";
 import { useUpdateFeedbackConfig } from "@/hooks/feedback/useFeedbackConfig";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  Switch,
-} from "@reelo/ui/components";
-import { useTransition } from "react";
-import { toast } from "sonner";
 
 const TIMING_OPTIONS = [
   { value: "IMMEDIATELY", label: "Immediately" },
@@ -42,7 +32,6 @@ export function FeedbackExistingSettings({
   config,
 }: FeedbackExistingSettingsProps) {
   const { mutateAsync: updateConfig } = useUpdateFeedbackConfig();
-  const [howDidYouHearPending, startHowDidYouHearTransition] = useTransition();
 
   const handleUpdateFollowUp = async (values: Record<string, string>) => {
     try {
@@ -102,9 +91,12 @@ export function FeedbackExistingSettings({
     }
   };
 
-  const handleUpdateOnlineReviews = async (values: Record<string, string>) => {
+  const handleUpdateDiscoveryAndReviews = async (
+    values: Record<string, string>,
+  ) => {
     try {
       await updateConfig({
+        isHowDidYouHearEnabled: values.isHowDidYouHearEnabled === "true",
         askForOnlineReviews: values.askForOnlineReviews === "true",
         onlineReviewLink: values.onlineReviewLink || null,
         onlineReviewPlatform:
@@ -139,19 +131,6 @@ export function FeedbackExistingSettings({
     }
   };
 
-  const handleHowDidYouHearChange = async (enabled: boolean) => {
-    startHowDidYouHearTransition(async () => {
-      try {
-        await updateConfig({ isHowDidYouHearEnabled: enabled });
-        toast.success("Settings updated successfully");
-      } catch (error: unknown) {
-        toast.error(
-          error instanceof Error ? error.message : "Failed to update",
-        );
-      }
-    });
-  };
-
   return (
     <div className="space-y-6">
       <SettingsFieldGroup
@@ -178,6 +157,35 @@ export function FeedbackExistingSettings({
           negativeFollowUp: config.negativeFollowUp ?? "",
         }}
         onSubmit={handleUpdateFollowUp}
+      />
+
+      <SettingsFieldGroup
+        title="Feedback rewards"
+        description="Credit cashback to the customer's wallet when they submit feedback."
+        fields={[
+          {
+            name: "feedbackRewardEnabled",
+            label: "Enable reward",
+            type: "checkbox",
+            checkboxLabel: "Give cashback for feedback",
+          },
+          {
+            name: "rewardAmount",
+            label: "Reward amount (₹ cashback)",
+            type: "number",
+            placeholder: "0",
+            optional: true,
+            min: 0,
+          },
+        ]}
+        defaultValues={{
+          feedbackRewardEnabled: config.feedbackRewardEnabled
+            ? "true"
+            : "false",
+          rewardAmount:
+            config.rewardAmount != null ? String(config.rewardAmount) : "",
+        }}
+        onSubmit={handleUpdateRewards}
       />
 
       <SettingsFieldGroup
@@ -222,26 +230,46 @@ export function FeedbackExistingSettings({
         onSubmit={handleUpdateTimingAndCollection}
       />
 
-      <Card className="gap-0 p-0!">
-        <CardHeader className="flex flex-col gap-0 border-b py-2!">
-          <CardTitle className="text-base font-medium">
-            How did you hear about us?
-          </CardTitle>
-          <CardDescription className="text-xs">
-            Ask customers how they discovered your business
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-row items-center justify-between px-6 py-4">
-          <span className="text-sm">
-            Enable &quot;How did you hear about us?&quot;
-          </span>
-          <Switch
-            checked={config.isHowDidYouHearEnabled}
-            onCheckedChange={handleHowDidYouHearChange}
-            disabled={howDidYouHearPending}
-          />
-        </CardContent>
-      </Card>
+      <SettingsFieldGroup
+        title="Discovery & reviews"
+        description="Ask how customers found you and prompt them to leave a review after feedback"
+        fields={[
+          {
+            name: "isHowDidYouHearEnabled",
+            label: "How did you hear about us?",
+            type: "checkbox",
+            checkboxLabel: "Ask customers how they discovered your business",
+          },
+          {
+            name: "askForOnlineReviews",
+            label: "Ask for online reviews",
+            type: "checkbox",
+            checkboxLabel: "Show review prompt after feedback",
+          },
+          {
+            name: "onlineReviewPlatform",
+            label: "Platform",
+            type: "select",
+            options: ONLINE_REVIEW_PLATFORM_OPTIONS,
+            optional: true,
+          },
+          {
+            name: "onlineReviewLink",
+            label: "Review link",
+            placeholder: "https://...",
+            optional: true,
+          },
+        ]}
+        defaultValues={{
+          isHowDidYouHearEnabled: config.isHowDidYouHearEnabled
+            ? "true"
+            : "false",
+          askForOnlineReviews: config.askForOnlineReviews ? "true" : "false",
+          onlineReviewPlatform: config.onlineReviewPlatform ?? "",
+          onlineReviewLink: config.onlineReviewLink ?? "",
+        }}
+        onSubmit={handleUpdateDiscoveryAndReviews}
+      />
 
       <SettingsFieldGroup
         title="Negative feedback alerts"
@@ -296,67 +324,6 @@ export function FeedbackExistingSettings({
             config.negFeedbackAlertEmailAddress ?? "",
         }}
         onSubmit={handleUpdateNegativeAlerts}
-      />
-
-      <SettingsFieldGroup
-        title="Online reviews"
-        description="Prompt customers to leave a review"
-        fields={[
-          {
-            name: "askForOnlineReviews",
-            label: "Ask for online reviews",
-            type: "checkbox",
-            checkboxLabel: "Show review prompt after feedback",
-          },
-          {
-            name: "onlineReviewPlatform",
-            label: "Platform",
-            type: "select",
-            options: ONLINE_REVIEW_PLATFORM_OPTIONS,
-            optional: true,
-          },
-          {
-            name: "onlineReviewLink",
-            label: "Review link",
-            placeholder: "https://...",
-            optional: true,
-          },
-        ]}
-        defaultValues={{
-          askForOnlineReviews: config.askForOnlineReviews ? "true" : "false",
-          onlineReviewPlatform: config.onlineReviewPlatform ?? "",
-          onlineReviewLink: config.onlineReviewLink ?? "",
-        }}
-        onSubmit={handleUpdateOnlineReviews}
-      />
-
-      <SettingsFieldGroup
-        title="Feedback rewards"
-        description="Reward customers for submitting feedback (e.g. loyalty points)"
-        fields={[
-          {
-            name: "feedbackRewardEnabled",
-            label: "Enable reward",
-            type: "checkbox",
-            checkboxLabel: "Give reward for feedback",
-          },
-          {
-            name: "rewardAmount",
-            label: "Reward amount (points)",
-            type: "number",
-            placeholder: "0",
-            optional: true,
-            min: 0,
-          },
-        ]}
-        defaultValues={{
-          feedbackRewardEnabled: config.feedbackRewardEnabled
-            ? "true"
-            : "false",
-          rewardAmount:
-            config.rewardAmount != null ? String(config.rewardAmount) : "",
-        }}
-        onSubmit={handleUpdateRewards}
       />
     </div>
   );

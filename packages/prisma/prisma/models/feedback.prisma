@@ -21,9 +21,9 @@ model FeedbackConfig {
   isHowDidYouHearEnabled Boolean               @default(true)
   howDidYouHearOptions   HowDidYouHearOption[]
 
-  // Rewards
+  // Rewards (cashback credited to customer wallet on feedback submit)
   feedbackRewardEnabled Boolean @default(false)
-  rewardAmount          Float? // this is loyalty point of the business  
+  rewardAmount          Float? // cashback amount (₹) added to customer wallet  
 
   // Timing
   timing       FeedbackTiming @default(IMMEDIATELY)

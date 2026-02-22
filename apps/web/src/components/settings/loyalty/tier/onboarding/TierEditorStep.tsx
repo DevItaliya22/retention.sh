@@ -1,7 +1,7 @@
 "use client";
 
 import type { LoyaltyProgramFormValues } from "@/lib/schemas/loyalty-form";
-import { Button, useFormContext } from "@reelo/ui/components";
+import { Button, Separator, useFormContext } from "@reelo/ui/components";
 import { Plus } from "lucide-react";
 import { useFieldArray } from "react-hook-form";
 import { TierCard } from "./TierCard";
@@ -33,28 +33,28 @@ export function TierEditorStep() {
   const tiersError = form.formState.errors.tiers?.message as string | undefined;
 
   return (
-    <div className="space-y-4">
-      <p className="text-muted-foreground text-sm">
-        Add tiers based on customer lifetime spending. Higher rank = better
-        tier.
-      </p>
+    <div className="grid gap-4">
       {tiersError ? (
         <p className="text-destructive text-sm" role="alert">
           {tiersError}
         </p>
       ) : null}
-      <div className="space-y-4">
+      <div className="space-y-0">
         {fields.map((field, index) => (
-          <TierCard
-            key={field.id}
-            index={index}
-            onRemove={() => remove(index)}
-            canRemove={fields.length > 1}
-            isTopTier={
-              Number(watchedTiers?.[index]?.rank ?? 0) === maxRank &&
-              maxRank > 0
-            }
-          />
+          <div key={field.id}>
+            <TierCard
+              index={index}
+              onRemove={() => remove(index)}
+              canRemove={fields.length > 1}
+              isTopTier={
+                Number(watchedTiers?.[index]?.rank ?? 0) === maxRank &&
+                maxRank > 0
+              }
+            />
+            {index < fields.length - 1 && (
+              <Separator className="bg-border my-6" />
+            )}
+          </div>
         ))}
       </div>
       <Button

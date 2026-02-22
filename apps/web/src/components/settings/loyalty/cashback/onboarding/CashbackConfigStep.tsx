@@ -9,9 +9,9 @@ import {
   FormControl,
   FormField,
   FormItem,
+  FormLabel,
   FormMessage,
   Input,
-  Label,
   Switch,
   useFormContext,
 } from "@reelo/ui/components";
@@ -20,13 +20,13 @@ export function CashbackConfigStep() {
   const form = useFormContext<LoyaltyProgramFormValues>();
 
   return (
-    <div className="space-y-4">
+    <div className="grid gap-4">
       <FormField
         control={form.control}
         name="cashbackPercentage"
         render={({ field }) => (
           <FormItem>
-            <Label className="text-sm">Cashback percentage</Label>
+            <FormLabel>Cashback percentage</FormLabel>
             <FormControl>
               <Input
                 variant="underline"
@@ -52,35 +52,38 @@ export function CashbackConfigStep() {
           </FormItem>
         )}
       />
+
       <FormField
         control={form.control}
         name="onFinalAmount"
         render={({ field }) => (
-          <FormItem className="flex flex-row items-center gap-2">
+          <FormItem className="border-input flex flex-row items-center justify-between gap-4 border-b py-4">
+            <div className="min-w-0 space-y-0.5">
+              <FormLabel>Calculate cashback on final amount</FormLabel>
+              <p className="text-muted-foreground max-w-md text-sm">
+                After store discounts and tax
+              </p>
+            </div>
             <FormControl>
-              <label className="flex cursor-pointer items-center gap-2">
-                <Switch
-                  checked={field.value ?? false}
-                  onCheckedChange={field.onChange}
-                />
-                <span className="text-sm font-normal">
-                  Calculate cashback on final amount (after store discounts and
-                  tax)
-                </span>
-              </label>
+              <Switch
+                checked={field.value ?? false}
+                onCheckedChange={field.onChange}
+              />
             </FormControl>
             <FormMessage />
           </FormItem>
         )}
       />
+
       <FormField
         control={form.control}
         name="maxCashbackCap"
         render={({ field }) => (
           <FormItem>
-            <Label className="text-sm">
-              Max cashback per bill (₹) — leave empty for no cap
-            </Label>
+            <FormLabel>Max cashback per bill (₹)</FormLabel>
+            <p className="text-muted-foreground mb-1 max-w-md text-sm">
+              Leave empty for no cap
+            </p>
             <FormControl>
               <Input
                 variant="underline"
@@ -101,35 +104,39 @@ export function CashbackConfigStep() {
           </FormItem>
         )}
       />
+
       <MinPurchaseToggleField<LoyaltyProgramFormValues>
         enabledName="minPurchaseForEarningEnabled"
         valueName="minPurchaseForEarning"
         label="Min purchase for earning"
+        valueLabel="Minimum amount for earning (₹)"
         placeholder="0"
       />
       <MinPurchaseToggleField<LoyaltyProgramFormValues>
         enabledName="minPurchaseForRedemptionEnabled"
         valueName="minPurchaseForRedemption"
         label="Min purchase for redemption"
+        valueLabel="Minimum amount for redemption (₹)"
         placeholder="0"
       />
+
       <FormField
         control={form.control}
         name="allowSameBillRedemption"
         render={({ field }) => (
-          <FormItem className="flex flex-row items-center gap-2">
+          <FormItem className="border-input flex flex-row items-center justify-between gap-4 border-b py-4">
+            <div className="min-w-0 space-y-0.5">
+              <FormLabel>Allow cashback on same bill</FormLabel>
+              <p className="text-muted-foreground max-w-md text-sm">
+                If off, cashback earned on this bill is available from the next
+                bill only
+              </p>
+            </div>
             <FormControl>
-              <label className="flex cursor-pointer items-center gap-2">
-                <Switch
-                  checked={field.value ?? false}
-                  onCheckedChange={field.onChange}
-                />
-                <span className="text-sm font-normal">
-                  Allow customers to use cashback earned on this bill on the
-                  same bill (if off, cashback is available from the next bill
-                  only)
-                </span>
-              </label>
+              <Switch
+                checked={field.value ?? false}
+                onCheckedChange={field.onChange}
+              />
             </FormControl>
             <FormMessage />
           </FormItem>

@@ -229,6 +229,17 @@ export function CustomerDetailPageClient({
               skeletonWidth="w-16"
             />
             <DetailRow
+              label="Free items (not claimed yet)"
+              value={
+                customer?.freeItems != null && customer.freeItems.length > 0
+                  ? `${customer.freeItems.length} item${customer.freeItems.length !== 1 ? "s" : ""}: ${customer.freeItems.map((i) => i.skuName).join(", ")}`
+                  : "—"
+              }
+              icon={Gift}
+              isLoading={isLoading && !customer}
+              skeletonWidth="w-24"
+            />
+            <DetailRow
               label="Member since"
               value={
                 customer?.createdAt ? (

@@ -28,6 +28,7 @@ export interface CurrentBusiness {
   isServiceEnabled?: IsServiceEnabled | null;
   referralProgram?: { id: string } | null;
   loyalty?: { id: string } | null;
+  feedbackConfig?: { id: string } | null;
 }
 
 export interface CurrentBusinessResponse {

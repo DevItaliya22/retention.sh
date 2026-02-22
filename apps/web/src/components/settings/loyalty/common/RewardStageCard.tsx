@@ -3,20 +3,26 @@
 import type { LoyaltyRewardType } from "@/lib/schemas/loyalty";
 import type { LoyaltyProgramFormValues } from "@/lib/schemas/loyalty-form";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
   Button,
-  Card,
-  CardContent,
-  CardHeader,
   FormControl,
   FormField,
   FormItem,
+  FormLabel,
   FormMessage,
   Input,
-  Label,
   Switch,
   useFormContext,
 } from "@reelo/ui/components";
 import { Trash2 } from "lucide-react";
+import { useState } from "react";
 import { MaxCapToggleField } from "./MaxCapToggleField";
 import { MinPurchaseToggleField } from "./MinPurchaseToggleField";
 
@@ -37,33 +43,65 @@ export function RewardStageCard({
   onRemove,
   canRemove,
 }: RewardStageCardProps) {
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const form = useFormContext<LoyaltyProgramFormValues>();
   const prefix = `rewardStages.${index}` as const;
   const rewardType = form.watch(`${prefix}.rewardType`) as LoyaltyRewardType;
 
+  const handleConfirmRemove = () => {
+    onRemove();
+    setDeleteOpen(false);
+  };
+
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <span className="text-sm font-medium">Reward stage {index + 1}</span>
+    <section className="space-y-4">
+      <div className="flex flex-row items-center justify-between gap-2">
+        <h3 className="text-base font-medium">Reward stage {index + 1}</h3>
         {canRemove && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="text-muted-foreground hover:text-destructive h-8 w-8"
-            onClick={onRemove}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+          <>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="text-destructive hover:bg-destructive/10 hover:text-destructive h-8 w-8"
+              onClick={() => setDeleteOpen(true)}
+              aria-label={`Delete reward stage ${index + 1}`}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+            <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>
+                    Delete reward stage {index + 1}?
+                  </AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This reward stage will be removed. You can add it back later
+                    if needed.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleConfirmRemove}
+                    className="bg-destructive hover:bg-destructive/90 text-white hover:text-white"
+                  >
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </>
         )}
-      </CardHeader>
-      <CardContent className="space-y-4">
+      </div>
+
+      <div className="grid gap-4">
         <FormField
           control={form.control}
           name={`${prefix}.pointsRequired`}
           render={({ field }) => (
             <FormItem>
-              <Label className="text-sm">Points required</Label>
+              <FormLabel>Points required</FormLabel>
               <FormControl>
                 <Input
                   variant="underline"
@@ -89,7 +127,7 @@ export function RewardStageCard({
           name={`${prefix}.rewardName`}
           render={({ field }) => (
             <FormItem>
-              <Label className="text-sm">Reward name (display)</Label>
+              <FormLabel>Reward name (display)</FormLabel>
               <FormControl>
                 <Input
                   variant="underline"
@@ -106,7 +144,7 @@ export function RewardStageCard({
           name={`${prefix}.rewardType`}
           render={({ field }) => (
             <FormItem>
-              <Label className="text-sm">Reward type</Label>
+              <FormLabel>Reward type</FormLabel>
               <div className="flex flex-wrap gap-4 pt-2">
                 {REWARD_TYPES.map((t) => (
                   <label
@@ -135,7 +173,7 @@ export function RewardStageCard({
               name={`${prefix}.freeItemName`}
               render={({ field }) => (
                 <FormItem>
-                  <Label className="text-sm">Item name (if no SKU)</Label>
+                  <FormLabel>Item name (if no SKU)</FormLabel>
                   <FormControl>
                     <Input
                       variant="underline"
@@ -163,7 +201,7 @@ export function RewardStageCard({
               name={`${prefix}.percentageValue`}
               render={({ field }) => (
                 <FormItem>
-                  <Label className="text-sm">Discount %</Label>
+                  <FormLabel>Discount %</FormLabel>
                   <FormControl>
                     <Input
                       variant="underline"
@@ -192,17 +230,15 @@ export function RewardStageCard({
               control={form.control}
               name={`${prefix}.appliesToEntirePurchase`}
               render={({ field }) => (
-                <FormItem className="flex flex-row items-center gap-2">
+                <FormItem className="border-input flex flex-row items-center justify-between gap-4 border-b py-4">
+                  <div className="min-w-0 space-y-0.5">
+                    <FormLabel>Apply to entire purchase</FormLabel>
+                  </div>
                   <FormControl>
-                    <label className="flex cursor-pointer items-center gap-2">
-                      <Switch
-                        checked={field.value ?? true}
-                        onCheckedChange={field.onChange}
-                      />
-                      <span className="text-sm font-normal">
-                        Apply to entire purchase
-                      </span>
-                    </label>
+                    <Switch
+                      checked={field.value ?? true}
+                      onCheckedChange={field.onChange}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -230,7 +266,7 @@ export function RewardStageCard({
               name={`${prefix}.cashAmount`}
               render={({ field }) => (
                 <FormItem>
-                  <Label className="text-sm">Cash discount amount (₹)</Label>
+                  <FormLabel>Cash discount amount (₹)</FormLabel>
                   <FormControl>
                     <Input
                       variant="underline"
@@ -266,7 +302,7 @@ export function RewardStageCard({
             />
           </>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   );
 }
