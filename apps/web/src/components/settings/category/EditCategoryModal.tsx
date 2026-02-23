@@ -27,6 +27,7 @@ import {
   FormLabel,
   FormMessage,
   Input,
+  SaveButton,
   Select,
   SelectContent,
   SelectItem,
@@ -89,35 +90,43 @@ export function EditCategoryModal({
     form,
   ]);
 
-  const handleSubmit = (data: EditCategoryFormValues) => {
-    update.mutate(
-      {
-        id: category.id,
-        data: {
-          ...data,
-          description: data.description || null,
-          parentId: data.parentId ?? null,
+  const runSubmit = async () => {
+    const valid = await form.trigger();
+    if (!valid) throw new Error("Validation failed");
+    const data = form.getValues();
+    return new Promise<void>((resolve, reject) => {
+      update.mutate(
+        {
+          id: category.id,
+          data: {
+            ...data,
+            description: data.description || null,
+            parentId: data.parentId ?? null,
+          },
         },
-      },
-      {
-        onSuccess: (res) => {
-          if (res.error) {
-            toast.error(res.error);
-            return;
-          }
-          toast.success("Category updated successfully");
-          onClose();
+        {
+          onSuccess: (res) => {
+            if (res.error) {
+              toast.error(res.error);
+              reject(new Error(res.error));
+              return;
+            }
+            toast.success("Category updated successfully");
+            onClose();
+            resolve();
+          },
+          onError: (err) => {
+            toast.error(
+              getErrorMessageFromResponse(
+                err,
+                "Failed to update category. Please try again.",
+              ),
+            );
+            reject(err);
+          },
         },
-        onError: (err) => {
-          toast.error(
-            getErrorMessageFromResponse(
-              err,
-              "Failed to update category. Please try again.",
-            ),
-          );
-        },
-      },
-    );
+      );
+    });
   };
 
   return (
@@ -130,7 +139,12 @@ export function EditCategoryModal({
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)}>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              void runSubmit();
+            }}
+          >
             <DialogSection padding="medium" className="space-y-4">
               <FormField
                 control={form.control}
@@ -233,9 +247,14 @@ export function EditCategoryModal({
               <Button type="button" variant="outline" onClick={onClose}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={update.isPending}>
-                {update.isPending ? "Saving..." : "Save changes"}
-              </Button>
+              <SaveButton
+                onSave={runSubmit}
+                labels={{
+                  idle: "Save changes",
+                  loading: "Saving",
+                  success: "Saved",
+                }}
+              />
             </DialogFooter>
           </form>
         </Form>

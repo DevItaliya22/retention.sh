@@ -21,6 +21,9 @@ model FeedbackConfig {
   isHowDidYouHearEnabled Boolean               @default(true)
   howDidYouHearOptions   HowDidYouHearOption[]
 
+  // Selection options (e.g. "What you liked / didn't like") — ordered by seq, DnD in admin
+  selectionOptions FeedbackSelectionOption[]
+
   // Rewards (cashback credited to customer wallet on feedback submit)
   feedbackRewardEnabled Boolean @default(false)
   rewardAmount          Float? // cashback amount (₹) added to customer wallet  
@@ -108,6 +111,24 @@ model HowDidYouHearOption {
   @@map("how_did_you_hear_option")
 }
 
+model FeedbackSelectionOption {
+  id String @id @default(uuid())
+
+  label    String
+  seq      Int // display order for DnD
+  configId String
+  config   FeedbackConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+
+  responses FeedbackResponse[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([configId, label])
+  @@index([configId])
+  @@map("feedback_selection_option")
+}
+
 model FeedbackResponse {
   id String @id @default(uuid())
 
@@ -124,10 +145,11 @@ model FeedbackResponse {
   transactions Transaction[]
 
   // Response Data
-  rating             Int?
-  comment            String?
-  howDidYouHear      String?
-  selectedCategories String[] // Storing as names for simplicity or could be relation
+  rating                   Int?
+  comment                  String?
+  howDidYouHear            String?
+  selectedCategories       String[] // Storing as names for simplicity or could be relation
+  selectedSelectionOptions FeedbackSelectionOption[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

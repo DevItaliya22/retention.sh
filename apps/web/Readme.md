@@ -30,13 +30,8 @@ SKU adding
 
 <!--  form https://www.openloyalty.io/  -->
 
-Points
-Tiers
 Games of chance
-Rewards
-Wallets
 Spin the wheel
-Referrals
 Achievements
 Lotteries
 Badges

@@ -17,6 +17,7 @@ export const GET = withAdminAuth(async (_request, context) => {
         questions: { orderBy: { createdAt: "asc" } },
         categories: { orderBy: { createdAt: "asc" } },
         howDidYouHearOptions: { orderBy: { createdAt: "asc" } },
+        selectionOptions: { orderBy: { seq: "asc" } },
         branding: true,
       },
     });
@@ -115,6 +116,7 @@ export const PUT = withAdminAuth(async (request: NextRequest, context) => {
             questions: { orderBy: { createdAt: "asc" } },
             categories: { orderBy: { createdAt: "asc" } },
             howDidYouHearOptions: { orderBy: { createdAt: "asc" } },
+            selectionOptions: { orderBy: { seq: "asc" } },
             branding: true,
           },
         })
@@ -135,6 +137,7 @@ export const PUT = withAdminAuth(async (request: NextRequest, context) => {
             questions: { orderBy: { createdAt: "asc" } },
             categories: { orderBy: { createdAt: "asc" } },
             howDidYouHearOptions: { orderBy: { createdAt: "asc" } },
+            selectionOptions: { orderBy: { seq: "asc" } },
             branding: true,
           },
         });

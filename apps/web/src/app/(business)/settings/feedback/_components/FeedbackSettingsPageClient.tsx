@@ -33,6 +33,7 @@ function getDefaultConfig(): FeedbackConfigDto {
     questions: [],
     categories: [],
     howDidYouHearOptions: [],
+    selectionOptions: [],
     branding: null,
   };
 }

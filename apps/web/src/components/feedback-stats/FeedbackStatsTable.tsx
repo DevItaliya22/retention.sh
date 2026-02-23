@@ -6,6 +6,7 @@ import {
 } from "@/hooks/feedback/useFeedbackConfig";
 import { getDataTableConfig } from "@/lib/utils/data-table-params";
 import {
+  Button,
   buttonVariants,
   DataTable,
   DataTableColumnHeader,
@@ -15,12 +16,22 @@ import {
 import { useDataTable } from "@reelo/ui/hooks";
 import { cn } from "@reelo/ui/lib/utils";
 import type { ColumnDef } from "@tanstack/react-table";
-import { User } from "lucide-react";
+import { Eye, User } from "lucide-react";
 import Link from "next/link";
-import { useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { FeedbackCommentSheet } from "./FeedbackCommentSheet";
 
 export function FeedbackStatsTable() {
   const { data, isLoading, isError, error } = useFeedbackStatsQuery();
+  const [detailFeedbackId, setDetailFeedbackId] = useState<string | null>(null);
+
+  const openDetailSheet = useCallback((id: string) => {
+    setDetailFeedbackId(id);
+  }, []);
+
+  const closeDetailSheet = useCallback(() => {
+    setDetailFeedbackId(null);
+  }, []);
 
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
@@ -36,6 +47,7 @@ export function FeedbackStatsTable() {
         comment: null as string | null,
         howDidYouHear: null as string | null,
         selectedCategories: [] as string[],
+        selectedSelectionOptions: [],
         createdAt: "",
         customerName: "",
         customerPhone: null as string | null,
@@ -50,6 +62,7 @@ export function FeedbackStatsTable() {
           comment: null,
           howDidYouHear: null,
           selectedCategories: [],
+          selectedSelectionOptions: [],
           createdAt: "",
           customerName: "",
           customerPhone: null,
@@ -210,8 +223,40 @@ export function FeedbackStatsTable() {
         },
         enableSorting: true,
       },
+      {
+        id: "actions",
+        size: 80,
+        header: () => <span className="sr-only">Actions</span>,
+        cell: ({ row }) => {
+          const item = row.original;
+          if (item.id === "empty-state") return null;
+          if (isLoading && item.id.startsWith("skeleton-")) {
+            return (
+              <div className="flex justify-end">
+                <Skeleton className="h-8 w-8" />
+              </div>
+            );
+          }
+          return (
+            <div className="flex justify-end">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => openDetailSheet(item.id)}
+                aria-label="View feedback details"
+              >
+                <Eye className="h-4 w-4" />
+              </Button>
+            </div>
+          );
+        },
+        enableSorting: false,
+        enableHiding: false,
+      },
     ],
-    [isLoading],
+    [isLoading, openDetailSheet],
   );
 
   const { table } = useDataTable({
@@ -222,7 +267,7 @@ export function FeedbackStatsTable() {
     initialState: {
       pagination: { pageIndex: 0, pageSize: perPage },
       sorting: [{ id: "createdAt", desc: true }],
-      columnPinning: { right: [] },
+      columnPinning: { right: ["actions"] },
     },
     prefix: getDataTableConfig("feedbackStats").prefix,
   });
@@ -241,26 +286,33 @@ export function FeedbackStatsTable() {
   }
 
   return (
-    <DataTable
-      table={table}
-      renderRowFooter={(row) => {
-        if (isEmpty && row.original.id === "empty-state") {
-          return (
-            <div className="flex flex-col items-center justify-center px-4 py-12">
-              <p className="text-muted-foreground text-sm font-medium">
-                No feedback yet
-              </p>
-              <p className="text-muted-foreground mt-1 text-xs">
-                Responses will appear when customers submit feedback from their
-                bill link
-              </p>
-            </div>
-          );
-        }
-        return null;
-      }}
-    >
-      <DataTableToolbar table={table} />
-    </DataTable>
+    <>
+      <FeedbackCommentSheet
+        open={detailFeedbackId !== null}
+        onOpenChange={(open) => !open && closeDetailSheet()}
+        feedbackResponseId={detailFeedbackId}
+      />
+      <DataTable
+        table={table}
+        renderRowFooter={(row) => {
+          if (isEmpty && row.original.id === "empty-state") {
+            return (
+              <div className="flex flex-col items-center justify-center px-4 py-12">
+                <p className="text-muted-foreground text-sm font-medium">
+                  No feedback yet
+                </p>
+                <p className="text-muted-foreground mt-1 text-xs">
+                  Responses will appear when customers submit feedback from
+                  their bill link
+                </p>
+              </div>
+            );
+          }
+          return null;
+        }}
+      >
+        <DataTableToolbar table={table} />
+      </DataTable>
+    </>
   );
 }

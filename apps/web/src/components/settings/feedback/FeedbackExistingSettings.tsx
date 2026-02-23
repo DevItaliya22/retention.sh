@@ -1,8 +1,28 @@
 "use client";
 
 import { SettingsFieldGroup } from "@/components/common/settings/SettingsFieldGroup";
-import type { FeedbackConfigDto } from "@/hooks/feedback/useFeedbackConfig";
-import { useUpdateFeedbackConfig } from "@/hooks/feedback/useFeedbackConfig";
+import type {
+  FeedbackConfigDto,
+  FeedbackSelectionOptionDto,
+} from "@/hooks/feedback/useFeedbackConfig";
+import {
+  useCreateFeedbackSelectionOption,
+  useDeleteFeedbackSelectionOption,
+  useReorderFeedbackSelectionOptions,
+  useUpdateFeedbackConfig,
+  useUpdateFeedbackSelectionOption,
+} from "@/hooks/feedback/useFeedbackConfig";
+import {
+  Button,
+  Input,
+  Sortable,
+  SortableContent,
+  SortableItem,
+  SortableItemHandle,
+} from "@reelo/ui/components";
+import { GripVertical, Trash2 } from "lucide-react";
+import { useCallback, useState } from "react";
+import { toast } from "sonner";
 
 const TIMING_OPTIONS = [
   { value: "IMMEDIATELY", label: "Immediately" },
@@ -23,6 +43,173 @@ const ONLINE_REVIEW_PLATFORM_OPTIONS = [
   { value: "ZOMATO", label: "Zomato" },
   { value: "OTHER", label: "Other" },
 ];
+
+function SelectionOptionsSection({
+  options,
+}: {
+  options: FeedbackSelectionOptionDto[];
+}) {
+  const [newLabel, setNewLabel] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editLabel, setEditLabel] = useState("");
+
+  const createOption = useCreateFeedbackSelectionOption();
+  const updateOption = useUpdateFeedbackSelectionOption();
+  const deleteOption = useDeleteFeedbackSelectionOption();
+  const reorderOptions = useReorderFeedbackSelectionOptions();
+
+  const handleAdd = useCallback(async () => {
+    const label = newLabel.trim();
+    if (!label) return;
+    try {
+      await createOption.mutateAsync({ label, seq: options.length });
+      setNewLabel("");
+      toast.success("Option added");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to add option");
+    }
+  }, [newLabel, options.length, createOption]);
+
+  const handleReorder = useCallback(
+    async (reordered: FeedbackSelectionOptionDto[]) => {
+      const orderedIds = reordered.map((o) => o.id);
+      if (orderedIds.join() === options.map((o) => o.id).join()) return;
+      try {
+        await reorderOptions.mutateAsync({ orderedIds });
+        toast.success("Order updated");
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Failed to update order");
+      }
+    },
+    [options, reorderOptions],
+  );
+
+  const handleUpdateLabel = useCallback(
+    async (id: string, label: string) => {
+      const trimmed = label.trim();
+      const opt = options.find((o) => o.id === id);
+      if (!opt || trimmed === opt.label) {
+        setEditingId(null);
+        return;
+      }
+      try {
+        await updateOption.mutateAsync({ id, label: trimmed });
+        setEditingId(null);
+        toast.success("Option updated");
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Failed to update option");
+      }
+    },
+    [options, updateOption],
+  );
+
+  const handleDelete = useCallback(
+    async (id: string) => {
+      try {
+        await deleteOption.mutateAsync(id);
+        toast.success("Option removed");
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Failed to remove option");
+      }
+    },
+    [deleteOption],
+  );
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <h3 className="text-sm font-medium">Selection options</h3>
+        <p className="text-muted-foreground text-xs">
+          Options customers can select when giving feedback (e.g. what they
+          liked or didn&apos;t like). Order is used on the feedback form.
+        </p>
+      </div>
+      <div className="flex flex-col gap-2">
+        <Sortable
+          value={options}
+          getItemValue={(item) => item.id}
+          onValueChange={(next) => handleReorder(next)}
+        >
+          <SortableContent className="flex flex-col gap-2">
+            {options.map((opt) => (
+              <SortableItem
+                key={opt.id}
+                value={opt.id}
+                className="border-input bg-background flex items-center gap-2 rounded-lg border px-3 py-2"
+              >
+                <SortableItemHandle
+                  className="text-muted-foreground cursor-grab touch-none active:cursor-grabbing"
+                  aria-label="Drag to reorder"
+                >
+                  <GripVertical className="size-4" />
+                </SortableItemHandle>
+                {editingId === opt.id ? (
+                  <Input
+                    className="min-h-9 flex-1"
+                    value={editLabel}
+                    onChange={(e) => setEditLabel(e.target.value)}
+                    onBlur={() => handleUpdateLabel(opt.id, editLabel)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        (e.target as HTMLInputElement).blur();
+                      }
+                    }}
+                    autoFocus
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    className="min-h-9 flex-1 text-left text-sm"
+                    onClick={() => {
+                      setEditingId(opt.id);
+                      setEditLabel(opt.label);
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                )}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="text-muted-foreground hover:text-destructive size-8 shrink-0"
+                  aria-label="Remove option"
+                  onClick={() => handleDelete(opt.id)}
+                  disabled={deleteOption.isPending}
+                >
+                  <Trash2 className="size-4" />
+                </Button>
+              </SortableItem>
+            ))}
+          </SortableContent>
+        </Sortable>
+        <div className="flex gap-2">
+          <Input
+            className="min-h-9 flex-1"
+            placeholder="Add option (e.g. Friendly staff)"
+            value={newLabel}
+            onChange={(e) => setNewLabel(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                handleAdd();
+              }
+            }}
+          />
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={handleAdd}
+            disabled={!newLabel.trim() || createOption.isPending}
+          >
+            Add
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 interface FeedbackExistingSettingsProps {
   config: FeedbackConfigDto;
@@ -270,6 +457,8 @@ export function FeedbackExistingSettings({
         }}
         onSubmit={handleUpdateDiscoveryAndReviews}
       />
+
+      <SelectionOptionsSection options={config.selectionOptions ?? []} />
 
       <SettingsFieldGroup
         title="Negative feedback alerts"

@@ -134,6 +134,7 @@ CREATE TABLE "business" (
     "defaultCurrencySymbol" TEXT NOT NULL DEFAULT '₹',
     "defaultCurrencyCode" TEXT NOT NULL DEFAULT 'INR',
     "registrationBonusPoints" INTEGER NOT NULL DEFAULT 0,
+    "nextBillNumber" INTEGER NOT NULL DEFAULT 1,
     "isServiceEnabled" JSONB,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -175,9 +176,30 @@ CREATE TABLE "sku" (
 -- CreateTable
 CREATE TABLE "campaign" (
     "id" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
-    "description" TEXT NOT NULL,
+    "slug" TEXT NOT NULL,
+    "title" TEXT,
+    "description" TEXT,
+    "contactNumber" TEXT,
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "targetCustomerTags" TEXT[] DEFAULT ARRAY[]::TEXT[],
+    "status" "CampaignStatus" NOT NULL DEFAULT 'DRAFT',
+    "emailSubject" TEXT,
+    "themeColor" TEXT,
+    "textColor" TEXT,
+    "logo" TEXT,
+    "bannerImage" TEXT,
     "rewardType" "CampaignRewardType" NOT NULL DEFAULT 'FREE_ITEM',
+    "rewardValue" TEXT,
+    "appliesTo" "BenefitAppliesTo" NOT NULL DEFAULT 'ENTIRE_PURCHASE',
+    "maxRedemptionAmount" DOUBLE PRECISION,
+    "maxRedemptionEnabled" BOOLEAN NOT NULL DEFAULT false,
+    "minPurchaseForEarningEnabled" BOOLEAN NOT NULL DEFAULT false,
+    "minPurchaseForEarning" DOUBLE PRECISION,
+    "minPurchaseForRedemptionEnabled" BOOLEAN NOT NULL DEFAULT false,
+    "minPurchaseForRedemption" DOUBLE PRECISION,
+    "instantCashbackRedeemable" BOOLEAN NOT NULL DEFAULT false,
+    "redemptionLimit" "RedemptionLimit" NOT NULL DEFAULT 'ONCE',
+    "termsAndConditions" TEXT[] DEFAULT ARRAY[]::TEXT[],
     "whatsappEnabled" BOOLEAN NOT NULL DEFAULT false,
     "emailEnabled" BOOLEAN NOT NULL DEFAULT false,
     "businessId" TEXT NOT NULL,
@@ -285,6 +307,18 @@ CREATE TABLE "how_did_you_hear_option" (
 );
 
 -- CreateTable
+CREATE TABLE "feedback_selection_option" (
+    "id" TEXT NOT NULL,
+    "label" TEXT NOT NULL,
+    "seq" INTEGER NOT NULL,
+    "configId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "feedback_selection_option_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "feedback_response" (
     "id" TEXT NOT NULL,
     "configId" TEXT NOT NULL,
@@ -347,6 +381,7 @@ CREATE TABLE "loyalty_cashback_config" (
     "redemptionBillLimitEnabled" BOOLEAN NOT NULL DEFAULT false,
     "redemptionBillLimitAmount" DOUBLE PRECISION,
     "redemptionBillLimitPercentage" DOUBLE PRECISION,
+    "allowSameBillRedemption" BOOLEAN NOT NULL DEFAULT false,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -359,6 +394,7 @@ CREATE TABLE "loyalty_tier_config" (
     "loyaltyId" TEXT NOT NULL,
     "pointsPerRupee" DOUBLE PRECISION NOT NULL DEFAULT 1,
     "onFinalAmount" BOOLEAN NOT NULL DEFAULT false,
+    "allowSameBillRedemption" BOOLEAN NOT NULL DEFAULT false,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -391,6 +427,7 @@ CREATE TABLE "loyalty_amount_spent_config" (
     "pointsPerRupee" DOUBLE PRECISION NOT NULL DEFAULT 1,
     "onFinalAmount" BOOLEAN NOT NULL DEFAULT false,
     "maxPointsPerPurchase" INTEGER,
+    "allowSameBillRedemption" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -405,6 +442,7 @@ CREATE TABLE "loyalty_visit_made_config" (
     "visitIntervalEnabled" BOOLEAN NOT NULL DEFAULT false,
     "visitIntervalValue" INTEGER,
     "visitIntervalUnit" "VisitIntervalUnit",
+    "allowSameBillRedemption" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -791,6 +829,14 @@ CREATE TABLE "verification" (
     CONSTRAINT "verification_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "_FeedbackResponseToFeedbackSelectionOption" (
+    "A" TEXT NOT NULL,
+    "B" TEXT NOT NULL,
+
+    CONSTRAINT "_FeedbackResponseToFeedbackSelectionOption_AB_pkey" PRIMARY KEY ("A","B")
+);
+
 -- CreateIndex
 CREATE INDEX "bill_businessId_idx" ON "bill"("businessId");
 
@@ -840,6 +886,9 @@ CREATE INDEX "sku_categoryId_idx" ON "sku"("categoryId");
 CREATE UNIQUE INDEX "sku_businessId_sku_key" ON "sku"("businessId", "sku");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "campaign_slug_key" ON "campaign"("slug");
+
+-- CreateIndex
 CREATE INDEX "campaign_businessId_idx" ON "campaign"("businessId");
 
 -- CreateIndex
@@ -880,6 +929,12 @@ CREATE INDEX "feedback_category_configId_idx" ON "feedback_category"("configId")
 
 -- CreateIndex
 CREATE INDEX "how_did_you_hear_option_configId_idx" ON "how_did_you_hear_option"("configId");
+
+-- CreateIndex
+CREATE INDEX "feedback_selection_option_configId_idx" ON "feedback_selection_option"("configId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "feedback_selection_option_configId_label_key" ON "feedback_selection_option"("configId", "label");
 
 -- CreateIndex
 CREATE INDEX "feedback_response_configId_idx" ON "feedback_response"("configId");
@@ -1133,6 +1188,9 @@ CREATE INDEX "account_userId_idx" ON "account"("userId");
 -- CreateIndex
 CREATE INDEX "verification_identifier_idx" ON "verification"("identifier");
 
+-- CreateIndex
+CREATE INDEX "_FeedbackResponseToFeedbackSelectionOption_B_index" ON "_FeedbackResponseToFeedbackSelectionOption"("B");
+
 -- AddForeignKey
 ALTER TABLE "bill" ADD CONSTRAINT "bill_businessId_customerId_fkey" FOREIGN KEY ("businessId", "customerId") REFERENCES "business_customer"("businessId", "customerId") ON DELETE CASCADE ON UPDATE CASCADE;
 
@@ -1189,6 +1247,9 @@ ALTER TABLE "feedback_category" ADD CONSTRAINT "feedback_category_configId_fkey"
 
 -- AddForeignKey
 ALTER TABLE "how_did_you_hear_option" ADD CONSTRAINT "how_did_you_hear_option_configId_fkey" FOREIGN KEY ("configId") REFERENCES "feedback_config"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "feedback_selection_option" ADD CONSTRAINT "feedback_selection_option_configId_fkey" FOREIGN KEY ("configId") REFERENCES "feedback_config"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "feedback_response" ADD CONSTRAINT "feedback_response_configId_fkey" FOREIGN KEY ("configId") REFERENCES "feedback_config"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -1354,3 +1415,9 @@ ALTER TABLE "session" ADD CONSTRAINT "session_userId_fkey" FOREIGN KEY ("userId"
 
 -- AddForeignKey
 ALTER TABLE "account" ADD CONSTRAINT "account_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "_FeedbackResponseToFeedbackSelectionOption" ADD CONSTRAINT "_FeedbackResponseToFeedbackSelectionOption_A_fkey" FOREIGN KEY ("A") REFERENCES "feedback_response"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "_FeedbackResponseToFeedbackSelectionOption" ADD CONSTRAINT "_FeedbackResponseToFeedbackSelectionOption_B_fkey" FOREIGN KEY ("B") REFERENCES "feedback_selection_option"("id") ON DELETE CASCADE ON UPDATE CASCADE;

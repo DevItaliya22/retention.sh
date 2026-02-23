@@ -26,6 +26,7 @@ import {
   FormMessage,
   FormProvider,
   Input,
+  SaveButton,
   Separator,
   Switch,
   useForm,
@@ -121,7 +122,10 @@ export function TierSettingsCard({
       ? Math.max(...watchedTiers.map((t) => Number(t?.rank ?? 0)))
       : 0;
 
-  const handleSave = form.handleSubmit((values) => {
+  const runSubmit = async () => {
+    const valid = await form.trigger();
+    if (!valid) throw new Error("Validation failed");
+    const values = form.getValues();
     const validation = validateTierRanges(
       values.tiers.map((t) => ({
         rank: t.rank,
@@ -133,7 +137,7 @@ export function TierSettingsCard({
       const message = validation.errors.join(". ");
       form.setError("tiers", { type: "manual", message });
       toast.error(message);
-      return;
+      throw new Error(message);
     }
     const maxRank =
       values.tiers.length > 0
@@ -162,10 +166,16 @@ export function TierSettingsCard({
         };
       }),
     };
-    onSave(payload, {
-      onSuccess: () => form.reset(values, { keepDefaultValues: false }),
+    return new Promise<void>((resolve, reject) => {
+      onSave(payload, {
+        onSuccess: () => {
+          form.reset(values, { keepDefaultValues: false });
+          resolve();
+        },
+        onError: (e) => reject(e),
+      } as { onSuccess?: () => void; onError?: (e: unknown) => void });
     });
-  });
+  };
 
   return (
     <Card className="gap-0 p-0!">
@@ -313,14 +323,15 @@ export function TierSettingsCard({
               </Button>
             </CardContent>
             <CardFooter className="flex justify-end px-6 py-2">
-              <Button
-                type="button"
-                onClick={handleSave}
-                loading={isSaving}
+              <SaveButton
+                onSave={runSubmit}
                 disabled={!form.formState.isDirty}
-              >
-                Save changes
-              </Button>
+                labels={{
+                  idle: "Save changes",
+                  loading: "Saving",
+                  success: "Saved",
+                }}
+              />
             </CardFooter>
           </form>
         </Form>

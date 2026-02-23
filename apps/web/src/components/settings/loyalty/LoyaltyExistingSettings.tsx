@@ -18,7 +18,6 @@ import {
 } from "@/hooks/loyalty/useLoyaltySettings";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import {
-  Button,
   Card,
   CardContent,
   CardDescription,
@@ -27,6 +26,7 @@ import {
   CardTitle,
   Form,
   FormProvider,
+  SaveButton,
   useForm,
 } from "@reelo/ui/components";
 import { useEffect } from "react";
@@ -205,30 +205,39 @@ function CommonSettingsCard({
     },
   });
 
-  const handleSave = form.handleSubmit((values) => {
+  const runSubmit = async () => {
+    const valid = await form.trigger();
+    if (!valid) throw new Error("Validation failed");
+    const values = form.getValues();
     const rawTerms = values.termsAndConditions ?? [];
     const filtered = rawTerms
       .map((s) => (typeof s === "string" ? s : "").trim())
       .filter(Boolean);
-    updateMutation.mutate(
-      {
-        section: "common",
-        pointReminderDays: values.pointReminderDays ?? null,
-        pointExpiryDays: values.pointExpiryDays ?? null,
-        whatsappEnabled: values.whatsappEnabled ?? false,
-        emailEnabled: values.emailEnabled ?? false,
-        smsEnabled: values.smsEnabled ?? false,
-        termsAndConditions: filtered.length > 0 ? filtered : [],
-      },
-      {
-        onSuccess: () => {
-          toast.success("Expiry & channels saved");
-          form.reset(values, { keepDefaultValues: false });
+    return new Promise<void>((resolve, reject) => {
+      updateMutation.mutate(
+        {
+          section: "common",
+          pointReminderDays: values.pointReminderDays ?? null,
+          pointExpiryDays: values.pointExpiryDays ?? null,
+          whatsappEnabled: values.whatsappEnabled ?? false,
+          emailEnabled: values.emailEnabled ?? false,
+          smsEnabled: values.smsEnabled ?? false,
+          termsAndConditions: filtered.length > 0 ? filtered : [],
         },
-        onError: (e) => toast.error(e.message),
-      },
-    );
-  });
+        {
+          onSuccess: () => {
+            toast.success("Expiry & channels saved");
+            form.reset(values, { keepDefaultValues: false });
+            resolve();
+          },
+          onError: (e) => {
+            toast.error(e.message);
+            reject(e);
+          },
+        },
+      );
+    });
+  };
 
   return (
     <Card className="gap-0 p-0!">
@@ -249,14 +258,15 @@ function CommonSettingsCard({
               <TermsConditionsEditor layout="settings" />
             </CardContent>
             <CardFooter className="flex justify-end border-t px-6 py-4">
-              <Button
-                type="button"
-                onClick={handleSave}
-                loading={updateMutation.isPending}
+              <SaveButton
+                onSave={runSubmit}
                 disabled={!form.formState.isDirty}
-              >
-                Save changes
-              </Button>
+                labels={{
+                  idle: "Save changes",
+                  loading: "Saving",
+                  success: "Saved",
+                }}
+              />
             </CardFooter>
           </form>
         </Form>
@@ -287,18 +297,27 @@ function BrandingSettingsCard({
     defaultValues: { branding },
   });
 
-  const handleSave = form.handleSubmit((values) => {
-    updateMutation.mutate(
-      { section: "branding", branding: values.branding ?? null },
-      {
-        onSuccess: () => {
-          toast.success("Branding saved");
-          form.reset(values, { keepDefaultValues: false });
+  const runSubmit = async () => {
+    const valid = await form.trigger();
+    if (!valid) throw new Error("Validation failed");
+    const values = form.getValues();
+    return new Promise<void>((resolve, reject) => {
+      updateMutation.mutate(
+        { section: "branding", branding: values.branding ?? null },
+        {
+          onSuccess: () => {
+            toast.success("Branding saved");
+            form.reset(values, { keepDefaultValues: false });
+            resolve();
+          },
+          onError: (e) => {
+            toast.error(e.message);
+            reject(e);
+          },
         },
-        onError: (e) => toast.error(e.message),
-      },
-    );
-  });
+      );
+    });
+  };
 
   return (
     <Card className="gap-0 p-0!">
@@ -315,14 +334,15 @@ function BrandingSettingsCard({
               <BrandingFormFields prefix="branding" layout="settings" />
             </CardContent>
             <CardFooter className="flex justify-end border-t px-6 py-4">
-              <Button
-                type="button"
-                onClick={handleSave}
-                loading={updateMutation.isPending}
+              <SaveButton
+                onSave={runSubmit}
                 disabled={!form.formState.isDirty}
-              >
-                Save changes
-              </Button>
+                labels={{
+                  idle: "Save changes",
+                  loading: "Saving",
+                  success: "Saved",
+                }}
+              />
             </CardFooter>
           </form>
         </Form>
