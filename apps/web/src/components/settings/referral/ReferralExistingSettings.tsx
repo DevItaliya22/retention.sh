@@ -20,6 +20,7 @@ import {
   FormLabel,
   FormMessage,
   Input,
+  SaveButton,
   Select,
   SelectContent,
   SelectItem,
@@ -130,7 +131,6 @@ function NewCustomerBenefitsCard({
     values: Record<string, string | undefined>,
   ) => Promise<{ success: boolean; error?: string }>;
 }) {
-  const [isPending, startTransition] = useTransition();
   const form = useForm<NewCustomerBenefitForm>({
     resolver: zodResolver(
       newCustomerBenefitSchema,
@@ -172,6 +172,20 @@ function NewCustomerBenefitsCard({
     });
   }, [referralProgram, form]);
 
+  const runSubmit = async () => {
+    const valid = await form.trigger();
+    if (!valid) throw new Error("Validation failed");
+    const values = form.getValues();
+    const result = await onSubmit(values);
+    if (result.success) {
+      toast.success("Settings updated successfully");
+      form.reset(values, { keepDefaultValues: false });
+    } else {
+      toast.error(result.error || "Failed to update");
+      throw new Error(result.error);
+    }
+  };
+
   return (
     <Card className="gap-0 p-0!">
       <CardHeader className="flex flex-col gap-0 border-b py-2!">
@@ -184,14 +198,10 @@ function NewCustomerBenefitsCard({
       </CardHeader>
       <Form {...form}>
         <form
-          onSubmit={form.handleSubmit((values) =>
-            startTransition(async () => {
-              const result = await onSubmit(values);
-              if (result.success)
-                toast.success("Settings updated successfully");
-              else toast.error(result.error || "Failed to update");
-            }),
-          )}
+          onSubmit={(e) => {
+            e.preventDefault();
+            void runSubmit();
+          }}
         >
           <CardContent className="flex flex-col gap-y-4 border-b px-6 py-4">
             <FormField
@@ -318,13 +328,15 @@ function NewCustomerBenefitsCard({
             />
           </CardContent>
           <CardFooter className="flex justify-end px-6 py-2">
-            <Button
-              type="submit"
-              disabled={isPending || !form.formState.isDirty}
-              loading={isPending}
-            >
-              Save changes
-            </Button>
+            <SaveButton
+              onSave={runSubmit}
+              disabled={!form.formState.isDirty}
+              labels={{
+                idle: "Save changes",
+                loading: "Saving",
+                success: "Saved",
+              }}
+            />
           </CardFooter>
         </form>
       </Form>
@@ -343,7 +355,6 @@ function ExistingCustomerBenefitsCard({
     values: Record<string, string | undefined>,
   ) => Promise<{ success: boolean; error?: string }>;
 }) {
-  const [isPending, startTransition] = useTransition();
   const form = useForm<ExistingCustomerBenefitForm>({
     resolver: zodResolver(
       existingCustomerBenefitSchema,
@@ -389,6 +400,20 @@ function ExistingCustomerBenefitsCard({
     });
   }, [referralProgram, form]);
 
+  const runSubmit = async () => {
+    const valid = await form.trigger();
+    if (!valid) throw new Error("Validation failed");
+    const values = form.getValues();
+    const result = await onSubmit(values);
+    if (result.success) {
+      toast.success("Settings updated successfully");
+      form.reset(values, { keepDefaultValues: false });
+    } else {
+      toast.error(result.error || "Failed to update");
+      throw new Error(result.error);
+    }
+  };
+
   return (
     <Card className="gap-0 p-0!">
       <CardHeader className="flex flex-col gap-0 border-b py-2!">
@@ -401,14 +426,10 @@ function ExistingCustomerBenefitsCard({
       </CardHeader>
       <Form {...form}>
         <form
-          onSubmit={form.handleSubmit((values) =>
-            startTransition(async () => {
-              const result = await onSubmit(values);
-              if (result.success)
-                toast.success("Settings updated successfully");
-              else toast.error(result.error || "Failed to update");
-            }),
-          )}
+          onSubmit={(e) => {
+            e.preventDefault();
+            void runSubmit();
+          }}
         >
           <CardContent className="flex flex-col gap-y-4 border-b px-6 py-4">
             <FormField
@@ -535,13 +556,15 @@ function ExistingCustomerBenefitsCard({
             />
           </CardContent>
           <CardFooter className="flex justify-end px-6 py-2">
-            <Button
-              type="submit"
-              disabled={isPending || !form.formState.isDirty}
-              loading={isPending}
-            >
-              Save changes
-            </Button>
+            <SaveButton
+              onSave={runSubmit}
+              disabled={!form.formState.isDirty}
+              labels={{
+                idle: "Save changes",
+                loading: "Saving",
+                success: "Saved",
+              }}
+            />
           </CardFooter>
         </form>
       </Form>
@@ -775,7 +798,6 @@ function InformationSectionsCard({
   sections: Array<{ title: string; content: string }>;
   onUpdate: ReturnType<typeof useUpdateReferralProgram>["mutateAsync"];
 }) {
-  const [isPending, startTransition] = useTransition();
   const form = useForm<{ sections: Array<{ title: string; content: string }> }>(
     {
       defaultValues: {
@@ -807,20 +829,14 @@ function InformationSectionsCard({
     );
   };
 
-  const onSubmit = (data: {
-    sections: Array<{ title: string; content: string }>;
-  }) => {
-    startTransition(async () => {
-      try {
-        const filtered = data.sections.filter(
-          (s) => s.title.trim() !== "" || s.content.trim() !== "",
-        );
-        await onUpdate({ informationSections: filtered });
-        toast.success("Information sections updated");
-      } catch (error: any) {
-        toast.error(error.message || "Failed to update");
-      }
-    });
+  const runSubmit = async () => {
+    const data = form.getValues();
+    const filtered = data.sections.filter(
+      (s) => s.title.trim() !== "" || s.content.trim() !== "",
+    );
+    await onUpdate({ informationSections: filtered });
+    toast.success("Information sections updated");
+    form.reset(data, { keepDefaultValues: false });
   };
 
   return (
@@ -834,7 +850,12 @@ function InformationSectionsCard({
         </CardDescription>
       </CardHeader>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)}>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            void runSubmit();
+          }}
+        >
           <CardContent className="space-y-4 border-b px-6 py-4">
             {watchSections.map((_, index) => (
               <div key={index} className="flex gap-2 rounded-lg border p-4">
@@ -892,13 +913,15 @@ function InformationSectionsCard({
             </Button>
           </CardContent>
           <CardFooter className="flex justify-end border-t px-6 py-4">
-            <Button
-              type="submit"
-              disabled={isPending || !form.formState.isDirty}
-              loading={isPending}
-            >
-              Save changes
-            </Button>
+            <SaveButton
+              onSave={runSubmit}
+              disabled={!form.formState.isDirty}
+              labels={{
+                idle: "Save changes",
+                loading: "Saving",
+                success: "Saved",
+              }}
+            />
           </CardFooter>
         </form>
       </Form>
@@ -921,7 +944,6 @@ function TermsCard({
     | "termsAndConditionsExistingCustomer";
   onUpdate: ReturnType<typeof useUpdateReferralProgram>["mutateAsync"];
 }) {
-  const [isPending, startTransition] = useTransition();
   const items = value.map((t) => t.content);
   const form = useForm<{ items: string[] }>({
     defaultValues: {
@@ -946,18 +968,14 @@ function TermsCard({
     });
   };
 
-  const onSubmit = (data: { items: string[] }) => {
-    startTransition(async () => {
-      try {
-        const filtered = data.items
-          .map((s) => s.trim())
-          .filter((s) => s.length > 0);
-        await onUpdate({ [fieldKey]: filtered });
-        toast.success("Terms updated successfully");
-      } catch (error: any) {
-        toast.error(error.message || "Failed to update");
-      }
-    });
+  const runSubmit = async () => {
+    const data = form.getValues();
+    const filtered = data.items
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+    await onUpdate({ [fieldKey]: filtered });
+    toast.success("Terms updated successfully");
+    form.reset(data, { keepDefaultValues: false });
   };
 
   return (
@@ -967,7 +985,12 @@ function TermsCard({
         <CardDescription className="text-xs">{description}</CardDescription>
       </CardHeader>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)}>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            void runSubmit();
+          }}
+        >
           <CardContent className="space-y-3 border-b px-6 py-4">
             {watchItems.map((_, index) => (
               <div key={index} className="flex items-start gap-2">
@@ -1009,13 +1032,15 @@ function TermsCard({
             </Button>
           </CardContent>
           <CardFooter className="flex justify-end border-t px-6 py-4">
-            <Button
-              type="submit"
-              disabled={isPending || !form.formState.isDirty}
-              loading={isPending}
-            >
-              Save changes
-            </Button>
+            <SaveButton
+              onSave={runSubmit}
+              disabled={!form.formState.isDirty}
+              labels={{
+                idle: "Save changes",
+                loading: "Saving",
+                success: "Saved",
+              }}
+            />
           </CardFooter>
         </form>
       </Form>

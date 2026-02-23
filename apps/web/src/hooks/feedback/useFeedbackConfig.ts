@@ -1,13 +1,21 @@
 "use client";
 
 import { fetcher } from "@/lib/fetcher";
-import type { FeedbackConfigUpdateInput } from "@/lib/schemas/feedback";
+import type {
+  FeedbackConfigUpdateInput,
+  FeedbackSelectionOptionCreateInput,
+  FeedbackSelectionOptionReorderInput,
+  FeedbackSelectionOptionUpdateInput,
+} from "@/lib/schemas/feedback";
 import {
   buildApiParams,
   getDataTableConfig,
 } from "@/lib/utils/data-table-params";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
+
+const FEEDBACK_SELECTION_OPTIONS_BASE =
+  "/api/feedback/config/selection-options";
 
 export interface FeedbackQuestionDto {
   id: string;
@@ -23,6 +31,12 @@ export interface FeedbackCategoryDto {
 export interface HowDidYouHearOptionDto {
   id: string;
   name: string;
+}
+
+export interface FeedbackSelectionOptionDto {
+  id: string;
+  label: string;
+  seq: number;
 }
 
 export interface FeedbackConfigDto {
@@ -49,6 +63,7 @@ export interface FeedbackConfigDto {
   questions: FeedbackQuestionDto[];
   categories: FeedbackCategoryDto[];
   howDidYouHearOptions: HowDidYouHearOptionDto[];
+  selectionOptions: FeedbackSelectionOptionDto[];
   branding: unknown;
 }
 
@@ -63,6 +78,7 @@ export interface FeedbackStatRow {
   comment: string | null;
   howDidYouHear: string | null;
   selectedCategories: string[];
+  selectedSelectionOptions: { id: string; label: string }[];
   createdAt: string;
   customerName: string;
   customerPhone: string | null;
@@ -75,6 +91,36 @@ export interface FeedbackStatsResponse {
   page: number;
   perPage: number;
   error?: string;
+}
+
+export interface FeedbackDetailDto {
+  id: string;
+  rating: number | null;
+  comment: string | null;
+  howDidYouHear: string | null;
+  selectedCategories: string[];
+  selectedSelectionOptions: { id: string; label: string }[];
+  createdAt: string;
+  customerName: string;
+  customerPhone: string | null;
+  customerSlugId: string;
+  bill: {
+    id: string;
+    billNumber: string;
+    createdAt: string;
+    finalAmount: number | null;
+    userPaidAmount: number | null;
+  } | null;
+}
+
+export function useFeedbackDetailQuery(feedbackResponseId: string | null) {
+  return useQuery<FeedbackDetailDto, Error>({
+    queryKey: ["feedbackDetail", feedbackResponseId],
+    queryFn: () =>
+      fetcher<FeedbackDetailDto>(`/api/feedback/stats/${feedbackResponseId}`),
+    enabled: !!feedbackResponseId,
+    staleTime: 30_000,
+  });
 }
 
 export function useFeedbackConfigQuery() {
@@ -129,5 +175,87 @@ export function useFeedbackStatsQuery() {
     },
     placeholderData: (prev) => prev,
     staleTime: 5000,
+  });
+}
+
+export interface FeedbackSelectionOptionListResponse {
+  items: FeedbackSelectionOptionDto[];
+  error?: string;
+}
+
+export function useCreateFeedbackSelectionOption() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: FeedbackSelectionOptionCreateInput) => {
+      const res = await fetcher<{
+        option: FeedbackSelectionOptionDto;
+        error?: string;
+      }>(FEEDBACK_SELECTION_OPTIONS_BASE, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      if (res.error && !res.option) throw new Error(res.error);
+      return res;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["feedbackConfig"] });
+    },
+  });
+}
+
+export function useUpdateFeedbackSelectionOption() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      ...payload
+    }: FeedbackSelectionOptionUpdateInput & { id: string }) => {
+      const res = await fetcher<{
+        option: FeedbackSelectionOptionDto;
+        error?: string;
+      }>(`${FEEDBACK_SELECTION_OPTIONS_BASE}/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+      });
+      if (res.error && !res.option) throw new Error(res.error);
+      return res;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["feedbackConfig"] });
+    },
+  });
+}
+
+export function useDeleteFeedbackSelectionOption() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetcher<{ ok?: boolean; error?: string }>(
+        `${FEEDBACK_SELECTION_OPTIONS_BASE}/${id}`,
+        { method: "DELETE" },
+      );
+      if (res.error) throw new Error(res.error);
+      return res;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["feedbackConfig"] });
+    },
+  });
+}
+
+export function useReorderFeedbackSelectionOptions() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: FeedbackSelectionOptionReorderInput) => {
+      const res = await fetcher<{ ok?: boolean; error?: string }>(
+        `${FEEDBACK_SELECTION_OPTIONS_BASE}/reorder`,
+        { method: "PUT", body: JSON.stringify(payload) },
+      );
+      if (res.error) throw new Error(res.error);
+      return res;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["feedbackConfig"] });
+    },
   });
 }

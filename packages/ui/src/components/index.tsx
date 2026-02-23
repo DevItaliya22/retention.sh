@@ -48,6 +48,7 @@ export * from "./phone-input";
 export * from "./popover";
 export * from "./radio-group";
 export * from "./resizable";
+export * from "./save-button";
 export * from "./scroll-area";
 export * from "./search-box";
 export * from "./search-box-persisted";

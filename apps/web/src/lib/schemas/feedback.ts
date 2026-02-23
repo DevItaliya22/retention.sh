@@ -51,6 +51,23 @@ export const feedbackSubmitSchema = z.object({
   comment: z.string().max(2000).optional().nullable(),
   howDidYouHear: z.string().max(255).optional().nullable(),
   selectedCategories: z.array(z.string().max(255)).optional().default([]),
+  selectedSelectionOptionIds: z.array(z.string().uuid()).optional().default([]),
+});
+
+const uuidSchema = z.string().uuid();
+
+export const feedbackSelectionOptionCreateSchema = z.object({
+  label: z.string().min(1).max(255).trim(),
+  seq: z.coerce.number().int().min(0).optional(),
+});
+
+export const feedbackSelectionOptionUpdateSchema = z.object({
+  label: z.string().min(1).max(255).trim().optional(),
+  seq: z.coerce.number().int().min(0).optional(),
+});
+
+export const feedbackSelectionOptionReorderSchema = z.object({
+  orderedIds: z.array(uuidSchema).min(0),
 });
 
 export type FeedbackConfigUpdateInput = z.infer<
@@ -58,3 +75,12 @@ export type FeedbackConfigUpdateInput = z.infer<
 >;
 export type FeedbackStatsQueryInput = z.infer<typeof feedbackStatsQuerySchema>;
 export type FeedbackSubmitInput = z.infer<typeof feedbackSubmitSchema>;
+export type FeedbackSelectionOptionCreateInput = z.infer<
+  typeof feedbackSelectionOptionCreateSchema
+>;
+export type FeedbackSelectionOptionUpdateInput = z.infer<
+  typeof feedbackSelectionOptionUpdateSchema
+>;
+export type FeedbackSelectionOptionReorderInput = z.infer<
+  typeof feedbackSelectionOptionReorderSchema
+>;

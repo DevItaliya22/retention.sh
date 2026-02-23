@@ -2,7 +2,6 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
-  Button,
   Card,
   CardContent,
   CardDescription,
@@ -18,6 +17,7 @@ import {
   FormMessage,
   InfoIcon,
   Input,
+  SaveButton,
   Select,
   SelectContent,
   SelectItem,
@@ -25,7 +25,6 @@ import {
   SelectValue,
   Textarea,
 } from "@reelo/ui/components";
-import { useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import * as z from "zod";
@@ -69,8 +68,6 @@ export function SettingsFieldGroup({
   defaultValues,
   onSubmit,
 }: SettingsFieldGroupProps) {
-  const [isPending, startTransition] = useTransition();
-
   const schema = z.object(
     fields.reduce(
       (acc, field) => {
@@ -92,27 +89,24 @@ export function SettingsFieldGroup({
 
   const { isDirty } = form.formState;
 
-  const handleSubmit = (values: Record<string, string | undefined>) => {
-    startTransition(async () => {
-      try {
-        const filteredValues: Record<string, string> = {};
-        fields.forEach((field) => {
-          if (!field.disabled) {
-            filteredValues[field.name] = (values[field.name] ?? "") as string;
-          }
-        });
-        const result = await onSubmit(filteredValues);
-        if (result.success) {
-          toast.success("Settings updated successfully");
-          form.reset(values, { keepDefaultValues: false });
-        } else {
-          toast.error(result.error || "Failed to update settings");
-        }
-      } catch (error) {
-        console.error("Error updating settings:", error);
-        toast.error("Failed to update settings");
+  const runSubmit = async () => {
+    const valid = await form.trigger();
+    if (!valid) throw new Error("Validation failed");
+    const values = form.getValues();
+    const filteredValues: Record<string, string> = {};
+    fields.forEach((field) => {
+      if (!field.disabled) {
+        filteredValues[field.name] = (values[field.name] ?? "") as string;
       }
     });
+    const result = await onSubmit(filteredValues);
+    if (result.success) {
+      toast.success("Settings updated successfully");
+      form.reset(values, { keepDefaultValues: false });
+    } else {
+      toast.error(result.error || "Failed to update settings");
+      throw new Error(result.error);
+    }
   };
 
   return (
@@ -124,7 +118,12 @@ export function SettingsFieldGroup({
         )}
       </CardHeader>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(handleSubmit)}>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            void runSubmit();
+          }}
+        >
           <CardContent className="flex flex-col gap-y-4 border-b px-6 py-4 last:border-none">
             {fields.map((field) => (
               <FormField
@@ -153,13 +152,13 @@ export function SettingsFieldGroup({
                             {...formField}
                             value={formField.value || ""}
                             placeholder={field.placeholder}
-                            disabled={field.disabled || isPending}
+                            disabled={field.disabled}
                           />
                         ) : field.type === "select" && field.options ? (
                           <Select
                             onValueChange={formField.onChange}
                             value={formField.value || ""}
-                            disabled={field.disabled || isPending}
+                            disabled={field.disabled}
                           >
                             <SelectTrigger className="w-full rounded-none border-0 border-b bg-transparent px-0 py-3 shadow-none focus-visible:ring-0 dark:bg-transparent dark:hover:bg-transparent">
                               <SelectValue
@@ -184,7 +183,7 @@ export function SettingsFieldGroup({
                               onCheckedChange={(v) =>
                                 formField.onChange(v ? "true" : "false")
                               }
-                              disabled={field.disabled || isPending}
+                              disabled={field.disabled}
                             />
                             {field.checkboxLabel && (
                               <span className="text-muted-foreground text-sm">
@@ -199,7 +198,7 @@ export function SettingsFieldGroup({
                             {...formField}
                             value={formField.value || ""}
                             placeholder={field.placeholder}
-                            disabled={field.disabled || isPending}
+                            disabled={field.disabled}
                             {...(field.type === "number"
                               ? {
                                   min: field.min,
@@ -222,14 +221,16 @@ export function SettingsFieldGroup({
               />
             ))}
           </CardContent>
-          <CardFooter className="flex items-center justify-end space-x-2 px-6 py-2">
-            <Button
-              type="submit"
-              disabled={isPending || !isDirty}
-              loading={isPending}
-            >
-              {isPending ? "Saving..." : "Save changes"}
-            </Button>
+          <CardFooter className="flex items-center justify-end px-6 py-2">
+            <SaveButton
+              onSave={runSubmit}
+              disabled={!isDirty}
+              labels={{
+                idle: "Save changes",
+                loading: "Saving",
+                success: "Saved",
+              }}
+            />
           </CardFooter>
         </form>
       </Form>

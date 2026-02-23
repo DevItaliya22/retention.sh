@@ -49,6 +49,7 @@ export async function GET(
             questions: { orderBy: { createdAt: "asc" } },
             categories: { orderBy: { createdAt: "asc" } },
             howDidYouHearOptions: { orderBy: { createdAt: "asc" } },
+            selectionOptions: { orderBy: { seq: "asc" } },
             branding: true,
           },
         },
@@ -166,6 +167,7 @@ export async function GET(
           questions: { orderBy: { createdAt: "asc" } },
           categories: { orderBy: { createdAt: "asc" } },
           howDidYouHearOptions: { orderBy: { createdAt: "asc" } },
+          selectionOptions: { orderBy: { seq: "asc" } },
           branding: true,
         },
       });
@@ -191,6 +193,10 @@ export async function GET(
             id: o.id,
             name: o.name,
           })),
+          selectionOptions: configToUse.selectionOptions.map((o) => ({
+            id: o.id,
+            label: o.label,
+          })),
           askForOnlineReviews: configToUse.askForOnlineReviews,
           onlineReviewLink: configToUse.onlineReviewLink,
           onlineReviewPlatform: configToUse.onlineReviewPlatform,
@@ -204,6 +210,7 @@ export async function GET(
           categories: [],
           isHowDidYouHearEnabled: false,
           howDidYouHearOptions: [],
+          selectionOptions: [],
           askForOnlineReviews: false,
           onlineReviewLink: null,
           onlineReviewPlatform: null,
@@ -342,11 +349,38 @@ export async function POST(
       );
     }
 
-    const { rating, comment, howDidYouHear, selectedCategories } =
-      validation.data;
+    const {
+      rating,
+      comment,
+      howDidYouHear,
+      selectedCategories,
+      selectedSelectionOptionIds,
+    } = validation.data;
 
     const businessId = link.bill.businessId;
     const customerId = link.bill.customerId;
+
+    const optionIds =
+      selectedSelectionOptionIds && selectedSelectionOptionIds.length > 0
+        ? selectedSelectionOptionIds
+        : [];
+    if (optionIds.length > 0) {
+      const validOptions = await db.feedbackSelectionOption.findMany({
+        where: { configId, id: { in: optionIds } },
+        select: { id: true },
+      });
+      const validIds = new Set(validOptions.map((o) => o.id));
+      const invalid = optionIds.filter((id) => !validIds.has(id));
+      if (invalid.length > 0) {
+        return NextResponse.json(
+          {
+            error: "Invalid selection option(s). Please refresh and try again.",
+            success: false,
+          },
+          { status: 400 },
+        );
+      }
+    }
 
     const configFull = await db.feedbackConfig.findUnique({
       where: { id: configId },
@@ -378,6 +412,10 @@ export async function POST(
           comment: comment ?? null,
           howDidYouHear: howDidYouHear ?? null,
           selectedCategories: selectedCategories ?? [],
+          selectedSelectionOptions:
+            optionIds.length > 0
+              ? { connect: optionIds.map((id) => ({ id })) }
+              : undefined,
         },
       });
 

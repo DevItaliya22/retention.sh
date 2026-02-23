@@ -9,7 +9,6 @@ import {
 } from "@/components/settings/loyalty/common";
 import type { LoyaltyResponse } from "@/hooks/loyalty/useLoyaltySettings";
 import {
-  Button,
   Card,
   CardContent,
   CardDescription,
@@ -24,6 +23,7 @@ import {
   FormMessage,
   FormProvider,
   Input,
+  SaveButton,
   Select,
   SelectContent,
   SelectItem,
@@ -73,7 +73,10 @@ export function CashbackSettingsCard({
     },
   });
 
-  const handleSave = form.handleSubmit((values) => {
+  const runSubmit = async () => {
+    const valid = await form.trigger();
+    if (!valid) throw new Error("Validation failed");
+    const values = form.getValues();
     const payload: Partial<CashbackConfig> = {
       cashbackPercentage: values.cashbackPercentage,
       onFinalAmount: values.onFinalAmount,
@@ -90,10 +93,16 @@ export function CashbackSettingsCard({
       redemptionBillLimitPercentage: values.redemptionBillLimitPercentage,
       allowSameBillRedemption: values.allowSameBillRedemption,
     };
-    onSave(payload, {
-      onSuccess: () => form.reset(values, { keepDefaultValues: false }),
+    return new Promise<void>((resolve, reject) => {
+      onSave(payload, {
+        onSuccess: () => {
+          form.reset(values, { keepDefaultValues: false });
+          resolve();
+        },
+        onError: (e) => reject(e),
+      } as { onSuccess?: () => void; onError?: (e: unknown) => void });
     });
-  });
+  };
 
   return (
     <Card className="gap-0 p-0!">
@@ -525,14 +534,15 @@ export function CashbackSettingsCard({
               </div>
             </CardContent>
             <CardFooter className="flex justify-end border-t px-6 py-4">
-              <Button
-                type="button"
-                onClick={handleSave}
-                loading={isSaving}
+              <SaveButton
+                onSave={runSubmit}
                 disabled={!form.formState.isDirty}
-              >
-                Save changes
-              </Button>
+                labels={{
+                  idle: "Save changes",
+                  loading: "Saving",
+                  success: "Saved",
+                }}
+              />
             </CardFooter>
           </form>
         </Form>

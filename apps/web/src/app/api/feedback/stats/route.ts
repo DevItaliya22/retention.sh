@@ -13,6 +13,7 @@ export interface FeedbackStatRow {
   comment: string | null;
   howDidYouHear: string | null;
   selectedCategories: string[];
+  selectedSelectionOptions: { id: string; label: string }[];
   createdAt: string;
   customerName: string;
   customerPhone: string | null;
@@ -79,6 +80,7 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
               customer: { include: { user: true } },
             },
           },
+          selectedSelectionOptions: { select: { id: true, label: true } },
         },
       }),
       db.feedbackResponse.count({ where }),
@@ -90,6 +92,11 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
       comment: r.comment ?? null,
       howDidYouHear: r.howDidYouHear ?? null,
       selectedCategories: r.selectedCategories ?? [],
+      selectedSelectionOptions:
+        r.selectedSelectionOptions?.map((o) => ({
+          id: o.id,
+          label: o.label,
+        })) ?? [],
       createdAt: r.createdAt.toISOString(),
       customerName: r.businessCustomer?.customer?.user?.name ?? "Unknown",
       customerPhone: r.businessCustomer?.customer?.user?.phoneNumber ?? null,

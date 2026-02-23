@@ -16,6 +16,7 @@ import {
   FormLabel,
   FormMessage,
   Input,
+  SaveButton,
   Skeleton,
   Switch,
   Textarea,
@@ -66,7 +67,6 @@ export function SettingsField({
   disabled = false,
   deleteAction,
 }: SettingsFieldProps) {
-  const [isPending, startTransition] = useTransition();
   const [isDeleting, setIsDeleting] = useTransition();
 
   const schema = type === "toggle" ? toggleSchema : textSchema;
@@ -82,23 +82,21 @@ export function SettingsField({
 
   const { isDirty } = form.formState;
 
-  const handleSubmit = (data: { value: string | boolean }) => {
-    startTransition(async () => {
-      try {
-        const result = await onSubmit(data);
-        if (result.success) {
-          toast.success("Settings updated successfully");
-          form.reset({ value: data.value }, { keepDefaultValues: false });
-        } else {
-          toast.error(result.error || "Failed to update settings");
-        }
-      } catch (error) {
-        console.error("Error updating settings:", error);
-        toast.error("Failed to update settings");
-      }
-    });
+  const runSubmit = async () => {
+    const valid = await form.trigger();
+    if (!valid) throw new Error("Validation failed");
+    const data = form.getValues();
+    const result = await onSubmit(data);
+    if (result.success) {
+      toast.success("Settings updated successfully");
+      form.reset({ value: data.value }, { keepDefaultValues: false });
+    } else {
+      toast.error(result.error || "Failed to update settings");
+      throw new Error(result.error);
+    }
   };
 
+  const [isPending, startTransition] = useTransition();
   const handleToggleChange = (checked: boolean, currentValue: boolean) => {
     startTransition(async () => {
       try {
@@ -154,7 +152,12 @@ export function SettingsField({
         )}
       </CardHeader>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(handleSubmit)}>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (type !== "toggle") void runSubmit();
+          }}
+        >
           <CardContent className="flex flex-col gap-y-2 border-b px-6 py-4 last:border-none">
             {type === "toggle" ? (
               <FormField
@@ -248,7 +251,7 @@ export function SettingsField({
             )}
           </CardContent>
           {type !== "toggle" && (
-            <CardFooter className="flex items-center justify-end space-x-2 px-6 py-2">
+            <CardFooter className="flex items-center justify-end gap-2 px-6 py-2">
               {deleteAction && (
                 <Button
                   type="button"
@@ -260,13 +263,15 @@ export function SettingsField({
                   {deleteAction.label}
                 </Button>
               )}
-              <Button
-                type="submit"
-                disabled={isPending || disabled || !isDirty}
-                loading={isPending}
-              >
-                {isPending ? "Saving..." : "Save changes"}
-              </Button>
+              <SaveButton
+                onSave={runSubmit}
+                disabled={disabled || !isDirty}
+                labels={{
+                  idle: "Save changes",
+                  loading: "Saving",
+                  success: "Saved",
+                }}
+              />
             </CardFooter>
           )}
           {type === "toggle" && deleteAction && (

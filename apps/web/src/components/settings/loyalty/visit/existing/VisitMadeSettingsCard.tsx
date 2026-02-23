@@ -31,6 +31,7 @@ import {
   FormMessage,
   FormProvider,
   Input,
+  SaveButton,
   Select,
   SelectContent,
   SelectItem,
@@ -124,7 +125,10 @@ export function VisitMadeSettingsCard({
     name: "rewardStages",
   });
 
-  const handleSave = form.handleSubmit((values) => {
+  const runSubmit = async () => {
+    const valid = await form.trigger();
+    if (!valid) throw new Error("Validation failed");
+    const values = form.getValues();
     const payload = {
       visitMadeConfig: {
         pointsPerVisit: values.pointsPerVisit ?? 1,
@@ -151,10 +155,16 @@ export function VisitMadeSettingsCard({
         maxDiscountCap: s.maxDiscountCap ?? null,
       })),
     };
-    onSave(payload, {
-      onSuccess: () => form.reset(values, { keepDefaultValues: false }),
+    return new Promise<void>((resolve, reject) => {
+      onSave(payload, {
+        onSuccess: () => {
+          form.reset(values, { keepDefaultValues: false });
+          resolve();
+        },
+        onError: (e) => reject(e),
+      } as { onSuccess?: () => void; onError?: (e: unknown) => void });
     });
-  });
+  };
 
   return (
     <Card className="gap-0 p-0!">
@@ -359,14 +369,15 @@ export function VisitMadeSettingsCard({
               </Button>
             </CardContent>
             <CardFooter className="flex justify-end px-6 py-2">
-              <Button
-                type="button"
-                onClick={handleSave}
-                loading={isSaving}
+              <SaveButton
+                onSave={runSubmit}
                 disabled={!form.formState.isDirty}
-              >
-                Save changes
-              </Button>
+                labels={{
+                  idle: "Save changes",
+                  loading: "Saving",
+                  success: "Saved",
+                }}
+              />
             </CardFooter>
           </form>
         </Form>

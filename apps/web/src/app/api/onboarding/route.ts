@@ -1,4 +1,5 @@
 import { withAdminAuthOptionalBusiness } from "@/lib/auth/middleware";
+import { FEEDBACK_FORM_DEFAULTS } from "@/lib/constants/forms/feedback";
 import {
   type WelcomeFormValues,
   welcomeFormSchema,
@@ -65,6 +66,14 @@ export const POST = withAdminAuthOptionalBusiness(
           data: {
             userId: userId,
             businessId: business.id,
+          },
+        });
+
+        await tx.feedbackConfig.create({
+          data: {
+            businessId: business.id,
+            positiveFollowUp: FEEDBACK_FORM_DEFAULTS.followUpMessage,
+            negativeFollowUp: FEEDBACK_FORM_DEFAULTS.followUpMessage,
           },
         });
 

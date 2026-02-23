@@ -28,6 +28,7 @@ interface PublicFeedbackConfig {
   categories: { id: string; name: string }[];
   isHowDidYouHearEnabled: boolean;
   howDidYouHearOptions: { id: string; name: string }[];
+  selectionOptions: { id: string; label: string }[];
   askForOnlineReviews: boolean;
   onlineReviewLink: string | null;
   onlineReviewPlatform: string | null;
@@ -100,6 +101,9 @@ export function FeedbackPageClient({
   const [comment, setComment] = useState("");
   const [howDidYouHear, setHowDidYouHear] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedSelectionOptionIds, setSelectedSelectionOptionIds] = useState<
+    string[]
+  >([]);
   const [submitStatus, setSubmitStatus] = useState<
     "idle" | "submitting" | "success" | "error"
   >("idle");
@@ -148,6 +152,7 @@ export function FeedbackPageClient({
             comment: comment.trim() || null,
             howDidYouHear: howDidYouHear.trim() || null,
             selectedCategories,
+            selectedSelectionOptionIds,
           }),
         },
       );
@@ -172,11 +177,25 @@ export function FeedbackPageClient({
       setSubmitStatus("error");
       setFollowUpMessage("Something went wrong. Please try again.");
     }
-  }, [businessSlug, token, rating, comment, howDidYouHear, selectedCategories]);
+  }, [
+    businessSlug,
+    token,
+    rating,
+    comment,
+    howDidYouHear,
+    selectedCategories,
+    selectedSelectionOptionIds,
+  ]);
 
   const toggleCategory = (name: string) => {
     setSelectedCategories((prev) =>
       prev.includes(name) ? prev.filter((c) => c !== name) : [...prev, name],
+    );
+  };
+
+  const toggleSelectionOption = (id: string) => {
+    setSelectedSelectionOptionIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
     );
   };
 
@@ -382,6 +401,38 @@ export function FeedbackPageClient({
                       {cat.name}
                     </Label>
                   </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Selection options (e.g. what you liked / didn't like) – grouped list */}
+          {config.selectionOptions && config.selectionOptions.length > 0 && (
+            <div className="space-y-2">
+              <Label className="text-sm">
+                What did you like or not like? (optional)
+              </Label>
+              <div className="bg-card rounded-lg border shadow-sm">
+                {config.selectionOptions.map((opt, index) => (
+                  <label
+                    key={opt.id}
+                    htmlFor={`sel-${opt.id}`}
+                    className={`hover:bg-muted/50 flex min-h-[44px] cursor-pointer touch-manipulation items-center justify-between gap-3 px-4 py-3 transition-colors ${
+                      index < config.selectionOptions!.length - 1
+                        ? "border-b"
+                        : ""
+                    }`}
+                  >
+                    <span className="text-foreground text-sm font-normal">
+                      {opt.label}
+                    </span>
+                    <Checkbox
+                      id={`sel-${opt.id}`}
+                      checked={selectedSelectionOptionIds.includes(opt.id)}
+                      onCheckedChange={() => toggleSelectionOption(opt.id)}
+                      className="shrink-0 touch-manipulation"
+                    />
+                  </label>
                 ))}
               </div>
             </div>
