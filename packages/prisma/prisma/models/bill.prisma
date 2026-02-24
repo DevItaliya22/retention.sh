@@ -63,7 +63,8 @@ model Bill {
   // Unified transactions (cashback or points earned/redeemed) linked to this bill.
   transactions Transaction[]
 
-  lineItems BillLineItem[]
+  lineItems    BillLineItem[]
+  shopifyOrder ShopifyOrder? // When this bill was created from a Shopify order
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

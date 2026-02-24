@@ -6,7 +6,9 @@
  * Available for redeem = wallet.cashbackBalance - cashbackEarnedThisBill (when applicable).
  */
 
+import { getLockedShopifyBalance } from "@/lib/actions/loyalty";
 import type { Prisma } from "@reelo/db";
+import { TransactionValueKind } from "@reelo/db";
 import {
   calculatePointsEarnedForBill,
   calculateRedeemable,
@@ -190,6 +192,28 @@ export async function getRedeemableInfo(
   const amountSpentBal = wallet?.amountSpentBalance ?? 0;
   const visitPointsBal = wallet?.visitPointsBalance ?? 0;
 
+  const lockedCashback = await getLockedShopifyBalance(tx, {
+    businessId,
+    customerId,
+    valueKind: TransactionValueKind.CASHBACK,
+  });
+  const lockedAmountSpent = await getLockedShopifyBalance(tx, {
+    businessId,
+    customerId,
+    valueKind: TransactionValueKind.AMOUNT_SPENT_POINTS,
+  });
+  const lockedVisit = await getLockedShopifyBalance(tx, {
+    businessId,
+    customerId,
+    valueKind: TransactionValueKind.VISIT_POINTS,
+  });
+  const effectiveCashbackBal = Math.max(0, cashbackBal - lockedCashback);
+  const effectiveAmountSpentBal = Math.max(
+    0,
+    amountSpentBal - lockedAmountSpent,
+  );
+  const effectiveVisitPointsBal = Math.max(0, visitPointsBal - lockedVisit);
+
   // Same-bill rule: when allowSameBillRedemption is false, exclude earned this bill from redeemable.
   const allowSameBill =
     "allowSameBillRedemption" in context.config
@@ -200,11 +224,13 @@ export async function getRedeemableInfo(
         : true;
   const availableCashback =
     isCashbackType && !allowSameBill
-      ? Math.max(0, cashbackBal - (cashbackEarnedThisBill || 0))
-      : cashbackBal;
+      ? Math.max(0, effectiveCashbackBal - (cashbackEarnedThisBill || 0))
+      : effectiveCashbackBal;
 
   const pointsBal =
-    context.type === "AMOUNT_SPENT" ? amountSpentBal : visitPointsBal;
+    context.type === "AMOUNT_SPENT"
+      ? effectiveAmountSpentBal
+      : effectiveVisitPointsBal;
   const effectivePointsForRedeem =
     !isCashbackType && !allowSameBill
       ? Math.max(0, pointsBal - (rawEarnable > 0 ? rawEarnable : 0))
@@ -249,7 +275,9 @@ export async function getRedeemableInfo(
     : Math.max(0, rawEarnable);
 
   // For AMOUNT_SPENT/VISIT_MADE: return both so redeem page shows "available cashback" and "available points"
-  const cashbackBalanceValue = isCashbackType ? cashbackBal : availableCashback;
+  const cashbackBalanceValue = isCashbackType
+    ? effectiveCashbackBal
+    : availableCashback;
   const pointsBalanceValue = !isCashbackType ? pointsBal : undefined;
   const maxRedeemableFromCashbackValue = !isCashbackType
     ? Math.min(availableCashback, billAmount)
@@ -266,7 +294,7 @@ export async function getRedeemableInfo(
     maxRedeemable: isCashbackType ? maxRedeemableCashback : maxRedeemablePoints,
     cashbackEarnedThisBill: cashbackEarned,
     earnablePoints,
-    balance: isCashbackType ? cashbackBal : pointsBal,
+    balance: isCashbackType ? effectiveCashbackBal : pointsBal,
     cashbackBalance: cashbackBalanceValue,
     pointsBalance: pointsBalanceValue,
     maxRedeemableFromCashback: maxRedeemableFromCashbackValue,

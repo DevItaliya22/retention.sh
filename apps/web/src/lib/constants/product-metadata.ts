@@ -15,7 +15,7 @@ export const PRODUCT_METADATA = {
   image: "/og.png", // Relative path - will be resolved to full URL
   favicon: "/favicon.ico",
   siteName: "Dy",
-  url: process.env.NEXT_PUBLIC_APP_URL || "https://dy.com",
+  url: process.env.NEXT_PUBLIC_URL || "https://dy.com",
   keywords: [
     "business loyalty program",
     "loyalty management",
@@ -44,18 +44,18 @@ export const PRODUCT_METADATA = {
 
 /**
  * Gets the full URL for product metadata image
- * Uses NEXT_PUBLIC_APP_URL if available, otherwise falls back to product URL
+ * Uses NEXT_PUBLIC_URL if available, otherwise falls back to product URL
  */
 export function getProductImageUrl(): string {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || PRODUCT_METADATA.url;
+  const baseUrl = process.env.NEXT_PUBLIC_URL || PRODUCT_METADATA.url;
   return `${baseUrl}${PRODUCT_METADATA.image}`;
 }
 
 /**
  * Gets the full URL for product favicon
- * Uses NEXT_PUBLIC_APP_URL if available, otherwise falls back to product URL
+ * Uses NEXT_PUBLIC_URL if available, otherwise falls back to product URL
  */
 export function getProductFaviconUrl(): string {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || PRODUCT_METADATA.url;
+  const baseUrl = process.env.NEXT_PUBLIC_URL || PRODUCT_METADATA.url;
   return `${baseUrl}${PRODUCT_METADATA.favicon}`;
 }
