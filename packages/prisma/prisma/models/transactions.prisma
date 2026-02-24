@@ -45,6 +45,9 @@ model Transaction {
     loyaltyId String?
     loyalty   Loyalty? @relation(fields: [loyaltyId], references: [id], onDelete: SetNull)
 
+    shopifyOrderId String?
+    shopifyOrder   ShopifyOrder? @relation(fields: [shopifyOrderId], references: [id], onDelete: SetNull)
+
     sourceId String?
 
     createdAt DateTime @default(now())
@@ -60,5 +63,6 @@ model Transaction {
     @@index([source])
     @@index([valueKind])
     @@index([expiresAt])
+    @@index([shopifyOrderId])
     @@map("transaction")
 }

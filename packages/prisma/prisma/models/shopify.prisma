@@ -1,0 +1,103 @@
+// ========================================================================
+// SHOPIFY INTEGRATION
+// ========================================================================
+// One Business can connect one or more Shopify stores.
+// ShopifyStore holds OAuth credentials and sync metadata.
+// ShopifyProductSync maps our Sku to Shopify product/variant for sync.
+// ========================================================================
+
+model ShopifyStore {
+  id String @id @default(uuid())
+
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  // Store identity (e.g. "my-store.myshopify.com")
+  shopDomain String
+  shopName   String?
+
+  // OAuth: access token from Shopify Admin API. Prefer encrypt-at-rest in production.
+  accessToken String
+  scope       String?
+
+  // Optional: for webhook signature verification
+  webhookSecret String?
+
+  // Sync state
+  lastSyncedAt     DateTime?
+  isActive         Boolean   @default(true)
+  returnWindowDays Int       @default(7) // Days after fulfillment before points can be redeemed
+
+  productSyncs ShopifyProductSync[]
+  orders       ShopifyOrder[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([businessId, shopDomain])
+  @@index([businessId])
+  @@index([shopDomain])
+  @@map("shopify_store")
+}
+
+// Shopify order: we grant loyalty only after fulfillment; return window blocks redemption.
+model ShopifyOrder {
+  id String @id @default(uuid())
+
+  shopifyStoreId String
+  shopifyStore   ShopifyStore @relation(fields: [shopifyStoreId], references: [id], onDelete: Cascade)
+
+  shopifyOrderId String // Shopify's order id (gid or numeric)
+  businessId     String
+  customerId     String // Customer.id (we resolve from order email)
+
+  totalAmount       Float // Order total at fulfillment (for loyalty calc)
+  fulfillmentStatus String? // fulfilled | partial | null
+  financialStatus   String? // paid | refunded | voided etc.
+
+  fulfilledAt        DateTime? // When all line items fulfilled (delivered)
+  returnWindowEndsAt DateTime? // fulfilledAt + return_days; points not redeemable until then
+  loyaltyGrantedAt   DateTime? // When we created EARNED transaction(s)
+  refundedAt         DateTime? // When we processed refund (deduct points)
+
+  // Bill created in dy when order is placed (so it shows in bills list)
+  billId String? @unique
+  bill   Bill?   @relation(fields: [billId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  transactions Transaction[]
+
+  @@unique([shopifyStoreId, shopifyOrderId])
+  @@index([businessId])
+  @@index([customerId])
+  @@index([returnWindowEndsAt])
+  @@map("shopify_order")
+}
+
+// Maps a Business Sku to a Shopify product/variant for two-way sync.
+// One Sku can be linked to one Shopify variant (or product, if single-variant).
+model ShopifyProductSync {
+  id String @id @default(uuid())
+
+  shopifyStoreId String
+  shopifyStore   ShopifyStore @relation(fields: [shopifyStoreId], references: [id], onDelete: Cascade)
+
+  skuId String
+  sku   Sku    @relation(fields: [skuId], references: [id], onDelete: Cascade)
+
+  shopifyProductId String
+  shopifyVariantId String?
+
+  lastSyncedAt DateTime @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([shopifyStoreId, skuId])
+  @@unique([shopifyStoreId, shopifyProductId, shopifyVariantId])
+  @@index([shopifyStoreId])
+  @@index([skuId])
+  @@map("shopify_product_sync")
+}

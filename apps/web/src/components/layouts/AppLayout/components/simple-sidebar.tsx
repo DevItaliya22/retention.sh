@@ -259,6 +259,14 @@ export function SimpleSidebar({
                             <Link href="/settings/feedback">Feedback</Link>
                           </SidebarMenuSubButton>
                         </SidebarMenuSubItem>
+                        <SidebarMenuSubItem>
+                          <SidebarMenuSubButton
+                            asChild
+                            isActive={pathname === "/settings/shopify"}
+                          >
+                            <Link href="/settings/shopify">Shopify</Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
                       </SidebarMenuSub>
                     </CollapsibleContent>
                   </SidebarMenuItem>
