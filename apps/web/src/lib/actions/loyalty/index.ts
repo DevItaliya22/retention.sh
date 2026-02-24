@@ -25,6 +25,40 @@ import {
 
 export { DEFAULT_POINT_EXPIRY_DAYS, getExpiryDays } from "@/lib/loyalty";
 
+/** Sum of EARNED amounts from SHOPIFY_ORDER that are still inside return window (lockedUntil > now). */
+export async function getLockedShopifyBalance(
+  tx: Prisma.TransactionClient,
+  params: {
+    businessId: string;
+    customerId: string;
+    valueKind:
+      | typeof TransactionValueKind.CASHBACK
+      | typeof TransactionValueKind.AMOUNT_SPENT_POINTS
+      | typeof TransactionValueKind.VISIT_POINTS;
+  },
+): Promise<number> {
+  const now = new Date();
+  const rows = await tx.transaction.findMany({
+    where: {
+      businessId: params.businessId,
+      customerId: params.customerId,
+      source: TransactionSource.SHOPIFY_ORDER,
+      type: TransactionType.EARNED,
+      valueKind: params.valueKind,
+    },
+    select: { amount: true, metadata: true },
+  });
+  let sum = 0;
+  for (const r of rows) {
+    const meta = r.metadata as { lockedUntil?: string } | null;
+    const lockedUntil = meta?.lockedUntil ? new Date(meta.lockedUntil) : null;
+    if (lockedUntil && lockedUntil > now && r.amount > 0) {
+      sum += r.amount;
+    }
+  }
+  return sum;
+}
+
 export async function getBusinessLoyaltyContext(
   tx: Prisma.TransactionClient,
   businessId: string,
@@ -565,10 +599,19 @@ export async function convertPointsForBill(
   const wallet = await tx.wallet.findUnique({
     where: { businessId_customerId: { businessId, customerId } },
   });
-  const pointsBalance =
+  const rawPointsBalance =
     context.type === "AMOUNT_SPENT"
       ? Math.max(0, wallet?.amountSpentBalance ?? 0)
       : Math.max(0, wallet?.visitPointsBalance ?? 0);
+  const lockedPoints = await getLockedShopifyBalance(tx, {
+    businessId,
+    customerId,
+    valueKind:
+      context.type === "AMOUNT_SPENT"
+        ? TransactionValueKind.AMOUNT_SPENT_POINTS
+        : TransactionValueKind.VISIT_POINTS,
+  });
+  const pointsBalance = Math.max(0, rawPointsBalance - lockedPoints);
 
   const allowSameBill = context.config.allowSameBillRedemption ?? true;
   let effectivePointsBalance = pointsBalance;
@@ -825,6 +868,29 @@ export async function applyRedemptionForBill(
   const amountSpentBal = Math.max(0, wallet?.amountSpentBalance ?? 0);
   const visitPointsBal = Math.max(0, wallet?.visitPointsBalance ?? 0);
 
+  const lockedCashback = await getLockedShopifyBalance(tx, {
+    businessId,
+    customerId,
+    valueKind: TransactionValueKind.CASHBACK,
+  });
+  const lockedAmountSpent = await getLockedShopifyBalance(tx, {
+    businessId,
+    customerId,
+    valueKind: TransactionValueKind.AMOUNT_SPENT_POINTS,
+  });
+  const lockedVisit = await getLockedShopifyBalance(tx, {
+    businessId,
+    customerId,
+    valueKind: TransactionValueKind.VISIT_POINTS,
+  });
+
+  const effectiveCashbackBal = Math.max(0, cashbackBal - lockedCashback);
+  const effectiveAmountSpentBal = Math.max(
+    0,
+    amountSpentBal - lockedAmountSpent,
+  );
+  const effectiveVisitPointsBal = Math.max(0, visitPointsBal - lockedVisit);
+
   const resolvedTier =
     context.type === "TIER"
       ? resolveTierForLifetimeSpend(context.config.tiers, lifetimeSpend)
@@ -832,9 +898,9 @@ export async function applyRedemptionForBill(
 
   const pointsBalance =
     context.type === "AMOUNT_SPENT"
-      ? amountSpentBal
+      ? effectiveAmountSpentBal
       : context.type === "VISIT_MADE"
-        ? visitPointsBal
+        ? effectiveVisitPointsBal
         : 0;
 
   const allowSameBill =
@@ -846,8 +912,8 @@ export async function applyRedemptionForBill(
         : true;
   const availableCashback =
     isCashbackType && !allowSameBill
-      ? Math.max(0, cashbackBal - cashbackEarnedThisBill)
-      : cashbackBal;
+      ? Math.max(0, effectiveCashbackBal - cashbackEarnedThisBill)
+      : effectiveCashbackBal;
   const balanceForRedeemable = isCashbackType
     ? availableCashback
     : pointsBalance;
@@ -978,6 +1044,29 @@ export async function applyLoyaltyForBill(
   const amountSpentBal = Math.max(0, wallet?.amountSpentBalance ?? 0);
   const visitPointsBal = Math.max(0, wallet?.visitPointsBalance ?? 0);
 
+  const lockedCashback = await getLockedShopifyBalance(tx, {
+    businessId,
+    customerId,
+    valueKind: TransactionValueKind.CASHBACK,
+  });
+  const lockedAmountSpent = await getLockedShopifyBalance(tx, {
+    businessId,
+    customerId,
+    valueKind: TransactionValueKind.AMOUNT_SPENT_POINTS,
+  });
+  const lockedVisit = await getLockedShopifyBalance(tx, {
+    businessId,
+    customerId,
+    valueKind: TransactionValueKind.VISIT_POINTS,
+  });
+
+  const effectiveCashbackBal = Math.max(0, cashbackBal - lockedCashback);
+  const effectiveAmountSpentBal = Math.max(
+    0,
+    amountSpentBal - lockedAmountSpent,
+  );
+  const effectiveVisitPointsBal = Math.max(0, visitPointsBal - lockedVisit);
+
   const resolvedTier =
     context.type === "TIER"
       ? resolveTierForLifetimeSpend(context.config.tiers, lifetimeSpend)
@@ -986,13 +1075,15 @@ export async function applyLoyaltyForBill(
 
   const pointsBalance =
     context.type === "AMOUNT_SPENT"
-      ? amountSpentBal
+      ? effectiveAmountSpentBal
       : context.type === "VISIT_MADE"
-        ? visitPointsBal
+        ? effectiveVisitPointsBal
         : 0;
 
   const redeemable = isCashbackType
-    ? calculateRedeemable(billAmount, cashbackBal, context, { resolvedTier })
+    ? calculateRedeemable(billAmount, effectiveCashbackBal, context, {
+        resolvedTier,
+      })
     : calculateRedeemable(billAmount, pointsBalance, context, { resolvedTier });
 
   const loyalty = await tx.loyalty.findUnique({
