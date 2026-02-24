@@ -63,7 +63,7 @@ export function constructMetadata({
     bing?: string;
   };
 } = {}): Metadata {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || PRODUCT_METADATA.url;
+  const baseUrl = process.env.NEXT_PUBLIC_URL || PRODUCT_METADATA.url;
 
   // Only process if image is provided (not null/undefined)
   const finalImage = image

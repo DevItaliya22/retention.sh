@@ -7,6 +7,7 @@ import {
   MessageSquare,
   Package,
   Settings,
+  ShoppingBag,
   Users,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
@@ -56,6 +57,12 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
       href: `/settings/feedback`,
       icon: <MessageSquare className="h-4 w-4" />,
       active: pathname === "/settings/feedback",
+    },
+    {
+      label: "Shopify",
+      href: `/settings/shopify`,
+      icon: <ShoppingBag className="h-4 w-4" />,
+      active: pathname === "/settings/shopify",
     },
   ];
 

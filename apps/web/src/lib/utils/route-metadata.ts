@@ -101,6 +101,10 @@ const ROUTE_METADATA_MAP: Record<string, RouteMetadataConfig> = {
     title: "Feedback Settings",
     description: "Configure when and how to collect customer feedback",
   },
+  "/settings/shopify": {
+    title: "Shopify",
+    description: "Connect your Shopify store and sync products",
+  },
   "/feedback-stats": {
     title: "Feedback stats",
     description: "Customer feedback responses by rating and date",
@@ -212,7 +216,7 @@ export function generateRouteMetadata(
   pathname: string,
   params: Record<string, string | string[] | undefined> = {},
 ): Metadata {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://dy.com";
+  const baseUrl = process.env.NEXT_PUBLIC_URL || "https://dy.com";
   const fullUrl = `${baseUrl}${pathname}`;
 
   // Get route pattern (now uses params for better detection)

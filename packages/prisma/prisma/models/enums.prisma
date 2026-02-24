@@ -135,6 +135,7 @@ enum TransactionSource {
   REFERRAL // Points from referral program
   REGISTRATION // Registration bonus (Business.registrationBonusPoints)
   MANUAL_ADJUSTMENT // Admin manual adjustment
+  SHOPIFY_ORDER // Points from fulfilled Shopify order (locked until return window)
 }
 
 // Value kind for unified Transaction — which wallet bucket.

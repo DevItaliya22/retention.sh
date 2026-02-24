@@ -28,8 +28,9 @@ model Business {
   referralProgram ReferralProgram?
   campaigns       Campaign[]
 
-  categories Category[]
-  skus       Sku[]
+  categories    Category[]
+  skus          Sku[]
+  shopifyStores ShopifyStore[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -88,6 +89,8 @@ model Sku {
 
   referralProgramAsNewCustomerFreeItem      ReferralProgram[] @relation("ReferralNewCustomerFreeItem")
   referralProgramAsExistingCustomerFreeItem ReferralProgram[] @relation("ReferralExistingCustomerFreeItem")
+
+  shopifyProductSyncs ShopifyProductSync[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
