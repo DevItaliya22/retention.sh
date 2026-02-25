@@ -1,0 +1,147 @@
+// ========================================================================
+// BUSINESS PARTNERSHIP
+// ========================================================================
+// Two businesses can form a partnership to share referrals, campaigns,
+// and enable cross-business loyalty point usage with exchange ratios.
+//
+// Flow:
+//   1. Business A sends PartnerRequest to Business B (by slug).
+//   2. Business B accepts → BusinessPartnership created with two PartnershipMembers.
+//   3. Each member configures their exchangeRate and pointToCurrencyRate.
+//   4. Optionally enable sharedReferrals, shareReferralRewards, sharedCampaigns.
+//
+// Rejection:
+//   - REJECTED: can re-request later.
+//   - PERMANENTLY_REJECTED: cannot re-request until moved back to REJECTED.
+//     From PERMANENTLY_REJECTED the receiver can offer to "send from your side"
+//     which creates a new request with the roles reversed.
+// ========================================================================
+
+enum PartnerRequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  PERMANENTLY_REJECTED
+}
+
+enum PartnershipStatus {
+  ACTIVE
+  DISSOLVED
+}
+
+model PartnerRequest {
+  id String @id @default(uuid())
+
+  senderBusinessId String
+  senderBusiness   Business @relation("PartnerRequestsSent", fields: [senderBusinessId], references: [id], onDelete: Cascade)
+
+  receiverBusinessId String
+  receiverBusiness   Business @relation("PartnerRequestsReceived", fields: [receiverBusinessId], references: [id], onDelete: Cascade)
+
+  status PartnerRequestStatus @default(PENDING)
+
+  partnershipId String?              @unique
+  partnership   BusinessPartnership? @relation(fields: [partnershipId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([senderBusinessId, receiverBusinessId])
+  @@index([receiverBusinessId])
+  @@map("partner_request")
+}
+
+model BusinessPartnership {
+  id String @id @default(uuid())
+
+  status PartnershipStatus @default(ACTIVE)
+
+  sharedReferrals      Boolean @default(false)
+  shareReferralRewards Boolean @default(false)
+  sharedCampaigns      Boolean @default(false)
+
+  members   PartnershipMember[]
+  campaigns PartnerCampaign[]
+  request   PartnerRequest?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("business_partnership")
+}
+
+// Each business's membership in a partnership with its own exchange configuration.
+//
+// Exchange logic:
+//   availableValue = walletBalance * pointToCurrencyRate  (→ rupees)
+//   partnerValue   = availableValue * exchangeRate        (→ rupees at partner)
+//
+// pointToCurrencyRate:
+//   CASHBACK / TIER  → 1.0 (balance already in ₹)
+//   AMOUNT_SPENT     → defaults to 1/pointsPerRupee
+//   VISIT_MADE       → admin must set explicitly (no natural conversion)
+model PartnershipMember {
+  id String @id @default(uuid())
+
+  partnershipId String
+  partnership   BusinessPartnership @relation(fields: [partnershipId], references: [id], onDelete: Cascade)
+
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  exchangeRate        Float @default(1.0)
+  pointToCurrencyRate Float @default(1.0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([partnershipId, businessId])
+  @@index([businessId])
+  @@map("partnership_member")
+}
+
+// A campaign created within a partnership context, visible to both businesses.
+// Separate from Campaign so the regular campaign list is unaffected.
+model PartnerCampaign {
+  id   String @id @default(uuid())
+  slug String @unique
+
+  partnershipId String
+  partnership   BusinessPartnership @relation(fields: [partnershipId], references: [id], onDelete: Cascade)
+
+  createdByBusinessId String
+  createdByBusiness   Business @relation(fields: [createdByBusinessId], references: [id], onDelete: Cascade)
+
+  title         String?
+  description   String?
+  contactNumber String?
+  expiresAt     DateTime
+  status        CampaignStatus @default(DRAFT)
+
+  themeColor  String?
+  textColor   String?
+  logo        String?
+  bannerImage String?
+
+  rewardType           CampaignRewardType @default(FREE_ITEM)
+  rewardValue          String?
+  appliesTo            BenefitAppliesTo   @default(ENTIRE_PURCHASE)
+  maxRedemptionAmount  Float?
+  maxRedemptionEnabled Boolean            @default(false)
+
+  minPurchaseForEarningEnabled    Boolean @default(false)
+  minPurchaseForEarning           Float?
+  minPurchaseForRedemptionEnabled Boolean @default(false)
+  minPurchaseForRedemption        Float?
+
+  instantCashbackRedeemable Boolean         @default(false)
+  redemptionLimit           RedemptionLimit @default(ONCE)
+  termsAndConditions        String[]        @default([])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([partnershipId])
+  @@index([createdByBusinessId])
+  @@map("partner_campaign")
+}
