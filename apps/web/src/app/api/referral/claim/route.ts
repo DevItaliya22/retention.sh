@@ -348,6 +348,170 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      // ── Shared Referral: add new customer to partner business ──────────
+      const activePartnership = await tx.businessPartnership.findFirst({
+        where: {
+          status: "ACTIVE",
+          sharedReferrals: true,
+          members: { some: { businessId } },
+        },
+        include: {
+          members: {
+            include: {
+              business: {
+                include: {
+                  referralProgram: {
+                    include: {
+                      newCustomerFreeItemSku: {
+                        select: { id: true, name: true },
+                      },
+                    },
+                  },
+                  loyalty: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (activePartnership) {
+        const partnerMember = activePartnership.members.find(
+          (m) => m.businessId !== businessId,
+        );
+        if (partnerMember) {
+          const partnerBusinessId = partnerMember.businessId;
+
+          // Check if customer already exists in partner business
+          const existingInPartner = await tx.businessCustomer.findFirst({
+            where: {
+              businessId: partnerBusinessId,
+              customerId: customer.id,
+            },
+          });
+
+          if (!existingInPartner) {
+            await tx.businessCustomer.create({
+              data: {
+                businessId: partnerBusinessId,
+                customerId: customer.id,
+              },
+            });
+
+            // If shareReferralRewards is on and partner has a referral program,
+            // give the new customer the partner's referral new-customer benefit
+            if (
+              activePartnership.shareReferralRewards &&
+              partnerMember.business.referralProgram?.isEnabled
+            ) {
+              const partnerProgram = partnerMember.business.referralProgram;
+              const partnerNewType = partnerProgram.newCustomerBenefitType;
+
+              if (partnerNewType === "AMOUNT_CASHBACK") {
+                const amt = Math.max(
+                  0,
+                  Number(partnerProgram.newCustomerBenefitValue) || 0,
+                );
+                if (amt > 0) {
+                  await tx.wallet.upsert({
+                    where: {
+                      businessId_customerId: {
+                        businessId: partnerBusinessId,
+                        customerId: customer.id,
+                      },
+                    },
+                    create: {
+                      businessId: partnerBusinessId,
+                      customerId: customer.id,
+                      cashbackBalance: amt,
+                    },
+                    update: { cashbackBalance: { increment: amt } },
+                  });
+                  await tx.transaction.create({
+                    data: {
+                      businessId: partnerBusinessId,
+                      customerId: customer.id,
+                      valueKind: "CASHBACK",
+                      amount: amt,
+                      type: "EARNED",
+                      source: "REFERRAL",
+                      loyaltyId: partnerMember.business.loyalty?.id ?? null,
+                      description: "Partner referral cashback",
+                    },
+                  });
+                }
+              } else if (
+                partnerNewType === "FREE_ITEM_ON_NEXT_PURCHASE" &&
+                partnerProgram.newCustomerFreeItemSkuId
+              ) {
+                const partnerSku =
+                  partnerProgram.newCustomerFreeItemSku ??
+                  (await tx.sku.findUnique({
+                    where: {
+                      id: partnerProgram.newCustomerFreeItemSkuId,
+                    },
+                    select: { id: true, name: true },
+                  }));
+                if (partnerSku) {
+                  const partnerFreeItem = {
+                    id: crypto.randomUUID(),
+                    skuId: partnerSku.id,
+                    skuName: partnerSku.name,
+                    source: "REFERRAL",
+                    createdAt: new Date().toISOString(),
+                  };
+                  const partnerWallet = await tx.wallet.findUnique({
+                    where: {
+                      businessId_customerId: {
+                        businessId: partnerBusinessId,
+                        customerId: customer.id,
+                      },
+                    },
+                  });
+                  const partnerExistingItems =
+                    (partnerWallet?.freeItems as Array<unknown> | null) ?? [];
+                  const partnerUpdatedItems = [
+                    ...partnerExistingItems,
+                    partnerFreeItem,
+                  ];
+                  await tx.wallet.upsert({
+                    where: {
+                      businessId_customerId: {
+                        businessId: partnerBusinessId,
+                        customerId: customer.id,
+                      },
+                    },
+                    create: {
+                      businessId: partnerBusinessId,
+                      customerId: customer.id,
+                      freeItems: partnerUpdatedItems as any,
+                    },
+                    update: {
+                      freeItems: partnerUpdatedItems as any,
+                    },
+                  });
+                  await tx.transaction.create({
+                    data: {
+                      businessId: partnerBusinessId,
+                      customerId: customer.id,
+                      valueKind: "FREE_ITEM",
+                      amount: 1,
+                      type: "EARNED",
+                      source: "REFERRAL",
+                      metadata: {
+                        skuId: partnerSku.id,
+                        skuName: partnerSku.name,
+                      } as any,
+                      description: `Partner referral: Free ${partnerSku.name}`,
+                    },
+                  });
+                }
+              }
+            }
+          }
+        }
+      }
+
       return {
         businessCustomer,
         businessName: business.name,

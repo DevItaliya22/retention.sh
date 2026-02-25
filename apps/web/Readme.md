@@ -1,5 +1,9 @@
 insta auto dm
 
+Add category
+
+Check how does new customer is getting created i hopify
+
 ## bija dhandha ma points redeem thava pade
 
 online menu

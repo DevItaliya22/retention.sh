@@ -215,5 +215,6 @@ function parseNextPageInfo(linkHeader: string | null): string | null {
   const next = linkHeader.split(",").find((s) => s.includes('rel="next"'));
   if (!next) return null;
   const match = next.match(/page_info=([^&>]+)/);
-  return match ? decodeURIComponent(match[1]) : null;
+  const pageInfo = match?.[1];
+  return pageInfo ? decodeURIComponent(pageInfo) : null;
 }
