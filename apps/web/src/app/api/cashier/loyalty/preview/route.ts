@@ -7,6 +7,7 @@ import { runTransaction } from "@/lib/db/transaction";
 import {
   calculatePointsEarnedForBill,
   getAmountForEarning,
+  getPartnerRedeemableInfo,
   getRedeemableInfo,
 } from "@/lib/loyalty";
 import { loyaltyPreviewSchema } from "@/lib/schemas/loyalty";
@@ -96,6 +97,7 @@ export const GET = withCashierAuth(async (request: NextRequest, context) => {
           }[],
           visitCount: null as number | null,
           freeItems: [],
+          partnerRedeemable: [],
         };
       }
 
@@ -131,6 +133,7 @@ export const GET = withCashierAuth(async (request: NextRequest, context) => {
           rewardStages: [],
           visitCount: null,
           freeItems: [],
+          partnerRedeemable: [],
         };
       }
 
@@ -163,6 +166,7 @@ export const GET = withCashierAuth(async (request: NextRequest, context) => {
           rewardStages: [],
           visitCount: null,
           freeItems: [],
+          partnerRedeemable: [],
         };
       }
 
@@ -183,6 +187,12 @@ export const GET = withCashierAuth(async (request: NextRequest, context) => {
           ? Math.floor(redeemInfo.maxRedeemable * 100) / 100
           : Math.floor(redeemInfo.maxRedeemable);
 
+      const partnerRedeemable = await getPartnerRedeemableInfo(tx, {
+        currentBusinessId: businessId,
+        customerId: user.customer.id,
+        billAmount,
+      });
+
       return {
         loyaltyType: redeemInfo.loyaltyType,
         pointsBalance: redeemInfo.pointsBalance ?? 0,
@@ -201,6 +211,7 @@ export const GET = withCashierAuth(async (request: NextRequest, context) => {
         rewardStages: redeemInfo.rewardStages,
         visitCount: redeemInfo.visitCount,
         freeItems: parseFreeItems(wallet?.freeItems),
+        partnerRedeemable,
       };
     });
 

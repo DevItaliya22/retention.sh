@@ -1,4 +1,5 @@
 import { withAdminAuth } from "@/lib/auth/middleware";
+import { sumCashbackEarnedFromTransactions } from "@/lib/loyalty";
 import {
   sanitizeErrorMessage,
   validateSchema,
@@ -69,6 +70,7 @@ export const GET = withAdminAuth<{ id: string }>(
               type: true,
               source: true,
               amount: true,
+              metadata: true,
               createdAt: true,
             },
           },
@@ -102,6 +104,10 @@ export const GET = withAdminAuth<{ id: string }>(
         )
         .reduce((s, pt) => s + Math.abs(pt.amount), 0);
 
+      const cashbackEarnedFromTx = sumCashbackEarnedFromTransactions(
+        bill.transactions,
+      );
+
       const formattedBill = {
         id: bill.id,
         billNumber: bill.billNumber,
@@ -109,7 +115,8 @@ export const GET = withAdminAuth<{ id: string }>(
         storeDiscount: bill.storeDiscount,
         tax: bill.tax,
         finalAmount: bill.finalAmount,
-        cashbackAmount: bill.cashbackAmount,
+        cashbackAmount:
+          cashbackEarnedFromTx > 0 ? cashbackEarnedFromTx : bill.cashbackAmount,
         cashbackRedeemedAmount: bill.cashbackRedeemedAmount,
         userPaidAmount: bill.userPaidAmount,
         amount: bill.finalAmount,
@@ -137,14 +144,24 @@ export const GET = withAdminAuth<{ id: string }>(
         })),
         createdAt: bill.createdAt.toISOString(),
         updatedAt: bill.updatedAt.toISOString(),
-        loyaltyLogs: bill.transactions.map((log) => ({
-          id: log.id,
-          valueKind: log.valueKind,
-          type: log.type,
-          source: log.source,
-          amount: log.amount,
-          createdAt: log.createdAt.toISOString(),
-        })),
+        loyaltyLogs: bill.transactions.map((log) => {
+          const meta = log.metadata as { redeemedAtBusinessId?: string } | null;
+          const redeemedAtOurStore =
+            meta != null &&
+            typeof meta.redeemedAtBusinessId === "string" &&
+            meta.redeemedAtBusinessId === context.business.id &&
+            log.type === "REDEEMED";
+          return {
+            id: log.id,
+            valueKind: log.valueKind,
+            type: log.type,
+            source: log.source,
+            amount: log.amount,
+            /** True when this redemption was partner balance used at this store (shows as --amount). */
+            isPartnerRedemption: redeemedAtOurStore,
+            createdAt: log.createdAt.toISOString(),
+          };
+        }),
       };
 
       return NextResponse.json({

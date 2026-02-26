@@ -13,13 +13,11 @@ export const GET = withAdminAuth(async (_request: NextRequest, context) => {
       where: { id: context.business.id },
       select: {
         receivePartnershipOffers: true,
-        maxPartnerAllowed: true,
       },
     });
 
     return NextResponse.json({
       receivePartnershipOffers: business?.receivePartnershipOffers ?? false,
-      maxPartnerAllowed: business?.maxPartnerAllowed ?? 1,
     });
   } catch (error) {
     console.error("Partnership settings GET error:", error);
@@ -38,24 +36,7 @@ export const PUT = withAdminAuth(async (request: NextRequest, context) => {
       return NextResponse.json({ error: validation.error }, { status: 400 });
     }
 
-    const { receivePartnershipOffers, maxPartnerAllowed } = validation.data;
-
-    if (maxPartnerAllowed !== undefined) {
-      const activeCount = await db.partnershipMember.count({
-        where: {
-          businessId: context.business.id,
-          partnership: { status: "ACTIVE" },
-        },
-      });
-      if (maxPartnerAllowed < activeCount) {
-        return NextResponse.json(
-          {
-            error: `Cannot set max partners to ${maxPartnerAllowed} — you already have ${activeCount} active partnership(s).`,
-          },
-          { status: 400 },
-        );
-      }
-    }
+    const { receivePartnershipOffers } = validation.data;
 
     const updated = await db.business.update({
       where: { id: context.business.id },
@@ -63,11 +44,9 @@ export const PUT = withAdminAuth(async (request: NextRequest, context) => {
         ...(receivePartnershipOffers !== undefined && {
           receivePartnershipOffers,
         }),
-        ...(maxPartnerAllowed !== undefined && { maxPartnerAllowed }),
       },
       select: {
         receivePartnershipOffers: true,
-        maxPartnerAllowed: true,
       },
     });
 

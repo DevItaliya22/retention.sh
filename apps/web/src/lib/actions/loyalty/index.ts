@@ -81,6 +81,7 @@ const noLoyaltyResult = (billAmount: number): ApplyLoyaltyResult => ({
   redeemedPoints: 0,
   cashbackAmount: null,
   cashbackRedeemedAmount: null,
+  partnerRedeemedAmount: null,
   pointsBalance: 0,
   finalAmount: billAmount,
 });
@@ -558,6 +559,8 @@ export interface ApplyLoyaltyResult {
   redeemedPoints: number;
   cashbackAmount: number | null;
   cashbackRedeemedAmount: number | null;
+  /** Discount (₹) from redeeming partner points/cashback at this bill. */
+  partnerRedeemedAmount: number | null;
   pointsBalance: number;
   finalAmount: number;
   tierUpgrade?: TierUpgradeInfo | null;
@@ -973,9 +976,189 @@ export async function applyRedemptionForBill(
     redeemedPoints: 0,
     cashbackAmount: null,
     cashbackRedeemedAmount: redeemedCashback,
+    partnerRedeemedAmount: null,
     pointsBalance: effectivePointsBalance,
     finalAmount,
   };
+}
+
+/**
+ * Apply partner (cross-business) redemption: deduct from partner's wallet and
+ * return the discount amount (₹) at the current store. Caller applies this to
+ * finalAmount and persists partnerRedeemedAmount on the bill.
+ */
+export async function applyPartnerRedemptionForBill(
+  tx: Prisma.TransactionClient,
+  params: {
+    currentBusinessId: string;
+    customerId: string;
+    billId: string;
+    partnerBusinessId: string;
+    /** For CASHBACK/TIER partner: ₹ to redeem at partner. */
+    redeemPartnerCashback?: number;
+    /** For AMOUNT_SPENT/VISIT_MADE partner: points to redeem. */
+    redeemPartnerPoints?: number;
+  },
+): Promise<number> {
+  const {
+    currentBusinessId,
+    customerId,
+    billId,
+    partnerBusinessId,
+    redeemPartnerCashback = 0,
+    redeemPartnerPoints = 0,
+  } = params;
+
+  const cashbackReq = Math.max(0, redeemPartnerCashback);
+  const pointsReq = Math.max(0, Math.floor(redeemPartnerPoints));
+  if (cashbackReq <= 0 && pointsReq <= 0) return 0;
+
+  const partnership = await tx.businessPartnership.findFirst({
+    where: {
+      status: "ACTIVE",
+      AND: [
+        { members: { some: { businessId: currentBusinessId } } },
+        { members: { some: { businessId: partnerBusinessId } } },
+      ],
+    },
+    include: {
+      members: {
+        where: { businessId: partnerBusinessId },
+        include: {
+          business: {
+            include: { loyalty: { select: { id: true, loyaltyType: true } } },
+          },
+        },
+      },
+    },
+  });
+
+  if (!partnership || partnership.members.length === 0) {
+    throw new Error("Partnership not found or inactive.");
+  }
+
+  const partnerMember =
+    partnership.members[0] ??
+    (() => {
+      throw new Error("Partner member not found.");
+    })();
+  const partnerLoyalty = partnerMember.business.loyalty;
+  if (!partnerLoyalty) {
+    throw new Error("Partner business has no loyalty program.");
+  }
+
+  const exchangeRate = Number(partnerMember.exchangeRate) || 1;
+  const pointToCurrencyRate = Number(partnerMember.pointToCurrencyRate) || 1;
+
+  const wallet = await tx.wallet.findUnique({
+    where: {
+      businessId_customerId: { businessId: partnerBusinessId, customerId },
+    },
+  });
+
+  if (!wallet) {
+    throw new Error("Customer has no wallet at partner.");
+  }
+
+  let discountAtCurrentStore = 0;
+
+  if (
+    partnerLoyalty.loyaltyType === "CASHBACK" ||
+    partnerLoyalty.loyaltyType === "TIER"
+  ) {
+    if (pointsReq > 0) {
+      throw new Error(
+        "Partner uses cashback; send redeemPartnerCashback, not points.",
+      );
+    }
+    const balance = Math.max(0, wallet.cashbackBalance ?? 0);
+    if (cashbackReq > balance) {
+      throw new Error(
+        `Insufficient partner cashback: requested ₹${cashbackReq}, available ₹${balance}`,
+      );
+    }
+    discountAtCurrentStore = Math.floor(cashbackReq * exchangeRate * 100) / 100;
+
+    await tx.transaction.create({
+      data: {
+        businessId: partnerBusinessId,
+        customerId,
+        billId,
+        loyaltyId: partnerLoyalty.id,
+        valueKind: TransactionValueKind.CASHBACK,
+        amount: -cashbackReq,
+        type: TransactionType.REDEEMED,
+        source: TransactionSource.BILL,
+        sourceId: billId,
+        description: `Redeemed at partner store (₹${cashbackReq})`,
+        metadata: { redeemedAtBusinessId: currentBusinessId },
+      },
+    });
+    await tx.wallet.update({
+      where: {
+        businessId_customerId: { businessId: partnerBusinessId, customerId },
+      },
+      data: { cashbackBalance: { decrement: cashbackReq } },
+    });
+  } else if (
+    partnerLoyalty.loyaltyType === "AMOUNT_SPENT" ||
+    partnerLoyalty.loyaltyType === "VISIT_MADE"
+  ) {
+    if (cashbackReq > 0) {
+      throw new Error(
+        "Partner uses points; send redeemPartnerPoints, not cashback.",
+      );
+    }
+    const balance = Math.max(
+      0,
+      Math.floor(
+        (partnerLoyalty.loyaltyType === "AMOUNT_SPENT"
+          ? (wallet.amountSpentBalance ?? 0)
+          : (wallet.visitPointsBalance ?? 0)) as number,
+      ),
+    );
+    if (pointsReq > balance) {
+      throw new Error(
+        `Insufficient partner points: requested ${pointsReq}, available ${balance}`,
+      );
+    }
+    const valueKind =
+      partnerLoyalty.loyaltyType === "AMOUNT_SPENT"
+        ? TransactionValueKind.AMOUNT_SPENT_POINTS
+        : TransactionValueKind.VISIT_POINTS;
+
+    discountAtCurrentStore =
+      Math.floor(pointsReq * pointToCurrencyRate * exchangeRate * 100) / 100;
+
+    await tx.transaction.create({
+      data: {
+        businessId: partnerBusinessId,
+        customerId,
+        billId,
+        loyaltyId: partnerLoyalty.id,
+        valueKind,
+        amount: -pointsReq,
+        type: TransactionType.REDEEMED,
+        source: TransactionSource.BILL,
+        sourceId: billId,
+        description: `Redeemed at partner store (${pointsReq} pts)`,
+        metadata: { redeemedAtBusinessId: currentBusinessId },
+      },
+    });
+    await tx.wallet.update({
+      where: {
+        businessId_customerId: { businessId: partnerBusinessId, customerId },
+      },
+      data:
+        partnerLoyalty.loyaltyType === "AMOUNT_SPENT"
+          ? { amountSpentBalance: { decrement: pointsReq } }
+          : { visitPointsBalance: { decrement: pointsReq } },
+    });
+  } else {
+    throw new Error("Unsupported partner loyalty type.");
+  }
+
+  return discountAtCurrentStore;
 }
 
 /** Apply loyalty logic to a bill. Uses Wallet + Transaction. */
@@ -991,6 +1174,14 @@ export async function applyLoyaltyForBill(
     redeemCashbackRequested?: number | null;
     /** When set, use reward stage (PERCENTAGE_DISCOUNT/CASH_DISCOUNT) instead of 1pt=₹1. AMOUNT_SPENT/VISIT_MADE only. */
     rewardStageId?: string | null;
+    /** Partner business ID when redeeming partner points/cashback at this bill. */
+    redeemFromPartnerBusinessId?: string | null;
+    /** For CASHBACK/TIER partner: ₹ to redeem at partner. */
+    redeemPartnerCashback?: number | null;
+    /** For AMOUNT_SPENT/VISIT_MADE partner: points to redeem. */
+    redeemPartnerPoints?: number | null;
+    /** When true, do not create EARNED tx or add to wallet; earn is applied when cashier finalizes (Create Another Bill). */
+    deferEarn?: boolean;
   },
 ): Promise<ApplyLoyaltyResult> {
   const { businessId, customerId, billId } = params;
@@ -1161,6 +1352,7 @@ export async function applyLoyaltyForBill(
   let finalAmount = billAmount;
   let cashbackAmount: number | null = null;
   let cashbackRedeemedAmount: number | null = null;
+  let partnerRedeemedAmount: number | null = null;
 
   if (redeemedCashback > 0) {
     finalAmount = Math.max(0, billAmount - redeemedCashback);
@@ -1187,6 +1379,26 @@ export async function applyLoyaltyForBill(
     });
   }
 
+  // Partner (cross-business) redemption: deduct from partner wallet, apply discount here
+  const partnerId = params.redeemFromPartnerBusinessId ?? null;
+  const partnerCashback = Math.max(0, params.redeemPartnerCashback ?? 0);
+  const partnerPoints = Math.max(
+    0,
+    Math.floor(params.redeemPartnerPoints ?? 0),
+  );
+  if (partnerId && (partnerCashback > 0 || partnerPoints > 0)) {
+    const partnerDiscount = await applyPartnerRedemptionForBill(tx, {
+      currentBusinessId: businessId,
+      customerId,
+      billId,
+      partnerBusinessId: partnerId,
+      redeemPartnerCashback: partnerCashback > 0 ? partnerCashback : undefined,
+      redeemPartnerPoints: partnerPoints > 0 ? partnerPoints : undefined,
+    });
+    finalAmount = Math.max(0, finalAmount - partnerDiscount);
+    partnerRedeemedAmount = partnerDiscount;
+  }
+
   const amountForEarning = getAmountForEarning(
     context,
     billAmount,
@@ -1205,7 +1417,8 @@ export async function applyLoyaltyForBill(
     : 0;
   const earnedPoints = Math.max(0, rawEarned);
 
-  if (isCashbackType && earnedPoints > 0) {
+  const deferEarn = params.deferEarn === true;
+  if (!deferEarn && isCashbackType && earnedPoints > 0) {
     cashbackAmount = earnedPoints;
     const cashbackExpiresAt =
       (context.type === "CASHBACK" || context.type === "TIER") &&
@@ -1235,7 +1448,7 @@ export async function applyLoyaltyForBill(
             ? { cashbackPercentage: context.config.cashbackPercentage }
             : undefined,
     });
-  } else if (!isCashbackType && earnedPoints > 0) {
+  } else if (!deferEarn && !isCashbackType && earnedPoints > 0) {
     const expiryDays =
       context.type === "AMOUNT_SPENT"
         ? getExpiryDays(context.config.pointExpiryDays)
@@ -1256,7 +1469,11 @@ export async function applyLoyaltyForBill(
       expiresAt,
       updateVisitCount: context.type === "VISIT_MADE" && visitQualifies,
     });
-  } else if (context.type === "TIER" || context.type === "VISIT_MADE") {
+  }
+  if (deferEarn && isCashbackType && earnedPoints > 0) {
+    cashbackAmount = earnedPoints;
+  }
+  if (context.type === "TIER" || context.type === "VISIT_MADE") {
     const updateData: {
       visitCount?: { increment: number };
       lastVisitAt?: Date;
@@ -1339,12 +1556,151 @@ export async function applyLoyaltyForBill(
     redeemedPoints,
     cashbackAmount,
     cashbackRedeemedAmount,
+    partnerRedeemedAmount,
     pointsBalance: effectivePointsBalance,
     finalAmount,
     tierUpgrade: tierUpgradeInfo,
     currentTier: currentTierInfo,
     tierMessage: tierMessage ?? undefined,
   };
+}
+
+/** Apply deferred earn for a bill (when cashier clicks Create Another Bill). Idempotent: no-op if EARNED already exists for this bill. */
+export async function finalizeBillEarn(
+  tx: Prisma.TransactionClient,
+  params: {
+    businessId: string;
+    customerId: string;
+    billId: string;
+    /** Bill finalAmount (before any redemption). */
+    finalAmount: number | null;
+    /** Bill subtotal (for earning when onFinalAmount=false). */
+    billSubtotal: number | null;
+    /** Amount customer actually pays after redemption (used for earn calc). */
+    userPaidAmount: number | null;
+  },
+): Promise<{
+  applied: boolean;
+  cashbackAmount: number | null;
+  earnedPoints: number;
+}> {
+  const {
+    businessId,
+    customerId,
+    billId,
+    finalAmount,
+    billSubtotal,
+    userPaidAmount,
+  } = params;
+  const amountToPay = userPaidAmount ?? finalAmount ?? 0;
+  if (amountToPay <= 0) {
+    return { applied: false, cashbackAmount: null, earnedPoints: 0 };
+  }
+
+  const existingEarned = await tx.transaction.count({
+    where: { billId, type: TransactionType.EARNED },
+  });
+  if (existingEarned > 0) {
+    return { applied: false, cashbackAmount: null, earnedPoints: 0 };
+  }
+
+  const context = await getBusinessLoyaltyContext(tx, businessId);
+  if (!context)
+    return { applied: false, cashbackAmount: null, earnedPoints: 0 };
+
+  const loyalty = await tx.loyalty.findUnique({
+    where: { businessId },
+    include: {
+      amountSpentConfig: { include: { rewardStages: true } },
+      visitMadeConfig: { include: { rewardStages: true } },
+    },
+  });
+  const wallet = await tx.wallet.findUnique({
+    where: { businessId_customerId: { businessId, customerId } },
+  });
+  const billsAgg = await tx.bill.aggregate({
+    where: { businessId, customerId },
+    _sum: { finalAmount: true },
+  });
+  const aggregateSpend = billsAgg._sum.finalAmount ?? 0;
+  const lifetimeSpend =
+    wallet?.lifetimeSpend != null && wallet.lifetimeSpend > 0
+      ? wallet.lifetimeSpend
+      : aggregateSpend;
+  const resolvedTier =
+    context.type === "TIER"
+      ? resolveTierForLifetimeSpend(context.config.tiers, lifetimeSpend)
+      : null;
+  const isCashbackType = context.type === "CASHBACK" || context.type === "TIER";
+
+  const amountForEarning = getAmountForEarning(
+    context,
+    amountToPay,
+    billSubtotal,
+    amountToPay,
+  );
+  const visitQualifies =
+    context.type !== "VISIT_MADE" ||
+    isVisitQualifying(context.config, wallet?.lastVisitAt ?? null);
+  const rawEarned = visitQualifies
+    ? calculatePointsEarnedForBill(amountForEarning, context, { resolvedTier })
+    : 0;
+  const earnedPoints = Math.max(0, rawEarned);
+  if (earnedPoints <= 0) {
+    return { applied: true, cashbackAmount: null, earnedPoints: 0 };
+  }
+
+  if (isCashbackType) {
+    const cashbackExpiresAt =
+      (context.type === "CASHBACK" || context.type === "TIER") &&
+      context.config.pointExpiryDays != null &&
+      context.config.pointExpiryDays > 0
+        ? (() => {
+            const d = new Date();
+            d.setDate(d.getDate() + context.config.pointExpiryDays!);
+            return d;
+          })()
+        : null;
+    await recordCashbackEarned(tx, {
+      businessId,
+      customerId,
+      billId,
+      loyaltyId: loyalty?.id ?? null,
+      amount: earnedPoints,
+      expiresAt: cashbackExpiresAt,
+      metadata:
+        context.type === "TIER" && resolvedTier
+          ? {
+              tierName: resolvedTier.name,
+              tierId: resolvedTier.id,
+              cashbackPercentage: resolvedTier.cashbackPercentage,
+            }
+          : context.type === "CASHBACK"
+            ? { cashbackPercentage: context.config.cashbackPercentage }
+            : undefined,
+    });
+    return { applied: true, cashbackAmount: earnedPoints, earnedPoints: 0 };
+  }
+
+  const expiryDays =
+    context.type === "AMOUNT_SPENT"
+      ? getExpiryDays(context.config.pointExpiryDays)
+      : getExpiryDays(
+          context.type === "VISIT_MADE" ? context.config.pointExpiryDays : null,
+        );
+  const expiresAt = new Date();
+  expiresAt.setDate(expiresAt.getDate() + expiryDays);
+  await recordPointsEarned(tx, {
+    businessId,
+    customerId,
+    billId,
+    loyaltyId: loyalty?.id ?? null,
+    context,
+    amount: earnedPoints,
+    expiresAt,
+    updateVisitCount: context.type === "VISIT_MADE" && visitQualifies,
+  });
+  return { applied: true, cashbackAmount: null, earnedPoints };
 }
 
 export async function expirePointsForBusiness(params: {

@@ -1,10 +1,14 @@
 import {
   applyCashbackRedemptionForBill,
+  applyPartnerRedemptionForBill,
   convertPointsForBill,
 } from "@/lib/actions/loyalty";
 import { withCashierAuth } from "@/lib/auth/middleware";
 import { runTransaction } from "@/lib/db/transaction";
-import { getRedeemableInfo } from "@/lib/loyalty";
+import {
+  getRedeemableInfo,
+  sumCashbackEarnedFromTransactions,
+} from "@/lib/loyalty";
 import {
   sanitizeErrorMessage,
   validateSchema,
@@ -20,6 +24,12 @@ const redeemSchema = z.object({
   redeemCashback: z.coerce.number().min(0).optional(),
   /** For convert: points to use (must match stage.pointsRequired). */
   redeemPoints: z.coerce.number().int().min(0).optional(),
+  /** Apply partner balance: partner business id. */
+  redeemFromPartnerBusinessId: z.string().uuid().optional().nullable(),
+  /** Partner CASHBACK/TIER: ₹ to redeem at partner. */
+  redeemPartnerCashback: z.coerce.number().min(0).optional(),
+  /** Partner AMOUNT_SPENT/VISIT_MADE: points to redeem. */
+  redeemPartnerPoints: z.coerce.number().int().min(0).optional(),
 });
 
 export const POST = withCashierAuth<{ id: string }>(
@@ -37,6 +47,12 @@ export const POST = withCashierAuth<{ id: string }>(
         where: {
           id: billId,
           businessId: context.business.id,
+        },
+        include: {
+          transactions: {
+            where: { type: "EARNED", valueKind: "CASHBACK" },
+            select: { type: true, valueKind: true, amount: true },
+          },
         },
       });
 
@@ -58,18 +74,58 @@ export const POST = withCashierAuth<{ id: string }>(
 
       const rewardStageId = validation.data.rewardStageId ?? null;
       const redeemCashback = Math.max(0, validation.data.redeemCashback ?? 0);
+      const redeemFromPartnerBusinessId =
+        validation.data.redeemFromPartnerBusinessId ?? null;
+      const redeemPartnerCashback = Math.max(
+        0,
+        validation.data.redeemPartnerCashback ?? 0,
+      );
+      const redeemPartnerPoints = Math.max(
+        0,
+        Math.floor(validation.data.redeemPartnerPoints ?? 0),
+      );
       const currentAmountToPay = bill.userPaidAmount ?? bill.finalAmount ?? 0;
 
-      if (!rewardStageId && redeemCashback === 0) {
+      const wantsPartner =
+        redeemFromPartnerBusinessId &&
+        (redeemPartnerCashback > 0 || redeemPartnerPoints > 0);
+      if (!rewardStageId && redeemCashback === 0 && !wantsPartner) {
         return NextResponse.json(
           {
             error:
-              "Provide rewardStageId (convert points) or redeemCashback (apply to bill)",
+              "Provide rewardStageId (convert points), redeemCashback (apply to bill), or partner redemption",
             bill: null,
           },
           { status: 400 },
         );
       }
+
+      const hasOurStoreRedemption = (bill.cashbackRedeemedAmount ?? 0) > 0;
+      const hasPartnerRedemption = (bill.partnerRedeemedAmount ?? 0) > 0;
+      if (redeemCashback > 0 && hasPartnerRedemption) {
+        return NextResponse.json(
+          {
+            error:
+              "This bill already used partner balance. Only one type of redemption (your store or partner) is allowed per bill.",
+            bill: null,
+          },
+          { status: 400 },
+        );
+      }
+      if (wantsPartner && hasOurStoreRedemption) {
+        return NextResponse.json(
+          {
+            error:
+              "This bill already used balance at this store. Only one type of redemption (your store or partner) is allowed per bill.",
+            bill: null,
+          },
+          { status: 400 },
+        );
+      }
+
+      const cashbackEarnedThisBill = sumCashbackEarnedFromTransactions(
+        bill.transactions,
+      );
 
       const result = await runTransaction(async (tx) => {
         const redeemInfo = await getRedeemableInfo(tx, {
@@ -77,7 +133,10 @@ export const POST = withCashierAuth<{ id: string }>(
           customerId: bill.customerId,
           billAmount: currentAmountToPay,
           billSubtotal: bill.subtotal,
-          cashbackEarnedThisBill: bill.cashbackAmount ?? 0,
+          cashbackEarnedThisBill:
+            cashbackEarnedThisBill > 0
+              ? cashbackEarnedThisBill
+              : (bill.cashbackAmount ?? 0),
         });
 
         if (!redeemInfo) {
@@ -161,6 +220,44 @@ export const POST = withCashierAuth<{ id: string }>(
           });
         }
 
+        // 3) Apply partner redemption (one partner per bill; deduct from partner wallet, discount on this bill).
+        if (wantsPartner && redeemFromPartnerBusinessId) {
+          const existingPartnerId = billToReturn.redeemedFromPartnerBusinessId;
+          if (
+            existingPartnerId != null &&
+            existingPartnerId !== redeemFromPartnerBusinessId
+          ) {
+            throw new Error(
+              "One bill can only use one partner. This bill has already used another partner.",
+            );
+          }
+          const partnerDiscount = await applyPartnerRedemptionForBill(tx, {
+            currentBusinessId: context.business.id,
+            customerId: bill.customerId,
+            billId: bill.id,
+            partnerBusinessId: redeemFromPartnerBusinessId,
+            redeemPartnerCashback:
+              redeemPartnerCashback > 0 ? redeemPartnerCashback : undefined,
+            redeemPartnerPoints:
+              redeemPartnerPoints > 0 ? redeemPartnerPoints : undefined,
+          });
+          const currentUserPaid =
+            billToReturn.userPaidAmount ?? billToReturn.finalAmount ?? 0;
+          const existingPartner = billToReturn.partnerRedeemedAmount ?? 0;
+          billToReturn = await tx.bill.update({
+            where: { id: bill.id },
+            data: {
+              partnerRedeemedAmount: existingPartner + partnerDiscount,
+              redeemedFromPartnerBusinessId:
+                existingPartnerId ?? redeemFromPartnerBusinessId,
+              userPaidAmount: Math.max(
+                0,
+                Math.floor((currentUserPaid - partnerDiscount) * 100) / 100,
+              ),
+            },
+          });
+        }
+
         return {
           bill: billToReturn,
           loyalty: null,
@@ -175,7 +272,10 @@ export const POST = withCashierAuth<{ id: string }>(
         error instanceof Error
           ? error.message
           : sanitizeErrorMessage(error) || "Failed to redeem";
-      return NextResponse.json({ error: msg, bill: null }, { status: 500 });
+      const status = msg.includes("One bill can only use one partner")
+        ? 400
+        : 500;
+      return NextResponse.json({ error: msg, bill: null }, { status });
     }
   },
 );
