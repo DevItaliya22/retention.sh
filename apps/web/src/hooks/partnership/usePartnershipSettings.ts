@@ -6,7 +6,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 export interface PartnershipSettings {
   receivePartnershipOffers: boolean;
-  maxPartnerAllowed: number;
 }
 
 export function usePartnershipSettings() {

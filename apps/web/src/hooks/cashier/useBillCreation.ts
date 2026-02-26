@@ -73,6 +73,8 @@ export interface CreateBillResponse {
     finalAmount: number | null;
     cashbackAmount: number | null;
     cashbackRedeemedAmount: number | null;
+    /** Discount from redeeming partner loyalty (cashback/points) at this bill. */
+    partnerRedeemedAmount: number | null;
     userPaidAmount: number | null;
     amount?: number | null;
     businessId: string;

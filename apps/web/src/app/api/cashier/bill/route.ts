@@ -123,6 +123,9 @@ export const POST = withCashierAuth(async (request: NextRequest, context) => {
       tax = [],
       redeemPoints: redeemPointsRaw,
       redeemCashback: redeemCashbackRaw,
+      redeemFromPartnerBusinessId,
+      redeemPartnerCashback: redeemPartnerCashbackRaw,
+      redeemPartnerPoints: redeemPartnerPointsRaw,
       notes,
       paymentMethod,
       lineItems: lineItemsFromRequest = [],
@@ -131,6 +134,14 @@ export const POST = withCashierAuth(async (request: NextRequest, context) => {
     // Defense: never allow negative redemption (prevents minus-minus = plus hack)
     const redeemPoints = Math.max(0, Math.floor(Number(redeemPointsRaw) || 0));
     const redeemCashback = Math.max(0, Number(redeemCashbackRaw) || 0);
+    const redeemPartnerCashback = Math.max(
+      0,
+      Number(redeemPartnerCashbackRaw) || 0,
+    );
+    const redeemPartnerPoints = Math.max(
+      0,
+      Math.floor(Number(redeemPartnerPointsRaw) || 0),
+    );
 
     if (!phoneNumber || phoneNumber.trim() === "") {
       return NextResponse.json(
@@ -275,6 +286,12 @@ export const POST = withCashierAuth(async (request: NextRequest, context) => {
         redeemPointsRequested: redeemPoints ?? null,
         redeemCashbackRequested: redeemCashback ?? null,
         rewardStageId: validation.data.rewardStageId ?? null,
+        redeemFromPartnerBusinessId: redeemFromPartnerBusinessId ?? null,
+        redeemPartnerCashback:
+          redeemPartnerCashback > 0 ? redeemPartnerCashback : null,
+        redeemPartnerPoints:
+          redeemPartnerPoints > 0 ? redeemPartnerPoints : null,
+        deferEarn: true,
       });
 
       const updatedBill = await tx.bill.update({
@@ -285,6 +302,10 @@ export const POST = withCashierAuth(async (request: NextRequest, context) => {
           cashbackRedeemedAmount:
             loyalty.cashbackRedeemedAmount != null
               ? loyalty.cashbackRedeemedAmount
+              : undefined,
+          partnerRedeemedAmount:
+            loyalty.partnerRedeemedAmount != null
+              ? loyalty.partnerRedeemedAmount
               : undefined,
           userPaidAmount: loyalty.finalAmount,
         },

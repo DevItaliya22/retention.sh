@@ -12,6 +12,7 @@ export {
   loyaltyRecordToContext,
   resolveTierForLifetimeSpend,
   safeAmount,
+  sumCashbackEarnedFromTransactions,
   validateTierRanges,
 } from "./helpers";
 export type {
@@ -26,8 +27,13 @@ export type {
   ValidateTierRangesResult,
   VisitMadeContext,
 } from "./helpers";
-export { calculateDiscountFromStage, getRedeemableInfo } from "./redeem-info";
+export {
+  calculateDiscountFromStage,
+  getPartnerRedeemableInfo,
+  getRedeemableInfo,
+} from "./redeem-info";
 export type {
+  PartnerRedeemableItem,
   RedeemableInfoResult,
   RewardStageInput,
   RewardStageRedeemInfo,

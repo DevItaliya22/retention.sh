@@ -377,23 +377,48 @@ export function isVisitQualifying(
   return Date.now() - lastVisitAt.getTime() >= intervalMs;
 }
 
-/** Amount to use for earning calc. When onFinalAmount: use finalAmount; else use subtotal or billAmount. */
+/**
+ * Amount to use for earning calc.
+ * - CASHBACK/TIER: When redemption was applied (finalAmount < billAmount), or when the chosen base
+ *   would exceed amount-to-pay (e.g. redeem-info passes billAmount=amountToPay, billSubtotal=pre-redemption):
+ *   use finalAmount (amount to pay) so cashback is earned on what the customer actually pays.
+ * - Otherwise: when onFinalAmount use finalAmount; else use subtotal or billAmount.
+ */
 export function getAmountForEarning(
   context: LoyaltyContext,
   billAmount: number,
   billSubtotal: number | null,
   finalAmount?: number,
 ): number {
+  const isCashbackOrTier =
+    context.type === "CASHBACK" || context.type === "TIER";
+  const redemptionApplied =
+    finalAmount != null && finalAmount > 0 && finalAmount < billAmount;
+
+  if (isCashbackOrTier && redemptionApplied) {
+    return safeAmount(finalAmount);
+  }
+
   const useFinal =
     (context.type === "CASHBACK" && context.config.onFinalAmount) ||
     (context.type === "TIER" && context.config.onFinalAmount) ||
     (context.type === "AMOUNT_SPENT" && context.config.onFinalAmount);
-  const amt =
+  let amt =
     useFinal && finalAmount != null && finalAmount > 0
       ? finalAmount
       : billSubtotal != null && billSubtotal > 0
         ? billSubtotal
         : billAmount;
+
+  // CASHBACK/TIER: never earn on more than amount-to-pay (e.g. redeem-info uses amountToPay as billAmount but subtotal as 1000)
+  if (
+    isCashbackOrTier &&
+    finalAmount != null &&
+    finalAmount > 0 &&
+    amt > finalAmount
+  ) {
+    amt = finalAmount;
+  }
   return safeAmount(amt);
 }
 
@@ -402,6 +427,18 @@ export function safeAmount(value: number): number {
   if (typeof value !== "number" || !Number.isFinite(value) || value < 0)
     return 0;
   return value;
+}
+
+/**
+ * Sum of EARNED CASHBACK amounts from transactions.
+ * Use this as the single source of truth for "cashback earned on this bill" in APIs and UI.
+ */
+export function sumCashbackEarnedFromTransactions(
+  transactions: Array<{ type: string; valueKind: string; amount: number }>,
+): number {
+  return transactions
+    .filter((t) => t.type === "EARNED" && t.valueKind === "CASHBACK")
+    .reduce((s, t) => s + Math.max(0, Number(t.amount)), 0);
 }
 
 /** CASHBACK: Earned amount (₹) from bill. 1 unit = ₹1. */
@@ -428,8 +465,10 @@ export function calculateCashbackEarned(
 /**
  * CASHBACK: Max redeemable (₹) on this bill from balance.
  * - Same-bill rule: caller must pass balance = available cashback (e.g. wallet minus earned on this bill).
- * - Wallet limit: when enabled, applies EITHER fixed amount (₹) OR % of balance, not both.
- * - Bill limit: when enabled, applies EITHER fixed amount (₹) OR % of bill amount, not both.
+ * - maxCashbackCap: absolute cap on how much can be redeemed per bill (when set).
+ * - Wallet limit: when enabled, applies EITHER fixed amount (₹) OR % of balance (0–100), not both.
+ * - Bill limit: when enabled, applies EITHER fixed amount (₹) OR % of bill amount (0–100), not both.
+ * Final max = min(balance, cap from limits, maxCashbackCap, bill amount).
  */
 export function calculateCashbackRedeemable(
   billAmount: number,
@@ -446,25 +485,32 @@ export function calculateCashbackRedeemable(
     if (amt < config.minPurchaseForRedemption) return 0;
   }
   let cap = bal;
-  // Wallet limit: mutually exclusive — either fixed amount (₹) or % of balance
+  // Wallet limit: mutually exclusive — either fixed amount (₹) or % of balance (config stores 0–100)
   if (config.redemptionBalanceLimitEnabled) {
     if (config.redemptionBalanceLimitAmount != null) {
       cap = Math.min(cap, config.redemptionBalanceLimitAmount);
     } else if (config.redemptionBalanceLimitPercentage != null) {
       const pctCap =
-        Math.floor(bal * config.redemptionBalanceLimitPercentage * 100) / 100;
+        Math.floor(
+          ((bal * config.redemptionBalanceLimitPercentage) / 100) * 100,
+        ) / 100;
       cap = Math.min(cap, pctCap);
     }
   }
-  // Bill limit: mutually exclusive — either fixed amount (₹) or % of bill
+  // Bill limit: mutually exclusive — either fixed amount (₹) or % of bill (config stores 0–100)
   if (config.redemptionBillLimitEnabled) {
     if (config.redemptionBillLimitAmount != null) {
       cap = Math.min(cap, config.redemptionBillLimitAmount);
     } else if (config.redemptionBillLimitPercentage != null) {
       const billPctCap =
-        Math.floor(amt * config.redemptionBillLimitPercentage * 100) / 100;
+        Math.floor(((amt * config.redemptionBillLimitPercentage) / 100) * 100) /
+        100;
       cap = Math.min(cap, billPctCap);
     }
+  }
+  // Per-bill redemption cap (same as earning cap): max cashback redeemable on one bill
+  if (config.maxCashbackCap != null && config.maxCashbackCap > 0) {
+    cap = Math.min(cap, config.maxCashbackCap);
   }
   return Math.min(bal, cap, amt);
 }
@@ -537,7 +583,7 @@ export function calculateRedeemable(
       100
     );
   }
-  // TIER: minPurchaseForRedemption only limits REDEMPTION (this function). It does NOT affect earning (calculateTierCashbackEarned).
+  // TIER: minPurchaseForRedemption and tier's maxCashbackCap (redemption cap per bill) apply.
   if (context.type === "TIER") {
     if (!options?.resolvedTier) return 0;
     const tier = options.resolvedTier;
@@ -548,6 +594,15 @@ export function calculateRedeemable(
     ) {
       return 0;
     }
+    let cap = Math.min(bal, Math.floor(amt));
+    if (
+      tier.maxCashbackCapEnabled &&
+      tier.maxCashbackCap != null &&
+      tier.maxCashbackCap > 0
+    ) {
+      cap = Math.min(cap, Math.floor(tier.maxCashbackCap * 100) / 100);
+    }
+    return cap;
   }
   return Math.min(bal, Math.floor(amt));
 }

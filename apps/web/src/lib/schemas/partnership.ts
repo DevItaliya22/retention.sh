@@ -33,7 +33,6 @@ export type RespondPartnerRequestInput = z.infer<
 
 export const updatePartnershipSettingsSchema = z.object({
   receivePartnershipOffers: z.boolean().optional(),
-  maxPartnerAllowed: z.coerce.number().int().min(1).max(100).optional(),
 });
 export type UpdatePartnershipSettingsInput = z.infer<
   typeof updatePartnershipSettingsSchema

@@ -142,6 +142,14 @@ function BillSuccessCard({
               <span className="font-medium">-₹{loyalty!.redeemedPoints}</span>
             </div>
           )}
+          {(bill.partnerRedeemedAmount ?? 0) > 0 && (
+            <div className="flex justify-between text-violet-600 dark:text-violet-400">
+              <span>Partner balance redeemed</span>
+              <span className="font-medium">
+                -₹{(bill.partnerRedeemedAmount ?? 0).toFixed(2)}
+              </span>
+            </div>
+          )}
           <Separator />
           <div className="flex justify-between text-base font-semibold">
             <span>Amount to pay</span>
@@ -315,6 +323,10 @@ export function BillCreationForm() {
   const [notes, setNotes] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("");
   const [redeemPoints, setRedeemPoints] = useState("");
+  const [redeemFromPartnerId, setRedeemFromPartnerId] = useState<string | null>(
+    null,
+  );
+  const [redeemPartnerValue, setRedeemPartnerValue] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lineItems, setLineItems] = useState<LineItemRow[]>([]);
@@ -367,12 +379,49 @@ export function BillCreationForm() {
   const redeemablePoints = loyaltyPreview?.redeemablePoints ?? 0;
   const pointsBalance = loyaltyPreview?.pointsBalance ?? 0;
   const cashbackBalance = loyaltyPreview?.cashbackBalance ?? 0;
+  const partnerRedeemable = loyaltyPreview?.partnerRedeemable ?? [];
 
   const isCashbackType = loyaltyType === "CASHBACK" || loyaltyType === "TIER";
   const isPointsType =
     loyaltyType === "AMOUNT_SPENT" || loyaltyType === "VISIT_MADE";
 
-  // Estimated amount user pays after loyalty (redeemed points/cashback reduce the bill).
+  const selectedPartner = redeemFromPartnerId
+    ? partnerRedeemable.find((p) => p.partnerBusinessId === redeemFromPartnerId)
+    : null;
+  const isPartnerCashbackType =
+    selectedPartner &&
+    (selectedPartner.loyaltyType === "CASHBACK" ||
+      selectedPartner.loyaltyType === "TIER");
+  const partnerRedeemVal = Math.max(
+    0,
+    redeemPartnerValue
+      ? isPartnerCashbackType
+        ? parseFloat(redeemPartnerValue) || 0
+        : parseInt(redeemPartnerValue, 10) || 0
+      : 0,
+  );
+  // Partner value (points or ₹) → discount at this store = (val / balance) * valueAtCurrentStore, capped by maxRedeemableOnBill
+  const effectivePartnerDiscount =
+    selectedPartner && selectedPartner.balance > 0
+      ? Math.min(
+          (partnerRedeemVal / selectedPartner.balance) *
+            selectedPartner.valueAtCurrentStore,
+          selectedPartner.maxRedeemableOnBill,
+          finalAmountBeforeLoyalty,
+        )
+      : 0;
+  const maxPartnerRedeemValue = selectedPartner
+    ? selectedPartner.balance > 0 && selectedPartner.valueAtCurrentStore > 0
+      ? Math.min(
+          selectedPartner.balance,
+          (selectedPartner.maxRedeemableOnBill /
+            selectedPartner.valueAtCurrentStore) *
+            selectedPartner.balance,
+        )
+      : 0
+    : 0;
+
+  // Estimated amount user pays after loyalty (own + partner redemption reduce the bill).
   const redeemValue = Math.max(
     0,
     redeemPoints
@@ -381,7 +430,10 @@ export function BillCreationForm() {
         : parseInt(redeemPoints, 10) || 0
       : 0,
   );
-  const estimatedUserPays = Math.max(0, finalAmountBeforeLoyalty - redeemValue);
+  const estimatedUserPays = Math.max(
+    0,
+    finalAmountBeforeLoyalty - redeemValue - effectivePartnerDiscount,
+  );
 
   // ─── Handlers ───────────────────────────────────────────────────────────
   const handleReset = useCallback(() => {
@@ -393,6 +445,8 @@ export function BillCreationForm() {
     setPaymentMethod("");
     setLineItems([]);
     setRedeemPoints("");
+    setRedeemFromPartnerId(null);
+    setRedeemPartnerValue("");
     clearSelectedCustomer();
     setError(null);
     setShowSuggestions(false);
@@ -575,6 +629,13 @@ export function BillCreationForm() {
           ? Math.max(0, parseInt(redeemPoints, 10) || 0)
           : Math.max(0, parseFloat(redeemPoints) || 0)
         : 0;
+      const parsedRedeemPartner =
+        redeemPartnerValue && selectedPartner
+          ? isPartnerCashbackType
+            ? Math.max(0, parseFloat(redeemPartnerValue) || 0)
+            : Math.max(0, parseInt(redeemPartnerValue, 10) || 0)
+          : 0;
+
       const validationResult = billFormSchema.safeParse({
         billNumber,
         phoneNumber,
@@ -586,6 +647,18 @@ export function BillCreationForm() {
           isPointsType && redeemPoints ? parsedRedeemPoints : undefined,
         redeemCashback:
           isCashbackType && redeemPoints ? parsedRedeemPoints : undefined,
+        redeemFromPartnerBusinessId:
+          redeemFromPartnerId && parsedRedeemPartner > 0
+            ? redeemFromPartnerId
+            : undefined,
+        redeemPartnerCashback:
+          selectedPartner && isPartnerCashbackType && parsedRedeemPartner > 0
+            ? parsedRedeemPartner
+            : undefined,
+        redeemPartnerPoints:
+          selectedPartner && !isPartnerCashbackType && parsedRedeemPartner > 0
+            ? parsedRedeemPartner
+            : undefined,
         notes: notes.trim() || undefined,
         paymentMethod: paymentMethod.trim() || undefined,
         lineItems: parsedLineItems.length > 0 ? parsedLineItems : undefined,
@@ -611,6 +684,18 @@ export function BillCreationForm() {
         const errorMessage = isCashbackType
           ? `Cannot redeem more than ₹${redeemablePoints.toFixed(2)} cashback.`
           : `Cannot redeem more than ${redeemablePoints} points.`;
+        setError(errorMessage);
+        toast.error(errorMessage);
+        return;
+      }
+      if (
+        selectedPartner &&
+        parsedRedeemPartner > 0 &&
+        parsedRedeemPartner > maxPartnerRedeemValue
+      ) {
+        const errorMessage = isPartnerCashbackType
+          ? `Cannot redeem more than ₹${maxPartnerRedeemValue.toFixed(2)} from ${selectedPartner.partnerBusinessName}.`
+          : `Cannot redeem more than ${Math.floor(maxPartnerRedeemValue)} points from ${selectedPartner.partnerBusinessName}.`;
         setError(errorMessage);
         toast.error(errorMessage);
         return;
@@ -875,31 +960,68 @@ export function BillCreationForm() {
                   />
                 </div>
 
-                {/* Redeem points/cashback (loyalty) — only when applicable */}
-                {/* {loyaltyType !== "NONE" &&
-                  phoneNumber.length >= 4 &&
-                  redeemablePoints > 0 && (
-                    <div className="space-y-1.5">
-                      <Label htmlFor="redeemPoints">
-                        {isCashbackType
-                          ? `Redeem cashback (₹) — Balance: ₹${cashbackBalance.toFixed(2)}`
-                          : "Redeem points (₹)"}
-                      </Label>
-                      <Input
-                        id="redeemPoints"
-                        variant="underline"
-                        type="number"
-                        min={0}
-                        max={redeemablePoints}
-                        step={isCashbackType ? 0.01 : 1}
-                        placeholder="0"
-                        value={redeemPoints}
-                        onChange={(e) => setRedeemPoints(e.target.value)}
+                {/* Redeem from partner (them → you) — when customer has balance at a partner */}
+                {partnerRedeemable.length > 0 && phoneNumber.length >= 4 && (
+                  <div className="space-y-2 rounded-lg border border-dashed p-3">
+                    <Label className="text-sm font-medium">
+                      Redeem from partner
+                    </Label>
+                    <p className="text-muted-foreground text-xs">
+                      Use points/cashback from a partner business at this store.
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <Select
+                        value={redeemFromPartnerId ?? "__none__"}
+                        onValueChange={(v) => {
+                          setRedeemFromPartnerId(v === "__none__" ? null : v);
+                          setRedeemPartnerValue("");
+                        }}
                         disabled={isCreating}
-                        className="max-w-32"
-                      />
+                      >
+                        <SelectTrigger className="max-w-[200px]">
+                          <SelectValue placeholder="Select partner" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">
+                            No partner redemption
+                          </SelectItem>
+                          {partnerRedeemable.map((p) => (
+                            <SelectItem
+                              key={p.partnerBusinessId}
+                              value={p.partnerBusinessId}
+                            >
+                              {p.partnerBusinessName} — ₹
+                              {p.valueAtCurrentStore.toFixed(2)} available
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {selectedPartner && (
+                        <div className="flex items-center gap-2">
+                          <Input
+                            variant="underline"
+                            type="number"
+                            min={0}
+                            max={maxPartnerRedeemValue}
+                            step={isPartnerCashbackType ? 0.01 : 1}
+                            placeholder="0"
+                            value={redeemPartnerValue}
+                            onChange={(e) =>
+                              setRedeemPartnerValue(e.target.value)
+                            }
+                            disabled={isCreating}
+                            className="max-w-28"
+                            aria-label="Partner redeem amount"
+                          />
+                          <span className="text-muted-foreground text-xs">
+                            {isPartnerCashbackType ? "₹" : "pts"} (≈ ₹
+                            {effectivePartnerDiscount.toFixed(2)} off)
+                          </span>
+                        </div>
+                      )}
                     </div>
-                  )} */}
+                  </div>
+                )}
 
                 {/* Line Items */}
                 <div className="space-y-3 rounded-lg border p-4">

@@ -1,7 +1,10 @@
 import { expirePointsForCustomer } from "@/lib/actions/loyalty";
 import { withCustomerAuth } from "@/lib/auth/middleware";
 import { runTransaction } from "@/lib/db/transaction";
-import { resolveTierForLifetimeSpend } from "@/lib/loyalty";
+import {
+  resolveTierForLifetimeSpend,
+  sumCashbackEarnedFromTransactions,
+} from "@/lib/loyalty";
 import { businessSlugParamSchema } from "@/lib/schemas/common";
 import {
   sanitizeErrorMessage,
@@ -156,14 +159,21 @@ export const GET = withCustomerAuth<{ businessSlug: string }>(
           include: {
             transactions: {
               where: { valueKind: "CASHBACK", type: "EARNED" },
-              take: 1,
-              orderBy: { createdAt: "desc" },
+              select: {
+                type: true,
+                valueKind: true,
+                amount: true,
+                metadata: true,
+              },
             },
           },
           orderBy: { createdAt: "desc" },
           take: 50,
         });
         cashbackHistory = bills.map((bill) => {
+          const cashbackReceived = sumCashbackEarnedFromTransactions(
+            bill.transactions,
+          );
           const ct = bill.transactions[0];
           const meta =
             (ct?.metadata as {
@@ -175,7 +185,10 @@ export const GET = withCustomerAuth<{ businessSlug: string }>(
             date: bill.createdAt.toISOString(),
             billNumber: bill.billNumber,
             amountSpent: bill.finalAmount ?? 0,
-            cashbackReceived: bill.cashbackAmount ?? ct?.amount ?? 0,
+            cashbackReceived:
+              cashbackReceived > 0
+                ? cashbackReceived
+                : (bill.cashbackAmount ?? 0),
             cashbackRedeemed: bill.cashbackRedeemedAmount ?? 0,
             tierName: meta.tierName ?? null,
             cashbackPercentage: meta.cashbackPercentage ?? null,
