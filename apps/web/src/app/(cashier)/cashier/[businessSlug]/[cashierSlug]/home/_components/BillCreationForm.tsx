@@ -400,25 +400,33 @@ export function BillCreationForm() {
         : parseInt(redeemPartnerValue, 10) || 0
       : 0,
   );
-  // Partner value (points or ₹) → discount at this store = (val / balance) * valueAtCurrentStore, capped by maxRedeemableOnBill
+  // For partner CASHBACK/TIER: input is "discount at this store" (₹). For points: input is partner points.
   const effectivePartnerDiscount =
     selectedPartner && selectedPartner.balance > 0
-      ? Math.min(
-          (partnerRedeemVal / selectedPartner.balance) *
-            selectedPartner.valueAtCurrentStore,
-          selectedPartner.maxRedeemableOnBill,
-          finalAmountBeforeLoyalty,
-        )
+      ? isPartnerCashbackType
+        ? Math.min(
+            partnerRedeemVal,
+            selectedPartner.maxRedeemableOnBill,
+            finalAmountBeforeLoyalty,
+          )
+        : Math.min(
+            (partnerRedeemVal / selectedPartner.balance) *
+              selectedPartner.valueAtCurrentStore,
+            selectedPartner.maxRedeemableOnBill,
+            finalAmountBeforeLoyalty,
+          )
       : 0;
   const maxPartnerRedeemValue = selectedPartner
-    ? selectedPartner.balance > 0 && selectedPartner.valueAtCurrentStore > 0
-      ? Math.min(
-          selectedPartner.balance,
-          (selectedPartner.maxRedeemableOnBill /
-            selectedPartner.valueAtCurrentStore) *
+    ? isPartnerCashbackType
+      ? selectedPartner.maxRedeemableOnBill
+      : selectedPartner.balance > 0 && selectedPartner.valueAtCurrentStore > 0
+        ? Math.min(
             selectedPartner.balance,
-        )
-      : 0
+            (selectedPartner.maxRedeemableOnBill /
+              selectedPartner.valueAtCurrentStore) *
+              selectedPartner.balance,
+          )
+        : 0
     : 0;
 
   // Estimated amount user pays after loyalty (own + partner redemption reduce the bill).
@@ -629,12 +637,26 @@ export function BillCreationForm() {
           ? Math.max(0, parseInt(redeemPoints, 10) || 0)
           : Math.max(0, parseFloat(redeemPoints) || 0)
         : 0;
-      const parsedRedeemPartner =
+      const parsedRedeemPartnerInput =
         redeemPartnerValue && selectedPartner
           ? isPartnerCashbackType
             ? Math.max(0, parseFloat(redeemPartnerValue) || 0)
             : Math.max(0, parseInt(redeemPartnerValue, 10) || 0)
           : 0;
+      // For partner CASHBACK/TIER: input is discount at this store (₹); convert to partner amount for API
+      const parsedRedeemPartner =
+        !selectedPartner || parsedRedeemPartnerInput <= 0
+          ? 0
+          : isPartnerCashbackType
+            ? Math.min(
+                selectedPartner.balance,
+                Math.floor(
+                  ((parsedRedeemPartnerInput * selectedPartner.balance) /
+                    selectedPartner.valueAtCurrentStore) *
+                    100,
+                ) / 100,
+              )
+            : parsedRedeemPartnerInput;
 
       const validationResult = billFormSchema.safeParse({
         billNumber,
@@ -688,13 +710,16 @@ export function BillCreationForm() {
         toast.error(errorMessage);
         return;
       }
+      const partnerInputForMaxCheck = isPartnerCashbackType
+        ? parsedRedeemPartnerInput
+        : parsedRedeemPartner;
       if (
         selectedPartner &&
-        parsedRedeemPartner > 0 &&
-        parsedRedeemPartner > maxPartnerRedeemValue
+        partnerInputForMaxCheck > 0 &&
+        partnerInputForMaxCheck > maxPartnerRedeemValue
       ) {
         const errorMessage = isPartnerCashbackType
-          ? `Cannot redeem more than ₹${maxPartnerRedeemValue.toFixed(2)} from ${selectedPartner.partnerBusinessName}.`
+          ? `Cannot redeem more than ₹${maxPartnerRedeemValue.toFixed(2)} on this bill from ${selectedPartner.partnerBusinessName}.`
           : `Cannot redeem more than ${Math.floor(maxPartnerRedeemValue)} points from ${selectedPartner.partnerBusinessName}.`;
         setError(errorMessage);
         toast.error(errorMessage);

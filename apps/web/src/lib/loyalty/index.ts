@@ -8,6 +8,7 @@ export {
   calculateTierCashbackEarned,
   getAmountForEarning,
   getExpiryDays,
+  getMaxCashbackCapFromContext,
   isVisitQualifying,
   loyaltyRecordToContext,
   resolveTierForLifetimeSpend,
