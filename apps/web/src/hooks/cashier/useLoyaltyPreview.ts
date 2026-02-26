@@ -22,6 +22,15 @@ export interface FreeItemPreview {
   createdAt: string;
 }
 
+export interface PartnerRedeemablePreview {
+  partnerBusinessId: string;
+  partnerBusinessName: string;
+  loyaltyType: string;
+  balance: number;
+  valueAtCurrentStore: number;
+  maxRedeemableOnBill: number;
+}
+
 export interface LoyaltyPreviewData {
   loyaltyType: string;
   pointsBalance: number;
@@ -45,6 +54,8 @@ export interface LoyaltyPreviewData {
   tierMessage?: string | null;
   rewardStages: RewardStagePreview[];
   visitCount: number | null;
+  /** Partner balances redeemable at this store (them → you). */
+  partnerRedeemable?: PartnerRedeemablePreview[];
 }
 
 export interface LoyaltyPreviewResponse {

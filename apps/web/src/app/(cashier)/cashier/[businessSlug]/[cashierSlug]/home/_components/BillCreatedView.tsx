@@ -52,6 +52,15 @@ interface FreeItemToClaim {
   createdAt: string;
 }
 
+interface PartnerRedeemableItem {
+  partnerBusinessId: string;
+  partnerBusinessName: string;
+  loyaltyType: string;
+  balance: number;
+  valueAtCurrentStore: number;
+  maxRedeemableOnBill: number;
+}
+
 interface RedeemInfoBill {
   id: string;
   billNumber: string;
@@ -59,8 +68,15 @@ interface RedeemInfoBill {
   userPaidAmount: number | null;
   cashbackAmount: number | null;
   cashbackRedeemedAmount: number | null;
+  partnerRedeemedAmount?: number | null;
+  /** Which partner was used on this bill (one partner per bill). */
+  redeemedFromPartnerBusinessId?: string | null;
   earnedCashback?: number;
   earnedPoints?: number;
+  /** True when earn is deferred (will be applied on Create Another Bill). */
+  earnNotYetApplied?: boolean;
+  pendingCashbackEarn?: number;
+  pendingPointsEarn?: number;
   /** Free items redeemed on this bill (points → FREE_ITEM reward). */
   redeemedFreeItems?: Array<{
     rewardName: string;
@@ -83,6 +99,7 @@ export function BillCreatedView({
   const [data, setData] = useState<{
     bill: RedeemInfoBill;
     redeemInfo: RedeemInfo | null;
+    partnerRedeemable: PartnerRedeemableItem[];
     freeItems: FreeItemToClaim[];
   } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -94,6 +111,14 @@ export function BillCreatedView({
   >(null);
   const [redeeming, setRedeeming] = useState(false);
   const [claimingId, setClaimingId] = useState<string | null>(null);
+  /** Per-partner input value (partnerBusinessId -> value string) */
+  const [partnerRedeemValues, setPartnerRedeemValues] = useState<
+    Record<string, string>
+  >({});
+  const [redeemingPartnerId, setRedeemingPartnerId] = useState<string | null>(
+    null,
+  );
+  const [finalizing, setFinalizing] = useState(false);
 
   const basePath = `/api/cashier/bills/${billId}`;
 
@@ -104,6 +129,7 @@ export function BillCreatedView({
       const res = await fetcher<{
         bill: RedeemInfoBill;
         redeemInfo: RedeemInfo | null;
+        partnerRedeemable?: PartnerRedeemableItem[];
         freeItems?: FreeItemToClaim[];
         error?: string;
       }>(`${basePath}/redeem-info`);
@@ -111,6 +137,7 @@ export function BillCreatedView({
       setData({
         bill: res.bill,
         redeemInfo: res.redeemInfo,
+        partnerRedeemable: res.partnerRedeemable ?? [],
         freeItems: res.freeItems ?? [],
       });
     } catch (err: unknown) {
@@ -200,9 +227,110 @@ export function BillCreatedView({
     }
   };
 
-  const handleCreateAnother = () => {
-    onCreateAnother();
-    router.refresh();
+  const handleCreateAnother = async () => {
+    setFinalizing(true);
+    try {
+      await fetcher<{ applied?: boolean; error?: string }>(
+        `${basePath}/finalize-earn`,
+        {
+          method: "POST",
+        },
+      );
+      onCreateAnother();
+      router.refresh();
+    } catch (err) {
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : "Failed to finish. Please try again.",
+      );
+    } finally {
+      setFinalizing(false);
+    }
+  };
+
+  /** For CASHBACK/TIER: max discount at this store (₹). For points: max partner points. */
+  const getMaxPartnerValue = (p: PartnerRedeemableItem) => {
+    const isCashback = p.loyaltyType === "CASHBACK" || p.loyaltyType === "TIER";
+    if (p.balance <= 0 || p.valueAtCurrentStore <= 0) return 0;
+    if (isCashback) return p.maxRedeemableOnBill;
+    const raw = (p.maxRedeemableOnBill * p.balance) / p.valueAtCurrentStore;
+    return Math.min(p.balance, Math.floor(raw));
+  };
+
+  /** Convert input to partner amount for API. For CASHBACK/TIER input is discount here (₹) → partner amount. */
+  const partnerInputToApiAmount = (
+    p: PartnerRedeemableItem,
+    inputValue: number,
+  ) => {
+    const isCashback = p.loyaltyType === "CASHBACK" || p.loyaltyType === "TIER";
+    if (!isCashback) return inputValue;
+    if (p.valueAtCurrentStore <= 0) return 0;
+    return Math.min(
+      p.balance,
+      Math.floor(((inputValue * p.balance) / p.valueAtCurrentStore) * 100) /
+        100,
+    );
+  };
+
+  const handlePartnerRedeem = async (partnerBusinessId: string) => {
+    if (!data?.partnerRedeemable?.length) return;
+    const partner = data.partnerRedeemable.find(
+      (p) => p.partnerBusinessId === partnerBusinessId,
+    );
+    if (!partner || partner.maxRedeemableOnBill <= 0) return;
+    const isPartnerCashback =
+      partner.loyaltyType === "CASHBACK" || partner.loyaltyType === "TIER";
+    const raw = partnerRedeemValues[partnerBusinessId] ?? "";
+    const inputVal = isPartnerCashback
+      ? Math.max(0, parseFloat(raw) || 0)
+      : Math.max(0, Math.floor(parseInt(raw, 10) || 0));
+    if (inputVal <= 0) {
+      toast.error("Enter amount or points to redeem from partner");
+      return;
+    }
+    const maxVal = getMaxPartnerValue(partner);
+    if (inputVal > maxVal) {
+      toast.error(
+        isPartnerCashback
+          ? `Cannot redeem more than ₹${maxVal.toFixed(2)} on this bill from ${partner.partnerBusinessName}`
+          : `Cannot redeem more than ${maxVal} points from ${partner.partnerBusinessName}`,
+      );
+      return;
+    }
+    const val = partnerInputToApiAmount(partner, inputVal);
+    if (val <= 0) {
+      toast.error("Invalid amount");
+      return;
+    }
+    setRedeemingPartnerId(partnerBusinessId);
+    try {
+      const body: {
+        redeemFromPartnerBusinessId: string;
+        redeemPartnerCashback?: number;
+        redeemPartnerPoints?: number;
+      } = { redeemFromPartnerBusinessId: partnerBusinessId };
+      if (isPartnerCashback) body.redeemPartnerCashback = val;
+      else body.redeemPartnerPoints = val;
+      const res = await fetcher<{ bill: object; error?: string }>(
+        `${basePath}/redeem`,
+        { method: "POST", body: JSON.stringify(body) },
+      );
+      if (res.error) throw new Error(res.error);
+      toast.success("Partner balance applied to bill");
+      setPartnerRedeemValues((prev) => {
+        const next = { ...prev };
+        delete next[partnerBusinessId];
+        return next;
+      });
+      fetchData();
+    } catch (err: unknown) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to apply partner",
+      );
+    } finally {
+      setRedeemingPartnerId(null);
+    }
   };
 
   const handleClaimFreeItem = async (freeItemId: string) => {
@@ -258,17 +386,23 @@ export function BillCreatedView({
     redeemInfo &&
     (redeemInfo.loyaltyType === "CASHBACK" ||
       redeemInfo.loyaltyType === "TIER");
-  const alreadyRedeemedOnThisBill =
+  const alreadyRedeemedAtOurStore =
     redeemInfo?.alreadyRedeemedOnThisBill === true;
+  const alreadyUsedPartner = (bill.partnerRedeemedAmount ?? 0) > 0;
+  const alreadyRedeemedOnThisBill =
+    alreadyRedeemedAtOurStore || alreadyUsedPartner;
   const redeemableRewards =
     redeemInfo?.rewardStages?.filter((r) => r.canRedeem) ?? [];
-  const hasRedeemOptions =
+  const canRedeemAtOurStore =
     redeemInfo &&
-    !alreadyRedeemedOnThisBill &&
+    !alreadyUsedPartner &&
     (redeemInfo.maxRedeemable > 0 ||
       (redeemInfo.maxRedeemableFromCashback ?? 0) > 0 ||
       (redeemInfo.maxRedeemableFromPoints ?? 0) > 0 ||
       redeemableRewards.length > 0);
+  const canRedeemFromPartner =
+    !alreadyRedeemedAtOurStore && (data.partnerRedeemable?.length ?? 0) > 0;
+  const hasRedeemOptions = canRedeemAtOurStore || canRedeemFromPartner;
 
   return (
     <Card className="w-full max-w-md border-0 shadow-none">
@@ -287,7 +421,15 @@ export function BillCreatedView({
 
         <Separator />
 
-        <div className="bg-muted/40 rounded-lg px-4 py-3">
+        <div className="bg-muted/40 space-y-1 rounded-lg px-4 py-3">
+          {(bill.partnerRedeemedAmount ?? 0) > 0 && (
+            <div className="flex items-center justify-between text-sm text-violet-600 dark:text-violet-400">
+              <span>Partner balance redeemed</span>
+              <span className="font-medium">
+                -₹{(bill.partnerRedeemedAmount ?? 0).toFixed(2)}
+              </span>
+            </div>
+          )}
           <div className="flex items-center justify-between text-base">
             <span className="text-muted-foreground font-medium">
               Amount to pay
@@ -303,8 +445,9 @@ export function BillCreatedView({
             <Sparkles className="size-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
             <div className="text-sm">
               <p className="font-medium text-emerald-700 dark:text-emerald-300">
-                You have earned ₹{(bill.earnedCashback ?? 0).toFixed(2)}{" "}
-                cashback on this bill!
+                {bill.earnNotYetApplied
+                  ? `You will earn ₹${(bill.earnedCashback ?? 0).toFixed(2)} cashback when you finish (click Create Another Bill).`
+                  : `You have earned ₹${(bill.earnedCashback ?? 0).toFixed(2)} cashback on this bill!`}
               </p>
             </div>
           </div>
@@ -314,7 +457,9 @@ export function BillCreatedView({
             <TrendingUp className="size-5 shrink-0 text-blue-600 dark:text-blue-400" />
             <div className="text-sm">
               <p className="font-medium text-blue-700 dark:text-blue-300">
-                You have earned {bill.earnedPoints} points on this bill!
+                {bill.earnNotYetApplied
+                  ? `You will earn ${bill.earnedPoints} points when you finish (click Create Another Bill).`
+                  : `You have earned ${bill.earnedPoints} points on this bill!`}
               </p>
             </div>
           </div>
@@ -408,8 +553,8 @@ export function BillCreatedView({
           <div className="bg-muted/30 flex items-center gap-3 rounded-lg border border-amber-200 p-3 dark:border-amber-800">
             <Gift className="size-5 shrink-0 text-amber-600 dark:text-amber-400" />
             <p className="text-muted-foreground text-sm">
-              This bill has already been redeemed. Redemption can only be done
-              once per bill.
+              This bill has already used loyalty (this store or partner). Only
+              one redemption per bill.
             </p>
           </div>
         )}
@@ -420,77 +565,53 @@ export function BillCreatedView({
             <div className="space-y-5">
               <div className="flex items-center gap-2">
                 <Gift className="text-primary size-6" />
-                <h4 className="text-base font-semibold">Redeem on this bill</h4>
+                <h4 className="text-base font-semibold">
+                  Use loyalty on this bill
+                </h4>
               </div>
               <p className="text-muted-foreground text-sm">
-                {isCashback
-                  ? `Available: ₹${(redeemInfo.balance ?? 0).toFixed(2)} · Max on this bill: ₹${redeemInfo.maxRedeemable.toFixed(2)}`
-                  : `Cashback: ₹${(redeemInfo.cashbackBalance ?? 0).toFixed(2)} · Points: ${redeemInfo.pointsBalance ?? 0} (convert via reward below)`}
+                Choose one: use balance at this store or from a partner. You can
+                only apply one type per bill.
               </p>
-              <div className="space-y-4">
-                {((isCashback && redeemInfo.maxRedeemable > 0) ||
-                  (redeemInfo.maxRedeemableFromCashback ?? 0) > 0) && (
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">
-                      Cashback to apply (₹)
-                    </Label>
-                    <div className="flex gap-2">
-                      <Input
-                        type="number"
-                        min={0}
-                        max={
-                          isCashback
-                            ? redeemInfo.maxRedeemable
-                            : (redeemInfo.maxRedeemableFromCashback ?? 0)
-                        }
-                        step={0.01}
-                        placeholder="0.00"
-                        value={redeemCashbackValue}
-                        onChange={(e) => setRedeemCashbackValue(e.target.value)}
-                        disabled={redeeming}
-                        className="h-11 flex-1 text-base"
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="default"
-                        className="h-11 shrink-0 px-4 font-medium"
-                        onClick={() => {
-                          const max = isCashback
-                            ? redeemInfo.maxRedeemable
-                            : (redeemInfo.maxRedeemableFromCashback ?? 0);
-                          setRedeemCashbackValue(max.toFixed(2));
-                        }}
-                        disabled={redeeming}
-                      >
-                        Max
-                      </Button>
-                    </div>
-                  </div>
-                )}
-                {!isCashback &&
-                  (redeemInfo.maxRedeemableFromPoints ??
-                    redeemInfo.maxRedeemable ??
-                    0) > 0 && (
-                    <>
+
+              {/* Option 1: Balance at this store */}
+              {canRedeemAtOurStore && redeemInfo && (
+                <div className="bg-muted/30 space-y-3 rounded-lg border p-4">
+                  <p className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
+                    At this store
+                  </p>
+                  <p className="text-muted-foreground text-sm">
+                    {bill.earnNotYetApplied &&
+                    ((bill.pendingCashbackEarn ?? 0) > 0 ||
+                      (bill.pendingPointsEarn ?? 0) > 0)
+                      ? isCashback
+                        ? `Available: ₹${(redeemInfo.balance ?? 0).toFixed(2)} (existing) + ₹${(bill.pendingCashbackEarn ?? 0).toFixed(2)} from this bill (not redeemable until you finish). Max redeemable now: ₹${redeemInfo.maxRedeemable.toFixed(2)}`
+                        : `Available: ₹${(redeemInfo.cashbackBalance ?? 0).toFixed(2)} cashback · ${redeemInfo.pointsBalance ?? 0} points + ${bill.pendingPointsEarn ?? 0} pts from this bill (not redeemable until you finish). Max on bill: ${redeemInfo.maxRedeemable} pts`
+                      : isCashback
+                        ? `Available: ₹${(redeemInfo.balance ?? 0).toFixed(2)} · Max on this bill: ₹${redeemInfo.maxRedeemable.toFixed(2)}`
+                        : `Cashback: ₹${(redeemInfo.cashbackBalance ?? 0).toFixed(2)} · Points: ${redeemInfo.pointsBalance ?? 0} (convert via reward below)`}
+                  </p>
+                  <div className="space-y-4">
+                    {((isCashback && redeemInfo.maxRedeemable > 0) ||
+                      (redeemInfo.maxRedeemableFromCashback ?? 0) > 0) && (
                       <div className="space-y-2">
                         <Label className="text-sm font-medium">
-                          Points to use
+                          Cashback to apply (₹)
                         </Label>
                         <div className="flex gap-2">
                           <Input
                             type="number"
                             min={0}
                             max={
-                              redeemInfo.maxRedeemableFromPoints ??
-                              redeemInfo.maxRedeemable ??
-                              0
+                              isCashback
+                                ? redeemInfo.maxRedeemable
+                                : (redeemInfo.maxRedeemableFromCashback ?? 0)
                             }
-                            step={1}
-                            placeholder="0"
-                            value={redeemPointsValue}
+                            step={0.01}
+                            placeholder="0.00"
+                            value={redeemCashbackValue}
                             onChange={(e) =>
-                              setRedeemPointsValue(e.target.value)
+                              setRedeemCashbackValue(e.target.value)
                             }
                             disabled={redeeming}
                             className="h-11 flex-1 text-base"
@@ -501,11 +622,10 @@ export function BillCreatedView({
                             size="default"
                             className="h-11 shrink-0 px-4 font-medium"
                             onClick={() => {
-                              const max =
-                                redeemInfo.maxRedeemableFromPoints ??
-                                redeemInfo.maxRedeemable ??
-                                0;
-                              setRedeemPointsValue(String(max));
+                              const max = isCashback
+                                ? redeemInfo.maxRedeemable
+                                : (redeemInfo.maxRedeemableFromCashback ?? 0);
+                              setRedeemCashbackValue(max.toFixed(2));
                             }}
                             disabled={redeeming}
                           >
@@ -513,68 +633,247 @@ export function BillCreatedView({
                           </Button>
                         </div>
                       </div>
-                      {redeemableRewards.length > 0 && (
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium">
-                            Or pick a reward
-                          </Label>
-                          <div className="flex flex-wrap gap-2">
-                            {redeemableRewards.map((r) => (
-                              <Button
-                                key={r.id}
-                                type="button"
-                                variant={
-                                  selectedRewardStageId === r.id
-                                    ? "default"
-                                    : "outline"
+                    )}
+                    {!isCashback &&
+                      (redeemInfo.maxRedeemableFromPoints ??
+                        redeemInfo.maxRedeemable ??
+                        0) > 0 && (
+                        <>
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium">
+                              Points to use
+                            </Label>
+                            <div className="flex gap-2">
+                              <Input
+                                type="number"
+                                min={0}
+                                max={
+                                  redeemInfo.maxRedeemableFromPoints ??
+                                  redeemInfo.maxRedeemable ??
+                                  0
                                 }
+                                step={1}
+                                placeholder="0"
+                                value={redeemPointsValue}
+                                onChange={(e) =>
+                                  setRedeemPointsValue(e.target.value)
+                                }
+                                disabled={redeeming}
+                                className="h-11 flex-1 text-base"
+                              />
+                              <Button
+                                type="button"
+                                variant="outline"
                                 size="default"
-                                className="text-sm"
+                                className="h-11 shrink-0 px-4 font-medium"
                                 onClick={() => {
-                                  if (selectedRewardStageId === r.id) {
-                                    setSelectedRewardStageId(null);
-                                    setRedeemPointsValue("");
-                                  } else {
-                                    setSelectedRewardStageId(r.id);
-                                    setRedeemPointsValue(
-                                      String(r.pointsRequired),
-                                    );
-                                  }
+                                  const max =
+                                    redeemInfo.maxRedeemableFromPoints ??
+                                    redeemInfo.maxRedeemable ??
+                                    0;
+                                  setRedeemPointsValue(String(max));
                                 }}
+                                disabled={redeeming}
                               >
-                                {r.rewardName} ({r.pointsRequired} pts)
+                                Max
                               </Button>
-                            ))}
+                            </div>
                           </div>
-                        </div>
+                          {redeemableRewards.length > 0 && (
+                            <div className="space-y-2">
+                              <Label className="text-sm font-medium">
+                                Or pick a reward
+                              </Label>
+                              <div className="flex flex-wrap gap-2">
+                                {redeemableRewards.map((r) => (
+                                  <Button
+                                    key={r.id}
+                                    type="button"
+                                    variant={
+                                      selectedRewardStageId === r.id
+                                        ? "default"
+                                        : "outline"
+                                    }
+                                    size="default"
+                                    className="text-sm"
+                                    onClick={() => {
+                                      if (selectedRewardStageId === r.id) {
+                                        setSelectedRewardStageId(null);
+                                        setRedeemPointsValue("");
+                                      } else {
+                                        setSelectedRewardStageId(r.id);
+                                        setRedeemPointsValue(
+                                          String(r.pointsRequired),
+                                        );
+                                      }
+                                    }}
+                                  >
+                                    {r.rewardName} ({r.pointsRequired} pts)
+                                  </Button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </>
                       )}
-                    </>
-                  )}
-                <Button
-                  onClick={handleRedeem}
-                  size="lg"
-                  className="w-full"
-                  disabled={
-                    redeeming ||
-                    (parseFloat(redeemCashbackValue || "0") <= 0 &&
-                      !selectedRewardStageId)
-                  }
-                  loading={redeeming}
-                >
-                  {selectedRewardStageId
-                    ? "Convert points"
-                    : parseFloat(redeemCashbackValue || "0") > 0
-                      ? "Apply cashback to bill"
-                      : "Redeem"}
-                </Button>
-              </div>
+                    <Button
+                      onClick={handleRedeem}
+                      size="lg"
+                      className="w-full"
+                      disabled={
+                        redeeming ||
+                        (parseFloat(redeemCashbackValue || "0") <= 0 &&
+                          !selectedRewardStageId)
+                      }
+                      loading={redeeming}
+                    >
+                      {selectedRewardStageId
+                        ? "Convert points"
+                        : parseFloat(redeemCashbackValue || "0") > 0
+                          ? "Apply cashback to bill"
+                          : "Redeem"}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Option 2: Partner balance */}
+              {canRedeemFromPartner && (
+                <div className="space-y-4">
+                  <p className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
+                    From partner
+                  </p>
+                  <p className="text-muted-foreground text-sm">
+                    Use balance from a partner business at this store. This
+                    store&apos;s loyalty rules (min bill, max cap) apply.
+                  </p>
+                  <div className="space-y-4">
+                    {data.partnerRedeemable.map((p) => {
+                      const isPartnerCashback =
+                        p.loyaltyType === "CASHBACK" ||
+                        p.loyaltyType === "TIER";
+                      const balanceLabel = isPartnerCashback
+                        ? `₹${p.balance.toFixed(2)} cashback`
+                        : `${p.balance} points`;
+                      const maxPartnerDisplay = getMaxPartnerValue(p);
+                      const value =
+                        partnerRedeemValues[p.partnerBusinessId] ?? "";
+                      const valueNum = isPartnerCashback
+                        ? parseFloat(value) || 0
+                        : Math.floor(parseInt(value, 10) || 0);
+                      const isRedeeming =
+                        redeemingPartnerId === p.partnerBusinessId;
+                      const billUsedAnotherPartner =
+                        bill.redeemedFromPartnerBusinessId != null &&
+                        bill.redeemedFromPartnerBusinessId !==
+                          p.partnerBusinessId;
+                      const canUseThisPartner =
+                        !billUsedAnotherPartner &&
+                        (bill.redeemedFromPartnerBusinessId == null ||
+                          bill.redeemedFromPartnerBusinessId ===
+                            p.partnerBusinessId);
+                      return (
+                        <div
+                          key={p.partnerBusinessId}
+                          className="bg-muted/30 space-y-3 rounded-lg border p-4"
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <span className="font-medium">
+                              {p.partnerBusinessName}
+                            </span>
+                            <span className="text-muted-foreground text-sm">
+                              {balanceLabel} at partner → ₹
+                              {p.valueAtCurrentStore.toFixed(2)} here · max ₹
+                              {p.maxRedeemableOnBill.toFixed(2)} on this bill
+                            </span>
+                          </div>
+                          {billUsedAnotherPartner ? (
+                            <p className="text-muted-foreground text-sm">
+                              One partner per bill. This bill already used
+                              another partner.
+                            </p>
+                          ) : (
+                            <div className="flex flex-wrap items-center gap-2">
+                              <Input
+                                type="number"
+                                min={0}
+                                max={maxPartnerDisplay}
+                                step={isPartnerCashback ? 0.01 : 1}
+                                placeholder={isPartnerCashback ? "0.00" : "0"}
+                                value={value}
+                                onChange={(e) =>
+                                  setPartnerRedeemValues((prev) => ({
+                                    ...prev,
+                                    [p.partnerBusinessId]: e.target.value,
+                                  }))
+                                }
+                                disabled={isRedeeming || !canUseThisPartner}
+                                className="h-11 w-28"
+                                aria-label={`Redeem from ${p.partnerBusinessName}`}
+                              />
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="default"
+                                className="h-11 shrink-0 px-4 font-medium"
+                                onClick={() =>
+                                  setPartnerRedeemValues((prev) => ({
+                                    ...prev,
+                                    [p.partnerBusinessId]:
+                                      maxPartnerDisplay > 0
+                                        ? isPartnerCashback
+                                          ? maxPartnerDisplay.toFixed(2)
+                                          : String(maxPartnerDisplay)
+                                        : "",
+                                  }))
+                                }
+                                disabled={
+                                  isRedeeming ||
+                                  maxPartnerDisplay <= 0 ||
+                                  !canUseThisPartner
+                                }
+                              >
+                                Max
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="default"
+                                size="default"
+                                className="h-11"
+                                onClick={() =>
+                                  handlePartnerRedeem(p.partnerBusinessId)
+                                }
+                                disabled={
+                                  isRedeeming ||
+                                  !canUseThisPartner ||
+                                  valueNum <= 0 ||
+                                  valueNum > maxPartnerDisplay
+                                }
+                                loading={isRedeeming}
+                              >
+                                Apply to bill
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           </>
         )}
 
-        <Button onClick={handleCreateAnother} className="w-full" size="lg">
+        <Button
+          onClick={handleCreateAnother}
+          className="w-full"
+          size="lg"
+          disabled={finalizing}
+          loading={finalizing}
+        >
           <ReceiptText className="mr-2 size-4" />
-          Create Another Bill
+          {finalizing ? "Finishing…" : "Create Another Bill"}
         </Button>
       </CardContent>
     </Card>

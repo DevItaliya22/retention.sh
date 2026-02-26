@@ -527,29 +527,42 @@ export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
                   </tr>
                 </thead>
                 <tbody>
-                  {loyaltyLogs.map((log) => (
-                    <tr key={log.id} className="border-b last:border-b-0">
-                      <td className="px-4 py-3 font-medium">
-                        {log.valueKind ?? "—"}
-                      </td>
-                      <td className="px-4 py-3 font-medium">
-                        {formatLoyaltyType(log.type)}
-                      </td>
-                      <td className="text-muted-foreground px-4 py-3">
-                        {log.source}
-                      </td>
-                      <td className="px-4 py-3 text-right tabular-nums">
-                        {log.type === "REDEEMED" ? "-" : "+"}
-                        {log.amount}
-                      </td>
-                      <td className="text-muted-foreground px-4 py-3 text-right">
-                        {new Date(log.createdAt).toLocaleString("en-IN", {
-                          dateStyle: "short",
-                          timeStyle: "short",
-                        })}
-                      </td>
-                    </tr>
-                  ))}
+                  {loyaltyLogs.map((log) => {
+                    const isCashback = log.valueKind === "CASHBACK";
+                    const amountDisplay =
+                      isCashback && typeof log.amount === "number"
+                        ? `₹${Math.abs(log.amount).toFixed(2)}`
+                        : String(Math.abs(log.amount));
+                    const prefix =
+                      log.type === "REDEEMED"
+                        ? log.isPartnerRedemption
+                          ? "––"
+                          : "–"
+                        : "+";
+                    return (
+                      <tr key={log.id} className="border-b last:border-b-0">
+                        <td className="px-4 py-3 font-medium">
+                          {log.valueKind ?? "—"}
+                        </td>
+                        <td className="px-4 py-3 font-medium">
+                          {formatLoyaltyType(log.type)}
+                        </td>
+                        <td className="text-muted-foreground px-4 py-3">
+                          {log.isPartnerRedemption ? "Partner" : log.source}
+                        </td>
+                        <td className="px-4 py-3 text-right tabular-nums">
+                          {prefix}
+                          {amountDisplay}
+                        </td>
+                        <td className="text-muted-foreground px-4 py-3 text-right">
+                          {new Date(log.createdAt).toLocaleString("en-IN", {
+                            dateStyle: "short",
+                            timeStyle: "short",
+                          })}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

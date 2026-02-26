@@ -32,6 +32,15 @@ model Business {
   skus          Sku[]
   shopifyStores ShopifyStore[]
 
+  // Partnership
+  receivePartnershipOffers Boolean @default(false)
+  maxPartnerAllowed        Int     @default(1)
+
+  partnershipMembers      PartnershipMember[]
+  partnerRequestsSent     PartnerRequest[]    @relation("PartnerRequestsSent")
+  partnerRequestsReceived PartnerRequest[]    @relation("PartnerRequestsReceived")
+  partnerCampaignsCreated PartnerCampaign[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

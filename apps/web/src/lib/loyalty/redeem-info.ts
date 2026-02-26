@@ -13,6 +13,7 @@ import {
   calculatePointsEarnedForBill,
   calculateRedeemable,
   getAmountForEarning,
+  getMaxCashbackCapFromContext,
   isVisitQualifying,
   loyaltyRecordToContext,
   resolveTierForLifetimeSpend,
@@ -324,4 +325,209 @@ export async function getRedeemableInfo(
     rewardStages,
     visitCount: wallet?.visitCount ?? null,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Partner (cross-business) redemption
+// ---------------------------------------------------------------------------
+
+export interface PartnerRedeemableItem {
+  partnerBusinessId: string;
+  partnerBusinessName: string;
+  /** Partner's loyalty type (determines whether to send points or cashback). */
+  loyaltyType: string;
+  /** Balance at partner: points for AMOUNT_SPENT/VISIT_MADE, ₹ for CASHBACK/TIER. */
+  balance: number;
+  /** Value at current store (₹) after partner's exchange rate (them → you). */
+  valueAtCurrentStore: number;
+  /** Max redeemable on this bill (min of valueAtCurrentStore and billAmount). */
+  maxRedeemableOnBill: number;
+}
+
+/**
+ * Returns list of partners where the customer has a wallet balance that can be
+ * redeemed at the current business using the partner's exchange rate (them → you).
+ * Max redeemable on this bill is capped by the **current (bill) business's** loyalty
+ * rules (min bill to redeem, max cap, etc.) — the bill's business is the boss for loyalty.
+ */
+export async function getPartnerRedeemableInfo(
+  tx: Omit<
+    Prisma.TransactionClient,
+    "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends"
+  >,
+  params: {
+    currentBusinessId: string;
+    customerId: string;
+    /** Bill amount (userPaidAmount or finalAmount) — bill's business rules apply. */
+    billAmount: number;
+  },
+): Promise<PartnerRedeemableItem[]> {
+  const { currentBusinessId, customerId, billAmount } = params;
+  if (billAmount <= 0) return [];
+
+  // Load current (bill) business's loyalty — its rules (min bill, max cap) apply to partner redemption too
+  const currentLoyalty = await tx.loyalty.findUnique({
+    where: { businessId: currentBusinessId },
+    include: {
+      cashbackConfig: true,
+      tierConfig: { include: { tiers: { orderBy: { rank: "asc" } } } },
+      amountSpentConfig: true,
+      visitMadeConfig: true,
+    },
+  });
+  const currentContext = currentLoyalty
+    ? loyaltyRecordToContext(currentLoyalty)
+    : null;
+
+  let resolvedTier: ReturnType<typeof resolveTierForLifetimeSpend> = null;
+  if (
+    currentContext?.type === "TIER" &&
+    currentContext.config.tiers.length > 0
+  ) {
+    const billsAgg = await tx.bill.aggregate({
+      where: { businessId: currentBusinessId, customerId },
+      _sum: { finalAmount: true },
+    });
+    const lifetimeSpend = billsAgg._sum.finalAmount ?? 0;
+    resolvedTier = resolveTierForLifetimeSpend(
+      currentContext.config.tiers,
+      lifetimeSpend,
+    );
+  }
+
+  const partnerships = await tx.businessPartnership.findMany({
+    where: { status: "ACTIVE" },
+    include: {
+      members: {
+        include: {
+          business: {
+            select: {
+              id: true,
+              name: true,
+              loyalty: { select: { loyaltyType: true } },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  const result: PartnerRedeemableItem[] = [];
+
+  for (const p of partnerships) {
+    const myMember = p.members.find((m) => m.businessId === currentBusinessId);
+    const partnerMember = p.members.find(
+      (m) => m.businessId !== currentBusinessId,
+    );
+    if (!myMember || !partnerMember) continue;
+
+    const partnerBusiness = partnerMember.business;
+    const partnerLoyalty = partnerBusiness.loyalty;
+    if (!partnerLoyalty) continue;
+
+    const wallet = await tx.wallet.findUnique({
+      where: {
+        businessId_customerId: {
+          businessId: partnerMember.businessId,
+          customerId,
+        },
+      },
+    });
+    if (!wallet) continue;
+
+    const exchangeRate = Number(partnerMember.exchangeRate) || 1;
+    const pointToCurrencyRate = Number(partnerMember.pointToCurrencyRate) || 1;
+
+    let balance = 0;
+    let valueAtCurrentStore = 0;
+
+    if (
+      partnerLoyalty.loyaltyType === "CASHBACK" ||
+      partnerLoyalty.loyaltyType === "TIER"
+    ) {
+      balance = Math.max(0, wallet.cashbackBalance ?? 0);
+      valueAtCurrentStore = balance * exchangeRate;
+    } else if (partnerLoyalty.loyaltyType === "AMOUNT_SPENT") {
+      balance = Math.max(0, Math.floor(wallet.amountSpentBalance ?? 0));
+      valueAtCurrentStore = balance * pointToCurrencyRate * exchangeRate;
+    } else if (partnerLoyalty.loyaltyType === "VISIT_MADE") {
+      balance = Math.max(0, Math.floor(wallet.visitPointsBalance ?? 0));
+      valueAtCurrentStore = balance * pointToCurrencyRate * exchangeRate;
+    }
+
+    valueAtCurrentStore = Math.floor(valueAtCurrentStore * 100) / 100;
+    if (valueAtCurrentStore <= 0) continue;
+
+    // Cap by current (bill) business's loyalty rules. For partner redemption the loyalty
+    // "max cashback per bill" is interpreted as partner currency; we multiply by exchangeRate
+    // to get cap in this store's currency (e.g. max 20 at partner × ratio 10 → ₹200 here).
+    let maxRedeemableOnBill: number;
+    if (currentContext) {
+      const amt = safeAmount(billAmount);
+      const isCashbackOrTier =
+        currentContext.type === "CASHBACK" || currentContext.type === "TIER";
+
+      if (isCashbackOrTier) {
+        const minPurchase =
+          currentContext.type === "CASHBACK"
+            ? currentContext.config.minPurchaseForRedemption
+            : resolvedTier?.minPurchaseForRedemption;
+        const minEnabled =
+          currentContext.type === "CASHBACK"
+            ? currentContext.config.minPurchaseForRedemptionEnabled
+            : resolvedTier?.minPurchaseForRedemptionEnabled;
+        if (
+          minEnabled &&
+          minPurchase != null &&
+          minPurchase > 0 &&
+          amt < minPurchase
+        ) {
+          maxRedeemableOnBill = 0;
+        } else {
+          const loyaltyCapPartnerUnits = getMaxCashbackCapFromContext(
+            currentContext,
+            resolvedTier ?? undefined,
+          );
+          const capInOurCurrency =
+            (loyaltyCapPartnerUnits ?? Infinity) * exchangeRate;
+          maxRedeemableOnBill =
+            Math.floor(
+              Math.min(
+                valueAtCurrentStore,
+                capInOurCurrency,
+                Math.floor(amt * 100) / 100,
+              ) * 100,
+            ) / 100;
+        }
+      } else {
+        maxRedeemableOnBill = Math.min(
+          valueAtCurrentStore,
+          Math.floor(
+            calculateRedeemable(amt, valueAtCurrentStore, currentContext, {
+              resolvedTier,
+            }) * 100,
+          ) / 100,
+        );
+      }
+    } else {
+      maxRedeemableOnBill = Math.min(
+        valueAtCurrentStore,
+        Math.floor(billAmount * 100) / 100,
+      );
+    }
+
+    // Only include partners that can actually redeem on this bill (like own-business: don't show if max not matching).
+    if (maxRedeemableOnBill <= 0) continue;
+
+    result.push({
+      partnerBusinessId: partnerBusiness.id,
+      partnerBusinessName: partnerBusiness.name,
+      loyaltyType: partnerLoyalty.loyaltyType,
+      balance,
+      valueAtCurrentStore,
+      maxRedeemableOnBill,
+    });
+  }
+
+  return result;
 }

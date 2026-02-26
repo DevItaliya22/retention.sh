@@ -1,5 +1,13 @@
 insta auto dm
 
+Add category
+
+There is one major issue , cashback is right now given on the finalamount , but if someone takes redemption on that bill then the cashback should not be given on fnial amouont but it should be given on finalamount - cashback redemed amount
+
+the referal gets the point immediatly but the points wil; be locked until refered person makes bill of "X" amoount in tbis buines
+
+Check how does new customer is getting created i hopify
+
 ## bija dhandha ma points redeem thava pade
 
 online menu

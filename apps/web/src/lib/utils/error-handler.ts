@@ -185,14 +185,38 @@ export async function handleApiError(
   response: Response,
   defaultMessage: string = "An unexpected error occurred. Please try again.",
 ): Promise<string> {
+  let text: string;
   try {
-    const data = await response.json();
-    if (data.error && typeof data.error === "string") {
-      return sanitizeErrorMessage(data.error);
-    }
-    return defaultMessage;
+    text = await response.text();
   } catch {
-    // If JSON parsing fails, return default message
+    if (response.status === 404) return "Not found.";
     return defaultMessage;
   }
+
+  let message: string | null = null;
+  if (text) {
+    try {
+      const data = JSON.parse(text) as {
+        error?: string;
+        message?: string;
+      };
+      if (data.error && typeof data.error === "string") message = data.error;
+      else if (data.message && typeof data.message === "string")
+        message = data.message;
+    } catch {
+      // body is not JSON, ignore
+    }
+  }
+
+  if (message && message.trim().length > 0) {
+    // For 4xx, trust API message (already user-facing). Only sanitize 5xx.
+    if (response.status >= 400 && response.status < 500) return message.trim();
+    return sanitizeErrorMessage(message);
+  }
+
+  if (response.status === 404) return "Not found.";
+  if (response.status === 403) return "You don't have permission to do this.";
+  if (response.status === 400)
+    return "Invalid request. Please check your input.";
+  return defaultMessage;
 }

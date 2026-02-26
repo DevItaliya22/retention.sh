@@ -1,4 +1,5 @@
 import { withAdminAuth } from "@/lib/auth/middleware";
+import { sumCashbackEarnedFromTransactions } from "@/lib/loyalty";
 import { customerSlugIdParamSchema } from "@/lib/schemas/customer";
 import {
   sanitizeErrorMessage,
@@ -97,6 +98,10 @@ export const GET = withAdminAuth<{ slugId: string }>(
                   },
                 },
               },
+              transactions: {
+                where: { type: "EARNED", valueKind: "CASHBACK" },
+                select: { type: true, valueKind: true, amount: true },
+              },
             },
           },
         },
@@ -108,6 +113,55 @@ export const GET = withAdminAuth<{ slugId: string }>(
           { status: 404 },
         );
       }
+
+      // Partner redemption logs: this customer used our balance at a partner store (Transaction at us, REDEEMED, BILL, metadata.redeemedAtBusinessId).
+      const partnerRedemptionTxs = await db.transaction.findMany({
+        where: {
+          businessId: context.business.id,
+          customerId: businessCustomer.customerId,
+          type: "REDEEMED",
+          source: "BILL",
+        },
+        orderBy: { createdAt: "desc" },
+        take: 50,
+      });
+      const partnerRedemptions = partnerRedemptionTxs
+        .filter(
+          (t) =>
+            t.metadata != null &&
+            typeof t.metadata === "object" &&
+            "redeemedAtBusinessId" in t.metadata &&
+            typeof (t.metadata as { redeemedAtBusinessId?: string })
+              .redeemedAtBusinessId === "string",
+        )
+        .map((t) => {
+          const meta = t.metadata as { redeemedAtBusinessId: string };
+          return {
+            id: t.id,
+            amount: Math.abs(t.amount),
+            valueKind: t.valueKind,
+            redeemedAtBusinessId: meta.redeemedAtBusinessId,
+            createdAt: t.createdAt.toISOString(),
+          };
+        });
+      const redeemedAtBusinessIds = [
+        ...new Set(
+          partnerRedemptions.map((r) => r.redeemedAtBusinessId).filter(Boolean),
+        ),
+      ];
+      const businessNames =
+        redeemedAtBusinessIds.length > 0
+          ? await db.business.findMany({
+              where: { id: { in: redeemedAtBusinessIds } },
+              select: { id: true, name: true },
+            })
+          : [];
+      const businessNameMap = new Map(businessNames.map((b) => [b.id, b.name]));
+      const partnerRedemptionsWithNames = partnerRedemptions.map((r) => ({
+        ...r,
+        redeemedAtBusinessName:
+          businessNameMap.get(r.redeemedAtBusinessId) ?? null,
+      }));
 
       const customer = {
         id: businessCustomer.slugId,
@@ -145,13 +199,19 @@ export const GET = withAdminAuth<{ slugId: string }>(
         })),
         bills: businessCustomer.bills.map((b) => {
           const amountToShow = b.userPaidAmount ?? b.finalAmount ?? null;
+          const cashbackEarnedFromTx = sumCashbackEarnedFromTransactions(
+            b.transactions,
+          );
           return {
             id: b.id,
             billNumber: b.billNumber,
             finalAmount: b.finalAmount,
             userPaidAmount: b.userPaidAmount,
             amount: amountToShow,
-            cashbackAmount: b.cashbackAmount ?? null,
+            cashbackAmount:
+              cashbackEarnedFromTx > 0
+                ? cashbackEarnedFromTx
+                : (b.cashbackAmount ?? null),
             cashbackRedeemedAmount: b.cashbackRedeemedAmount ?? null,
             lineItems: b.lineItems.map((li) => ({
               id: li.id,
@@ -169,6 +229,7 @@ export const GET = withAdminAuth<{ slugId: string }>(
             createdAt: b.createdAt.toISOString(),
           };
         }),
+        partnerRedemptions: partnerRedemptionsWithNames,
       };
 
       return NextResponse.json({ customer });

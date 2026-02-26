@@ -4,6 +4,7 @@ import { PageLayout, ScaffoldContainer } from "@/components/layouts";
 import {
   Award,
   Gift,
+  Handshake,
   MessageSquare,
   Package,
   Settings,
@@ -63,6 +64,12 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
       href: `/settings/shopify`,
       icon: <ShoppingBag className="h-4 w-4" />,
       active: pathname === "/settings/shopify",
+    },
+    {
+      label: "Partners",
+      href: `/settings/partners`,
+      icon: <Handshake className="h-4 w-4" />,
+      active: pathname === "/settings/partners",
     },
   ];
 

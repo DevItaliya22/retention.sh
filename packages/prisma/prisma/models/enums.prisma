@@ -136,6 +136,7 @@ enum TransactionSource {
   REGISTRATION // Registration bonus (Business.registrationBonusPoints)
   MANUAL_ADJUSTMENT // Admin manual adjustment
   SHOPIFY_ORDER // Points from fulfilled Shopify order (locked until return window)
+  PARTNER_EXCHANGE // Points/cashback used at partner business
 }
 
 // Value kind for unified Transaction — which wallet bucket.

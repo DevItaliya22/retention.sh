@@ -1,4 +1,5 @@
 import { withAdminAuth } from "@/lib/auth/middleware";
+import { sumCashbackEarnedFromTransactions } from "@/lib/loyalty";
 import { billsQuerySchema } from "@/lib/schemas/bill";
 import {
   sanitizeErrorMessage,
@@ -178,6 +179,9 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
             ),
         )
         .reduce((s, pt) => s + Math.abs(pt.amount), 0);
+      const cashbackEarnedFromTx = sumCashbackEarnedFromTransactions(
+        bill.transactions,
+      );
       return {
         id: bill.id,
         billNumber: bill.billNumber,
@@ -185,7 +189,8 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
         storeDiscount: bill.storeDiscount,
         tax: bill.tax,
         finalAmount: bill.finalAmount,
-        cashbackAmount: bill.cashbackAmount,
+        cashbackAmount:
+          cashbackEarnedFromTx > 0 ? cashbackEarnedFromTx : bill.cashbackAmount,
         cashbackRedeemedAmount: bill.cashbackRedeemedAmount,
         userPaidAmount: bill.userPaidAmount,
         amount: bill.userPaidAmount ?? bill.finalAmount,
