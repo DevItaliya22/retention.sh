@@ -249,13 +249,28 @@ export function BillCreatedView({
     }
   };
 
+  /** For CASHBACK/TIER: max discount at this store (₹). For points: max partner points. */
   const getMaxPartnerValue = (p: PartnerRedeemableItem) => {
     const isCashback = p.loyaltyType === "CASHBACK" || p.loyaltyType === "TIER";
     if (p.balance <= 0 || p.valueAtCurrentStore <= 0) return 0;
+    if (isCashback) return p.maxRedeemableOnBill;
     const raw = (p.maxRedeemableOnBill * p.balance) / p.valueAtCurrentStore;
-    return isCashback
-      ? Math.min(p.balance, Math.floor(raw * 100) / 100)
-      : Math.min(p.balance, Math.floor(raw));
+    return Math.min(p.balance, Math.floor(raw));
+  };
+
+  /** Convert input to partner amount for API. For CASHBACK/TIER input is discount here (₹) → partner amount. */
+  const partnerInputToApiAmount = (
+    p: PartnerRedeemableItem,
+    inputValue: number,
+  ) => {
+    const isCashback = p.loyaltyType === "CASHBACK" || p.loyaltyType === "TIER";
+    if (!isCashback) return inputValue;
+    if (p.valueAtCurrentStore <= 0) return 0;
+    return Math.min(
+      p.balance,
+      Math.floor(((inputValue * p.balance) / p.valueAtCurrentStore) * 100) /
+        100,
+    );
   };
 
   const handlePartnerRedeem = async (partnerBusinessId: string) => {
@@ -267,20 +282,25 @@ export function BillCreatedView({
     const isPartnerCashback =
       partner.loyaltyType === "CASHBACK" || partner.loyaltyType === "TIER";
     const raw = partnerRedeemValues[partnerBusinessId] ?? "";
-    const val = isPartnerCashback
+    const inputVal = isPartnerCashback
       ? Math.max(0, parseFloat(raw) || 0)
       : Math.max(0, Math.floor(parseInt(raw, 10) || 0));
-    if (val <= 0) {
+    if (inputVal <= 0) {
       toast.error("Enter amount or points to redeem from partner");
       return;
     }
     const maxVal = getMaxPartnerValue(partner);
-    if (val > maxVal) {
+    if (inputVal > maxVal) {
       toast.error(
         isPartnerCashback
-          ? `Cannot redeem more than ₹${maxVal.toFixed(2)} from ${partner.partnerBusinessName}`
+          ? `Cannot redeem more than ₹${maxVal.toFixed(2)} on this bill from ${partner.partnerBusinessName}`
           : `Cannot redeem more than ${maxVal} points from ${partner.partnerBusinessName}`,
       );
+      return;
+    }
+    const val = partnerInputToApiAmount(partner, inputVal);
+    if (val <= 0) {
+      toast.error("Invalid amount");
       return;
     }
     setRedeemingPartnerId(partnerBusinessId);
@@ -735,7 +755,7 @@ export function BillCreatedView({
                       const balanceLabel = isPartnerCashback
                         ? `₹${p.balance.toFixed(2)} cashback`
                         : `${p.balance} points`;
-                      const maxPartnerUnits = getMaxPartnerValue(p);
+                      const maxPartnerDisplay = getMaxPartnerValue(p);
                       const value =
                         partnerRedeemValues[p.partnerBusinessId] ?? "";
                       const valueNum = isPartnerCashback
@@ -777,6 +797,7 @@ export function BillCreatedView({
                               <Input
                                 type="number"
                                 min={0}
+                                max={maxPartnerDisplay}
                                 step={isPartnerCashback ? 0.01 : 1}
                                 placeholder={isPartnerCashback ? "0.00" : "0"}
                                 value={value}
@@ -799,16 +820,16 @@ export function BillCreatedView({
                                   setPartnerRedeemValues((prev) => ({
                                     ...prev,
                                     [p.partnerBusinessId]:
-                                      maxPartnerUnits > 0
+                                      maxPartnerDisplay > 0
                                         ? isPartnerCashback
-                                          ? maxPartnerUnits.toFixed(2)
-                                          : String(maxPartnerUnits)
+                                          ? maxPartnerDisplay.toFixed(2)
+                                          : String(maxPartnerDisplay)
                                         : "",
                                   }))
                                 }
                                 disabled={
                                   isRedeeming ||
-                                  maxPartnerUnits <= 0 ||
+                                  maxPartnerDisplay <= 0 ||
                                   !canUseThisPartner
                                 }
                               >
@@ -826,7 +847,7 @@ export function BillCreatedView({
                                   isRedeeming ||
                                   !canUseThisPartner ||
                                   valueNum <= 0 ||
-                                  valueNum > maxPartnerUnits
+                                  valueNum > maxPartnerDisplay
                                 }
                                 loading={isRedeeming}
                               >

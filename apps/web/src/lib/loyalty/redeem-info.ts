@@ -13,6 +13,7 @@ import {
   calculatePointsEarnedForBill,
   calculateRedeemable,
   getAmountForEarning,
+  getMaxCashbackCapFromContext,
   isVisitQualifying,
   loyaltyRecordToContext,
   resolveTierForLifetimeSpend,
@@ -457,20 +458,63 @@ export async function getPartnerRedeemableInfo(
     valueAtCurrentStore = Math.floor(valueAtCurrentStore * 100) / 100;
     if (valueAtCurrentStore <= 0) continue;
 
-    // Cap by current (bill) business's loyalty rules: min bill to redeem, max cap, etc.
-    const maxRedeemableOnBill = currentContext
-      ? Math.min(
+    // Cap by current (bill) business's loyalty rules. For partner redemption the loyalty
+    // "max cashback per bill" is interpreted as partner currency; we multiply by exchangeRate
+    // to get cap in this store's currency (e.g. max 20 at partner × ratio 10 → ₹200 here).
+    let maxRedeemableOnBill: number;
+    if (currentContext) {
+      const amt = safeAmount(billAmount);
+      const isCashbackOrTier =
+        currentContext.type === "CASHBACK" || currentContext.type === "TIER";
+
+      if (isCashbackOrTier) {
+        const minPurchase =
+          currentContext.type === "CASHBACK"
+            ? currentContext.config.minPurchaseForRedemption
+            : resolvedTier?.minPurchaseForRedemption;
+        const minEnabled =
+          currentContext.type === "CASHBACK"
+            ? currentContext.config.minPurchaseForRedemptionEnabled
+            : resolvedTier?.minPurchaseForRedemptionEnabled;
+        if (
+          minEnabled &&
+          minPurchase != null &&
+          minPurchase > 0 &&
+          amt < minPurchase
+        ) {
+          maxRedeemableOnBill = 0;
+        } else {
+          const loyaltyCapPartnerUnits = getMaxCashbackCapFromContext(
+            currentContext,
+            resolvedTier ?? undefined,
+          );
+          const capInOurCurrency =
+            (loyaltyCapPartnerUnits ?? Infinity) * exchangeRate;
+          maxRedeemableOnBill =
+            Math.floor(
+              Math.min(
+                valueAtCurrentStore,
+                capInOurCurrency,
+                Math.floor(amt * 100) / 100,
+              ) * 100,
+            ) / 100;
+        }
+      } else {
+        maxRedeemableOnBill = Math.min(
           valueAtCurrentStore,
           Math.floor(
-            calculateRedeemable(
-              safeAmount(billAmount),
-              valueAtCurrentStore,
-              currentContext,
-              { resolvedTier },
-            ) * 100,
+            calculateRedeemable(amt, valueAtCurrentStore, currentContext, {
+              resolvedTier,
+            }) * 100,
           ) / 100,
-        )
-      : Math.min(valueAtCurrentStore, Math.floor(billAmount * 100) / 100);
+        );
+      }
+    } else {
+      maxRedeemableOnBill = Math.min(
+        valueAtCurrentStore,
+        Math.floor(billAmount * 100) / 100,
+      );
+    }
 
     // Only include partners that can actually redeem on this bill (like own-business: don't show if max not matching).
     if (maxRedeemableOnBill <= 0) continue;

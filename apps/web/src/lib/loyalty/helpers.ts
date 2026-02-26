@@ -567,6 +567,31 @@ export interface CalculateRedeemableOptions {
   resolvedTier?: ResolvedTier | null;
 }
 
+/**
+ * Returns the max cashback redeemable per bill from loyalty config (for own-store redemption).
+ * When redeeming partner balance at this store, treat this as "partner currency" cap and
+ * multiply by partner exchangeRate to get cap in this store's currency.
+ */
+export function getMaxCashbackCapFromContext(
+  context: LoyaltyContext,
+  resolvedTier?: ResolvedTier | null,
+): number | null {
+  if (context.type === "CASHBACK") {
+    const cap = context.config.maxCashbackCap;
+    return cap != null && cap > 0 ? cap : null;
+  }
+  if (context.type === "TIER" && resolvedTier) {
+    if (
+      resolvedTier.maxCashbackCapEnabled &&
+      resolvedTier.maxCashbackCap != null &&
+      resolvedTier.maxCashbackCap > 0
+    ) {
+      return resolvedTier.maxCashbackCap;
+    }
+  }
+  return null;
+}
+
 /** Max redeemable on this bill. For CASHBACK: ₹. For points types: points (1 pt = ₹1 discount). TIER: 0 when no tier resolved. */
 export function calculateRedeemable(
   billAmount: number,
