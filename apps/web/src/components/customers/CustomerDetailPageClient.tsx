@@ -34,6 +34,7 @@ import {
   Mail,
   Phone,
   Receipt,
+  Store,
   User,
   UserPlus,
   Users,
@@ -372,6 +373,51 @@ export function CustomerDetailPageClient({
                   </Button>
                 </div>
               )}
+            </CardContent>
+          </Card>
+        )}
+
+      {/* Partner redemptions: this customer used our balance at a partner store */}
+      {customer?.partnerRedemptions &&
+        customer.partnerRedemptions.length > 0 && (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Store className="text-muted-foreground size-4" />
+                Redeemed at partner stores
+              </CardTitle>
+              <CardDescription>
+                This customer used your balance (cashback/points) when shopping
+                at these partner stores. Useful for analytics.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Used at</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {customer.partnerRedemptions.map((r) => (
+                    <TableRow key={r.id}>
+                      <TableCell className="text-muted-foreground text-sm">
+                        <DateDisplay date={r.createdAt} />
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {r.valueKind === "CASHBACK"
+                          ? `₹${r.amount.toFixed(2)}`
+                          : `${Math.abs(Math.floor(r.amount))} pts`}
+                      </TableCell>
+                      <TableCell>
+                        {r.redeemedAtBusinessName ?? r.redeemedAtBusinessId}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
         )}

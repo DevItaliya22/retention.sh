@@ -267,6 +267,14 @@ export function SimpleSidebar({
                             <Link href="/settings/shopify">Shopify</Link>
                           </SidebarMenuSubButton>
                         </SidebarMenuSubItem>
+                        <SidebarMenuSubItem>
+                          <SidebarMenuSubButton
+                            asChild
+                            isActive={pathname === "/settings/partners"}
+                          >
+                            <Link href="/settings/partners">Partners</Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
                       </SidebarMenuSub>
                     </CollapsibleContent>
                   </SidebarMenuItem>

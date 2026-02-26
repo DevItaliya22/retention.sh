@@ -35,10 +35,16 @@ model Bill {
   // Cashback (₹) EARNED this bill (added to wallet; for display only).
   cashbackAmount Float?
 
-  // Cashback (₹) REDEEMED from wallet as discount this bill. userPaidAmount = finalAmount - cashbackRedeemedAmount.
+  // Cashback (₹) REDEEMED from wallet as discount this bill.
   cashbackRedeemedAmount Float?
 
-  // What the customer actually pays after cashback (and points redemption).
+  // Discount (₹) from redeeming partner points/cashback at this bill. userPaidAmount = finalAmount - cashbackRedeemedAmount - partnerRedeemedAmount.
+  partnerRedeemedAmount Float?
+
+  // Which partner's balance was used on this bill (one partner per bill). Set when first partner redemption is applied; used for analytics and to block a second partner.
+  redeemedFromPartnerBusinessId String?
+
+  // What the customer actually pays after cashback and partner redemption.
   userPaidAmount Float?
 
   // Optional notes on the bill.

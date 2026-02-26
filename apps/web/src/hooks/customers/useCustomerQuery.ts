@@ -41,6 +41,16 @@ export interface ReferralLogSummary {
   createdAt: string;
 }
 
+/** Log when this customer used our balance at a partner store (we are the partner; they redeemed at another business). */
+export interface PartnerRedemptionSummary {
+  id: string;
+  amount: number;
+  valueKind: string;
+  redeemedAtBusinessId: string;
+  redeemedAtBusinessName: string | null;
+  createdAt: string;
+}
+
 export interface CustomerDetail {
   id: string;
   slugId: string;
@@ -61,6 +71,8 @@ export interface CustomerDetail {
   referrals?: { name: string; slugId: string }[];
   referralLogs?: ReferralLogSummary[];
   bills: CustomerBillSummary[];
+  /** This customer used our balance at these partner stores (for analytics). */
+  partnerRedemptions?: PartnerRedemptionSummary[];
 }
 
 export interface CustomerDetailResponse {

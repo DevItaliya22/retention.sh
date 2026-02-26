@@ -69,6 +69,19 @@ export const billFormSchema = z.object({
     .number()
     .min(0, "Redeem cashback must be non-negative")
     .optional(),
+  /** Partner business ID when redeeming partner points/cashback at this bill. */
+  redeemFromPartnerBusinessId: z.string().uuid().optional().nullable(),
+  /** For CASHBACK/TIER partner: ₹ to redeem at partner. */
+  redeemPartnerCashback: z.coerce
+    .number()
+    .min(0, "Redeem partner cashback must be non-negative")
+    .optional(),
+  /** For AMOUNT_SPENT/VISIT_MADE partner: points to redeem. */
+  redeemPartnerPoints: z.coerce
+    .number()
+    .int()
+    .min(0, "Redeem partner points must be non-negative")
+    .optional(),
   notes: z
     .string()
     .max(2000, "Notes are too long (max 2000 characters)")

@@ -1,4 +1,5 @@
 import { withCashierAuth } from "@/lib/auth/middleware";
+import { sumCashbackEarnedFromTransactions } from "@/lib/loyalty";
 import {
   sanitizeErrorMessage,
   validateSchema,
@@ -59,6 +60,10 @@ export const GET = withCashierAuth<{ id: string }>(
               },
             },
           },
+          transactions: {
+            where: { type: "EARNED", valueKind: "CASHBACK" },
+            select: { type: true, valueKind: true, amount: true },
+          },
         },
       });
 
@@ -69,6 +74,10 @@ export const GET = withCashierAuth<{ id: string }>(
         );
       }
 
+      const cashbackEarnedFromTx = sumCashbackEarnedFromTransactions(
+        bill.transactions,
+      );
+
       const formattedBill = {
         id: bill.id,
         billNumber: bill.billNumber,
@@ -76,7 +85,8 @@ export const GET = withCashierAuth<{ id: string }>(
         storeDiscount: bill.storeDiscount,
         tax: bill.tax,
         finalAmount: bill.finalAmount,
-        cashbackAmount: bill.cashbackAmount,
+        cashbackAmount:
+          cashbackEarnedFromTx > 0 ? cashbackEarnedFromTx : bill.cashbackAmount,
         userPaidAmount: bill.userPaidAmount,
         amount: bill.userPaidAmount ?? bill.finalAmount,
         notes: bill.notes,

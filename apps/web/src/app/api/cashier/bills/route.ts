@@ -1,4 +1,5 @@
 import { withCashierAuth } from "@/lib/auth/middleware";
+import { sumCashbackEarnedFromTransactions } from "@/lib/loyalty";
 import {
   sanitizeErrorMessage,
   validateSchema,
@@ -56,26 +57,36 @@ export const GET = withCashierAuth(async (request: NextRequest, context) => {
               },
             },
           },
+          transactions: {
+            where: { type: "EARNED", valueKind: "CASHBACK" },
+            select: { type: true, valueKind: true, amount: true },
+          },
         },
       }),
       db.bill.count({ where }),
     ]);
 
-    const formattedBills = bills.map((bill) => ({
-      id: bill.id,
-      billNumber: bill.billNumber,
-      subtotal: bill.subtotal,
-      storeDiscount: bill.storeDiscount,
-      tax: bill.tax,
-      finalAmount: bill.finalAmount,
-      cashbackAmount: bill.cashbackAmount,
-      userPaidAmount: bill.userPaidAmount,
-      amount: bill.userPaidAmount ?? bill.finalAmount,
-      customerName: bill.businessCustomer.customer.user.name,
-      customerPhone: bill.businessCustomer.customer.user.phoneNumber,
-      customerEmail: bill.businessCustomer.customer.email,
-      createdAt: bill.createdAt.toISOString(),
-    }));
+    const formattedBills = bills.map((bill) => {
+      const cashbackEarnedFromTx = sumCashbackEarnedFromTransactions(
+        bill.transactions,
+      );
+      return {
+        id: bill.id,
+        billNumber: bill.billNumber,
+        subtotal: bill.subtotal,
+        storeDiscount: bill.storeDiscount,
+        tax: bill.tax,
+        finalAmount: bill.finalAmount,
+        cashbackAmount:
+          cashbackEarnedFromTx > 0 ? cashbackEarnedFromTx : bill.cashbackAmount,
+        userPaidAmount: bill.userPaidAmount,
+        amount: bill.userPaidAmount ?? bill.finalAmount,
+        customerName: bill.businessCustomer.customer.user.name,
+        customerPhone: bill.businessCustomer.customer.user.phoneNumber,
+        customerEmail: bill.businessCustomer.customer.email,
+        createdAt: bill.createdAt.toISOString(),
+      };
+    });
 
     return NextResponse.json({
       bills: formattedBills,
