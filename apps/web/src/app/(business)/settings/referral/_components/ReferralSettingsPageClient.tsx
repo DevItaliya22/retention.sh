@@ -1,6 +1,6 @@
 "use client";
 
-import { PageLayout, ScaffoldContainer } from "@/components/layouts";
+import { DashboardPageShell } from "@/components/layouts";
 import { ReferralExistingSettings } from "@/components/settings/referral/ReferralExistingSettings";
 import { ReferralSettingsSkeleton } from "@/components/settings/referral/ReferralSettingsSkeleton";
 import { ReferralProgramForm } from "@/components/settings/referral/_components/ReferralProgramForm";
@@ -22,32 +22,15 @@ import {
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
-function ReferralSkeletonLayout() {
-  return (
-    <PageLayout
-      title="Referral Program"
-      subtitle="Set up your referral program to reward customers"
-      size="default"
-      scaffoldSectionClassName="h-full w-full pt-2 pb-0"
-    >
-      <ScaffoldContainer>
-        <ReferralSettingsSkeleton />
-      </ScaffoldContainer>
-    </PageLayout>
-  );
-}
-
 export function ReferralSettingsPageClient() {
   const router = useRouter();
   const { data: programData } = useReferralProgram();
   const { data: businessData } = useCurrentBusiness();
-
   const hasProgram = !!programData?.referralProgram;
   const referralEnabled =
     isServiceEnabled(businessData?.business?.isServiceEnabled, "referral") ??
     false;
 
-  // Sync localStorage with API so next visit doesn't flash onboarding (API remains source of truth)
   useEffect(() => {
     if (programData === undefined) return;
     try {
@@ -60,14 +43,28 @@ export function ReferralSettingsPageClient() {
     }
   }, [programData]);
 
-  // Show skeleton until we have a definitive referral API response (avoids flash of onboarding)
   if (programData === undefined) {
-    return <ReferralSkeletonLayout />;
+    return (
+      <DashboardPageShell
+        title="Referral Program"
+        subtitle="Set up your referral program to reward customers"
+        contentVariant="contained"
+      >
+        <ReferralSettingsSkeleton />
+      </DashboardPageShell>
+    );
   }
 
-  // Only show onboarding when API has responded and said no program
   if (referralEnabled && !hasProgram) {
-    return <ReferralProgramForm initialData={null} embedded />;
+    return (
+      <DashboardPageShell
+        title="Referral Program"
+        subtitle="Set up your referral program to reward customers"
+        contentVariant="contained"
+      >
+        <ReferralProgramForm initialData={null} embedded />
+      </DashboardPageShell>
+    );
   }
 
   const subtitle = !referralEnabled
@@ -75,37 +72,31 @@ export function ReferralSettingsPageClient() {
     : "View and edit your referral program settings";
 
   return (
-    <PageLayout
+    <DashboardPageShell
       title="Referral Program"
       subtitle={subtitle}
-      size="default"
-      scaffoldSectionClassName="h-full w-full pt-2 pb-0"
+      contentVariant="contained"
     >
-      <ScaffoldContainer>
-        {!referralEnabled ? (
-          <Empty className="min-h-[200px]">
-            <EmptyHeader>
-              <EmptyTitle>Enable it in General settings first</EmptyTitle>
-              <EmptyDescription>
-                Turn on &quot;Referral enabled&quot; to set up or use the
-                referral program.
-              </EmptyDescription>
-            </EmptyHeader>
-            <EmptyContent>
-              <Button
-                variant="default"
-                onClick={() => router.push("/settings")}
-              >
-                Go to General settings
-              </Button>
-            </EmptyContent>
-          </Empty>
-        ) : (
-          <ReferralExistingSettings
-            referralProgram={programData!.referralProgram as ReferralProgram}
-          />
-        )}
-      </ScaffoldContainer>
-    </PageLayout>
+      {!referralEnabled ? (
+        <Empty className="min-h-[200px]">
+          <EmptyHeader>
+            <EmptyTitle>Enable it in General settings first</EmptyTitle>
+            <EmptyDescription>
+              Turn on &quot;Referral enabled&quot; to set up or use the referral
+              program.
+            </EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
+            <Button variant="default" onClick={() => router.push("/settings")}>
+              Go to General settings
+            </Button>
+          </EmptyContent>
+        </Empty>
+      ) : (
+        <ReferralExistingSettings
+          referralProgram={programData!.referralProgram as ReferralProgram}
+        />
+      )}
+    </DashboardPageShell>
   );
 }

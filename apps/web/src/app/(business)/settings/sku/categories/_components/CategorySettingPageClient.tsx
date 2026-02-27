@@ -1,13 +1,10 @@
 "use client";
 
-import {
-  PageLayout,
-  ScaffoldContainer,
-  ScaffoldSection,
-} from "@/components/layouts";
+import { DashboardPageShell, ScaffoldSection } from "@/components/layouts";
 import { AddCategoryModal } from "@/components/settings/category/AddCategoryModal";
 import { CategoryImportSheet } from "@/components/settings/category/CategoryImportSheet";
-import { CategoryTree } from "@/components/settings/category/CategoryTree";
+import { CategoryTable } from "@/components/settings/category/CategoryTable";
+import { useCategoriesQuery } from "@/hooks/category/useCategoriesQuery";
 
 import {
   Button,
@@ -26,7 +23,11 @@ export function CategorySettingPageClient() {
   const [addModalParentId, setAddModalParentId] = useState<string | null>(null);
   const pathname = usePathname();
   const router = useRouter();
+  const { data, isLoading } = useCategoriesQuery();
   const activeTab = pathname === "/settings/sku" ? "sku" : "categories";
+  const categories = data?.items ?? [];
+  const total = data?.total ?? 0;
+  const perPage = data?.perPage ?? 10;
 
   const openAddCategory = (parentId: string | null = null) => {
     setAddModalParentId(parentId);
@@ -39,61 +40,60 @@ export function CategorySettingPageClient() {
   };
 
   return (
-    <PageLayout
+    <DashboardPageShell
       title="Category"
       subtitle="Manage product categories"
-      size="full"
-      scaffoldSectionClassName="h-full w-full pt-2 pb-0"
       primaryActions={
-        activeTab === "categories" ? (
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              icon={<FileUp className="h-4 w-4" />}
-              onClick={() => setIsImportSheetOpen(true)}
-            >
-              Import
-            </Button>
-            <Button
-              icon={<Plus className="h-4 w-4" />}
-              onClick={() => openAddCategory(null)}
-            >
-              Add category
-            </Button>
-          </div>
-        ) : undefined
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            icon={<FileUp className="h-4 w-4" />}
+            onClick={() => setIsImportSheetOpen(true)}
+          >
+            Import
+          </Button>
+          <Button
+            icon={<Plus className="h-4 w-4" />}
+            onClick={() => openAddCategory(null)}
+          >
+            Add category
+          </Button>
+        </div>
       }
     >
-      <ScaffoldContainer className="px-6">
-        <ScaffoldSection isFullWidth className="pt-0!">
-          <Tabs value={activeTab} className="w-full">
-            <div className="flex items-center justify-between gap-4">
-              <TabsList className="space-x-1 p-1">
-                <TabsTrigger
-                  value="sku"
-                  className="gap-2"
-                  onClick={() => router.push("/settings/sku")}
-                >
-                  <Package className="h-4 w-4" />
-                  <span>SKU</span>
-                </TabsTrigger>
-                <TabsTrigger
-                  value="categories"
-                  className="gap-2"
-                  onClick={() => router.push("/settings/sku/categories")}
-                >
-                  <Layers className="h-4 w-4" />
-                  <span>Categories</span>
-                </TabsTrigger>
-              </TabsList>
-            </div>
+      <ScaffoldSection isFullWidth className="pt-0!">
+        <Tabs value={activeTab} className="w-full">
+          <div className="flex items-center justify-between gap-4">
+            <TabsList className="space-x-1 p-1">
+              <TabsTrigger
+                value="sku"
+                className="gap-2"
+                onClick={() => router.push("/settings/sku")}
+              >
+                <Package className="h-4 w-4" />
+                <span>SKU</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="categories"
+                className="gap-2"
+                onClick={() => router.push("/settings/sku/categories")}
+              >
+                <Layers className="h-4 w-4" />
+                <span>Categories</span>
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
-            <TabsContent value="categories" className="mt-6">
-              <CategoryTree onAddSubcategory={openAddCategory} />
-            </TabsContent>
-          </Tabs>
-        </ScaffoldSection>
-      </ScaffoldContainer>
+          <TabsContent value="categories" className="mt-4">
+            <CategoryTable
+              categories={categories}
+              total={total}
+              perPage={perPage}
+              isLoading={isLoading}
+            />
+          </TabsContent>
+        </Tabs>
+      </ScaffoldSection>
       <AddCategoryModal
         isOpen={isAddModalOpen}
         onClose={closeAddModal}
@@ -103,6 +103,6 @@ export function CategorySettingPageClient() {
         isOpen={isImportSheetOpen}
         onClose={() => setIsImportSheetOpen(false)}
       />
-    </PageLayout>
+    </DashboardPageShell>
   );
 }

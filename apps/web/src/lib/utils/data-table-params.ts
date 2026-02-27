@@ -8,6 +8,7 @@ export type DataTableConfigId =
   | "skus"
   | "bills"
   | "customers"
+  | "campaigns"
   | "cashiers"
   | "categories"
   | "referralStats"
@@ -34,6 +35,16 @@ export const DATA_TABLE_CONFIG: Record<
   customers: {
     prefix: "customers",
     filterKeys: ["name", "email", "phone", "dateFrom", "dateTo"],
+  },
+  campaigns: {
+    prefix: "campaigns",
+    filterKeys: [
+      "title",
+      "status",
+      "rewardType",
+      "appliesTo",
+      "redemptionLimit",
+    ],
   },
   cashiers: {
     prefix: "cashiers",

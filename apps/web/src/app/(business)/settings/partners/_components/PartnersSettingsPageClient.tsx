@@ -1,10 +1,6 @@
 "use client";
 
-import {
-  SettingsField,
-  SettingsFieldSkeleton,
-} from "@/components/common/settings/SettingsField";
-import { PageLayout, ScaffoldContainer } from "@/components/layouts";
+import { DashboardPageShell } from "@/components/layouts";
 import { useCurrentBusiness } from "@/hooks/business/useCurrentBusiness";
 import {
   useCreatePartnerCampaign,
@@ -35,12 +31,18 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  DataTable,
+  DataTableColumnHeader,
+  DataTableToolbar,
+  DateDisplay,
   Input,
   Label,
-  Separator,
   Skeleton,
   Switch,
 } from "@reelo/ui/components";
+import { useDataTable } from "@reelo/ui/hooks";
+import { cn } from "@reelo/ui/lib/utils";
+import type { ColumnDef } from "@tanstack/react-table";
 import {
   AlertTriangle,
   ArrowRight,
@@ -52,11 +54,68 @@ import {
   Undo2,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
 const MY_BUSINESS_LABEL = "Your business";
 const PARTNER_LABEL = "Partner";
+const PARTNER_TABLE_PAGE_SIZE = 8;
+
+function formatStatusLabel(value: string) {
+  return value
+    .toLowerCase()
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function buildRequestSkeletonRows(length: number): PartnerRequestItem[] {
+  return Array.from({ length }, (_, i) => ({
+    id: `skeleton-${i}`,
+    senderBusinessId: "",
+    receiverBusinessId: "",
+    status: "PENDING",
+    partnershipId: null,
+    senderBusiness: undefined,
+    receiverBusiness: undefined,
+    createdAt: "",
+    updatedAt: "",
+  }));
+}
+
+function SettingsPanel({
+  title,
+  description,
+  children,
+  contentClassName,
+}: {
+  title: string;
+  description?: string;
+  children: ReactNode;
+  contentClassName?: string;
+}) {
+  return (
+    <Card className="bg-sidebar-accent/50 flex min-h-0 flex-col gap-0 rounded-lg border-0 p-2">
+      <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
+        <CardTitle className="text-foreground text-base leading-none font-semibold">
+          {title}
+        </CardTitle>
+        {description ? (
+          <CardDescription className="text-muted-foreground mt-0.5 text-sm">
+            {description}
+          </CardDescription>
+        ) : null}
+      </CardHeader>
+      <Card className="border-border/45 bg-background/55 flex min-h-0 flex-col gap-0 overflow-hidden rounded-lg border">
+        <CardContent
+          className={cn("min-h-0 overflow-hidden px-4 py-4", contentClassName)}
+        >
+          {children}
+        </CardContent>
+      </Card>
+    </Card>
+  );
+}
 
 // ---------------------------------------------------------------------------
 // General settings
@@ -66,30 +125,51 @@ function GeneralSettings() {
   const updateSettings = useUpdatePartnershipSettings();
 
   if (isLoading) {
-    return <SettingsFieldSkeleton type="toggle" />;
+    return (
+      <SettingsPanel
+        title="Receive partnership offers"
+        description="When enabled, other businesses can send you partnership requests."
+      >
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-56 rounded-md" />
+          <Skeleton className="h-10 w-full rounded-lg" />
+        </div>
+      </SettingsPanel>
+    );
   }
 
+  const handleToggle = async (checked: boolean) => {
+    try {
+      await updateSettings.mutateAsync({ receivePartnershipOffers: checked });
+      toast.success("Settings updated.");
+    } catch (e: unknown) {
+      toast.error(
+        e instanceof Error ? e.message : "Failed to update settings.",
+      );
+    }
+  };
+
   return (
-    <SettingsField
+    <SettingsPanel
       title="Receive partnership offers"
       description="When enabled, other businesses can send you partnership requests."
-      type="toggle"
-      defaultValue={data?.receivePartnershipOffers ?? false}
-      onSubmit={async ({ value }) => {
-        try {
-          await updateSettings.mutateAsync({
-            receivePartnershipOffers: value as boolean,
-          });
-          return { success: true };
-        } catch (e: unknown) {
-          return {
-            success: false,
-            error:
-              e instanceof Error ? e.message : "Failed to update settings.",
-          };
-        }
-      }}
-    />
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-1">
+          <Label className="text-sm font-medium">
+            Receive partnership offers
+          </Label>
+          <p className="text-muted-foreground text-xs">
+            Allow other businesses to send partnership requests to you.
+          </p>
+        </div>
+        <Switch
+          checked={data?.receivePartnershipOffers ?? false}
+          onCheckedChange={handleToggle}
+          disabled={updateSettings.isPending}
+        />
+      </div>
+    </SettingsPanel>
   );
 }
 
@@ -112,38 +192,30 @@ function SendRequest() {
   };
 
   return (
-    <Card className="flex min-h-0 flex-col gap-0 rounded-xl border-0 bg-[#EDE7D9] p-2 pb-3 shadow-none">
-      <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
-        <CardTitle className="text-foreground text-base leading-none font-semibold">
-          Send request
-        </CardTitle>
-        <CardDescription className="text-muted-foreground mt-0.5 text-sm">
-          Enter the partner&apos;s business slug to send a partnership request
-        </CardDescription>
-      </CardHeader>
-      <Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border-0 bg-[#FAF8F1] shadow-none">
-        <CardContent className="grid grid-cols-1 gap-4 px-4 py-4 sm:grid-cols-[1fr_auto] sm:items-end">
-          <div className="min-w-0 space-y-1.5">
-            <Label className="text-sm font-medium">Business slug</Label>
-            <Input
-              placeholder="e.g. partner-cafe"
-              className="border-border/80 bg-background rounded-lg"
-              value={slug}
-              onChange={(e) => setSlug(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSend()}
-            />
-          </div>
-          <Button
-            onClick={handleSend}
-            disabled={!slug.trim() || sendRequest.isPending}
-            className="shrink-0 rounded-lg"
-            icon={<Send className="h-4 w-4" />}
-          >
-            {sendRequest.isPending ? "Sending…" : "Send request"}
-          </Button>
-        </CardContent>
-      </Card>
-    </Card>
+    <SettingsPanel
+      title="Send request"
+      description="Enter the partner's business slug to send a partnership request."
+      contentClassName="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_auto] sm:items-end"
+    >
+      <div className="min-w-0 space-y-1.5">
+        <Label className="text-sm font-medium">Business slug</Label>
+        <Input
+          placeholder="e.g. partner-cafe"
+          className="border-border/80 bg-background rounded-lg"
+          value={slug}
+          onChange={(e) => setSlug(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleSend()}
+        />
+      </div>
+      <Button
+        onClick={handleSend}
+        disabled={!slug.trim() || sendRequest.isPending}
+        className="shrink-0 rounded-lg"
+        icon={<Send className="h-4 w-4" />}
+      >
+        {sendRequest.isPending ? "Sending..." : "Send request"}
+      </Button>
+    </SettingsPanel>
   );
 }
 
@@ -153,123 +225,245 @@ function SendRequest() {
 function IncomingRequests() {
   const { data, isLoading } = usePartnerRequests("incoming");
   const respond = useRespondPartnerRequest();
-  const pending = data?.items.filter((r) => r.status === "PENDING") ?? [];
+  const pending = useMemo(
+    () => data?.items.filter((r) => r.status === "PENDING") ?? [],
+    [data?.items],
+  );
 
-  const handleAction = async (
-    id: string,
-    action: "accept" | "reject" | "permanently_reject",
-  ) => {
-    try {
-      await respond.mutateAsync({ id, action });
-      toast.success(
-        action === "accept"
-          ? "Partnership accepted!"
-          : action === "reject"
-            ? "Request rejected."
-            : "Permanently rejected.",
-      );
-    } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Failed to respond.");
+  const handleAction = useCallback(
+    async (id: string, action: "accept" | "reject" | "permanently_reject") => {
+      try {
+        await respond.mutateAsync({ id, action });
+        toast.success(
+          action === "accept"
+            ? "Partnership accepted!"
+            : action === "reject"
+              ? "Request rejected."
+              : "Permanently rejected.",
+        );
+      } catch (e: unknown) {
+        toast.error(e instanceof Error ? e.message : "Failed to respond.");
+      }
+    },
+    [respond],
+  );
+
+  const isEmpty = !isLoading && pending.length === 0;
+  const displayItems = useMemo<PartnerRequestItem[]>(() => {
+    if (isLoading && pending.length === 0) {
+      return buildRequestSkeletonRows(PARTNER_TABLE_PAGE_SIZE);
     }
-  };
+    if (isEmpty) {
+      return [
+        {
+          id: "empty-state",
+          senderBusinessId: "",
+          receiverBusinessId: "",
+          status: "PENDING",
+          partnershipId: null,
+          senderBusiness: undefined,
+          receiverBusiness: undefined,
+          createdAt: "",
+          updatedAt: "",
+        },
+      ];
+    }
+    return pending;
+  }, [isEmpty, isLoading, pending]);
 
-  if (isLoading) {
-    return (
-      <div className="space-y-2">
-        <Skeleton className="h-16 w-full rounded-xl" />
-        <Skeleton className="h-16 w-full rounded-xl" />
-      </div>
-    );
-  }
+  const columns = useMemo<ColumnDef<PartnerRequestItem>[]>(
+    () => [
+      {
+        id: "business",
+        accessorFn: (row) => row.senderBusiness?.name ?? "Unknown",
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} label="Business" />
+        ),
+        cell: ({ row }) => {
+          const req = row.original;
+          if (req.id === "empty-state") return null;
+          if (isLoading && req.id.startsWith("skeleton-")) {
+            return <Skeleton className="h-4 w-32" />;
+          }
+          return (
+            <span className="font-medium">
+              {req.senderBusiness?.name ?? "Unknown"}
+            </span>
+          );
+        },
+        enableColumnFilter: true,
+        enableSorting: true,
+        meta: {
+          label: "Business",
+          variant: "text" as const,
+          placeholder: "Filter by business...",
+          maxLength: 255,
+        },
+      },
+      {
+        id: "slug",
+        accessorFn: (row) => row.senderBusiness?.slug ?? "",
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} label="Slug" />
+        ),
+        cell: ({ row }) => {
+          const req = row.original;
+          if (req.id === "empty-state") return null;
+          if (isLoading && req.id.startsWith("skeleton-")) {
+            return <Skeleton className="h-4 w-24" />;
+          }
+          return (
+            <span className="text-muted-foreground text-sm">
+              @{req.senderBusiness?.slug ?? "—"}
+            </span>
+          );
+        },
+        enableColumnFilter: true,
+        meta: {
+          label: "Slug",
+          variant: "text" as const,
+          placeholder: "Filter by slug...",
+          maxLength: 255,
+        },
+      },
+      {
+        id: "createdAt",
+        accessorKey: "createdAt",
+        header: ({ column }) => (
+          <div className="flex w-full justify-center">
+            <DataTableColumnHeader column={column} label="Date" />
+          </div>
+        ),
+        cell: ({ row }) => {
+          const req = row.original;
+          if (req.id === "empty-state") return null;
+          if (isLoading && req.id.startsWith("skeleton-")) {
+            return (
+              <div className="flex justify-center">
+                <Skeleton className="h-4 w-20" />
+              </div>
+            );
+          }
+          return (
+            <div className="flex justify-center">
+              <DateDisplay
+                date={req.createdAt}
+                className="text-muted-foreground text-sm"
+              />
+            </div>
+          );
+        },
+        enableSorting: true,
+        meta: {
+          label: "Date",
+          variant: "dateRange" as const,
+        },
+      },
+      {
+        id: "actions",
+        header: () => <span className="sr-only">Actions</span>,
+        cell: ({ row }) => {
+          const req = row.original;
+          if (req.id === "empty-state") return null;
+          if (isLoading && req.id.startsWith("skeleton-")) {
+            return (
+              <div className="flex justify-end gap-1.5">
+                <Skeleton className="h-7 w-16" />
+                <Skeleton className="h-7 w-16" />
+                <Skeleton className="h-7 w-20" />
+              </div>
+            );
+          }
+          return (
+            <div className="flex flex-nowrap justify-end gap-1.5">
+              <Button
+                size="sm"
+                className="h-7 shrink-0 rounded px-2 text-xs"
+                onClick={() => handleAction(req.id, "accept")}
+                disabled={respond.isPending}
+                icon={<Check className="h-3 w-3" />}
+              >
+                Accept
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 shrink-0 rounded px-2 text-xs"
+                onClick={() => handleAction(req.id, "reject")}
+                disabled={respond.isPending}
+                icon={<X className="h-3 w-3" />}
+              >
+                Reject
+              </Button>
+              <Button
+                size="sm"
+                variant="destructive"
+                className="h-7 shrink-0 rounded px-2 text-xs"
+                onClick={() => handleAction(req.id, "permanently_reject")}
+                disabled={respond.isPending}
+                icon={<Trash2 className="h-3 w-3" />}
+              >
+                Permanent
+              </Button>
+            </div>
+          );
+        },
+        enableSorting: false,
+        enableHiding: false,
+      },
+    ],
+    [handleAction, isLoading, respond.isPending],
+  );
 
-  if (pending.length === 0) {
-    return (
-      <div className="flex min-h-0 flex-1 flex-col items-center justify-center text-center">
-        <p className="text-muted-foreground text-sm font-medium">
-          No pending requests
-        </p>
-        <p className="text-muted-foreground mt-1 max-w-[220px] text-xs">
-          When someone sends a request, it will show up here.
-        </p>
-      </div>
-    );
-  }
+  const pageCount = Math.max(
+    1,
+    Math.ceil(displayItems.length / PARTNER_TABLE_PAGE_SIZE),
+  );
+
+  const { table } = useDataTable({
+    data: displayItems,
+    columns,
+    pageCount,
+    initialState: {
+      pagination: { pageIndex: 0, pageSize: PARTNER_TABLE_PAGE_SIZE },
+      sorting: [{ id: "createdAt", desc: true }],
+      columnPinning: { right: ["actions"] },
+    },
+    prefix: "partnerIncoming",
+    manualPagination: false,
+    manualSorting: false,
+    manualFiltering: false,
+  });
 
   return (
-    <div className="border-border overflow-x-auto rounded-lg border">
-      <table
-        className="w-full border-collapse text-sm"
-        style={{ minWidth: 520 }}
-      >
-        <thead>
-          <tr className="border-border bg-muted/50 border-b">
-            <th className="text-muted-foreground w-[28%] min-w-[90px] overflow-hidden px-3 py-2.5 text-left text-xs font-medium text-ellipsis whitespace-nowrap">
-              Business
-            </th>
-            <th className="text-muted-foreground w-[22%] min-w-[70px] overflow-hidden px-3 py-2.5 text-left text-xs font-medium text-ellipsis whitespace-nowrap">
-              Slug
-            </th>
-            <th className="text-muted-foreground w-[18%] min-w-[88px] overflow-hidden px-3 py-2.5 text-left text-xs font-medium text-ellipsis whitespace-nowrap">
-              Date
-            </th>
-            <th className="w-[32%] min-w-[200px] px-3 py-2.5 text-right text-xs font-medium">
-              Actions
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {pending.map((req) => (
-            <tr
-              key={req.id}
-              className="border-border/60 bg-background hover:bg-muted/30 border-b last:border-b-0"
-            >
-              <td className="max-w-0 overflow-hidden px-3 py-2.5 font-medium text-ellipsis whitespace-nowrap">
-                {req.senderBusiness?.name ?? "Unknown"}
-              </td>
-              <td className="text-muted-foreground max-w-0 overflow-hidden px-3 py-2.5 text-xs text-ellipsis whitespace-nowrap">
-                @{req.senderBusiness?.slug}
-              </td>
-              <td className="text-muted-foreground shrink-0 overflow-hidden px-3 py-2.5 text-xs text-ellipsis whitespace-nowrap">
-                {new Date(req.createdAt).toLocaleDateString()}
-              </td>
-              <td className="shrink-0 px-3 py-2.5 text-right">
-                <div className="flex flex-nowrap justify-end gap-1.5">
-                  <Button
-                    size="sm"
-                    className="h-7 shrink-0 rounded px-2 text-xs"
-                    onClick={() => handleAction(req.id, "accept")}
-                    disabled={respond.isPending}
-                    icon={<Check className="h-3 w-3" />}
-                  >
-                    Accept
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-7 shrink-0 rounded px-2 text-xs"
-                    onClick={() => handleAction(req.id, "reject")}
-                    disabled={respond.isPending}
-                    icon={<X className="h-3 w-3" />}
-                  >
-                    Reject
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    className="h-7 shrink-0 rounded px-2 text-xs"
-                    onClick={() => handleAction(req.id, "permanently_reject")}
-                    disabled={respond.isPending}
-                    icon={<Trash2 className="h-3 w-3" />}
-                  >
-                    Permanent
-                  </Button>
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <DataTable
+      table={table}
+      renderRowFooter={(row) => {
+        if (isEmpty && row.original.id === "empty-state") {
+          return (
+            <div className="flex flex-col items-center justify-center px-4 py-12">
+              <p className="text-muted-foreground text-sm font-medium">
+                No pending requests
+              </p>
+              <p className="text-muted-foreground mt-1 text-xs">
+                When someone sends a request, it will show up here.
+              </p>
+            </div>
+          );
+        }
+        return null;
+      }}
+    >
+      <div className="space-y-0.5 px-1 pb-1">
+        <p className="text-foreground text-base leading-none font-semibold">
+          Incoming
+        </p>
+        <p className="text-muted-foreground text-sm">
+          Partnership requests sent to you by other businesses.
+        </p>
+      </div>
+      <DataTableToolbar table={table} maxTextFilters={2} />
+    </DataTable>
   );
 }
 
@@ -278,105 +472,240 @@ function IncomingRequests() {
 // ---------------------------------------------------------------------------
 function SentRequests() {
   const { data, isLoading } = usePartnerRequests("outgoing");
-  const items = data?.items ?? [];
-
-  const statusBadge = (status: string) => {
-    switch (status) {
-      case "PENDING":
-        return (
-          <Badge variant="secondary" className="rounded-full font-medium">
-            Pending
-          </Badge>
-        );
-      case "ACCEPTED":
-        return (
-          <Badge variant="default" className="rounded-full font-medium">
-            Accepted
-          </Badge>
-        );
-      case "REJECTED":
-        return (
-          <Badge variant="outline" className="rounded-full">
-            Rejected
-          </Badge>
-        );
-      case "PERMANENTLY_REJECTED":
-        return (
-          <Badge variant="destructive" className="rounded-full font-medium">
-            Permanently rejected
-          </Badge>
-        );
-      default:
-        return (
-          <Badge variant="outline" className="rounded-full">
-            {status}
-          </Badge>
-        );
+  const items = useMemo(() => data?.items ?? [], [data?.items]);
+  const isEmpty = !isLoading && items.length === 0;
+  const displayItems = useMemo<PartnerRequestItem[]>(() => {
+    if (isLoading && items.length === 0) {
+      return buildRequestSkeletonRows(PARTNER_TABLE_PAGE_SIZE);
     }
-  };
+    if (isEmpty) {
+      return [
+        {
+          id: "empty-state",
+          senderBusinessId: "",
+          receiverBusinessId: "",
+          status: "PENDING",
+          partnershipId: null,
+          senderBusiness: undefined,
+          receiverBusiness: undefined,
+          createdAt: "",
+          updatedAt: "",
+        },
+      ];
+    }
+    return items;
+  }, [isEmpty, isLoading, items]);
 
-  if (isLoading) {
-    return <Skeleton className="h-14 w-full rounded-xl" />;
-  }
+  const columns = useMemo<ColumnDef<PartnerRequestItem>[]>(
+    () => [
+      {
+        id: "business",
+        accessorFn: (row) => row.receiverBusiness?.name ?? "Unknown",
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} label="Business" />
+        ),
+        cell: ({ row }) => {
+          const req = row.original;
+          if (req.id === "empty-state") return null;
+          if (isLoading && req.id.startsWith("skeleton-")) {
+            return <Skeleton className="h-4 w-32" />;
+          }
+          return (
+            <span className="font-medium">
+              {req.receiverBusiness?.name ?? "Unknown"}
+            </span>
+          );
+        },
+        enableColumnFilter: true,
+        enableSorting: true,
+        meta: {
+          label: "Business",
+          variant: "text" as const,
+          placeholder: "Filter by business...",
+          maxLength: 255,
+        },
+      },
+      {
+        id: "slug",
+        accessorFn: (row) => row.receiverBusiness?.slug ?? "",
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} label="Slug" />
+        ),
+        cell: ({ row }) => {
+          const req = row.original;
+          if (req.id === "empty-state") return null;
+          if (isLoading && req.id.startsWith("skeleton-")) {
+            return <Skeleton className="h-4 w-24" />;
+          }
+          return (
+            <span className="text-muted-foreground text-sm">
+              @{req.receiverBusiness?.slug ?? "—"}
+            </span>
+          );
+        },
+        enableColumnFilter: true,
+        meta: {
+          label: "Slug",
+          variant: "text" as const,
+          placeholder: "Filter by slug...",
+          maxLength: 255,
+        },
+      },
+      {
+        id: "createdAt",
+        accessorKey: "createdAt",
+        header: ({ column }) => (
+          <div className="flex w-full justify-center">
+            <DataTableColumnHeader column={column} label="Date" />
+          </div>
+        ),
+        cell: ({ row }) => {
+          const req = row.original;
+          if (req.id === "empty-state") return null;
+          if (isLoading && req.id.startsWith("skeleton-")) {
+            return (
+              <div className="flex justify-center">
+                <Skeleton className="h-4 w-20" />
+              </div>
+            );
+          }
+          return (
+            <div className="flex justify-center">
+              <DateDisplay
+                date={req.createdAt}
+                className="text-muted-foreground text-sm"
+              />
+            </div>
+          );
+        },
+        enableSorting: true,
+        meta: {
+          label: "Date",
+          variant: "dateRange" as const,
+        },
+      },
+      {
+        id: "status",
+        accessorKey: "status",
+        header: ({ column }) => (
+          <div className="flex w-full justify-end">
+            <DataTableColumnHeader column={column} label="Status" />
+          </div>
+        ),
+        cell: ({ row }) => {
+          const req = row.original;
+          if (req.id === "empty-state") return null;
+          if (isLoading && req.id.startsWith("skeleton-")) {
+            return (
+              <div className="flex justify-end">
+                <Skeleton className="h-6 w-24 rounded-full" />
+              </div>
+            );
+          }
 
-  if (items.length === 0) {
-    return (
-      <div className="flex min-h-0 flex-1 flex-col items-center justify-center text-center">
-        <p className="text-muted-foreground text-sm font-medium">
-          No sent requests
-        </p>
-        <p className="text-muted-foreground mt-1 max-w-[220px] text-xs">
-          Requests you send will appear here.
-        </p>
-      </div>
-    );
-  }
+          switch (req.status) {
+            case "PENDING":
+              return (
+                <div className="flex justify-end">
+                  <Badge
+                    variant="secondary"
+                    className="rounded-full font-medium"
+                  >
+                    Pending
+                  </Badge>
+                </div>
+              );
+            case "ACCEPTED":
+              return (
+                <div className="flex justify-end">
+                  <Badge variant="default" className="rounded-full font-medium">
+                    Accepted
+                  </Badge>
+                </div>
+              );
+            case "REJECTED":
+              return (
+                <div className="flex justify-end">
+                  <Badge variant="outline" className="rounded-full">
+                    Rejected
+                  </Badge>
+                </div>
+              );
+            case "PERMANENTLY_REJECTED":
+              return (
+                <div className="flex justify-end">
+                  <Badge
+                    variant="destructive"
+                    className="rounded-full font-medium"
+                  >
+                    Permanently rejected
+                  </Badge>
+                </div>
+              );
+            default:
+              return (
+                <div className="flex justify-end">
+                  <Badge variant="outline" className="rounded-full">
+                    {formatStatusLabel(req.status)}
+                  </Badge>
+                </div>
+              );
+          }
+        },
+        enableSorting: true,
+      },
+    ],
+    [isLoading],
+  );
+
+  const pageCount = Math.max(
+    1,
+    Math.ceil(displayItems.length / PARTNER_TABLE_PAGE_SIZE),
+  );
+
+  const { table } = useDataTable({
+    data: displayItems,
+    columns,
+    pageCount,
+    initialState: {
+      pagination: { pageIndex: 0, pageSize: PARTNER_TABLE_PAGE_SIZE },
+      sorting: [{ id: "createdAt", desc: true }],
+    },
+    prefix: "partnerSent",
+    manualPagination: false,
+    manualSorting: false,
+    manualFiltering: false,
+  });
 
   return (
-    <div className="border-border overflow-x-auto rounded-lg border">
-      <table
-        className="w-full border-collapse text-sm"
-        style={{ minWidth: 460 }}
-      >
-        <thead>
-          <tr className="border-border bg-muted/50 border-b">
-            <th className="text-muted-foreground w-[28%] min-w-[90px] overflow-hidden px-3 py-2.5 text-left text-xs font-medium text-ellipsis whitespace-nowrap">
-              Business
-            </th>
-            <th className="text-muted-foreground w-[22%] min-w-[70px] overflow-hidden px-3 py-2.5 text-left text-xs font-medium text-ellipsis whitespace-nowrap">
-              Slug
-            </th>
-            <th className="text-muted-foreground w-[22%] min-w-[88px] overflow-hidden px-3 py-2.5 text-left text-xs font-medium text-ellipsis whitespace-nowrap">
-              Date
-            </th>
-            <th className="w-[28%] min-w-[90px] px-3 py-2.5 text-right text-xs font-medium">
-              Status
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((req) => (
-            <tr
-              key={req.id}
-              className="border-border/60 bg-background hover:bg-muted/30 border-b last:border-b-0"
-            >
-              <td className="max-w-0 overflow-hidden px-3 py-2.5 font-medium text-ellipsis whitespace-nowrap">
-                {req.receiverBusiness?.name ?? "Unknown"}
-              </td>
-              <td className="text-muted-foreground max-w-0 overflow-hidden px-3 py-2.5 text-xs text-ellipsis whitespace-nowrap">
-                @{req.receiverBusiness?.slug}
-              </td>
-              <td className="text-muted-foreground shrink-0 overflow-hidden px-3 py-2.5 text-xs text-ellipsis whitespace-nowrap">
-                {new Date(req.createdAt).toLocaleDateString()}
-              </td>
-              <td className="shrink-0 px-3 py-2.5 text-right">
-                {statusBadge(req.status)}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <DataTable
+      table={table}
+      renderRowFooter={(row) => {
+        if (isEmpty && row.original.id === "empty-state") {
+          return (
+            <div className="flex flex-col items-center justify-center px-4 py-12">
+              <p className="text-muted-foreground text-sm font-medium">
+                No sent requests
+              </p>
+              <p className="text-muted-foreground mt-1 text-xs">
+                Requests you send will appear here.
+              </p>
+            </div>
+          );
+        }
+        return null;
+      }}
+    >
+      <div className="space-y-0.5 px-1 pb-1">
+        <p className="text-foreground text-base leading-none font-semibold">
+          Sent
+        </p>
+        <p className="text-muted-foreground text-sm">
+          Partnership requests you have sent.
+        </p>
+      </div>
+      <DataTableToolbar table={table} maxTextFilters={2} />
+    </DataTable>
   );
 }
 
@@ -387,8 +716,10 @@ function PermanentlyRejected() {
   const { data, isLoading } = usePartnerRequests("incoming");
   const unReject = useUnPermanentReject();
   const sendRequest = useSendPartnerRequest();
-  const permanentlyRejected =
-    data?.items.filter((r) => r.status === "PERMANENTLY_REJECTED") ?? [];
+  const permanentlyRejected = useMemo(
+    () => data?.items.filter((r) => r.status === "PERMANENTLY_REJECTED") ?? [],
+    [data?.items],
+  );
 
   if (isLoading || permanentlyRejected.length === 0) return null;
 
@@ -413,79 +744,132 @@ function PermanentlyRejected() {
   };
 
   return (
-    <Card className="flex min-h-0 flex-col gap-0 rounded-xl border-0 bg-[#EDE7D9] p-2 pb-3 shadow-none">
-      <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
-        <CardTitle className="text-foreground text-base leading-none font-semibold">
-          Permanently rejected
-        </CardTitle>
-        <CardDescription className="text-muted-foreground mt-0.5 text-sm">
-          They can&apos;t re-request until you move them back or send a request
-          from your side.
-        </CardDescription>
-      </CardHeader>
-      <Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border-0 bg-[#FAF8F1] shadow-none">
-        <CardContent className="overflow-hidden px-4 py-4">
-          <div className="border-border overflow-x-auto rounded-lg border">
-            <table
-              className="w-full border-collapse text-sm"
-              style={{ minWidth: 480 }}
+    <SettingsPanel
+      title="Permanently rejected"
+      description="They cannot re-request until you move them back or send a request from your side."
+    >
+      <RejectedRequestsTable
+        items={permanentlyRejected}
+        unRejectPending={unReject.isPending}
+        sendRequestPending={sendRequest.isPending}
+        onMoveToRejected={handleMoveToRejected}
+        onSendFromYourSide={handleSendFromYourSide}
+      />
+    </SettingsPanel>
+  );
+}
+
+function RejectedRequestsTable({
+  items,
+  unRejectPending,
+  sendRequestPending,
+  onMoveToRejected,
+  onSendFromYourSide,
+}: {
+  items: PartnerRequestItem[];
+  unRejectPending: boolean;
+  sendRequestPending: boolean;
+  onMoveToRejected: (id: string) => Promise<void>;
+  onSendFromYourSide: (item: PartnerRequestItem) => Promise<void>;
+}) {
+  const columns = useMemo<ColumnDef<PartnerRequestItem>[]>(
+    () => [
+      {
+        id: "business",
+        accessorFn: (row) => row.senderBusiness?.name ?? "Unknown",
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} label="Business" />
+        ),
+        cell: ({ row }) => (
+          <span className="font-medium">
+            {row.original.senderBusiness?.name ?? "Unknown"}
+          </span>
+        ),
+        enableColumnFilter: true,
+        enableSorting: true,
+        meta: {
+          label: "Business",
+          variant: "text" as const,
+          placeholder: "Filter by business...",
+          maxLength: 255,
+        },
+      },
+      {
+        id: "slug",
+        accessorFn: (row) => row.senderBusiness?.slug ?? "",
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} label="Slug" />
+        ),
+        cell: ({ row }) => (
+          <span className="text-muted-foreground text-sm">
+            @{row.original.senderBusiness?.slug ?? "—"}
+          </span>
+        ),
+        enableColumnFilter: true,
+        meta: {
+          label: "Slug",
+          variant: "text" as const,
+          placeholder: "Filter by slug...",
+          maxLength: 255,
+        },
+      },
+      {
+        id: "actions",
+        header: () => <span className="sr-only">Actions</span>,
+        cell: ({ row }) => (
+          <div className="flex flex-nowrap justify-end gap-1.5">
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 shrink-0 rounded px-2 text-xs"
+              onClick={() => void onMoveToRejected(row.original.id)}
+              disabled={unRejectPending}
+              icon={<Undo2 className="h-3 w-3" />}
             >
-              <thead>
-                <tr className="border-border bg-muted/50 border-b">
-                  <th className="text-muted-foreground w-[28%] min-w-[90px] overflow-hidden px-3 py-2.5 text-left text-xs font-medium text-ellipsis whitespace-nowrap">
-                    Business
-                  </th>
-                  <th className="text-muted-foreground w-[22%] min-w-[70px] overflow-hidden px-3 py-2.5 text-left text-xs font-medium text-ellipsis whitespace-nowrap">
-                    Slug
-                  </th>
-                  <th className="w-[50%] min-w-[220px] px-3 py-2.5 text-right text-xs font-medium">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {permanentlyRejected.map((req) => (
-                  <tr
-                    key={req.id}
-                    className="border-border/60 bg-background hover:bg-muted/30 border-b last:border-b-0"
-                  >
-                    <td className="max-w-0 overflow-hidden px-3 py-2.5 font-medium text-ellipsis whitespace-nowrap">
-                      {req.senderBusiness?.name ?? "Unknown"}
-                    </td>
-                    <td className="text-muted-foreground max-w-0 overflow-hidden px-3 py-2.5 text-xs text-ellipsis whitespace-nowrap">
-                      @{req.senderBusiness?.slug}
-                    </td>
-                    <td className="shrink-0 px-3 py-2.5 text-right">
-                      <div className="flex flex-nowrap justify-end gap-1.5">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-7 shrink-0 rounded px-2 text-xs"
-                          onClick={() => handleMoveToRejected(req.id)}
-                          disabled={unReject.isPending}
-                          icon={<Undo2 className="h-3 w-3" />}
-                        >
-                          Move to rejected
-                        </Button>
-                        <Button
-                          size="sm"
-                          className="h-7 shrink-0 rounded px-2 text-xs"
-                          onClick={() => handleSendFromYourSide(req)}
-                          disabled={sendRequest.isPending}
-                          icon={<ArrowRight className="h-3 w-3" />}
-                        >
-                          Send from your side
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+              Move to rejected
+            </Button>
+            <Button
+              size="sm"
+              className="h-7 shrink-0 rounded px-2 text-xs"
+              onClick={() => void onSendFromYourSide(row.original)}
+              disabled={sendRequestPending}
+              icon={<ArrowRight className="h-3 w-3" />}
+            >
+              Send from your side
+            </Button>
           </div>
-        </CardContent>
-      </Card>
-    </Card>
+        ),
+        enableSorting: false,
+        enableHiding: false,
+      },
+    ],
+    [onMoveToRejected, onSendFromYourSide, sendRequestPending, unRejectPending],
+  );
+
+  const pageCount = Math.max(
+    1,
+    Math.ceil(items.length / PARTNER_TABLE_PAGE_SIZE),
+  );
+
+  const { table } = useDataTable({
+    data: items,
+    columns,
+    pageCount,
+    initialState: {
+      pagination: { pageIndex: 0, pageSize: PARTNER_TABLE_PAGE_SIZE },
+      sorting: [{ id: "createdAt", desc: true }],
+      columnPinning: { right: ["actions"] },
+    },
+    prefix: "partnerRejected",
+    manualPagination: false,
+    manualSorting: false,
+    manualFiltering: false,
+  });
+
+  return (
+    <DataTable table={table}>
+      <DataTableToolbar table={table} maxTextFilters={2} />
+    </DataTable>
   );
 }
 
@@ -518,7 +902,6 @@ function PartnershipBlock({
   );
   const [confirmDissolve, setConfirmDissolve] = useState(false);
 
-  const partnerLoyaltyType = partnerMember?.business.loyalty?.loyaltyType;
   const myLoyaltyType = myMember?.business.loyalty?.loyaltyType;
   const showPointRate =
     myLoyaltyType === "AMOUNT_SPENT" || myLoyaltyType === "VISIT_MADE";
@@ -589,15 +972,15 @@ function PartnershipBlock({
   }
 
   return (
-    <div className="border-border/60 bg-muted/20 rounded-2xl border p-6 shadow-sm">
+    <div className="space-y-5 py-2">
       {/* Header */}
-      <div className="mb-6 flex items-start justify-between gap-4">
+      <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="bg-primary/15 flex h-12 w-12 items-center justify-center rounded-xl">
-            <Handshake className="text-primary h-6 w-6" />
+          <div className="bg-primary/15 flex h-10 w-10 items-center justify-center rounded-lg">
+            <Handshake className="text-primary h-5 w-5" />
           </div>
           <div>
-            <p className="text-lg font-semibold">{partnerBusinessName}</p>
+            <p className="text-base font-semibold">{partnerBusinessName}</p>
             <p className="text-muted-foreground text-xs">
               @{partnerMember?.business.slug} · Since{" "}
               {new Date(partnership.createdAt).toLocaleDateString()}
@@ -610,15 +993,15 @@ function PartnershipBlock({
       </div>
 
       {/* Exchange rates */}
-      <div className="mb-6 space-y-4">
+      <div className="space-y-3">
         <p className="text-sm font-semibold">Exchange rates</p>
         <p className="text-muted-foreground text-xs">
           You set your rate; partner sets theirs. Your rate converts your coins
           to their value; theirs converts their coins to yours.
         </p>
         <div className="grid gap-4 sm:grid-cols-2">
-          <div className="bg-background/80 space-y-2 rounded-xl p-4">
-            <p className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
+          <div className="space-y-2">
+            <p className="text-muted-foreground text-xs font-medium">
               Your rate (you set)
             </p>
             <p className="text-sm">
@@ -637,7 +1020,7 @@ function PartnershipBlock({
               onChange={(e) => setExchangeRate(e.target.value)}
             />
             {showPointRate && (
-              <div className="mt-3 space-y-1">
+              <div className="mt-2 space-y-1">
                 <Label className="text-xs">Point → currency</Label>
                 <Input
                   type="number"
@@ -651,15 +1034,15 @@ function PartnershipBlock({
             )}
             <Button
               size="sm"
-              className="mt-2 rounded-lg"
+              className="mt-1 rounded-lg"
               onClick={handleSaveRates}
               disabled={update.isPending}
             >
               {update.isPending ? "Saving…" : "Save your rate"}
             </Button>
           </div>
-          <div className="border-border/80 bg-muted/30 space-y-2 rounded-xl border border-dashed p-4">
-            <p className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
+          <div className="space-y-2">
+            <p className="text-muted-foreground text-xs font-medium">
               Partner&apos;s rate (they set)
             </p>
             <p className="text-sm">
@@ -672,7 +1055,7 @@ function PartnershipBlock({
             </p>
           </div>
         </div>
-        <div className="bg-primary/10 flex flex-wrap items-center gap-2 rounded-lg px-4 py-2">
+        <div className="bg-primary/10 flex flex-wrap items-center gap-2 rounded-lg px-3 py-2">
           <span className="text-muted-foreground text-sm">
             Ratio (you → them : them → you)
           </span>
@@ -682,13 +1065,11 @@ function PartnershipBlock({
         </div>
       </div>
 
-      <Separator className="my-6" />
-
       {/* Features */}
-      <div className="space-y-4">
+      <div className="space-y-3">
         <p className="text-sm font-semibold">Features</p>
-        <div className="space-y-3">
-          <div className="bg-background/60 hover:bg-background/80 flex items-start justify-between gap-4 rounded-lg px-4 py-3 transition-colors">
+        <div className="space-y-2">
+          <div className="bg-background/60 hover:bg-background/80 flex items-start justify-between gap-4 rounded-lg px-4 py-2.5 transition-colors">
             <div>
               <Label className="text-sm">Shared referrals</Label>
               <p className="text-muted-foreground text-xs">
@@ -702,7 +1083,7 @@ function PartnershipBlock({
             />
           </div>
           {partnership.sharedReferrals && (
-            <div className="bg-background/60 hover:bg-background/80 flex items-start justify-between gap-4 rounded-lg px-4 py-3 pl-6 transition-colors">
+            <div className="bg-background/60 hover:bg-background/80 flex items-start justify-between gap-4 rounded-lg px-4 py-2.5 transition-colors">
               <div>
                 <Label className="text-sm">Share referral rewards</Label>
                 <p className="text-muted-foreground text-xs">
@@ -718,7 +1099,7 @@ function PartnershipBlock({
               />
             </div>
           )}
-          <div className="bg-background/60 hover:bg-background/80 flex items-start justify-between gap-4 rounded-lg px-4 py-3 transition-colors">
+          <div className="bg-background/60 hover:bg-background/80 flex items-start justify-between gap-4 rounded-lg px-4 py-2.5 transition-colors">
             <div>
               <Label className="text-sm">Shared campaigns</Label>
               <p className="text-muted-foreground text-xs">
@@ -735,7 +1116,7 @@ function PartnershipBlock({
       </div>
 
       {partnership.sharedCampaigns && (
-        <div className="bg-muted/30 mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl px-4 py-3">
+        <div className="bg-muted/30 flex flex-wrap items-center justify-between gap-3 rounded-lg px-4 py-2.5">
           <p className="text-muted-foreground text-sm">
             Create a partner campaign for this partnership.
           </p>
@@ -752,13 +1133,11 @@ function PartnershipBlock({
         </div>
       )}
 
-      <Separator className="my-6" />
-
       {/* Dissolve */}
-      <div className="border-destructive/20 bg-destructive/5 flex flex-wrap items-center gap-3 rounded-xl border px-4 py-3">
+      <div className="bg-muted/30 rounded-lg px-4 py-2.5">
         {confirmDissolve ? (
-          <>
-            <span className="text-destructive text-sm font-medium">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-destructive mr-auto text-sm font-medium">
               Are you sure? This can&apos;t be undone easily.
             </span>
             <Button
@@ -778,17 +1157,22 @@ function PartnershipBlock({
             >
               Confirm dissolve
             </Button>
-          </>
+          </div>
         ) : (
-          <Button
-            size="sm"
-            variant="destructive"
-            className="rounded-lg"
-            onClick={() => setConfirmDissolve(true)}
-            icon={<Trash2 className="h-3.5 w-3.5" />}
-          >
-            Dissolve partnership
-          </Button>
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-muted-foreground text-sm">
+              Dissolve this partnership
+            </p>
+            <Button
+              size="sm"
+              variant="destructive"
+              className="rounded-lg"
+              onClick={() => setConfirmDissolve(true)}
+              icon={<Trash2 className="h-3.5 w-3.5" />}
+            >
+              Dissolve
+            </Button>
+          </div>
         )}
       </div>
     </div>
@@ -805,22 +1189,22 @@ function ActivePartnerships({ myBusinessId }: { myBusinessId: string }) {
   if (isLoading) {
     return (
       <div className="space-y-4">
-        <Skeleton className="h-48 w-full rounded-2xl" />
-        <Skeleton className="h-48 w-full rounded-2xl" />
+        <Skeleton className="h-40 w-full rounded-xl" />
+        <Skeleton className="h-40 w-full rounded-xl" />
       </div>
     );
   }
 
   if (partnerships.length === 0) {
     return (
-      <div className="border-border/60 bg-muted/20 flex flex-col items-center rounded-2xl border border-dashed py-20 text-center">
-        <div className="bg-muted/50 flex h-16 w-16 items-center justify-center rounded-2xl">
-          <Handshake className="text-muted-foreground/50 h-8 w-8" />
+      <div className="flex flex-col items-center py-10 text-center">
+        <div className="bg-muted/50 flex h-12 w-12 items-center justify-center rounded-xl">
+          <Handshake className="text-muted-foreground/50 h-6 w-6" />
         </div>
-        <p className="text-muted-foreground mt-5 text-base font-semibold">
+        <p className="text-muted-foreground mt-3 text-sm font-semibold">
           No partnerships yet
         </p>
-        <p className="text-muted-foreground mt-1 max-w-sm text-sm">
+        <p className="text-muted-foreground mt-1 max-w-sm text-xs">
           Send a request to get started. When they accept, you can set exchange
           rates and features here.
         </p>
@@ -829,7 +1213,7 @@ function ActivePartnerships({ myBusinessId }: { myBusinessId: string }) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="divide-border/30 divide-y">
       {partnerships.map((p) => (
         <PartnershipBlock
           key={p.id}
@@ -860,14 +1244,14 @@ function PartnerCampaignsList() {
           <div>
             <p className="font-medium">{c.title || "Untitled campaign"}</p>
             <p className="text-muted-foreground text-xs">
-              {c.createdByBusiness.name} · {c.status}
+              {c.createdByBusiness.name} · {formatStatusLabel(c.status)}
             </p>
           </div>
           <Badge
             variant={c.status === "DRAFT" ? "secondary" : "default"}
             className="rounded-full font-medium"
           >
-            {c.status}
+            {formatStatusLabel(c.status)}
           </Badge>
         </li>
       ))}
@@ -879,109 +1263,54 @@ function PartnerCampaignsList() {
 // Page
 // ---------------------------------------------------------------------------
 const PAGE_SUBTITLE =
-  "Partner with other businesses to share referrals, run joint campaigns, and let customers use loyalty value across both. Each business sets only their own exchange rate.";
+  "Share referrals, run joint campaigns, and let customers redeem loyalty value across partners.";
 
 export function PartnersSettingsPageClient() {
   const { data: businessData } = useCurrentBusiness();
   const myBusinessId: string = businessData?.business?.id ?? "";
 
   return (
-    <PageLayout
-      title="Connect with partners"
+    <DashboardPageShell
+      title="Partners"
       subtitle={PAGE_SUBTITLE}
-      size="default"
-      scaffoldSectionClassName="h-full w-full pt-2 pb-0"
+      contentVariant="contained"
     >
-      <ScaffoldContainer>
-        <div className="space-y-14 pb-20">
-          {/* Setup */}
-          <section className="space-y-5">
-            <h2 className="text-lg font-semibold tracking-tight">Setup</h2>
-            <div className="space-y-4">
-              <GeneralSettings />
-              <SendRequest />
-            </div>
-          </section>
+      <div className="space-y-4 pb-6">
+        {/* Setup */}
+        <section className="grid gap-4 xl:grid-cols-2">
+          <div>
+            <GeneralSettings />
+          </div>
+          <SendRequest />
+        </section>
 
-          <Separator className="my-2" />
+        {/* Requests */}
+        <section className="grid gap-4 xl:grid-cols-2">
+          <IncomingRequests />
+          <SentRequests />
+        </section>
 
-          {/* Requests */}
-          <section className="space-y-6">
-            <h2 className="text-lg font-semibold tracking-tight">Requests</h2>
+        <PermanentlyRejected />
 
-            <Card className="flex min-h-0 flex-col gap-0 rounded-xl border-0 bg-[#EDE7D9] p-2 pb-3 shadow-none">
-              <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
-                <CardTitle className="text-foreground text-base leading-none font-semibold">
-                  Incoming
-                </CardTitle>
-                <CardDescription className="text-muted-foreground mt-0.5 text-sm">
-                  Partnership requests sent to you by other businesses
-                </CardDescription>
-              </CardHeader>
-              <Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border-0 bg-[#FAF8F1] shadow-none">
-                <CardContent className="min-h-[120px] overflow-hidden px-4 py-4">
-                  <IncomingRequests />
-                </CardContent>
-              </Card>
-            </Card>
+        {/* Active partnerships */}
+        <section>
+          <SettingsPanel
+            title="Active partnerships"
+            description="Exchange rates and features per partner."
+            contentClassName="py-4 sm:p-4"
+          >
+            <ActivePartnerships myBusinessId={myBusinessId} />
+          </SettingsPanel>
+        </section>
 
-            <Card className="flex min-h-0 flex-col gap-0 rounded-xl border-0 bg-[#EDE7D9] p-2 pb-3 shadow-none">
-              <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
-                <CardTitle className="text-foreground text-base leading-none font-semibold">
-                  Sent
-                </CardTitle>
-                <CardDescription className="text-muted-foreground mt-0.5 text-sm">
-                  Partnership requests you have sent
-                </CardDescription>
-              </CardHeader>
-              <Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border-0 bg-[#FAF8F1] shadow-none">
-                <CardContent className="min-h-[120px] overflow-hidden px-4 py-4">
-                  <SentRequests />
-                </CardContent>
-              </Card>
-            </Card>
-          </section>
-
-          <PermanentlyRejected />
-
-          <Separator className="my-2" />
-
-          {/* Active partnerships */}
-          <section className="space-y-5">
-            <Card className="flex min-h-0 flex-col gap-0 rounded-xl border-0 bg-[#EDE7D9] p-2 pb-3 shadow-none">
-              <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
-                <CardTitle className="text-foreground text-base leading-none font-semibold">
-                  Active partnerships
-                </CardTitle>
-                <CardDescription className="text-muted-foreground mt-0.5 text-sm">
-                  Exchange rates and features per partner.
-                </CardDescription>
-              </CardHeader>
-              <Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border-0 bg-[#FAF8F1] shadow-none">
-                <CardContent className="overflow-hidden px-4 py-4 sm:p-6">
-                  <ActivePartnerships myBusinessId={myBusinessId} />
-                </CardContent>
-              </Card>
-            </Card>
-          </section>
-
-          <Card className="flex min-h-0 flex-col gap-0 rounded-xl border-0 bg-[#EDE7D9] p-2 pb-3 shadow-none">
-            <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
-              <CardTitle className="text-foreground text-base leading-none font-semibold">
-                Partner campaigns
-              </CardTitle>
-              <CardDescription className="text-muted-foreground mt-0.5 text-sm">
-                Joint campaigns with your partners
-              </CardDescription>
-            </CardHeader>
-            <Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border-0 bg-[#FAF8F1] shadow-none">
-              <CardContent className="overflow-hidden px-4 py-4 sm:p-6">
-                <PartnerCampaignsList />
-              </CardContent>
-            </Card>
-          </Card>
-        </div>
-      </ScaffoldContainer>
-    </PageLayout>
+        <SettingsPanel
+          title="Partner campaigns"
+          description="Joint campaigns with your partners."
+          contentClassName="py-4 sm:p-4"
+        >
+          <PartnerCampaignsList />
+        </SettingsPanel>
+      </div>
+    </DashboardPageShell>
   );
 }

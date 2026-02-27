@@ -173,7 +173,7 @@ export function DataTableDateFilter<TData>({
       <PopoverTrigger asChild>
         <Button
           variant="outline"
-          className="border-dashed font-normal"
+          className="border-border/60 bg-background/50 h-10 rounded-lg font-normal"
           icon={
             hasValue ? (
               <div
