@@ -220,6 +220,27 @@ export function FeedbackExistingSettings({
 }: FeedbackExistingSettingsProps) {
   const { mutateAsync: updateConfig } = useUpdateFeedbackConfig();
 
+  const handleUpdateBranding = async (values: Record<string, string>) => {
+    try {
+      await updateConfig({
+        branding: {
+          logo: values.logo || null,
+          themeColor: values.themeColor || null,
+          textColor: values.textColor || null,
+          bannerImage: values.bannerImage || null,
+          header: values.header || null,
+          subtitle: values.subtitle || null,
+        },
+      });
+      return { success: true };
+    } catch (error: unknown) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to update",
+      };
+    }
+  };
+
   const handleUpdateFollowUp = async (values: Record<string, string>) => {
     try {
       await updateConfig({
@@ -373,6 +394,58 @@ export function FeedbackExistingSettings({
             config.rewardAmount != null ? String(config.rewardAmount) : "",
         }}
         onSubmit={handleUpdateRewards}
+      />
+
+      <SettingsFieldGroup
+        title="Branding"
+        description="Customize appearance of the feedback page"
+        fields={[
+          {
+            name: "logo",
+            label: "Logo URL",
+            placeholder: "https://...",
+            helpText: "Image URL for your logo.",
+          },
+          {
+            name: "themeColor",
+            label: "Theme Color",
+            placeholder: "#7c3aed",
+            helpText: "Hex color (e.g. #7c3aed).",
+          },
+          {
+            name: "textColor",
+            label: "Text Color",
+            placeholder: "#ffffff",
+            helpText: "Hex color for text.",
+          },
+          {
+            name: "bannerImage",
+            label: "Banner Image URL",
+            placeholder: "https://...",
+            helpText: "Image URL for banner.",
+          },
+          {
+            name: "header",
+            label: "Header",
+            placeholder: "We'd love your feedback",
+            helpText: "Main heading on feedback pages.",
+          },
+          {
+            name: "subtitle",
+            label: "Subtitle",
+            placeholder: "Share your experience with us",
+            helpText: "Subheading or short description.",
+          },
+        ]}
+        defaultValues={{
+          logo: config.branding?.logo ?? "",
+          themeColor: config.branding?.themeColor ?? "",
+          textColor: config.branding?.textColor ?? "",
+          bannerImage: config.branding?.bannerImage ?? "",
+          header: config.branding?.header ?? "",
+          subtitle: config.branding?.subtitle ?? "",
+        }}
+        onSubmit={handleUpdateBranding}
       />
 
       <SettingsFieldGroup

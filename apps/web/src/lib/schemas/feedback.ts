@@ -15,6 +15,18 @@ const onlineReviewPlatformSchema = z.enum([
   "OTHER",
 ]);
 
+const brandingUpdateSchema = z
+  .object({
+    logo: z.string().max(500).optional().nullable(),
+    themeColor: z.string().max(50).optional().nullable(),
+    textColor: z.string().max(50).optional().nullable(),
+    bannerImage: z.string().max(500).optional().nullable(),
+    header: z.string().max(120).optional().nullable(),
+    subtitle: z.string().max(200).optional().nullable(),
+  })
+  .optional()
+  .nullable();
+
 export const feedbackConfigUpdateSchema = z.object({
   positiveFollowUp: z.string().max(500).optional().nullable(),
   negativeFollowUp: z.string().max(500).optional().nullable(),
@@ -34,6 +46,7 @@ export const feedbackConfigUpdateSchema = z.object({
   askForOnlineReviews: z.boolean().optional(),
   onlineReviewLink: z.string().max(500).optional().nullable(),
   onlineReviewPlatform: onlineReviewPlatformSchema.optional().nullable(),
+  branding: brandingUpdateSchema,
 });
 
 export const feedbackStatsQuerySchema = z.object({

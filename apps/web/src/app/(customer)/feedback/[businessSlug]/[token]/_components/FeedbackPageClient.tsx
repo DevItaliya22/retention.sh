@@ -2,7 +2,6 @@
 
 import { FEEDBACK_FORM_DEFAULTS } from "@/lib/constants/forms";
 import {
-  Button,
   Card,
   CardContent,
   CardHeader,
@@ -32,7 +31,14 @@ interface PublicFeedbackConfig {
   askForOnlineReviews: boolean;
   onlineReviewLink: string | null;
   onlineReviewPlatform: string | null;
-  branding: unknown;
+  branding: {
+    logo: string | null;
+    themeColor: string | null;
+    textColor: string | null;
+    bannerImage: string | null;
+    header: string | null;
+    subtitle: string | null;
+  } | null;
 }
 
 interface OnlineReview {
@@ -67,9 +73,10 @@ const platformLabel: Record<string, string> = {
 };
 
 const pageWrapperClass =
-  "bg-muted/30 flex min-h-screen min-h-[100dvh] w-full items-center justify-center p-4 py-6 sm:p-6";
+  "bg-[#F4F4F5] flex min-h-screen min-h-[100dvh] w-full items-center justify-center p-4 sm:p-6";
 
-const cardClass = "w-full max-w-md rounded-xl border shadow-sm";
+const cardClass =
+  "w-full max-w-[420px] rounded-[32px] border border-gray-200/70 bg-white shadow-sm overflow-hidden flex flex-col";
 
 function OnlineReviewCTA({
   review,
@@ -318,22 +325,73 @@ export function FeedbackPageClient({
     );
   }
 
+  const branding = config.branding;
+  const themeColor = branding?.themeColor || "#000000";
+  const textColor = branding?.textColor || "#ffffff";
+  const bannerImage = branding?.bannerImage || null;
+  const logo = branding?.logo || null;
+  const headerText = branding?.header || "We'd love your feedback";
+  const subtitleText =
+    branding?.subtitle || FEEDBACK_FORM_DEFAULTS.labels.howWasExperience;
+
   return (
     <div className={pageWrapperClass}>
       <Card className={cardClass}>
-        <CardHeader className="px-4 pt-6 pb-2 text-center sm:px-6">
-          <div className="bg-primary/10 text-primary mx-auto mb-2 flex size-12 items-center justify-center rounded-full">
-            <MessageSquare className="size-6" />
-          </div>
-          <h1 className="text-lg font-semibold sm:text-xl">
-            We'd love your feedback
-          </h1>
-          {billNumber && (
-            <p className="text-muted-foreground mt-1 text-sm">
-              Bill #{billNumber}
-            </p>
+        {/* Branded header similar to referral card */}
+        <div
+          className="relative px-6 pt-10 pb-12 text-center"
+          style={{ backgroundColor: themeColor }}
+        >
+          {bannerImage && (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={bannerImage}
+                alt=""
+                className="absolute inset-0 h-full w-full object-cover"
+              />
+              <div
+                className="absolute inset-0"
+                style={{ backgroundColor: themeColor, opacity: 0.88 }}
+              />
+            </>
           )}
-        </CardHeader>
+
+          <div className="relative z-10 flex flex-col items-center">
+            <div className="mb-4 h-16 w-16 rounded-full bg-white/15 p-[3px]">
+              <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-white">
+                {logo ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={logo}
+                    alt={businessSlug}
+                    className="h-full w-full object-contain"
+                  />
+                ) : (
+                  <span className="text-lg font-medium text-neutral-400">
+                    {(businessSlug || "B").charAt(0).toUpperCase()}
+                  </span>
+                )}
+              </div>
+            </div>
+            <h1
+              className="text-[20px] leading-snug font-semibold"
+              style={{ color: textColor }}
+            >
+              {headerText}
+            </h1>
+            <p
+              className="mt-1 text-xs leading-relaxed opacity-80"
+              style={{ color: textColor }}
+            >
+              {subtitleText}
+            </p>
+            {billNumber && (
+              <p className="mt-2 text-xs text-white/70">Bill #{billNumber}</p>
+            )}
+          </div>
+        </div>
+
         <CardContent className="space-y-6 px-4 pt-4 pb-6 sm:px-6">
           {/* Rating 1–5: touch-friendly stars */}
           <div className="space-y-2">
@@ -412,7 +470,7 @@ export function FeedbackPageClient({
               <Label className="text-sm">
                 What did you like or not like? (optional)
               </Label>
-              <div className="bg-card rounded-lg border shadow-sm">
+              <div className="bg-card rounded-lg border">
                 {config.selectionOptions.map((opt, index) => (
                   <label
                     key={opt.id}
@@ -467,16 +525,17 @@ export function FeedbackPageClient({
             <p className="text-destructive text-sm">{followUpMessage}</p>
           )}
 
-          <Button
+          <button
             type="button"
             onClick={submitFeedback}
             disabled={submitStatus === "submitting"}
-            className="min-h-[48px] w-full touch-manipulation text-base font-medium"
+            className="flex h-11 w-full items-center justify-center gap-2 rounded-[12px] text-[14px] font-medium transition-colors active:opacity-90"
+            style={{ backgroundColor: themeColor, color: textColor }}
           >
             {submitStatus === "submitting"
               ? FEEDBACK_FORM_DEFAULTS.labels.submittingButton
               : FEEDBACK_FORM_DEFAULTS.labels.submitButton}
-          </Button>
+          </button>
         </CardContent>
       </Card>
     </div>
