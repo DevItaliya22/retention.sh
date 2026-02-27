@@ -1,5 +1,6 @@
 "use client";
 
+import { SettingsField } from "@/components/common/settings/SettingsField";
 import { SettingsFieldGroup } from "@/components/common/settings/SettingsFieldGroup";
 import type { ReferralProgram } from "@/hooks/referral/useReferralProgram";
 import { useUpdateReferralProgram } from "@/hooks/referral/useReferralProgram";
@@ -26,11 +27,10 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-  Switch,
   Textarea,
 } from "@reelo/ui/components";
 import { Plus, Trash2 } from "lucide-react";
-import { useEffect, useTransition } from "react";
+import { useEffect } from "react";
 import type { Resolver } from "react-hook-form";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -187,110 +187,47 @@ function NewCustomerBenefitsCard({
   };
 
   return (
-    <Card className="gap-0 p-0!">
-      <CardHeader className="flex flex-col gap-0 border-b py-2!">
-        <CardTitle className="text-base font-medium">
+    <Card className="flex min-h-0 flex-col gap-0 rounded-xl border-0 bg-[#EDE7D9] p-2 pb-3 shadow-none">
+      <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
+        <CardTitle className="text-foreground text-base leading-none font-semibold">
           New Customer Benefits
         </CardTitle>
-        <CardDescription className="text-xs">
+        <CardDescription className="text-muted-foreground mt-0.5 text-sm">
           Rewards for customers who join through a referral link
         </CardDescription>
       </CardHeader>
-      <Form {...form}>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            void runSubmit();
-          }}
-        >
-          <CardContent className="flex flex-col gap-y-4 border-b px-6 py-4">
-            <FormField
-              control={form.control}
-              name="newCustomerBenefitType"
-              render={({ field }) => (
-                <FormItem className="flex flex-col gap-2 md:grid md:grid-cols-12">
-                  <div className="col-span-4">
-                    <FormLabel className="text-sm">Benefit Type</FormLabel>
-                  </div>
-                  <div className="col-span-8">
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="w-full rounded-none border-0 border-b bg-transparent px-0 py-3 shadow-none focus-visible:ring-0">
-                          <SelectValue placeholder="Select benefit type" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {BENEFIT_TYPE_OPTIONS.map((opt) => (
-                          <SelectItem key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </div>
-                </FormItem>
-              )}
-            />
-            {benefitType === "AMOUNT_CASHBACK" && (
+      <Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border-0 bg-[#FAF8F1] shadow-none">
+        <Form {...form}>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              void runSubmit();
+            }}
+            className="flex min-h-0 flex-1 flex-col"
+          >
+            <CardContent className="flex min-h-0 flex-1 flex-col gap-y-4 overflow-auto px-4 py-4">
               <FormField
                 control={form.control}
-                name="newCustomerBenefitValue"
+                name="newCustomerBenefitType"
                 render={({ field }) => (
                   <FormItem className="flex flex-col gap-2 md:grid md:grid-cols-12">
                     <div className="col-span-4">
-                      <FormLabel className="text-sm">
-                        Cashback Amount (₹)
-                      </FormLabel>
-                    </div>
-                    <div className="col-span-8">
-                      <FormControl>
-                        <Input
-                          variant="underline"
-                          type="number"
-                          min={0}
-                          placeholder="100"
-                          {...field}
-                          value={field.value}
-                          onChange={(e) =>
-                            field.onChange(
-                              String(
-                                Math.max(0, parseInt(e.target.value) || 0),
-                              ),
-                            )
-                          }
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </div>
-                  </FormItem>
-                )}
-              />
-            )}
-            {benefitType === "FREE_ITEM_ON_NEXT_PURCHASE" && (
-              <FormField
-                control={form.control}
-                name="newCustomerFreeItemSkuId"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col gap-2 md:grid md:grid-cols-12">
-                    <div className="col-span-4">
-                      <FormLabel className="text-sm">Free Item</FormLabel>
+                      <FormLabel className="text-sm">Benefit Type</FormLabel>
                     </div>
                     <div className="col-span-8">
                       <Select
                         onValueChange={field.onChange}
                         value={field.value}
-                        disabled={skus.length === 0}
                       >
                         <FormControl>
                           <SelectTrigger className="w-full rounded-none border-0 border-b bg-transparent px-0 py-3 shadow-none focus-visible:ring-0">
-                            <SelectValue placeholder="Select item" />
+                            <SelectValue placeholder="Select benefit type" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {skus.map((s) => (
-                            <SelectItem key={s.id} value={s.id}>
-                              {s.name} {s.sku ? `(${s.sku})` : ""}
+                          {BENEFIT_TYPE_OPTIONS.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>
+                              {opt.label}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -300,46 +237,117 @@ function NewCustomerBenefitsCard({
                   </FormItem>
                 )}
               />
-            )}
-            <FormField
-              control={form.control}
-              name="newCustomerBenefitExpiresInDays"
-              render={({ field }) => (
-                <FormItem className="flex flex-col gap-2 md:grid md:grid-cols-12">
-                  <div className="col-span-4">
-                    <FormLabel className="text-sm">Expires In (Days)</FormLabel>
-                  </div>
-                  <div className="col-span-8">
-                    <FormControl>
-                      <Input
-                        variant="underline"
-                        type="number"
-                        min={1}
-                        placeholder="Optional"
-                        {...field}
-                        value={field.value}
-                        onChange={(e) => field.onChange(e.target.value)}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </div>
-                </FormItem>
+              {benefitType === "AMOUNT_CASHBACK" && (
+                <FormField
+                  control={form.control}
+                  name="newCustomerBenefitValue"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col gap-2 md:grid md:grid-cols-12">
+                      <div className="col-span-4">
+                        <FormLabel className="text-sm">
+                          Cashback Amount (₹)
+                        </FormLabel>
+                      </div>
+                      <div className="col-span-8">
+                        <FormControl>
+                          <Input
+                            variant="underline"
+                            type="number"
+                            min={0}
+                            placeholder="100"
+                            {...field}
+                            value={field.value}
+                            onChange={(e) =>
+                              field.onChange(
+                                String(
+                                  Math.max(0, parseInt(e.target.value) || 0),
+                                ),
+                              )
+                            }
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </div>
+                    </FormItem>
+                  )}
+                />
               )}
-            />
-          </CardContent>
-          <CardFooter className="flex justify-end px-6 py-2">
-            <SaveButton
-              onSave={runSubmit}
-              disabled={!form.formState.isDirty}
-              labels={{
-                idle: "Save changes",
-                loading: "Saving",
-                success: "Saved",
-              }}
-            />
-          </CardFooter>
-        </form>
-      </Form>
+              {benefitType === "FREE_ITEM_ON_NEXT_PURCHASE" && (
+                <FormField
+                  control={form.control}
+                  name="newCustomerFreeItemSkuId"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col gap-2 md:grid md:grid-cols-12">
+                      <div className="col-span-4">
+                        <FormLabel className="text-sm">Free Item</FormLabel>
+                      </div>
+                      <div className="col-span-8">
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value}
+                          disabled={skus.length === 0}
+                        >
+                          <FormControl>
+                            <SelectTrigger className="w-full rounded-none border-0 border-b bg-transparent px-0 py-3 shadow-none focus-visible:ring-0">
+                              <SelectValue placeholder="Select item" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {skus.map((s) => (
+                              <SelectItem key={s.id} value={s.id}>
+                                {s.name} {s.sku ? `(${s.sku})` : ""}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </div>
+                    </FormItem>
+                  )}
+                />
+              )}
+              <FormField
+                control={form.control}
+                name="newCustomerBenefitExpiresInDays"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col gap-2 md:grid md:grid-cols-12">
+                    <div className="col-span-4">
+                      <FormLabel className="text-sm">
+                        Expires In (Days)
+                      </FormLabel>
+                    </div>
+                    <div className="col-span-8">
+                      <FormControl>
+                        <Input
+                          variant="underline"
+                          type="number"
+                          min={1}
+                          placeholder="Optional"
+                          {...field}
+                          value={field.value}
+                          onChange={(e) => field.onChange(e.target.value)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </div>
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+            <CardFooter className="flex shrink-0 justify-end border-0 px-4 py-2">
+              <SaveButton
+                onSave={runSubmit}
+                disabled={!form.formState.isDirty}
+                labels={{
+                  idle: "Save changes",
+                  loading: "Saving",
+                  success: "Saved",
+                }}
+              />
+            </CardFooter>
+          </form>
+        </Form>
+      </Card>
     </Card>
   );
 }
@@ -415,110 +423,47 @@ function ExistingCustomerBenefitsCard({
   };
 
   return (
-    <Card className="gap-0 p-0!">
-      <CardHeader className="flex flex-col gap-0 border-b py-2!">
-        <CardTitle className="text-base font-medium">
+    <Card className="flex min-h-0 flex-col gap-0 rounded-xl border-0 bg-[#EDE7D9] p-2 pb-3 shadow-none">
+      <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
+        <CardTitle className="text-foreground text-base leading-none font-semibold">
           Existing Customer Benefits
         </CardTitle>
-        <CardDescription className="text-xs">
+        <CardDescription className="text-muted-foreground mt-0.5 text-sm">
           Rewards for customers who refer others
         </CardDescription>
       </CardHeader>
-      <Form {...form}>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            void runSubmit();
-          }}
-        >
-          <CardContent className="flex flex-col gap-y-4 border-b px-6 py-4">
-            <FormField
-              control={form.control}
-              name="existingCustomerBenefitType"
-              render={({ field }) => (
-                <FormItem className="flex flex-col gap-2 md:grid md:grid-cols-12">
-                  <div className="col-span-4">
-                    <FormLabel className="text-sm">Benefit Type</FormLabel>
-                  </div>
-                  <div className="col-span-8">
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="w-full rounded-none border-0 border-b bg-transparent px-0 py-3 shadow-none focus-visible:ring-0">
-                          <SelectValue placeholder="Select benefit type" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {BENEFIT_TYPE_OPTIONS.map((opt) => (
-                          <SelectItem key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </div>
-                </FormItem>
-              )}
-            />
-            {benefitType === "AMOUNT_CASHBACK" && (
+      <Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border-0 bg-[#FAF8F1] shadow-none">
+        <Form {...form}>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              void runSubmit();
+            }}
+            className="flex min-h-0 flex-1 flex-col"
+          >
+            <CardContent className="flex min-h-0 flex-1 flex-col gap-y-4 overflow-auto px-4 py-4">
               <FormField
                 control={form.control}
-                name="existingCustomerBenefitValue"
+                name="existingCustomerBenefitType"
                 render={({ field }) => (
                   <FormItem className="flex flex-col gap-2 md:grid md:grid-cols-12">
                     <div className="col-span-4">
-                      <FormLabel className="text-sm">
-                        Cashback Amount (₹)
-                      </FormLabel>
-                    </div>
-                    <div className="col-span-8">
-                      <FormControl>
-                        <Input
-                          variant="underline"
-                          type="number"
-                          min={0}
-                          placeholder="50"
-                          {...field}
-                          value={field.value}
-                          onChange={(e) =>
-                            field.onChange(
-                              String(
-                                Math.max(0, parseInt(e.target.value) || 0),
-                              ),
-                            )
-                          }
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </div>
-                  </FormItem>
-                )}
-              />
-            )}
-            {benefitType === "FREE_ITEM_ON_NEXT_PURCHASE" && (
-              <FormField
-                control={form.control}
-                name="existingCustomerFreeItemSkuId"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col gap-2 md:grid md:grid-cols-12">
-                    <div className="col-span-4">
-                      <FormLabel className="text-sm">Free Item</FormLabel>
+                      <FormLabel className="text-sm">Benefit Type</FormLabel>
                     </div>
                     <div className="col-span-8">
                       <Select
                         onValueChange={field.onChange}
                         value={field.value}
-                        disabled={skus.length === 0}
                       >
                         <FormControl>
                           <SelectTrigger className="w-full rounded-none border-0 border-b bg-transparent px-0 py-3 shadow-none focus-visible:ring-0">
-                            <SelectValue placeholder="Select item" />
+                            <SelectValue placeholder="Select benefit type" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {skus.map((s) => (
-                            <SelectItem key={s.id} value={s.id}>
-                              {s.name} {s.sku ? `(${s.sku})` : ""}
+                          {BENEFIT_TYPE_OPTIONS.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>
+                              {opt.label}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -528,46 +473,117 @@ function ExistingCustomerBenefitsCard({
                   </FormItem>
                 )}
               />
-            )}
-            <FormField
-              control={form.control}
-              name="existingCustomerBenefitExpiresInDays"
-              render={({ field }) => (
-                <FormItem className="flex flex-col gap-2 md:grid md:grid-cols-12">
-                  <div className="col-span-4">
-                    <FormLabel className="text-sm">Expires In (Days)</FormLabel>
-                  </div>
-                  <div className="col-span-8">
-                    <FormControl>
-                      <Input
-                        variant="underline"
-                        type="number"
-                        min={1}
-                        placeholder="Optional"
-                        {...field}
-                        value={field.value}
-                        onChange={(e) => field.onChange(e.target.value)}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </div>
-                </FormItem>
+              {benefitType === "AMOUNT_CASHBACK" && (
+                <FormField
+                  control={form.control}
+                  name="existingCustomerBenefitValue"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col gap-2 md:grid md:grid-cols-12">
+                      <div className="col-span-4">
+                        <FormLabel className="text-sm">
+                          Cashback Amount (₹)
+                        </FormLabel>
+                      </div>
+                      <div className="col-span-8">
+                        <FormControl>
+                          <Input
+                            variant="underline"
+                            type="number"
+                            min={0}
+                            placeholder="50"
+                            {...field}
+                            value={field.value}
+                            onChange={(e) =>
+                              field.onChange(
+                                String(
+                                  Math.max(0, parseInt(e.target.value) || 0),
+                                ),
+                              )
+                            }
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </div>
+                    </FormItem>
+                  )}
+                />
               )}
-            />
-          </CardContent>
-          <CardFooter className="flex justify-end px-6 py-2">
-            <SaveButton
-              onSave={runSubmit}
-              disabled={!form.formState.isDirty}
-              labels={{
-                idle: "Save changes",
-                loading: "Saving",
-                success: "Saved",
-              }}
-            />
-          </CardFooter>
-        </form>
-      </Form>
+              {benefitType === "FREE_ITEM_ON_NEXT_PURCHASE" && (
+                <FormField
+                  control={form.control}
+                  name="existingCustomerFreeItemSkuId"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col gap-2 md:grid md:grid-cols-12">
+                      <div className="col-span-4">
+                        <FormLabel className="text-sm">Free Item</FormLabel>
+                      </div>
+                      <div className="col-span-8">
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value}
+                          disabled={skus.length === 0}
+                        >
+                          <FormControl>
+                            <SelectTrigger className="w-full rounded-none border-0 border-b bg-transparent px-0 py-3 shadow-none focus-visible:ring-0">
+                              <SelectValue placeholder="Select item" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {skus.map((s) => (
+                              <SelectItem key={s.id} value={s.id}>
+                                {s.name} {s.sku ? `(${s.sku})` : ""}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </div>
+                    </FormItem>
+                  )}
+                />
+              )}
+              <FormField
+                control={form.control}
+                name="existingCustomerBenefitExpiresInDays"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col gap-2 md:grid md:grid-cols-12">
+                    <div className="col-span-4">
+                      <FormLabel className="text-sm">
+                        Expires In (Days)
+                      </FormLabel>
+                    </div>
+                    <div className="col-span-8">
+                      <FormControl>
+                        <Input
+                          variant="underline"
+                          type="number"
+                          min={1}
+                          placeholder="Optional"
+                          {...field}
+                          value={field.value}
+                          onChange={(e) => field.onChange(e.target.value)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </div>
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+            <CardFooter className="flex shrink-0 justify-end border-0 px-4 py-2">
+              <SaveButton
+                onSave={runSubmit}
+                disabled={!form.formState.isDirty}
+                labels={{
+                  idle: "Save changes",
+                  loading: "Saving",
+                  success: "Saved",
+                }}
+              />
+            </CardFooter>
+          </form>
+        </Form>
+      </Card>
     </Card>
   );
 }
@@ -580,7 +596,6 @@ export function ReferralExistingSettings({
   referralProgram,
 }: ReferralExistingSettingsProps) {
   const { mutateAsync: updateReferralProgram } = useUpdateReferralProgram();
-  const [reminderPending, startReminderTransition] = useTransition();
   const { data: skusData } = useActiveSkusForSelect();
   const skus = skusData?.items ?? [];
 
@@ -660,17 +675,6 @@ export function ReferralExistingSettings({
     }
   };
 
-  const handleReminderChange = async (value: boolean) => {
-    startReminderTransition(async () => {
-      try {
-        await updateReferralProgram({ sendReminderToCustomer: value });
-        toast.success("Settings updated successfully");
-      } catch (error: any) {
-        toast.error(error.message || "Failed to update");
-      }
-    });
-  };
-
   return (
     <div className="space-y-6">
       <NewCustomerBenefitsCard
@@ -684,24 +688,25 @@ export function ReferralExistingSettings({
         onSubmit={handleUpdateExistingCustomerBenefits}
       />
 
-      {/* Send reminder */}
-      <Card className="gap-0 p-0!">
-        <CardHeader className="flex flex-col gap-0 border-b py-2!">
-          <CardTitle className="text-base font-medium">Send Reminder</CardTitle>
-          <CardDescription className="text-xs">
-            Send reminder notifications to customers about their referral
-            rewards
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-row items-center justify-between px-6 py-4">
-          <span className="text-sm">Send reminder to customer</span>
-          <Switch
-            checked={referralProgram.sendReminderToCustomer}
-            onCheckedChange={handleReminderChange}
-            disabled={reminderPending}
-          />
-        </CardContent>
-      </Card>
+      <SettingsField
+        title="Send Reminder"
+        description="Send reminder notifications to customers about their referral rewards"
+        type="toggle"
+        defaultValue={referralProgram.sendReminderToCustomer}
+        onSubmit={async (data) => {
+          try {
+            await updateReferralProgram({
+              sendReminderToCustomer: data.value as boolean,
+            });
+            return { success: true };
+          } catch (error: unknown) {
+            return {
+              success: false,
+              error: (error as Error)?.message || "Failed to update",
+            };
+          }
+        }}
+      />
 
       {/* Information Sections - temporarily disabled
       <InformationSectionsCard
@@ -840,91 +845,94 @@ function InformationSectionsCard({
   };
 
   return (
-    <Card className="gap-0 p-0!">
-      <CardHeader className="flex flex-col gap-0 border-b py-2!">
-        <CardTitle className="text-base font-medium">
+    <Card className="flex min-h-0 flex-col gap-0 rounded-xl border-0 bg-[#EDE7D9] p-2 pb-3 shadow-none">
+      <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
+        <CardTitle className="text-foreground text-base leading-none font-semibold">
           How customers know more about you
         </CardTitle>
-        <CardDescription className="text-xs">
+        <CardDescription className="text-muted-foreground mt-0.5 text-sm">
           Information sections shown on referral pages
         </CardDescription>
       </CardHeader>
-      <Form {...form}>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            void runSubmit();
-          }}
-        >
-          <CardContent className="space-y-4 border-b px-6 py-4">
-            {watchSections.map((_, index) => (
-              <div key={index} className="flex gap-2 rounded-lg border p-4">
-                <div className="flex-1 space-y-2">
-                  <FormField
-                    control={form.control}
-                    name={`sections.${index}.title`}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs">Title</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Section title" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name={`sections.${index}.content`}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs">Content</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            placeholder="Section content"
-                            rows={2}
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+      <Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border-0 bg-[#FAF8F1] shadow-none">
+        <Form {...form}>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              void runSubmit();
+            }}
+            className="flex min-h-0 flex-1 flex-col"
+          >
+            <CardContent className="flex min-h-0 flex-1 flex-col gap-y-4 overflow-auto px-4 py-4">
+              {watchSections.map((_, index) => (
+                <div key={index} className="flex gap-2 rounded-lg border p-4">
+                  <div className="flex-1 space-y-2">
+                    <FormField
+                      control={form.control}
+                      name={`sections.${index}.title`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs">Title</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Section title" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name={`sections.${index}.content`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs">Content</FormLabel>
+                          <FormControl>
+                            <Textarea
+                              placeholder="Section content"
+                              rows={2}
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => removeSection(index)}
+                    className="shrink-0"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => removeSection(index)}
-                  className="shrink-0"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={addSection}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Add section
-            </Button>
-          </CardContent>
-          <CardFooter className="flex justify-end border-t px-6 py-4">
-            <SaveButton
-              onSave={runSubmit}
-              disabled={!form.formState.isDirty}
-              labels={{
-                idle: "Save changes",
-                loading: "Saving",
-                success: "Saved",
-              }}
-            />
-          </CardFooter>
-        </form>
-      </Form>
+              ))}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={addSection}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Add section
+              </Button>
+            </CardContent>
+            <CardFooter className="flex shrink-0 justify-end border-0 px-4 py-2">
+              <SaveButton
+                onSave={runSubmit}
+                disabled={!form.formState.isDirty}
+                labels={{
+                  idle: "Save changes",
+                  loading: "Saving",
+                  success: "Saved",
+                }}
+              />
+            </CardFooter>
+          </form>
+        </Form>
+      </Card>
     </Card>
   );
 }
@@ -979,71 +987,78 @@ function TermsCard({
   };
 
   return (
-    <Card className="gap-0 p-0!">
-      <CardHeader className="flex flex-col gap-0 border-b py-2!">
-        <CardTitle className="text-base font-medium">{title}</CardTitle>
-        <CardDescription className="text-xs">{description}</CardDescription>
+    <Card className="flex min-h-0 flex-col gap-0 rounded-xl border-0 bg-[#EDE7D9] p-2 pb-3 shadow-none">
+      <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
+        <CardTitle className="text-foreground text-base leading-none font-semibold">
+          {title}
+        </CardTitle>
+        <CardDescription className="text-muted-foreground mt-0.5 text-sm">
+          {description}
+        </CardDescription>
       </CardHeader>
-      <Form {...form}>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            void runSubmit();
-          }}
-        >
-          <CardContent className="space-y-3 border-b px-6 py-4">
-            {watchItems.map((_, index) => (
-              <div key={index} className="flex items-start gap-2">
-                <FormField
-                  control={form.control}
-                  name={`items.${index}`}
-                  render={({ field }) => (
-                    <FormItem className="flex-1">
-                      <FormControl>
-                        <Textarea
-                          variant="underline"
-                          placeholder={`Point ${index + 1}`}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => removePoint(index)}
-                  className="mt-2 shrink-0"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={addPoint}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Add point
-            </Button>
-          </CardContent>
-          <CardFooter className="flex justify-end border-t px-6 py-4">
-            <SaveButton
-              onSave={runSubmit}
-              disabled={!form.formState.isDirty}
-              labels={{
-                idle: "Save changes",
-                loading: "Saving",
-                success: "Saved",
-              }}
-            />
-          </CardFooter>
-        </form>
-      </Form>
+      <Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border-0 bg-[#FAF8F1] shadow-none">
+        <Form {...form}>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              void runSubmit();
+            }}
+            className="flex min-h-0 flex-1 flex-col"
+          >
+            <CardContent className="flex min-h-0 flex-1 flex-col gap-y-3 overflow-auto px-4 py-4">
+              {watchItems.map((_, index) => (
+                <div key={index} className="flex items-start gap-2">
+                  <FormField
+                    control={form.control}
+                    name={`items.${index}`}
+                    render={({ field }) => (
+                      <FormItem className="flex-1">
+                        <FormControl>
+                          <Textarea
+                            variant="underline"
+                            placeholder={`Point ${index + 1}`}
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => removePoint(index)}
+                    className="mt-2 shrink-0"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={addPoint}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Add point
+              </Button>
+            </CardContent>
+            <CardFooter className="flex shrink-0 justify-end border-0 px-4 py-2">
+              <SaveButton
+                onSave={runSubmit}
+                disabled={!form.formState.isDirty}
+                labels={{
+                  idle: "Save changes",
+                  loading: "Saving",
+                  success: "Saved",
+                }}
+              />
+            </CardFooter>
+          </form>
+        </Form>
+      </Card>
     </Card>
   );
 }
