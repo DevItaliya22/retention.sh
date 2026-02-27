@@ -78,6 +78,7 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
       title="Business Settings"
       subtitle="Manage your business settings"
       navigationItems={navigationItems}
+      navigationVariant="gooey"
       size="full"
       scaffoldSectionClassName="h-full w-full pt-2 pb-0"
     >

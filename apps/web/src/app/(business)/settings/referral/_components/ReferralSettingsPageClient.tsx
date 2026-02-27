@@ -9,6 +9,7 @@ import {
   ReferralProgram,
   useReferralProgram,
 } from "@/hooks/referral/useReferralProgram";
+import { REFERRAL_ONBOARDED_KEY } from "@/lib/constants/settings-storage";
 import { isServiceEnabled } from "@/lib/utils/service-enabled";
 import {
   Button,
@@ -19,35 +20,52 @@ import {
   EmptyTitle,
 } from "@reelo/ui/components";
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+
+function ReferralSkeletonLayout() {
+  return (
+    <PageLayout
+      title="Referral Program"
+      subtitle="Set up your referral program to reward customers"
+      size="default"
+      scaffoldSectionClassName="h-full w-full pt-2 pb-0"
+    >
+      <ScaffoldContainer>
+        <ReferralSettingsSkeleton />
+      </ScaffoldContainer>
+    </PageLayout>
+  );
+}
 
 export function ReferralSettingsPageClient() {
   const router = useRouter();
-  const { data: programData, isLoading: programLoading } = useReferralProgram();
-  const { data: businessData, isLoading: businessLoading } =
-    useCurrentBusiness();
+  const { data: programData } = useReferralProgram();
+  const { data: businessData } = useCurrentBusiness();
 
-  const isLoading = programLoading || businessLoading;
   const hasProgram = !!programData?.referralProgram;
   const referralEnabled =
     isServiceEnabled(businessData?.business?.isServiceEnabled, "referral") ??
     false;
 
-  if (isLoading && !programData && !businessData) {
-    return (
-      <PageLayout
-        title="Referral Program"
-        subtitle="Set up your referral program to reward customers"
-        size="default"
-        scaffoldSectionClassName="h-full w-full pt-2 pb-0"
-      >
-        <ScaffoldContainer>
-          <ReferralSettingsSkeleton />
-        </ScaffoldContainer>
-      </PageLayout>
-    );
+  // Sync localStorage with API so next visit doesn't flash onboarding (API remains source of truth)
+  useEffect(() => {
+    if (programData === undefined) return;
+    try {
+      window.localStorage.setItem(
+        REFERRAL_ONBOARDED_KEY,
+        JSON.stringify(!!programData?.referralProgram),
+      );
+    } catch {
+      // ignore
+    }
+  }, [programData]);
+
+  // Show skeleton until we have a definitive referral API response (avoids flash of onboarding)
+  if (programData === undefined) {
+    return <ReferralSkeletonLayout />;
   }
 
-  // Embedded multi-step form: render directly (no PageLayout/Scaffold), same as BusinessOnboardingSettings
+  // Only show onboarding when API has responded and said no program
   if (referralEnabled && !hasProgram) {
     return <ReferralProgramForm initialData={null} embedded />;
   }

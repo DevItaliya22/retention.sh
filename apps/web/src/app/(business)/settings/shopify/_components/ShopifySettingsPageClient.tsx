@@ -1,5 +1,6 @@
 "use client";
 
+import { SettingsFieldGroup } from "@/components/common/settings/SettingsFieldGroup";
 import { PageLayout, ScaffoldContainer } from "@/components/layouts";
 import type { ShopifyStoreItem } from "@/hooks/shopify/useShopifyStores";
 import {
@@ -144,7 +145,6 @@ export function ShopifySettingsPageClient() {
   const disconnect = useDisconnectShopifyStore();
   const syncProducts = useSyncShopifyProducts();
   const updateStore = useUpdateShopifyStore();
-  const [shopInput, setShopInput] = useState("");
 
   // Toast from OAuth callback
   useEffect(() => {
@@ -165,20 +165,25 @@ export function ShopifySettingsPageClient() {
     }
   }, [searchParams]);
 
-  const handleConnect = useCallback(() => {
-    const shop = shopInput
-      .trim()
-      .toLowerCase()
-      .replace(/\.myshopify\.com$/, "");
-    if (!shop) {
-      toast.error(
-        "Enter your Shopify store domain (e.g. my-store or my-store.myshopify.com)",
-      );
-      return;
-    }
-    const url = `${SHOPIFY_INSTALL_PATH}?shop=${encodeURIComponent(shop.includes(".") ? shop : `${shop}.myshopify.com`)}`;
-    window.location.href = url;
-  }, [shopInput]);
+  const handleConnectSubmit = useCallback(
+    async (values: Record<string, string>) => {
+      const shop = (values.shop ?? "")
+        .trim()
+        .toLowerCase()
+        .replace(/\.myshopify\.com$/, "");
+      if (!shop) {
+        return {
+          success: false,
+          error:
+            "Enter your Shopify store domain (e.g. my-store or my-store.myshopify.com)",
+        };
+      }
+      const url = `${SHOPIFY_INSTALL_PATH}?shop=${encodeURIComponent(shop.includes(".") ? shop : `${shop}.myshopify.com`)}`;
+      window.location.href = url;
+      return { success: true };
+    },
+    [],
+  );
 
   const handleDisconnect = useCallback(
     async (storeId: string) => {
@@ -214,77 +219,64 @@ export function ShopifySettingsPageClient() {
     >
       <ScaffoldContainer>
         <div className="space-y-6">
-          {/* Connect new store */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <ShoppingBag className="h-4 w-4" />
-                Connect a store
-              </CardTitle>
-              <CardDescription>
-                Enter your Shopify store domain. You will be redirected to
-                Shopify to authorize access.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-end">
-              <div className="flex-1 space-y-2">
-                <label
-                  htmlFor="shop-domain"
-                  className="text-muted-foreground text-sm"
-                >
-                  Store domain
-                </label>
-                <input
-                  id="shop-domain"
-                  type="text"
-                  placeholder="my-store or my-store.myshopify.com"
-                  className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex h-9 w-full max-w-sm rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
-                  value={shopInput}
-                  onChange={(e) => setShopInput(e.target.value)}
-                />
-              </div>
-              <Button onClick={handleConnect} disabled={!shopInput.trim()}>
-                Connect Shopify
-              </Button>
-            </CardContent>
-          </Card>
+          <SettingsFieldGroup
+            title="Connect a store"
+            description="Enter your Shopify store domain. You will be redirected to Shopify to authorize access."
+            fields={[
+              {
+                name: "shop",
+                label: "Store domain",
+                placeholder: "my-store or my-store.myshopify.com",
+                helpText:
+                  "Enter your store name or full .myshopify.com domain.",
+              },
+            ]}
+            defaultValues={{ shop: "" }}
+            onSubmit={handleConnectSubmit}
+          />
 
           {/* Connected stores */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Connected stores</CardTitle>
-              <CardDescription>
+          <Card className="flex min-h-0 flex-col gap-0 rounded-xl border-0 bg-[#EDE7D9] p-2 pb-3 shadow-none">
+            <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
+              <CardTitle className="text-foreground flex items-center gap-2 text-base leading-none font-semibold">
+                <ShoppingBag className="h-4 w-4" />
+                Connected stores
+              </CardTitle>
+              <CardDescription className="text-muted-foreground mt-0.5 text-sm">
                 Manage connected Shopify stores and sync products to your SKU
                 catalog.
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              {isLoading && !data ? (
-                <Skeleton className="h-24 w-full rounded-md" />
-              ) : isError ? (
-                <p className="text-destructive text-sm">
-                  Failed to load stores. Please try again.
-                </p>
-              ) : !hasStores ? (
-                <p className="text-muted-foreground text-sm">
-                  No stores connected yet. Connect a store above to get started.
-                </p>
-              ) : (
-                <ul className="space-y-4">
-                  {stores.map((store) => (
-                    <StoreCard
-                      key={store.id}
-                      store={store}
-                      onSyncProducts={handleSyncProducts}
-                      onDisconnect={handleDisconnect}
-                      syncProductsPending={syncProducts.isPending}
-                      disconnectPending={disconnect.isPending}
-                      updateStore={updateStore}
-                    />
-                  ))}
-                </ul>
-              )}
-            </CardContent>
+            <Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border-0 bg-[#FAF8F1] shadow-none">
+              <CardContent className="overflow-hidden px-4 py-4">
+                {isLoading && !data ? (
+                  <Skeleton className="h-24 w-full rounded-md" />
+                ) : isError ? (
+                  <p className="text-destructive text-sm">
+                    Failed to load stores. Please try again.
+                  </p>
+                ) : !hasStores ? (
+                  <p className="text-muted-foreground text-sm">
+                    No stores connected yet. Connect a store above to get
+                    started.
+                  </p>
+                ) : (
+                  <ul className="space-y-4">
+                    {stores.map((store) => (
+                      <StoreCard
+                        key={store.id}
+                        store={store}
+                        onSyncProducts={handleSyncProducts}
+                        onDisconnect={handleDisconnect}
+                        syncProductsPending={syncProducts.isPending}
+                        disconnectPending={disconnect.isPending}
+                        updateStore={updateStore}
+                      />
+                    ))}
+                  </ul>
+                )}
+              </CardContent>
+            </Card>
           </Card>
         </div>
       </ScaffoldContainer>

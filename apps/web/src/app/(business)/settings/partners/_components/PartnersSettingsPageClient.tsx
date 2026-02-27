@@ -1,7 +1,10 @@
 "use client";
 
-import type { PageLayoutProps } from "@/components/layouts";
-import { PageLayout } from "@/components/layouts";
+import {
+  SettingsField,
+  SettingsFieldSkeleton,
+} from "@/components/common/settings/SettingsField";
+import { PageLayout, ScaffoldContainer } from "@/components/layouts";
 import { useCurrentBusiness } from "@/hooks/business/useCurrentBusiness";
 import {
   useCreatePartnerCampaign,
@@ -27,6 +30,11 @@ import {
 import {
   Badge,
   Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
   Input,
   Label,
   Separator,
@@ -56,55 +64,32 @@ const PARTNER_LABEL = "Partner";
 function GeneralSettings() {
   const { data, isLoading } = usePartnershipSettings();
   const updateSettings = useUpdatePartnershipSettings();
-  const [receiveOffers, setReceiveOffers] = useState<boolean | null>(null);
-
-  const currentReceive =
-    receiveOffers ?? data?.receivePartnershipOffers ?? false;
-  const hasChanges =
-    receiveOffers !== null && receiveOffers !== data?.receivePartnershipOffers;
-
-  const handleSave = async () => {
-    try {
-      await updateSettings.mutateAsync({
-        receivePartnershipOffers: currentReceive,
-      });
-      setReceiveOffers(null);
-      toast.success("Settings updated.");
-    } catch (e: unknown) {
-      toast.error(
-        e instanceof Error ? e.message : "Failed to update settings.",
-      );
-    }
-  };
 
   if (isLoading) {
-    return <Skeleton className="h-14 w-full rounded-xl" />;
+    return <SettingsFieldSkeleton type="toggle" />;
   }
 
   return (
-    <div className="bg-muted/30 flex flex-col gap-4 rounded-xl p-5 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
-      <div>
-        <Label className="text-sm font-medium">
-          Receive partnership offers
-        </Label>
-        <p className="text-muted-foreground mt-1 text-xs">
-          When enabled, other businesses can send you partnership requests.
-        </p>
-      </div>
-      <div className="flex items-center gap-3">
-        <Switch
-          checked={currentReceive}
-          onCheckedChange={(v) => setReceiveOffers(v)}
-        />
-        <Button
-          size="sm"
-          onClick={handleSave}
-          disabled={!hasChanges || updateSettings.isPending}
-        >
-          {updateSettings.isPending ? "Saving…" : "Save"}
-        </Button>
-      </div>
-    </div>
+    <SettingsField
+      title="Receive partnership offers"
+      description="When enabled, other businesses can send you partnership requests."
+      type="toggle"
+      defaultValue={data?.receivePartnershipOffers ?? false}
+      onSubmit={async ({ value }) => {
+        try {
+          await updateSettings.mutateAsync({
+            receivePartnershipOffers: value as boolean,
+          });
+          return { success: true };
+        } catch (e: unknown) {
+          return {
+            success: false,
+            error:
+              e instanceof Error ? e.message : "Failed to update settings.",
+          };
+        }
+      }}
+    />
   );
 }
 
@@ -127,26 +112,38 @@ function SendRequest() {
   };
 
   return (
-    <div className="bg-muted/30 grid grid-cols-1 gap-4 rounded-xl p-5 sm:grid-cols-[1fr_auto] sm:items-end">
-      <div className="min-w-0 space-y-1.5">
-        <Label className="text-sm font-medium">Business slug</Label>
-        <Input
-          placeholder="e.g. partner-cafe"
-          className="border-border/80 bg-background rounded-lg"
-          value={slug}
-          onChange={(e) => setSlug(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleSend()}
-        />
-      </div>
-      <Button
-        onClick={handleSend}
-        disabled={!slug.trim() || sendRequest.isPending}
-        className="shrink-0 rounded-lg"
-        icon={<Send className="h-4 w-4" />}
-      >
-        {sendRequest.isPending ? "Sending…" : "Send request"}
-      </Button>
-    </div>
+    <Card className="flex min-h-0 flex-col gap-0 rounded-xl border-0 bg-[#EDE7D9] p-2 pb-3 shadow-none">
+      <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
+        <CardTitle className="text-foreground text-base leading-none font-semibold">
+          Send request
+        </CardTitle>
+        <CardDescription className="text-muted-foreground mt-0.5 text-sm">
+          Enter the partner&apos;s business slug to send a partnership request
+        </CardDescription>
+      </CardHeader>
+      <Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border-0 bg-[#FAF8F1] shadow-none">
+        <CardContent className="grid grid-cols-1 gap-4 px-4 py-4 sm:grid-cols-[1fr_auto] sm:items-end">
+          <div className="min-w-0 space-y-1.5">
+            <Label className="text-sm font-medium">Business slug</Label>
+            <Input
+              placeholder="e.g. partner-cafe"
+              className="border-border/80 bg-background rounded-lg"
+              value={slug}
+              onChange={(e) => setSlug(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSend()}
+            />
+          </div>
+          <Button
+            onClick={handleSend}
+            disabled={!slug.trim() || sendRequest.isPending}
+            className="shrink-0 rounded-lg"
+            icon={<Send className="h-4 w-4" />}
+          >
+            {sendRequest.isPending ? "Sending…" : "Send request"}
+          </Button>
+        </CardContent>
+      </Card>
+    </Card>
   );
 }
 
@@ -416,73 +413,79 @@ function PermanentlyRejected() {
   };
 
   return (
-    <section className="bg-muted/20 space-y-4 rounded-2xl p-6">
-      <div>
-        <h3 className="text-sm font-semibold">Permanently rejected</h3>
-        <p className="text-muted-foreground mt-0.5 text-xs">
+    <Card className="flex min-h-0 flex-col gap-0 rounded-xl border-0 bg-[#EDE7D9] p-2 pb-3 shadow-none">
+      <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
+        <CardTitle className="text-foreground text-base leading-none font-semibold">
+          Permanently rejected
+        </CardTitle>
+        <CardDescription className="text-muted-foreground mt-0.5 text-sm">
           They can&apos;t re-request until you move them back or send a request
           from your side.
-        </p>
-      </div>
-      <div className="border-border overflow-x-auto rounded-lg border">
-        <table
-          className="w-full border-collapse text-sm"
-          style={{ minWidth: 480 }}
-        >
-          <thead>
-            <tr className="border-border bg-muted/50 border-b">
-              <th className="text-muted-foreground w-[28%] min-w-[90px] overflow-hidden px-3 py-2.5 text-left text-xs font-medium text-ellipsis whitespace-nowrap">
-                Business
-              </th>
-              <th className="text-muted-foreground w-[22%] min-w-[70px] overflow-hidden px-3 py-2.5 text-left text-xs font-medium text-ellipsis whitespace-nowrap">
-                Slug
-              </th>
-              <th className="w-[50%] min-w-[220px] px-3 py-2.5 text-right text-xs font-medium">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {permanentlyRejected.map((req) => (
-              <tr
-                key={req.id}
-                className="border-border/60 bg-background hover:bg-muted/30 border-b last:border-b-0"
-              >
-                <td className="max-w-0 overflow-hidden px-3 py-2.5 font-medium text-ellipsis whitespace-nowrap">
-                  {req.senderBusiness?.name ?? "Unknown"}
-                </td>
-                <td className="text-muted-foreground max-w-0 overflow-hidden px-3 py-2.5 text-xs text-ellipsis whitespace-nowrap">
-                  @{req.senderBusiness?.slug}
-                </td>
-                <td className="shrink-0 px-3 py-2.5 text-right">
-                  <div className="flex flex-nowrap justify-end gap-1.5">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-7 shrink-0 rounded px-2 text-xs"
-                      onClick={() => handleMoveToRejected(req.id)}
-                      disabled={unReject.isPending}
-                      icon={<Undo2 className="h-3 w-3" />}
-                    >
-                      Move to rejected
-                    </Button>
-                    <Button
-                      size="sm"
-                      className="h-7 shrink-0 rounded px-2 text-xs"
-                      onClick={() => handleSendFromYourSide(req)}
-                      disabled={sendRequest.isPending}
-                      icon={<ArrowRight className="h-3 w-3" />}
-                    >
-                      Send from your side
-                    </Button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </section>
+        </CardDescription>
+      </CardHeader>
+      <Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border-0 bg-[#FAF8F1] shadow-none">
+        <CardContent className="overflow-hidden px-4 py-4">
+          <div className="border-border overflow-x-auto rounded-lg border">
+            <table
+              className="w-full border-collapse text-sm"
+              style={{ minWidth: 480 }}
+            >
+              <thead>
+                <tr className="border-border bg-muted/50 border-b">
+                  <th className="text-muted-foreground w-[28%] min-w-[90px] overflow-hidden px-3 py-2.5 text-left text-xs font-medium text-ellipsis whitespace-nowrap">
+                    Business
+                  </th>
+                  <th className="text-muted-foreground w-[22%] min-w-[70px] overflow-hidden px-3 py-2.5 text-left text-xs font-medium text-ellipsis whitespace-nowrap">
+                    Slug
+                  </th>
+                  <th className="w-[50%] min-w-[220px] px-3 py-2.5 text-right text-xs font-medium">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {permanentlyRejected.map((req) => (
+                  <tr
+                    key={req.id}
+                    className="border-border/60 bg-background hover:bg-muted/30 border-b last:border-b-0"
+                  >
+                    <td className="max-w-0 overflow-hidden px-3 py-2.5 font-medium text-ellipsis whitespace-nowrap">
+                      {req.senderBusiness?.name ?? "Unknown"}
+                    </td>
+                    <td className="text-muted-foreground max-w-0 overflow-hidden px-3 py-2.5 text-xs text-ellipsis whitespace-nowrap">
+                      @{req.senderBusiness?.slug}
+                    </td>
+                    <td className="shrink-0 px-3 py-2.5 text-right">
+                      <div className="flex flex-nowrap justify-end gap-1.5">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 shrink-0 rounded px-2 text-xs"
+                          onClick={() => handleMoveToRejected(req.id)}
+                          disabled={unReject.isPending}
+                          icon={<Undo2 className="h-3 w-3" />}
+                        >
+                          Move to rejected
+                        </Button>
+                        <Button
+                          size="sm"
+                          className="h-7 shrink-0 rounded px-2 text-xs"
+                          onClick={() => handleSendFromYourSide(req)}
+                          disabled={sendRequest.isPending}
+                          icon={<ArrowRight className="h-3 w-3" />}
+                        >
+                          Send from your side
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+    </Card>
   );
 }
 
@@ -848,27 +851,27 @@ function PartnerCampaignsList() {
   if (isLoading || items.length === 0) return null;
 
   return (
-    <section className="bg-muted/20 space-y-4 rounded-2xl p-6">
-      <h3 className="text-sm font-semibold">Partner campaigns</h3>
-      <ul className="space-y-2">
-        {items.map((c) => (
-          <li className="border-border/60 bg-background/80 hover:bg-muted/30 flex items-center justify-between rounded-xl border px-4 py-3 transition-colors">
-            <div>
-              <p className="font-medium">{c.title || "Untitled campaign"}</p>
-              <p className="text-muted-foreground text-xs">
-                {c.createdByBusiness.name} · {c.status}
-              </p>
-            </div>
-            <Badge
-              variant={c.status === "DRAFT" ? "secondary" : "default"}
-              className="rounded-full font-medium"
-            >
-              {c.status}
-            </Badge>
-          </li>
-        ))}
-      </ul>
-    </section>
+    <ul className="space-y-2">
+      {items.map((c) => (
+        <li
+          key={c.id}
+          className="border-border/60 bg-background/80 hover:bg-muted/30 flex items-center justify-between rounded-xl border px-4 py-3 transition-colors"
+        >
+          <div>
+            <p className="font-medium">{c.title || "Untitled campaign"}</p>
+            <p className="text-muted-foreground text-xs">
+              {c.createdByBusiness.name} · {c.status}
+            </p>
+          </div>
+          <Badge
+            variant={c.status === "DRAFT" ? "secondary" : "default"}
+            className="rounded-full font-medium"
+          >
+            {c.status}
+          </Badge>
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -882,82 +885,103 @@ export function PartnersSettingsPageClient() {
   const { data: businessData } = useCurrentBusiness();
   const myBusinessId: string = businessData?.business?.id ?? "";
 
-  const contentPadding = "px-6 lg:px-10";
-  const contentMaxWidth = "max-w-3xl";
-
-  const layoutProps: Pick<
-    PageLayoutProps,
-    | "size"
-    | "scaffoldSectionClassName"
-    | "scaffoldContainerClassName"
-    | "title"
-    | "subtitle"
-  > = {
-    size: "default",
-    scaffoldSectionClassName: "h-full w-full pt-2 pb-0",
-    scaffoldContainerClassName: `mx-auto w-full ${contentMaxWidth} ${contentPadding}`,
-    title: "Connect with partners",
-    subtitle: PAGE_SUBTITLE,
-  };
-
   return (
-    <PageLayout {...layoutProps}>
-      <div
-        className={`mx-auto w-full ${contentMaxWidth} ${contentPadding} space-y-14 pb-20`}
-      >
-        {/* Setup */}
-        <section className="space-y-5">
-          <h2 className="text-lg font-semibold tracking-tight">Setup</h2>
-          <div className="space-y-4">
-            <GeneralSettings />
-            <SendRequest />
-          </div>
-        </section>
-
-        <Separator className="my-2" />
-
-        {/* Requests */}
-        <section className="space-y-8">
-          <h2 className="text-lg font-semibold tracking-tight">Requests</h2>
-
-          <div className="w-full">
-            <h3 className="text-muted-foreground mb-3 text-sm font-medium">
-              Incoming
-            </h3>
-            <div className="border-border bg-muted/20 min-h-[120px] rounded-2xl border p-4">
-              <IncomingRequests />
+    <PageLayout
+      title="Connect with partners"
+      subtitle={PAGE_SUBTITLE}
+      size="default"
+      scaffoldSectionClassName="h-full w-full pt-2 pb-0"
+    >
+      <ScaffoldContainer>
+        <div className="space-y-14 pb-20">
+          {/* Setup */}
+          <section className="space-y-5">
+            <h2 className="text-lg font-semibold tracking-tight">Setup</h2>
+            <div className="space-y-4">
+              <GeneralSettings />
+              <SendRequest />
             </div>
-          </div>
+          </section>
 
-          <div className="w-full">
-            <h3 className="text-muted-foreground mb-3 text-sm font-medium">
-              Sent
-            </h3>
-            <div className="border-border bg-muted/20 min-h-[120px] rounded-2xl border p-4">
-              <SentRequests />
-            </div>
-          </div>
-        </section>
+          <Separator className="my-2" />
 
-        <PermanentlyRejected />
+          {/* Requests */}
+          <section className="space-y-6">
+            <h2 className="text-lg font-semibold tracking-tight">Requests</h2>
 
-        <Separator className="my-2" />
+            <Card className="flex min-h-0 flex-col gap-0 rounded-xl border-0 bg-[#EDE7D9] p-2 pb-3 shadow-none">
+              <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
+                <CardTitle className="text-foreground text-base leading-none font-semibold">
+                  Incoming
+                </CardTitle>
+                <CardDescription className="text-muted-foreground mt-0.5 text-sm">
+                  Partnership requests sent to you by other businesses
+                </CardDescription>
+              </CardHeader>
+              <Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border-0 bg-[#FAF8F1] shadow-none">
+                <CardContent className="min-h-[120px] overflow-hidden px-4 py-4">
+                  <IncomingRequests />
+                </CardContent>
+              </Card>
+            </Card>
 
-        {/* Active partnerships */}
-        <section className="space-y-5">
-          <div>
-            <h2 className="text-lg font-semibold tracking-tight">
-              Active partnerships
-            </h2>
-            <p className="text-muted-foreground mt-1 text-sm">
-              Exchange rates and features per partner.
-            </p>
-          </div>
-          <ActivePartnerships myBusinessId={myBusinessId} />
-        </section>
+            <Card className="flex min-h-0 flex-col gap-0 rounded-xl border-0 bg-[#EDE7D9] p-2 pb-3 shadow-none">
+              <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
+                <CardTitle className="text-foreground text-base leading-none font-semibold">
+                  Sent
+                </CardTitle>
+                <CardDescription className="text-muted-foreground mt-0.5 text-sm">
+                  Partnership requests you have sent
+                </CardDescription>
+              </CardHeader>
+              <Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border-0 bg-[#FAF8F1] shadow-none">
+                <CardContent className="min-h-[120px] overflow-hidden px-4 py-4">
+                  <SentRequests />
+                </CardContent>
+              </Card>
+            </Card>
+          </section>
 
-        <PartnerCampaignsList />
-      </div>
+          <PermanentlyRejected />
+
+          <Separator className="my-2" />
+
+          {/* Active partnerships */}
+          <section className="space-y-5">
+            <Card className="flex min-h-0 flex-col gap-0 rounded-xl border-0 bg-[#EDE7D9] p-2 pb-3 shadow-none">
+              <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
+                <CardTitle className="text-foreground text-base leading-none font-semibold">
+                  Active partnerships
+                </CardTitle>
+                <CardDescription className="text-muted-foreground mt-0.5 text-sm">
+                  Exchange rates and features per partner.
+                </CardDescription>
+              </CardHeader>
+              <Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border-0 bg-[#FAF8F1] shadow-none">
+                <CardContent className="overflow-hidden px-4 py-4 sm:p-6">
+                  <ActivePartnerships myBusinessId={myBusinessId} />
+                </CardContent>
+              </Card>
+            </Card>
+          </section>
+
+          <Card className="flex min-h-0 flex-col gap-0 rounded-xl border-0 bg-[#EDE7D9] p-2 pb-3 shadow-none">
+            <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
+              <CardTitle className="text-foreground text-base leading-none font-semibold">
+                Partner campaigns
+              </CardTitle>
+              <CardDescription className="text-muted-foreground mt-0.5 text-sm">
+                Joint campaigns with your partners
+              </CardDescription>
+            </CardHeader>
+            <Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border-0 bg-[#FAF8F1] shadow-none">
+              <CardContent className="overflow-hidden px-4 py-4 sm:p-6">
+                <PartnerCampaignsList />
+              </CardContent>
+            </Card>
+          </Card>
+        </div>
+      </ScaffoldContainer>
     </PageLayout>
   );
 }

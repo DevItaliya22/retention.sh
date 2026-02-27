@@ -148,175 +148,182 @@ export function AmountSpentSettingsCard({
   };
 
   return (
-    <Card className="gap-0 p-0!">
-      <CardHeader className="flex flex-col gap-0 border-b py-2!">
-        <CardTitle className="text-base font-medium">
+    <Card className="flex min-h-0 flex-col gap-0 rounded-xl border-0 bg-[#EDE7D9] p-2 pb-3 shadow-none">
+      <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
+        <CardTitle className="text-foreground text-base leading-none font-semibold">
           Points & reward stages
         </CardTitle>
-        <CardDescription className="text-xs">
+        <CardDescription className="text-muted-foreground mt-0.5 text-sm">
           How customers earn points per bill and redeem for rewards
         </CardDescription>
       </CardHeader>
-      <FormProvider {...form}>
-        <Form {...form}>
-          <form onSubmit={(e) => e.preventDefault()}>
-            <CardContent className="flex flex-col gap-y-4 border-b px-6 py-4 last:border-none">
-              <FormField
-                control={form.control}
-                name="pointsPerRupee"
-                render={({ field }) => (
-                  <FormItem className={SETTINGS_ROW_CLASS}>
-                    <div className={SETTINGS_LABEL_CLASS}>
-                      <FormLabel className="text-sm">
-                        Points per rupee spent
-                      </FormLabel>
-                    </div>
-                    <div className={SETTINGS_CONTROL_CLASS}>
+      <Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border-0 bg-[#FAF8F1] shadow-none">
+        <FormProvider {...form}>
+          <Form {...form}>
+            <form
+              onSubmit={(e) => e.preventDefault()}
+              className="flex min-h-0 flex-1 flex-col"
+            >
+              <CardContent className="flex min-h-0 flex-1 flex-col gap-y-4 overflow-auto px-4 py-4">
+                <FormField
+                  control={form.control}
+                  name="pointsPerRupee"
+                  render={({ field }) => (
+                    <FormItem className={SETTINGS_ROW_CLASS}>
+                      <div className={SETTINGS_LABEL_CLASS}>
+                        <FormLabel className="text-sm">
+                          Points per rupee spent
+                        </FormLabel>
+                      </div>
+                      <div className={SETTINGS_CONTROL_CLASS}>
+                        <FormControl>
+                          <Input
+                            variant="underline"
+                            type="number"
+                            min={0}
+                            step="0.01"
+                            placeholder="1"
+                            value={field.value ?? ""}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              field.onChange(
+                                v === "" ? undefined : Math.max(0, Number(v)),
+                              );
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </div>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="onFinalAmount"
+                  render={({ field }) => (
+                    <FormItem className={SETTINGS_ROW_CLASS}>
+                      <div className={SETTINGS_LABEL_CLASS}>
+                        <FormLabel
+                          htmlFor="amountSpent-onFinalAmount"
+                          className="cursor-pointer text-sm"
+                        >
+                          Earn points on final amount (after store discounts and
+                          tax)
+                        </FormLabel>
+                      </div>
+                      <div className={SETTINGS_CONTROL_CLASS}>
+                        <FormControl>
+                          <Switch
+                            id="amountSpent-onFinalAmount"
+                            checked={field.value ?? false}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </div>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="maxPointsPerPurchase"
+                  render={({ field }) => (
+                    <FormItem className={SETTINGS_ROW_CLASS}>
+                      <div className={SETTINGS_LABEL_CLASS}>
+                        <FormLabel className="text-sm">
+                          Max points per purchase — leave empty for no cap
+                        </FormLabel>
+                      </div>
+                      <div className={SETTINGS_CONTROL_CLASS}>
+                        <FormControl>
+                          <Input
+                            variant="underline"
+                            type="number"
+                            min={0}
+                            step="1"
+                            placeholder="No limit"
+                            value={field.value ?? ""}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              field.onChange(
+                                v === ""
+                                  ? null
+                                  : Math.max(0, parseInt(v, 10) || 0),
+                              );
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </div>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="allowSameBillRedemption"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center gap-2">
                       <FormControl>
-                        <Input
-                          variant="underline"
-                          type="number"
-                          min={0}
-                          step="0.01"
-                          placeholder="1"
-                          value={field.value ?? ""}
-                          onChange={(e) => {
-                            const v = e.target.value;
-                            field.onChange(
-                              v === "" ? undefined : Math.max(0, Number(v)),
-                            );
-                          }}
-                        />
+                        <label className="flex cursor-pointer items-center gap-2">
+                          <Switch
+                            checked={field.value ?? true}
+                            onCheckedChange={field.onChange}
+                          />
+                          <span className="text-sm font-normal">
+                            Allow customers to use points earned on this bill on
+                            the same bill (if off, points are available from the
+                            next bill only)
+                          </span>
+                        </label>
                       </FormControl>
                       <FormMessage />
-                    </div>
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="onFinalAmount"
-                render={({ field }) => (
-                  <FormItem className={SETTINGS_ROW_CLASS}>
-                    <div className={SETTINGS_LABEL_CLASS}>
-                      <FormLabel
-                        htmlFor="amountSpent-onFinalAmount"
-                        className="cursor-pointer text-sm"
-                      >
-                        Earn points on final amount (after store discounts and
-                        tax)
-                      </FormLabel>
-                    </div>
-                    <div className={SETTINGS_CONTROL_CLASS}>
-                      <FormControl>
-                        <Switch
-                          id="amountSpent-onFinalAmount"
-                          checked={field.value ?? false}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </div>
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="maxPointsPerPurchase"
-                render={({ field }) => (
-                  <FormItem className={SETTINGS_ROW_CLASS}>
-                    <div className={SETTINGS_LABEL_CLASS}>
-                      <FormLabel className="text-sm">
-                        Max points per purchase — leave empty for no cap
-                      </FormLabel>
-                    </div>
-                    <div className={SETTINGS_CONTROL_CLASS}>
-                      <FormControl>
-                        <Input
-                          variant="underline"
-                          type="number"
-                          min={0}
-                          step="1"
-                          placeholder="No limit"
-                          value={field.value ?? ""}
-                          onChange={(e) => {
-                            const v = e.target.value;
-                            field.onChange(
-                              v === ""
-                                ? null
-                                : Math.max(0, parseInt(v, 10) || 0),
-                            );
-                          }}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </div>
-                  </FormItem>
-                )}
-              />
+                    </FormItem>
+                  )}
+                />
 
-              <FormField
-                control={form.control}
-                name="allowSameBillRedemption"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center gap-2">
-                    <FormControl>
-                      <label className="flex cursor-pointer items-center gap-2">
-                        <Switch
-                          checked={field.value ?? true}
-                          onCheckedChange={field.onChange}
-                        />
-                        <span className="text-sm font-normal">
-                          Allow customers to use points earned on this bill on
-                          the same bill (if off, points are available from the
-                          next bill only)
-                        </span>
-                      </label>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                <Separator />
 
-              <Separator />
-
-              <p className="text-muted-foreground text-sm">
-                Reward stages — customers redeem points for these rewards.
-              </p>
-              {fields.map((field, index) => (
-                <div key={field.id}>
-                  <RewardStageCard
-                    index={index}
-                    onRemove={() => remove(index)}
-                    canRemove={fields.length > 1}
-                  />
-                  {index < fields.length - 1 && <Separator className="my-4" />}
-                </div>
-              ))}
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => append(DEFAULT_STAGE)}
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Add reward stage
-              </Button>
-            </CardContent>
-            <CardFooter className="flex justify-end px-6 py-2">
-              <SaveButton
-                onSave={runSubmit}
-                disabled={!form.formState.isDirty}
-                labels={{
-                  idle: "Save changes",
-                  loading: "Saving",
-                  success: "Saved",
-                }}
-              />
-            </CardFooter>
-          </form>
-        </Form>
-      </FormProvider>
+                <p className="text-muted-foreground text-sm">
+                  Reward stages — customers redeem points for these rewards.
+                </p>
+                {fields.map((field, index) => (
+                  <div key={field.id}>
+                    <RewardStageCard
+                      index={index}
+                      onRemove={() => remove(index)}
+                      canRemove={fields.length > 1}
+                    />
+                    {index < fields.length - 1 && (
+                      <Separator className="my-4" />
+                    )}
+                  </div>
+                ))}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => append(DEFAULT_STAGE)}
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add reward stage
+                </Button>
+              </CardContent>
+              <CardFooter className="flex shrink-0 justify-end border-0 px-4 py-2">
+                <SaveButton
+                  onSave={runSubmit}
+                  disabled={!form.formState.isDirty}
+                  labels={{
+                    idle: "Save changes",
+                    loading: "Saving",
+                    success: "Saved",
+                  }}
+                />
+              </CardFooter>
+            </form>
+          </Form>
+        </FormProvider>
+      </Card>
     </Card>
   );
 }

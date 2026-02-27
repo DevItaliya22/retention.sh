@@ -240,37 +240,42 @@ function CommonSettingsCard({
   };
 
   return (
-    <Card className="gap-0 p-0!">
-      <CardHeader className="flex flex-col gap-0 border-b py-2!">
-        <CardTitle className="text-base font-medium">
+    <Card className="flex min-h-0 flex-col gap-0 rounded-xl border-0 bg-[#EDE7D9] p-2 pb-3 shadow-none">
+      <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
+        <CardTitle className="text-foreground text-base leading-none font-semibold">
           Expiry, Channels & Terms
         </CardTitle>
-        <CardDescription className="text-xs">
+        <CardDescription className="text-muted-foreground mt-0.5 text-sm">
           Point reminders, expiry, notification channels, and terms
         </CardDescription>
       </CardHeader>
-      <FormProvider {...form}>
-        <Form {...form}>
-          <form onSubmit={(e) => e.preventDefault()}>
-            <CardContent className="space-y-6 px-6 py-4">
-              <ExpiryReminderFields layout="settings" />
-              <ChannelSelector layout="settings" />
-              <TermsConditionsEditor layout="settings" />
-            </CardContent>
-            <CardFooter className="flex justify-end border-t px-6 py-4">
-              <SaveButton
-                onSave={runSubmit}
-                disabled={!form.formState.isDirty}
-                labels={{
-                  idle: "Save changes",
-                  loading: "Saving",
-                  success: "Saved",
-                }}
-              />
-            </CardFooter>
-          </form>
-        </Form>
-      </FormProvider>
+      <Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border-0 bg-[#FAF8F1] shadow-none">
+        <FormProvider {...form}>
+          <Form {...form}>
+            <form
+              onSubmit={(e) => e.preventDefault()}
+              className="flex min-h-0 flex-1 flex-col"
+            >
+              <CardContent className="flex min-h-0 flex-1 flex-col gap-y-6 overflow-auto px-4 py-4">
+                <ExpiryReminderFields layout="settings" />
+                <ChannelSelector layout="settings" />
+                <TermsConditionsEditor layout="settings" />
+              </CardContent>
+              <CardFooter className="flex shrink-0 justify-end border-0 px-4 py-2">
+                <SaveButton
+                  onSave={runSubmit}
+                  disabled={!form.formState.isDirty}
+                  labels={{
+                    idle: "Save changes",
+                    loading: "Saving",
+                    success: "Saved",
+                  }}
+                />
+              </CardFooter>
+            </form>
+          </Form>
+        </FormProvider>
+      </Card>
     </Card>
   );
 }
@@ -320,33 +325,40 @@ function BrandingSettingsCard({
   };
 
   return (
-    <Card className="gap-0 p-0!">
-      <CardHeader className="flex flex-col gap-0 border-b py-2!">
-        <CardTitle className="text-base font-medium">Branding</CardTitle>
-        <CardDescription className="text-xs">
+    <Card className="flex min-h-0 flex-col gap-0 rounded-xl border-0 bg-[#EDE7D9] p-2 pb-3 shadow-none">
+      <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
+        <CardTitle className="text-foreground text-base leading-none font-semibold">
+          Branding
+        </CardTitle>
+        <CardDescription className="text-muted-foreground mt-0.5 text-sm">
           Customize your loyalty program appearance
         </CardDescription>
       </CardHeader>
-      <FormProvider {...form}>
-        <Form {...form}>
-          <form onSubmit={(e) => e.preventDefault()}>
-            <CardContent className="px-6 py-4">
-              <BrandingFormFields prefix="branding" layout="settings" />
-            </CardContent>
-            <CardFooter className="flex justify-end border-t px-6 py-4">
-              <SaveButton
-                onSave={runSubmit}
-                disabled={!form.formState.isDirty}
-                labels={{
-                  idle: "Save changes",
-                  loading: "Saving",
-                  success: "Saved",
-                }}
-              />
-            </CardFooter>
-          </form>
-        </Form>
-      </FormProvider>
+      <Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border-0 bg-[#FAF8F1] shadow-none">
+        <FormProvider {...form}>
+          <Form {...form}>
+            <form
+              onSubmit={(e) => e.preventDefault()}
+              className="flex min-h-0 flex-1 flex-col"
+            >
+              <CardContent className="flex min-h-0 flex-1 flex-col overflow-auto px-4 py-4">
+                <BrandingFormFields prefix="branding" layout="settings" />
+              </CardContent>
+              <CardFooter className="flex shrink-0 justify-end border-0 px-4 py-2">
+                <SaveButton
+                  onSave={runSubmit}
+                  disabled={!form.formState.isDirty}
+                  labels={{
+                    idle: "Save changes",
+                    loading: "Saving",
+                    success: "Saved",
+                  }}
+                />
+              </CardFooter>
+            </form>
+          </Form>
+        </FormProvider>
+      </Card>
     </Card>
   );
 }

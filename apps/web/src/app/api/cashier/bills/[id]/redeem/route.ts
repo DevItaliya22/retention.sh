@@ -217,6 +217,12 @@ export const POST = withCashierAuth<{ id: string }>(
               cashbackRedeemedAmount: newTotalRedeemed,
               userPaidAmount: finalAmount,
             },
+            include: {
+              transactions: {
+                where: { type: "EARNED", valueKind: "CASHBACK" },
+                select: { type: true, valueKind: true, amount: true },
+              },
+            },
           });
         }
 
@@ -254,6 +260,12 @@ export const POST = withCashierAuth<{ id: string }>(
                 0,
                 Math.floor((currentUserPaid - partnerDiscount) * 100) / 100,
               ),
+            },
+            include: {
+              transactions: {
+                where: { type: "EARNED", valueKind: "CASHBACK" },
+                select: { type: true, valueKind: true, amount: true },
+              },
             },
           });
         }
