@@ -1,3 +1,4 @@
+import { SettingsPageFallback } from "@/components/settings/SettingsPageFallback";
 import { generateRouteMetadata } from "@/lib/utils/route-metadata";
 import type { Metadata } from "next";
 import { Suspense } from "react";
@@ -7,7 +8,14 @@ export const metadata: Metadata = generateRouteMetadata("/settings/cashier");
 
 export default function CashierSettingPage() {
   return (
-    <Suspense fallback={<div className="h-96" />}>
+    <Suspense
+      fallback={
+        <SettingsPageFallback
+          title="Cashier Settings"
+          subtitle="Manage your cashier accounts"
+        />
+      }
+    >
       <CashierSettingPageClient />
     </Suspense>
   );

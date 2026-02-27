@@ -167,7 +167,7 @@ export function VisitMadeSettingsCard({
   };
 
   return (
-    <Card className="flex min-h-0 flex-col gap-0 rounded-xl border-0 bg-[#EDE7D9] p-2 pb-3 shadow-none">
+    <Card className="bg-sidebar-accent/50 flex min-h-0 flex-col gap-0 rounded-lg border-0 p-2">
       <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
         <CardTitle className="text-foreground text-base leading-none font-semibold">
           Visit & reward stages
@@ -176,7 +176,7 @@ export function VisitMadeSettingsCard({
           How customers earn points per visit and redeem for rewards
         </CardDescription>
       </CardHeader>
-      <Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border-0 bg-[#FAF8F1] shadow-none">
+      <Card className="border-border/45 bg-background/55 flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border shadow-none">
         <FormProvider {...form}>
           <Form {...form}>
             <form

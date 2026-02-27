@@ -1,3 +1,4 @@
+import { SettingsPageFallback } from "@/components/settings/SettingsPageFallback";
 import { LoyaltySettingsSkeleton } from "@/components/settings/loyalty/LoyaltySettingsSkeleton";
 import { LoyaltySettingsPageClient } from "./_components/LoyaltySettingsPageClient";
 
@@ -9,7 +10,16 @@ export const metadata: Metadata = generateRouteMetadata("/settings/loyalty");
 
 export default function LoyaltySettingsPage() {
   return (
-    <Suspense fallback={<LoyaltySettingsSkeleton />}>
+    <Suspense
+      fallback={
+        <SettingsPageFallback
+          title="Loyalty Settings"
+          subtitle="Configure earning, redemption, expiry, and communication"
+        >
+          <LoyaltySettingsSkeleton />
+        </SettingsPageFallback>
+      }
+    >
       <LoyaltySettingsPageClient />
     </Suspense>
   );

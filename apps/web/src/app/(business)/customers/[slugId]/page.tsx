@@ -1,6 +1,6 @@
 import { CustomerDetailPageClient } from "@/components/customers/CustomerDetailPageClient";
 import { CustomerDetailSkeleton } from "@/components/customers/CustomerDetailSkeleton";
-import { PageLayout, ScaffoldContainer } from "@/components/layouts";
+import { DashboardPageShell } from "@/components/layouts";
 import { generateRouteMetadata } from "@/lib/utils/route-metadata";
 import type { Metadata } from "next";
 import { Suspense } from "react";
@@ -27,17 +27,13 @@ export default async function CustomerDetailPage({
   const { slugId } = await params;
 
   return (
-    <PageLayout
+    <DashboardPageShell
       title="Customer"
       subtitle="View customer details and loyalty info"
-      size="full"
-      scaffoldSectionClassName="pt-2 pb-0"
     >
-      <ScaffoldContainer className="max-w-full px-6">
-        <Suspense fallback={<CustomerDetailSkeleton />}>
-          <CustomerDetailPageClient slugId={slugId} />
-        </Suspense>
-      </ScaffoldContainer>
-    </PageLayout>
+      <Suspense fallback={<CustomerDetailSkeleton />}>
+        <CustomerDetailPageClient slugId={slugId} />
+      </Suspense>
+    </DashboardPageShell>
   );
 }

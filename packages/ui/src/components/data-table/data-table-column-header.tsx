@@ -39,7 +39,7 @@ export function DataTableColumnHeader<TData, TValue>({
     <DropdownMenu>
       <DropdownMenuTrigger
         className={cn(
-          "hover:bg-accent focus:ring-ring data-[state=open]:bg-accent [&_svg]:text-muted-foreground -ml-1.5 flex h-8 items-center gap-1.5 rounded-md px-2 py-1.5 focus:ring-1 focus:outline-none [&_svg]:size-4 [&_svg]:shrink-0",
+          "focus:ring-ring text-foreground/95 hover:bg-background/55 data-[state=open]:bg-background/65 [&_svg]:text-muted-foreground -ml-1.5 flex h-9 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm transition-colors focus:ring-1 focus:outline-none [&_svg]:size-4 [&_svg]:shrink-0",
           className,
         )}
         {...props}

@@ -66,7 +66,7 @@ export function LoyaltySettingsSkeleton({
 
 function CashbackSkeleton() {
   return (
-    <Card className="flex min-h-0 flex-col gap-0 rounded-xl border-0 bg-[#EDE7D9] p-2 pb-3 shadow-none">
+    <Card className="bg-sidebar-accent/50 flex min-h-0 flex-col gap-0 rounded-lg border-0 p-2">
       <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
         <CardTitle className="text-foreground text-base leading-none font-semibold">
           Cashback configuration
@@ -75,7 +75,7 @@ function CashbackSkeleton() {
           Cashback percentage, earning/redemption rules, and limits
         </CardDescription>
       </CardHeader>
-      <Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border-0 bg-[#FAF8F1] shadow-none">
+      <Card className="border-border/45 bg-background/55 flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border shadow-none">
         <CardContent className="space-y-6 px-4 py-4">
           <div className={SETTINGS_ROW_CLASS}>
             <div className={SETTINGS_LABEL_CLASS}>
@@ -189,7 +189,7 @@ function CashbackSkeleton() {
 
 function TierConfigSkeleton() {
   return (
-    <Card className="flex min-h-0 flex-col gap-0 rounded-xl border-0 bg-[#EDE7D9] p-2 pb-3 shadow-none">
+    <Card className="bg-sidebar-accent/50 flex min-h-0 flex-col gap-0 rounded-lg border-0 p-2">
       <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
         <CardTitle className="text-foreground text-base leading-none font-semibold">
           Tier configuration
@@ -198,7 +198,7 @@ function TierConfigSkeleton() {
           Points conversion and global cap
         </CardDescription>
       </CardHeader>
-      <Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border-0 bg-[#FAF8F1] shadow-none">
+      <Card className="border-border/45 bg-background/55 flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border shadow-none">
         <CardContent className="space-y-4 px-4 py-4">
           <div className={SETTINGS_ROW_CLASS}>
             <div className={SETTINGS_LABEL_CLASS}>
@@ -243,7 +243,7 @@ function TierConfigSkeleton() {
 
 function TiersSkeleton() {
   return (
-    <Card className="flex min-h-0 flex-col gap-0 rounded-xl border-0 bg-[#EDE7D9] p-2 pb-3 shadow-none">
+    <Card className="bg-sidebar-accent/50 flex min-h-0 flex-col gap-0 rounded-lg border-0 p-2">
       <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
         <CardTitle className="text-foreground text-base leading-none font-semibold">
           Manage tiers
@@ -252,7 +252,7 @@ function TiersSkeleton() {
           Add, edit, or remove tiers based on lifetime spending
         </CardDescription>
       </CardHeader>
-      <Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border-0 bg-[#FAF8F1] shadow-none">
+      <Card className="border-border/45 bg-background/55 flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border shadow-none">
         <CardContent className="space-y-4 px-4 py-4">
           <p className="text-muted-foreground text-sm">
             Higher rank = better tier. Customers progress based on lifetime
@@ -274,7 +274,7 @@ function TiersSkeleton() {
 
 function AmountSpentSkeleton() {
   return (
-    <Card className="flex min-h-0 flex-col gap-0 rounded-xl border-0 bg-[#EDE7D9] p-2 pb-3 shadow-none">
+    <Card className="bg-sidebar-accent/50 flex min-h-0 flex-col gap-0 rounded-lg border-0 p-2">
       <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
         <CardTitle className="text-foreground text-base leading-none font-semibold">
           Points configuration
@@ -283,7 +283,7 @@ function AmountSpentSkeleton() {
           How customers earn points per bill
         </CardDescription>
       </CardHeader>
-      <Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border-0 bg-[#FAF8F1] shadow-none">
+      <Card className="border-border/45 bg-background/55 flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border shadow-none">
         <CardContent className="space-y-4 px-4 py-4">
           <div className={SETTINGS_ROW_CLASS}>
             <div className={SETTINGS_LABEL_CLASS}>
@@ -335,7 +335,7 @@ function AmountSpentSkeleton() {
 
 function VisitMadeSkeleton() {
   return (
-    <Card className="flex min-h-0 flex-col gap-0 rounded-xl border-0 bg-[#EDE7D9] p-2 pb-3 shadow-none">
+    <Card className="bg-sidebar-accent/50 flex min-h-0 flex-col gap-0 rounded-lg border-0 p-2">
       <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
         <CardTitle className="text-foreground text-base leading-none font-semibold">
           Visit configuration
@@ -344,7 +344,7 @@ function VisitMadeSkeleton() {
           How customers earn points per visit
         </CardDescription>
       </CardHeader>
-      <Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border-0 bg-[#FAF8F1] shadow-none">
+      <Card className="border-border/45 bg-background/55 flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border shadow-none">
         <CardContent className="space-y-4 px-4 py-4">
           <div className={SETTINGS_ROW_CLASS}>
             <div className={SETTINGS_LABEL_CLASS}>
@@ -386,7 +386,7 @@ function VisitMadeSkeleton() {
 
 function RewardStagesSkeleton() {
   return (
-    <Card className="flex min-h-0 flex-col gap-0 rounded-xl border-0 bg-[#EDE7D9] p-2 pb-3 shadow-none">
+    <Card className="bg-sidebar-accent/50 flex min-h-0 flex-col gap-0 rounded-lg border-0 p-2">
       <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
         <CardTitle className="text-foreground text-base leading-none font-semibold">
           Reward stages
@@ -395,7 +395,7 @@ function RewardStagesSkeleton() {
           Configure redeemable rewards at different point thresholds
         </CardDescription>
       </CardHeader>
-      <Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border-0 bg-[#FAF8F1] shadow-none">
+      <Card className="border-border/45 bg-background/55 flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border shadow-none">
         <CardContent className="space-y-4 px-4 py-4">
           <p className="text-muted-foreground text-sm">
             Customers redeem points for these rewards.
@@ -416,7 +416,7 @@ function RewardStagesSkeleton() {
 
 function CommonSettingsSkeleton() {
   return (
-    <Card className="flex min-h-0 flex-col gap-0 rounded-xl border-0 bg-[#EDE7D9] p-2 pb-3 shadow-none">
+    <Card className="bg-sidebar-accent/50 flex min-h-0 flex-col gap-0 rounded-lg border-0 p-2">
       <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
         <CardTitle className="text-foreground text-base leading-none font-semibold">
           Expiry, Channels & Terms
@@ -425,7 +425,7 @@ function CommonSettingsSkeleton() {
           Point reminders, expiry, notification channels, and terms
         </CardDescription>
       </CardHeader>
-      <Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border-0 bg-[#FAF8F1] shadow-none">
+      <Card className="border-border/45 bg-background/55 flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border shadow-none">
         <CardContent className="space-y-6 px-4 py-4">
           <div className={SETTINGS_ROW_CLASS}>
             <div className={SETTINGS_LABEL_CLASS}>
@@ -493,7 +493,7 @@ function CommonSettingsSkeleton() {
 
 function BrandingSkeleton() {
   return (
-    <Card className="flex min-h-0 flex-col gap-0 rounded-xl border-0 bg-[#EDE7D9] p-2 pb-3 shadow-none">
+    <Card className="bg-sidebar-accent/50 flex min-h-0 flex-col gap-0 rounded-lg border-0 p-2">
       <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
         <CardTitle className="text-foreground text-base leading-none font-semibold">
           Branding
@@ -502,7 +502,7 @@ function BrandingSkeleton() {
           Customize your loyalty program appearance
         </CardDescription>
       </CardHeader>
-      <Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border-0 bg-[#FAF8F1] shadow-none">
+      <Card className="border-border/45 bg-background/55 flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border shadow-none">
         <CardContent className="space-y-4 px-4 py-4">
           <div className={SETTINGS_ROW_CLASS}>
             <div className={SETTINGS_LABEL_CLASS}>
