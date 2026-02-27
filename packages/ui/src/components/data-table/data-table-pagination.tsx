@@ -19,11 +19,14 @@ import {
 interface DataTablePaginationProps<TData> extends React.ComponentProps<"div"> {
   table: Table<TData>;
   pageSizeOptions?: number[];
+  /** Show "X of Y row(s) selected." text. Default false so tables without row selection don't show it. */
+  showRowSelectionCount?: boolean;
 }
 
 export function DataTablePagination<TData>({
   table,
   pageSizeOptions = [10, 20, 30, 40, 50],
+  showRowSelectionCount = false,
   className,
   ...props
 }: DataTablePaginationProps<TData>) {
@@ -35,10 +38,13 @@ export function DataTablePagination<TData>({
       )}
       {...props}
     >
-      <div className="text-muted-foreground flex-1 text-sm whitespace-nowrap">
-        {table.getFilteredSelectedRowModel().rows.length} of{" "}
-        {table.getFilteredRowModel().rows.length} row(s) selected.
-      </div>
+      {showRowSelectionCount && (
+        <div className="text-muted-foreground flex-1 text-sm whitespace-nowrap">
+          {table.getFilteredSelectedRowModel().rows.length} of{" "}
+          {table.getFilteredRowModel().rows.length} row(s) selected.
+        </div>
+      )}
+      {!showRowSelectionCount && <div className="flex-1" />}
       <div className="flex flex-col-reverse items-center gap-4 sm:flex-row sm:gap-6 lg:gap-8">
         <div className="flex items-center space-x-2">
           <p className="text-sm font-medium whitespace-nowrap">Rows per page</p>

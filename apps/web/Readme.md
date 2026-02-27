@@ -61,6 +61,10 @@ we have a x amount of token given to person who regiter themselves , but people 
 
 https://uselayouts.com/docs/components/inline-edit
 
+https://magicui.design/docs/components/interactive-hover-button
+
+icons : https://useanimations.com/#explore
+
 for feedbaack : https://uselayouts.com/docs/components/multi-step-form
 
 https://uselayouts.com/docs/components/smooth-dropdown
