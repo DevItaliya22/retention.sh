@@ -371,6 +371,24 @@ export function CustomerDetailPageClient({
                   >
                     <Copy className="size-4" />
                   </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="shrink-0"
+                    aria-label="Open referral link in new tab"
+                    onClick={() => {
+                      if (typeof window !== "undefined") {
+                        window.open(
+                          `${window.location.origin}/referral/${customer.businessSlug}/${customer.referralSlug}`,
+                          "_blank",
+                          "noopener,noreferrer",
+                        );
+                      }
+                    }}
+                  >
+                    <ExternalLink className="size-4" />
+                  </Button>
                 </div>
               )}
             </CardContent>

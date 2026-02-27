@@ -39,6 +39,15 @@ export interface FeedbackSelectionOptionDto {
   seq: number;
 }
 
+export interface FeedbackBrandingDto {
+  logo: string | null;
+  themeColor: string | null;
+  textColor: string | null;
+  bannerImage: string | null;
+  header: string | null;
+  subtitle: string | null;
+}
+
 export interface FeedbackConfigDto {
   id: string;
   businessId: string | null;
@@ -64,7 +73,7 @@ export interface FeedbackConfigDto {
   categories: FeedbackCategoryDto[];
   howDidYouHearOptions: HowDidYouHearOptionDto[];
   selectionOptions: FeedbackSelectionOptionDto[];
-  branding: unknown;
+  branding: FeedbackBrandingDto | null;
 }
 
 export interface FeedbackConfigResponse {

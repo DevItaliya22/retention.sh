@@ -51,6 +51,36 @@ export const PUT = withAdminAuth(async (request: NextRequest, context) => {
       where: { businessId },
     });
 
+    // Handle branding upsert if provided
+    let brandingId: string | null | undefined = undefined;
+    if (data.branding !== undefined) {
+      if (data.branding === null) {
+        brandingId = null;
+      } else {
+        const branding = await db.branding.upsert({
+          where: { businessId },
+          create: {
+            businessId,
+            logo: data.branding.logo ?? null,
+            themeColor: data.branding.themeColor ?? null,
+            textColor: data.branding.textColor ?? null,
+            bannerImage: data.branding.bannerImage ?? null,
+            header: data.branding.header ?? null,
+            subtitle: data.branding.subtitle ?? null,
+          },
+          update: {
+            logo: data.branding.logo ?? null,
+            themeColor: data.branding.themeColor ?? null,
+            textColor: data.branding.textColor ?? null,
+            bannerImage: data.branding.bannerImage ?? null,
+            header: data.branding.header ?? null,
+            subtitle: data.branding.subtitle ?? null,
+          },
+        });
+        brandingId = branding.id;
+      }
+    }
+
     const updatePayload = {
       ...(data.positiveFollowUp !== undefined && {
         positiveFollowUp: data.positiveFollowUp ?? null,
@@ -104,6 +134,7 @@ export const PUT = withAdminAuth(async (request: NextRequest, context) => {
       ...(data.onlineReviewPlatform !== undefined && {
         onlineReviewPlatform: data.onlineReviewPlatform ?? null,
       }),
+      ...(brandingId !== undefined && { brandingId }),
     };
 
     const defaultFollowUp = FEEDBACK_FORM_DEFAULTS.followUpMessage;
