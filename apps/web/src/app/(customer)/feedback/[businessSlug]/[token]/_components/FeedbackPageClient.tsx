@@ -73,15 +73,18 @@ const platformLabel: Record<string, string> = {
 };
 
 const pageWrapperClass =
-  "bg-[#F4F4F5] flex min-h-screen min-h-[100dvh] w-full items-center justify-center p-4 sm:p-6";
+  "bg-[#F4F4F5] flex min-h-screen min-h-[100dvh] w-full items-center justify-center px-4 pb-4 pt-2 sm:px-6 sm:pb-6 sm:pt-4";
 
 const cardClass =
-  "w-full max-w-[420px] rounded-[32px] border border-gray-200/70 bg-white shadow-sm overflow-hidden flex flex-col";
+  "w-full max-w-[420px] rounded-[32px] border border-gray-200/70 bg-white shadow-sm overflow-hidden flex flex-col !p-0";
 
 function OnlineReviewCTA({
   review,
+  themeColor,
 }: {
   review: { link: string; platform: string | null };
+  themeColor?: string;
+  textColor?: string;
 }) {
   const label =
     review.platform && platformLabel[review.platform]
@@ -92,7 +95,20 @@ function OnlineReviewCTA({
       href={review.link}
       target="_blank"
       rel="noopener noreferrer"
-      className="border-primary/30 bg-primary/5 text-primary hover:bg-primary/10 mt-4 inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg border px-5 py-3 text-sm font-medium transition-colors active:scale-[0.98]"
+      className={
+        themeColor
+          ? "mt-4 inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg border px-5 py-3 text-sm font-medium transition-colors hover:opacity-90 active:scale-[0.98]"
+          : "border-primary/30 bg-primary/5 text-primary hover:bg-primary/10 mt-4 inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg border px-5 py-3 text-sm font-medium transition-colors active:scale-[0.98]"
+      }
+      style={
+        themeColor
+          ? {
+              borderColor: `${themeColor}40`,
+              backgroundColor: `${themeColor}12`,
+              color: themeColor,
+            }
+          : undefined
+      }
     >
       {label}
       <ExternalLink className="size-4 shrink-0" />
@@ -244,65 +260,132 @@ export function FeedbackPageClient({
     );
   }
 
-  // Already submitted: reward at top, then thank you + message
-  if (alreadySubmitted) {
-    const message = loadedFollowUp ?? FEEDBACK_FORM_DEFAULTS.followUpMessage;
-    const showReward = loadedReward?.enabled && loadedReward?.amount != null;
-    const showOnlineReview = loadedOnlineReview != null;
-    return (
-      <div className={pageWrapperClass}>
-        <Card className={cardClass}>
-          <CardHeader className="px-4 pt-6 pb-6 text-center sm:px-6">
-            <div className="bg-primary/10 text-primary mx-auto mb-2 flex size-12 items-center justify-center rounded-full">
-              <MessageSquare className="size-6" />
-            </div>
-            {showReward && (
-              <p className="text-foreground mb-2 text-sm font-medium">
-                {FEEDBACK_FORM_DEFAULTS.rewardAddedToWallet(
-                  loadedReward!.amount!,
+  // Themed thank-you view (already submitted or just submitted)
+  const renderThemedThankYou = (
+    message: string,
+    showReward: boolean,
+    rewardAmount: number | null,
+    onlineReview: { link: string; platform: string | null } | null,
+    themeColor: string,
+    textColor: string,
+    logo: string | null,
+    bannerImage: string | null,
+  ) => (
+    <div className={pageWrapperClass}>
+      <Card className={cardClass}>
+        {/* Compact header: logo + check + title in one flow */}
+        <div
+          className="relative rounded-t-[32px] px-6 pt-8 pb-6 text-center sm:pt-9 sm:pb-7"
+          style={{ backgroundColor: themeColor }}
+        >
+          {bannerImage && (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={bannerImage}
+                alt=""
+                className="absolute inset-0 h-full w-full object-cover"
+              />
+              <div
+                className="absolute inset-0 rounded-t-[32px]"
+                style={{ backgroundColor: themeColor, opacity: 0.88 }}
+              />
+            </>
+          )}
+          <div className="relative z-10 flex flex-col items-center gap-3">
+            <div className="h-12 w-12 shrink-0 rounded-full border border-white/25 bg-white shadow-sm sm:h-14 sm:w-14">
+              <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-full">
+                {logo ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={logo}
+                    alt=""
+                    className="h-full w-full object-contain"
+                  />
+                ) : (
+                  <span
+                    className="text-base font-semibold sm:text-lg"
+                    style={{ color: themeColor }}
+                  >
+                    {(businessSlug || "B").charAt(0).toUpperCase()}
+                  </span>
                 )}
-              </p>
-            )}
-            <h1 className="text-lg font-semibold sm:text-xl">
+              </div>
+            </div>
+            <h1
+              className="text-[20px] font-bold tracking-tight sm:text-[22px]"
+              style={{ color: textColor }}
+            >
               {FEEDBACK_FORM_DEFAULTS.thankYouTitle}
             </h1>
-            <p className="text-muted-foreground mt-2 text-sm whitespace-pre-wrap">
+          </div>
+        </div>
+        {/* Content: one card for reward + message, then CTA */}
+        <div className="rounded-b-[32px] bg-white px-4 py-5 sm:px-6 sm:py-6">
+          <div
+            className="rounded-2xl border p-4 shadow-sm sm:p-5"
+            style={{
+              borderColor: `${themeColor}25`,
+              backgroundColor: `${themeColor}06`,
+            }}
+          >
+            {showReward && rewardAmount != null && (
+              <p className="text-center text-sm font-semibold text-gray-900">
+                {FEEDBACK_FORM_DEFAULTS.rewardAddedToWallet(rewardAmount)}
+              </p>
+            )}
+            <p
+              className={`text-center text-sm leading-relaxed text-gray-600 ${
+                showReward && rewardAmount != null ? "mt-2" : ""
+              }`}
+            >
               {message}
             </p>
-            {showOnlineReview && (
-              <OnlineReviewCTA review={loadedOnlineReview} />
-            )}
-          </CardHeader>
-        </Card>
-      </div>
+          </div>
+          {onlineReview && (
+            <div className="mt-4 flex justify-center">
+              <OnlineReviewCTA review={onlineReview} themeColor={themeColor} />
+            </div>
+          )}
+        </div>
+      </Card>
+    </div>
+  );
+
+  const brandingFromConfig = config?.branding;
+  const themeColorFallback = brandingFromConfig?.themeColor || "#7c3aed";
+  const textColorFallback = brandingFromConfig?.textColor || "#ffffff";
+  const logoFallback = brandingFromConfig?.logo || null;
+  const bannerFallback = brandingFromConfig?.bannerImage || null;
+
+  if (alreadySubmitted) {
+    const message = loadedFollowUp ?? FEEDBACK_FORM_DEFAULTS.followUpMessage;
+    const showReward = Boolean(
+      loadedReward?.enabled && loadedReward?.amount != null,
+    );
+    return renderThemedThankYou(
+      message,
+      showReward,
+      loadedReward?.amount ?? null,
+      loadedOnlineReview ?? null,
+      themeColorFallback,
+      textColorFallback,
+      logoFallback,
+      bannerFallback,
     );
   }
 
   if (submitStatus === "success") {
-    const showReward = reward?.enabled && reward?.amount != null;
-    const showOnlineReview = onlineReview != null;
-    return (
-      <div className={pageWrapperClass}>
-        <Card className={cardClass}>
-          <CardHeader className="px-4 pt-6 pb-6 text-center sm:px-6">
-            <div className="bg-primary/10 text-primary mx-auto mb-2 flex size-12 items-center justify-center rounded-full">
-              <MessageSquare className="size-6" />
-            </div>
-            {showReward && (
-              <p className="text-foreground mb-2 text-sm font-medium">
-                {FEEDBACK_FORM_DEFAULTS.rewardAddedToWallet(reward!.amount!)}
-              </p>
-            )}
-            <h1 className="text-lg font-semibold sm:text-xl">
-              {FEEDBACK_FORM_DEFAULTS.thankYouTitle}
-            </h1>
-            <p className="text-muted-foreground mt-2 text-sm whitespace-pre-wrap">
-              {followUpMessage}
-            </p>
-            {showOnlineReview && <OnlineReviewCTA review={onlineReview} />}
-          </CardHeader>
-        </Card>
-      </div>
+    const showReward = Boolean(reward?.enabled && reward?.amount != null);
+    return renderThemedThankYou(
+      followUpMessage,
+      showReward,
+      reward?.amount ?? null,
+      onlineReview ?? null,
+      themeColorFallback,
+      textColorFallback,
+      logoFallback,
+      bannerFallback,
     );
   }
 
@@ -336,10 +419,13 @@ export function FeedbackPageClient({
 
   return (
     <div className={pageWrapperClass}>
-      <Card className={cardClass}>
-        {/* Branded header similar to referral card */}
+      <Card
+        className={cardClass}
+        style={{ ["--feedback-theme" as string]: themeColor }}
+      >
+        {/* Branded header – flush to card top, no white strip */}
         <div
-          className="relative px-6 pt-10 pb-12 text-center"
+          className="relative rounded-t-[32px] px-6 pt-10 pb-12 text-center"
           style={{ backgroundColor: themeColor }}
         >
           {bannerImage && (
@@ -464,31 +550,44 @@ export function FeedbackPageClient({
             </div>
           )}
 
-          {/* Selection options (e.g. what you liked / didn't like) – grouped list */}
+          {/* Selection options – themed to match branding */}
           {config.selectionOptions && config.selectionOptions.length > 0 && (
             <div className="space-y-2">
               <Label className="text-sm">
                 What did you like or not like? (optional)
               </Label>
-              <div className="bg-card rounded-lg border">
+              <div
+                className="overflow-hidden rounded-lg border"
+                style={{
+                  borderColor: `${themeColor}40`,
+                  backgroundColor: `${themeColor}08`,
+                }}
+              >
                 {config.selectionOptions.map((opt, index) => (
                   <label
                     key={opt.id}
                     htmlFor={`sel-${opt.id}`}
-                    className={`hover:bg-muted/50 flex min-h-[44px] cursor-pointer touch-manipulation items-center justify-between gap-3 px-4 py-3 transition-colors ${
-                      index < config.selectionOptions!.length - 1
-                        ? "border-b"
-                        : ""
-                    }`}
+                    className="flex min-h-[44px] cursor-pointer touch-manipulation items-center justify-between gap-3 px-4 py-3 transition-colors hover:opacity-90"
+                    style={{
+                      borderBottom:
+                        index < config.selectionOptions!.length - 1
+                          ? `1px solid ${themeColor}20`
+                          : undefined,
+                      backgroundColor: selectedSelectionOptionIds.includes(
+                        opt.id,
+                      )
+                        ? `${themeColor}12`
+                        : undefined,
+                    }}
                   >
-                    <span className="text-foreground text-sm font-normal">
+                    <span className="text-sm font-normal text-gray-900">
                       {opt.label}
                     </span>
                     <Checkbox
                       id={`sel-${opt.id}`}
                       checked={selectedSelectionOptionIds.includes(opt.id)}
                       onCheckedChange={() => toggleSelectionOption(opt.id)}
-                      className="shrink-0 touch-manipulation"
+                      className="shrink-0 touch-manipulation data-[state=checked]:border-[var(--feedback-theme)] data-[state=checked]:bg-[var(--feedback-theme)] data-[state=checked]:text-white"
                     />
                   </label>
                 ))}

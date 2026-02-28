@@ -1,7 +1,7 @@
 "use client";
 
+import { BrandingFieldGroup } from "@/components/common/settings/BrandingFieldGroup";
 import { SettingsField } from "@/components/common/settings/SettingsField";
-import { SettingsFieldGroup } from "@/components/common/settings/SettingsFieldGroup";
 import type { ReferralProgram } from "@/hooks/referral/useReferralProgram";
 import { useUpdateReferralProgram } from "@/hooks/referral/useReferralProgram";
 import { useActiveSkusForSelect } from "@/hooks/sku/useSkusQuery";
@@ -721,47 +721,9 @@ export function ReferralExistingSettings({
       */}
 
       {/* Branding */}
-      <SettingsFieldGroup
+      <BrandingFieldGroup
         title="Branding"
         description="Customize appearance of referral pages"
-        fields={[
-          {
-            name: "logo",
-            label: "Logo URL",
-            placeholder: "https://...",
-            helpText: "Image URL for your logo.",
-          },
-          {
-            name: "themeColor",
-            label: "Theme Color",
-            placeholder: "#7c3aed",
-            helpText: "Hex color (e.g. #7c3aed).",
-          },
-          {
-            name: "textColor",
-            label: "Text Color",
-            placeholder: "#ffffff",
-            helpText: "Hex color for text.",
-          },
-          {
-            name: "bannerImage",
-            label: "Banner Image URL",
-            placeholder: "https://...",
-            helpText: "Image URL for banner.",
-          },
-          {
-            name: "header",
-            label: "Header",
-            placeholder: "Welcome",
-            helpText: "Main heading on referral pages.",
-          },
-          {
-            name: "subtitle",
-            label: "Subtitle",
-            placeholder: "Earn rewards",
-            helpText: "Subheading or short description.",
-          },
-        ]}
         defaultValues={{
           logo: referralProgram.branding?.logo ?? "",
           themeColor: referralProgram.branding?.themeColor ?? "",
