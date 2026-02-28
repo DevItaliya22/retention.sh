@@ -1,6 +1,7 @@
 "use client";
 
 import { CampaignPreview } from "@/components/campaigns/CampaignPreview";
+import { ScaffoldContainer } from "@/components/layouts";
 import { useCurrentBusiness } from "@/hooks/business/useCurrentBusiness";
 import {
   useCampaignQuery,
@@ -341,7 +342,7 @@ export function CampaignEditPageClient({
     <div className="flex min-h-screen flex-col">
       {/* ====== TOP BAR ====== */}
       <div className="bg-background sticky top-0 z-10 border-b">
-        <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:px-6">
+        <ScaffoldContainer className="flex h-14 items-center justify-between">
           <button
             type="button"
             onClick={() => router.push("/campaigns")}
@@ -386,11 +387,11 @@ export function CampaignEditPageClient({
               Next <ArrowRight className="ml-1 h-3.5 w-3.5" />
             </Button>
           </div>
-        </div>
+        </ScaffoldContainer>
       </div>
 
       {/* ====== MAIN CONTENT ====== */}
-      <div className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6">
+      <ScaffoldContainer className="flex-1 py-8">
         <Form {...form}>
           <form
             onSubmit={onSubmit}
@@ -1241,7 +1242,7 @@ export function CampaignEditPageClient({
             </div>
           </form>
         </Form>
-      </div>
+      </ScaffoldContainer>
     </div>
   );
 }
@@ -1260,14 +1261,16 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <div className="space-y-5 rounded-xl border p-5 sm:p-6">
-      <div>
-        <h3 className="text-base font-semibold">{title}</h3>
+    <div className="bg-sidebar-accent/50 flex flex-col gap-0 rounded-lg border-0 p-2">
+      <div className="mb-3 px-0 pt-0.5 pl-3">
+        <h3 className="text-base leading-none font-semibold">{title}</h3>
         {description && (
           <p className="text-muted-foreground mt-0.5 text-sm">{description}</p>
         )}
       </div>
-      <div className="space-y-4">{children}</div>
+      <div className="border-border/45 bg-background/55 overflow-hidden rounded-lg border px-5 py-4">
+        <div className="space-y-4">{children}</div>
+      </div>
     </div>
   );
 }

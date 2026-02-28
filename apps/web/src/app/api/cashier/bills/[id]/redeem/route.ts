@@ -32,6 +32,13 @@ const redeemSchema = z.object({
   redeemPartnerPoints: z.coerce.number().int().min(0).optional(),
 });
 
+const billRedeemInclude = {
+  transactions: {
+    where: { type: "EARNED" as const, valueKind: "CASHBACK" as const },
+    select: { type: true, valueKind: true, amount: true },
+  },
+};
+
 export const POST = withCashierAuth<{ id: string }>(
   async (request: NextRequest, context, params) => {
     try {
@@ -48,12 +55,7 @@ export const POST = withCashierAuth<{ id: string }>(
           id: billId,
           businessId: context.business.id,
         },
-        include: {
-          transactions: {
-            where: { type: "EARNED", valueKind: "CASHBACK" },
-            select: { type: true, valueKind: true, amount: true },
-          },
-        },
+        include: billRedeemInclude,
       });
 
       if (!bill) {
@@ -217,12 +219,7 @@ export const POST = withCashierAuth<{ id: string }>(
               cashbackRedeemedAmount: newTotalRedeemed,
               userPaidAmount: finalAmount,
             },
-            include: {
-              transactions: {
-                where: { type: "EARNED", valueKind: "CASHBACK" },
-                select: { type: true, valueKind: true, amount: true },
-              },
-            },
+            include: billRedeemInclude,
           });
         }
 
@@ -261,12 +258,7 @@ export const POST = withCashierAuth<{ id: string }>(
                 Math.floor((currentUserPaid - partnerDiscount) * 100) / 100,
               ),
             },
-            include: {
-              transactions: {
-                where: { type: "EARNED", valueKind: "CASHBACK" },
-                select: { type: true, valueKind: true, amount: true },
-              },
-            },
+            include: billRedeemInclude,
           });
         }
 

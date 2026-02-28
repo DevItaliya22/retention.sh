@@ -36,8 +36,11 @@ export interface PageLayoutProps {
   title?: string | ReactNode;
   subtitle?: string | ReactNode;
   icon?: ReactNode;
+  headerLeading?: ReactNode;
+  headerRowClassName?: string;
   primaryActions?: ReactNode;
   secondaryActions?: ReactNode;
+  pageHeaderClassName?: string;
   navigationItems?: NavigationItem[];
   navigationVariant?: NavigationVariant;
   className?: string;
@@ -74,8 +77,11 @@ const PageLayout = ({
   title,
   subtitle,
   icon,
+  headerLeading,
+  headerRowClassName,
   primaryActions,
   secondaryActions,
+  pageHeaderClassName,
   navigationItems = EMPTY_NAVIGATION_ITEMS,
   navigationVariant = "default",
   className,
@@ -170,15 +176,29 @@ const PageLayout = ({
         )}
       >
         {/* Header section */}
-        {(title || subtitle || primaryActions || secondaryActions) && (
-          <PageHeader
-            title={title}
-            subtitle={subtitle}
-            icon={icon}
-            primaryActions={primaryActions}
-            secondaryActions={secondaryActions}
-            isCompact={isCompact}
-          />
+        {(headerLeading ||
+          title ||
+          subtitle ||
+          primaryActions ||
+          secondaryActions) && (
+          <div className={cn("flex items-stretch gap-3", headerRowClassName)}>
+            {headerLeading && (
+              <div className={cn("flex shrink-0 items-center")}>
+                {headerLeading}
+              </div>
+            )}
+            {(title || subtitle || primaryActions || secondaryActions) && (
+              <PageHeader
+                title={title}
+                subtitle={subtitle}
+                icon={icon}
+                primaryActions={primaryActions}
+                secondaryActions={secondaryActions}
+                className={cn("min-w-0 flex-1", pageHeaderClassName)}
+                isCompact={isCompact}
+              />
+            )}
+          </div>
         )}
 
         {/* Navigation section */}

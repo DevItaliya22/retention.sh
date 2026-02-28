@@ -1,6 +1,6 @@
 "use client";
 
-import { PageLayout, ScaffoldContainer } from "@/components/layouts";
+import { DashboardPageShell } from "@/components/layouts";
 import { FeedbackExistingSettings } from "@/components/settings/feedback/FeedbackExistingSettings";
 import { FeedbackSettingsSkeleton } from "@/components/settings/feedback/FeedbackSettingsSkeleton";
 import type { FeedbackConfigDto } from "@/hooks/feedback/useFeedbackConfig";
@@ -44,29 +44,23 @@ export function FeedbackSettingsPageClient() {
 
   if (isLoading && !data) {
     return (
-      <PageLayout
+      <DashboardPageShell
         title="Feedback"
         subtitle="Configure when and how to collect customer feedback"
-        size="default"
-        scaffoldSectionClassName="h-full w-full pt-2 pb-0"
+        contentVariant="contained"
       >
-        <ScaffoldContainer>
-          <FeedbackSettingsSkeleton />
-        </ScaffoldContainer>
-      </PageLayout>
+        <FeedbackSettingsSkeleton />
+      </DashboardPageShell>
     );
   }
 
   return (
-    <PageLayout
+    <DashboardPageShell
       title="Feedback"
       subtitle="Configure when and how to collect customer feedback. A feedback link is created for every bill."
-      size="default"
-      scaffoldSectionClassName="h-full w-full pt-2 pb-0"
+      contentVariant="contained"
     >
-      <ScaffoldContainer>
-        <FeedbackExistingSettings config={config} />
-      </ScaffoldContainer>
-    </PageLayout>
+      <FeedbackExistingSettings config={config} />
+    </DashboardPageShell>
   );
 }

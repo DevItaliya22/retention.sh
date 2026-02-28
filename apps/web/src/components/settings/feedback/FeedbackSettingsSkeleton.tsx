@@ -19,7 +19,7 @@ export function FeedbackSettingsSkeleton() {
   return (
     <div className="space-y-6">
       {/* Follow-up messages - 2 fields (textarea) */}
-      <Card className="flex min-h-0 flex-col gap-0 rounded-xl border-0 bg-[#EDE7D9] p-2 pb-3 shadow-none">
+      <Card className="bg-sidebar-accent/50 flex min-h-0 flex-col gap-0 rounded-lg border-0 p-2">
         <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
           <CardTitle className="text-foreground text-base leading-none font-semibold">
             Follow-up messages
@@ -28,7 +28,7 @@ export function FeedbackSettingsSkeleton() {
             Messages shown after positive or negative feedback
           </CardDescription>
         </CardHeader>
-        <Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border-0 bg-[#FAF8F1] shadow-none">
+        <Card className="border-border/45 bg-background/55 flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border shadow-none">
           <CardContent className="flex min-h-0 flex-1 flex-col gap-y-4 overflow-auto px-4 py-4">
             <div className={ROW_CLASS}>
               <div className={LABEL_CLASS}>
@@ -54,7 +54,7 @@ export function FeedbackSettingsSkeleton() {
       </Card>
 
       {/* Feedback rewards - 2 fields: Enable reward (checkbox), Reward amount (₹ cashback) */}
-      <Card className="flex min-h-0 flex-col gap-0 rounded-xl border-0 bg-[#EDE7D9] p-2 pb-3 shadow-none">
+      <Card className="bg-sidebar-accent/50 flex min-h-0 flex-col gap-0 rounded-lg border-0 p-2">
         <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
           <CardTitle className="text-foreground text-base leading-none font-semibold">
             Feedback rewards
@@ -64,7 +64,7 @@ export function FeedbackSettingsSkeleton() {
             feedback.
           </CardDescription>
         </CardHeader>
-        <Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border-0 bg-[#FAF8F1] shadow-none">
+        <Card className="border-border/45 bg-background/55 flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border shadow-none">
           <CardContent className="flex min-h-0 flex-1 flex-col gap-y-4 overflow-auto px-4 py-4">
             <div className={ROW_CLASS}>
               <div className={LABEL_CLASS}>
@@ -95,7 +95,7 @@ export function FeedbackSettingsSkeleton() {
       </Card>
 
       {/* Timing & collection - 4 fields */}
-      <Card className="flex min-h-0 flex-col gap-0 rounded-xl border-0 bg-[#EDE7D9] p-2 pb-3 shadow-none">
+      <Card className="bg-sidebar-accent/50 flex min-h-0 flex-col gap-0 rounded-lg border-0 p-2">
         <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
           <CardTitle className="text-foreground text-base leading-none font-semibold">
             Timing & collection
@@ -104,7 +104,7 @@ export function FeedbackSettingsSkeleton() {
             When and how to collect feedback
           </CardDescription>
         </CardHeader>
-        <Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border-0 bg-[#FAF8F1] shadow-none">
+        <Card className="border-border/45 bg-background/55 flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border shadow-none">
           <CardContent className="flex min-h-0 flex-1 flex-col gap-y-4 overflow-auto px-4 py-4">
             <div className={ROW_CLASS}>
               <div className={LABEL_CLASS}>
@@ -156,7 +156,7 @@ export function FeedbackSettingsSkeleton() {
       </Card>
 
       {/* Discovery & reviews - 4 fields */}
-      <Card className="flex min-h-0 flex-col gap-0 rounded-xl border-0 bg-[#EDE7D9] p-2 pb-3 shadow-none">
+      <Card className="bg-sidebar-accent/50 flex min-h-0 flex-col gap-0 rounded-lg border-0 p-2">
         <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
           <CardTitle className="text-foreground text-base leading-none font-semibold">
             Discovery & reviews
@@ -166,7 +166,7 @@ export function FeedbackSettingsSkeleton() {
             feedback
           </CardDescription>
         </CardHeader>
-        <Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border-0 bg-[#FAF8F1] shadow-none">
+        <Card className="border-border/45 bg-background/55 flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border shadow-none">
           <CardContent className="flex min-h-0 flex-1 flex-col gap-y-4 overflow-auto px-4 py-4">
             <div className={ROW_CLASS}>
               <div className={LABEL_CLASS}>
@@ -237,7 +237,7 @@ export function FeedbackSettingsSkeleton() {
       </div>
 
       {/* Negative feedback alerts - 6 fields */}
-      <Card className="flex min-h-0 flex-col gap-0 rounded-xl border-0 bg-[#EDE7D9] p-2 pb-3 shadow-none">
+      <Card className="bg-sidebar-accent/50 flex min-h-0 flex-col gap-0 rounded-lg border-0 p-2">
         <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
           <CardTitle className="text-foreground text-base leading-none font-semibold">
             Negative feedback alerts
@@ -246,7 +246,7 @@ export function FeedbackSettingsSkeleton() {
             Get notified when customers leave negative feedback
           </CardDescription>
         </CardHeader>
-        <Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border-0 bg-[#FAF8F1] shadow-none">
+        <Card className="border-border/45 bg-background/55 flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border shadow-none">
           <CardContent className="flex min-h-0 flex-1 flex-col gap-y-4 overflow-auto px-4 py-4">
             <div className={ROW_CLASS}>
               <div className={LABEL_CLASS}>

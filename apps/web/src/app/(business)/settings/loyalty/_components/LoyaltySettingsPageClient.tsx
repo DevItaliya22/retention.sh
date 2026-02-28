@@ -1,6 +1,6 @@
 "use client";
 
-import { PageLayout, ScaffoldContainer } from "@/components/layouts";
+import { DashboardPageShell } from "@/components/layouts";
 import { LoyaltyProgramForm } from "@/components/settings/loyalty/_components/LoyaltyProgramForm";
 import { LoyaltyExistingSettings } from "@/components/settings/loyalty/LoyaltyExistingSettings";
 import { LoyaltySettingsSkeleton } from "@/components/settings/loyalty/LoyaltySettingsSkeleton";
@@ -19,32 +19,15 @@ import {
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
-function LoyaltySkeletonLayout() {
-  return (
-    <PageLayout
-      title="Loyalty Settings"
-      subtitle="Configure earning, redemption, expiry, and communication"
-      size="default"
-      scaffoldSectionClassName="h-full w-full pt-2 pb-0"
-    >
-      <ScaffoldContainer>
-        <LoyaltySettingsSkeleton />
-      </ScaffoldContainer>
-    </PageLayout>
-  );
-}
-
 export function LoyaltySettingsPageClient() {
   const router = useRouter();
   const { data: businessData } = useCurrentBusiness();
   const { data: loyaltyData } = useLoyaltySettingsQuery();
-
   const hasLoyalty = !!loyaltyData?.loyalty;
   const loyaltyEnabled =
     isServiceEnabled(businessData?.business?.isServiceEnabled, "loyalty") ??
     false;
 
-  // Sync localStorage with API so next visit doesn't flash onboarding (API remains source of truth)
   useEffect(() => {
     if (loyaltyData === undefined) return;
     try {
@@ -57,14 +40,28 @@ export function LoyaltySettingsPageClient() {
     }
   }, [loyaltyData]);
 
-  // Show skeleton until we have a definitive loyalty API response (avoids flash of onboarding)
   if (loyaltyData === undefined) {
-    return <LoyaltySkeletonLayout />;
+    return (
+      <DashboardPageShell
+        title="Loyalty Settings"
+        subtitle="Configure earning, redemption, expiry, and communication"
+        contentVariant="contained"
+      >
+        <LoyaltySettingsSkeleton />
+      </DashboardPageShell>
+    );
   }
 
-  // Only show onboarding when API has responded and said no program
   if (loyaltyEnabled && !hasLoyalty) {
-    return <LoyaltyProgramForm initialData={null} embedded />;
+    return (
+      <DashboardPageShell
+        title="Loyalty Settings"
+        subtitle="Set up earning, redemption, expiry, and communication"
+        contentVariant="contained"
+      >
+        <LoyaltyProgramForm initialData={null} embedded />
+      </DashboardPageShell>
+    );
   }
 
   const subtitle = !loyaltyEnabled
@@ -72,35 +69,29 @@ export function LoyaltySettingsPageClient() {
     : "Configure earning, redemption, expiry, and communication";
 
   return (
-    <PageLayout
+    <DashboardPageShell
       title="Loyalty Settings"
       subtitle={subtitle}
-      size="default"
-      scaffoldSectionClassName="h-full w-full pt-2 pb-0"
+      contentVariant="contained"
     >
-      <ScaffoldContainer>
-        {!loyaltyEnabled ? (
-          <Empty className="min-h-[200px]">
-            <EmptyHeader>
-              <EmptyTitle>Enable it in General settings first</EmptyTitle>
-              <EmptyDescription>
-                Turn on &quot;Loyalty enabled&quot; to set up or use the loyalty
-                program.
-              </EmptyDescription>
-            </EmptyHeader>
-            <EmptyContent>
-              <Button
-                variant="default"
-                onClick={() => router.push("/settings")}
-              >
-                Go to General settings
-              </Button>
-            </EmptyContent>
-          </Empty>
-        ) : (
-          <LoyaltyExistingSettings />
-        )}
-      </ScaffoldContainer>
-    </PageLayout>
+      {!loyaltyEnabled ? (
+        <Empty className="min-h-[200px]">
+          <EmptyHeader>
+            <EmptyTitle>Enable it in General settings first</EmptyTitle>
+            <EmptyDescription>
+              Turn on &quot;Loyalty enabled&quot; to set up or use the loyalty
+              program.
+            </EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
+            <Button variant="default" onClick={() => router.push("/settings")}>
+              Go to General settings
+            </Button>
+          </EmptyContent>
+        </Empty>
+      ) : (
+        <LoyaltyExistingSettings />
+      )}
+    </DashboardPageShell>
   );
 }

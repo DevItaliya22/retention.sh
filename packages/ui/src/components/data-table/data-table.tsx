@@ -77,70 +77,126 @@ export function DataTable<TData>({
   );
   return (
     <div
-      className={cn("flex w-full flex-col gap-2.5 overflow-auto", className)}
+      className={cn("flex w-full flex-col gap-3 overflow-visible", className)}
       {...props}
     >
       {children}
-      <div
-        className={cn(
-          "rounded-md border",
-          isTableScroll ? "overflow-auto" : "overflow-hidden",
-          tableContainerClassName,
-        )}
-        style={isTableScroll ? { maxHeight: tableMaxHeight } : undefined}
-      >
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead
-                    key={header.id}
-                    colSpan={header.colSpan}
-                    style={{
-                      ...getCommonPinningStyles({ column: header.column }),
-                    }}
-                  >
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
+      <div className="bg-sidebar-accent/50 rounded-lg p-2">
+        <div
+          className={cn(
+            "border-border/45 bg-background/55 rounded-lg border",
+            isTableScroll ? "overflow-auto" : "overflow-hidden",
+            tableContainerClassName,
+          )}
+          style={isTableScroll ? { maxHeight: tableMaxHeight } : undefined}
+        >
+          <Table className="[&_tbody_tr[data-state=selected]]:bg-sidebar-accent/35 [&_tbody_tr]:border-border/40 [&_tbody_tr]:hover:bg-sidebar-accent/20 [&_thead_th]:bg-background/65 [&_thead_th]:text-muted-foreground/95 [&_thead_tr]:border-border/50 [&_tbody_td]:px-4 [&_tbody_td]:py-4 [&_tbody_tr]:h-14 [&_thead_th]:h-12 [&_thead_th]:px-4 [&_thead_th]:text-xs [&_thead_th]:font-medium [&_thead_th]:tracking-wide">
+            <TableHeader>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id} className="hover:bg-transparent">
+                  {headerGroup.headers.map((header) => (
+                    <TableHead
+                      key={header.id}
+                      colSpan={header.colSpan}
+                      style={{
+                        ...getCommonPinningStyles({ column: header.column }),
+                      }}
+                    >
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext(),
+                          )}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              ))}
+            </TableHeader>
+            <TableBody>
+              {table.getRowModel().rows?.length ? (
+                table.getRowModel().rows.map((row) => {
+                  const cells = row.getVisibleCells().map((cell) => (
+                    <TableCell
+                      key={cell.id}
+                      style={{
+                        ...getCommonPinningStyles({ column: cell.column }),
+                      }}
+                    >
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext(),
+                      )}
+                    </TableCell>
+                  ));
+
+                  const rowId = getRowIdentifier(row);
+                  const isExpanded = enableExpanding && expandedRows.has(rowId);
+                  const rowFooter = renderRowFooter
+                    ? renderRowFooter(row)
+                    : null;
+
+                  if (enableReorder && onReorder) {
+                    return (
+                      <Fragment key={row.id}>
+                        <DataTableDraggableRow
+                          row={row}
+                          onReorder={onReorder}
+                          tableType={tableType}
+                          className={isExpanded ? "" : ""}
+                        >
+                          {cells}
+                        </DataTableDraggableRow>
+                        {rowFooter && (
+                          <TableRow className="pointer-events-none">
+                            <TableCell
+                              colSpan={table.getAllColumns().length}
+                              className="p-0"
+                            >
+                              {rowFooter}
+                            </TableCell>
+                          </TableRow>
                         )}
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => {
-                const cells = row.getVisibleCells().map((cell) => (
-                  <TableCell
-                    key={cell.id}
-                    style={{
-                      ...getCommonPinningStyles({ column: cell.column }),
-                    }}
-                  >
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
-                ));
+                        <AnimatePresence>
+                          {isExpanded && renderExpandedRow && (
+                            <TableRow>
+                              <TableCell
+                                colSpan={table.getAllColumns().length}
+                                className="p-0"
+                              >
+                                <motion.div
+                                  initial={{ height: 0, opacity: 0 }}
+                                  animate={{ height: "auto", opacity: 1 }}
+                                  exit={{ height: 0, opacity: 0 }}
+                                  transition={{
+                                    duration: 0.2,
+                                    ease: "easeInOut",
+                                  }}
+                                  style={{ overflow: "hidden" }}
+                                  className="bg-sidebar-accent/20"
+                                >
+                                  <div className="p-6">
+                                    {renderExpandedRow(row)}
+                                  </div>
+                                </motion.div>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </AnimatePresence>
+                      </Fragment>
+                    );
+                  }
 
-                const rowId = getRowIdentifier(row);
-                const isExpanded = enableExpanding && expandedRows.has(rowId);
-                const rowFooter = renderRowFooter ? renderRowFooter(row) : null;
-
-                if (enableReorder && onReorder) {
                   return (
                     <Fragment key={row.id}>
-                      <DataTableDraggableRow
-                        row={row}
-                        onReorder={onReorder}
-                        tableType={tableType}
-                        className={isExpanded ? "" : ""}
+                      <TableRow
+                        data-state={row.getIsSelected() && "selected"}
+                        className={
+                          isExpanded ? "border-foreground/20 border-b-2" : ""
+                        }
                       >
                         {cells}
-                      </DataTableDraggableRow>
+                      </TableRow>
                       {rowFooter && (
                         <TableRow className="pointer-events-none">
                           <TableCell
@@ -153,7 +209,7 @@ export function DataTable<TData>({
                       )}
                       <AnimatePresence>
                         {isExpanded && renderExpandedRow && (
-                          <TableRow className="">
+                          <TableRow>
                             <TableCell
                               colSpan={table.getAllColumns().length}
                               className="p-0"
@@ -167,7 +223,7 @@ export function DataTable<TData>({
                                   ease: "easeInOut",
                                 }}
                                 style={{ overflow: "hidden" }}
-                                className="bg-muted/30"
+                                className="bg-sidebar-accent/20"
                               >
                                 <div className="p-6">
                                   {renderExpandedRow(row)}
@@ -179,74 +235,28 @@ export function DataTable<TData>({
                       </AnimatePresence>
                     </Fragment>
                   );
-                }
-
-                return (
-                  <Fragment key={row.id}>
-                    <TableRow
-                      data-state={row.getIsSelected() && "selected"}
-                      className={
-                        isExpanded ? "border-foreground/20 border-b-2" : ""
-                      }
-                    >
-                      {cells}
-                    </TableRow>
-                    {rowFooter && (
-                      <TableRow className="pointer-events-none">
-                        <TableCell
-                          colSpan={table.getAllColumns().length}
-                          className="p-0"
-                        >
-                          {rowFooter}
-                        </TableCell>
-                      </TableRow>
-                    )}
-                    <AnimatePresence>
-                      {isExpanded && renderExpandedRow && (
-                        <TableRow className="">
-                          <TableCell
-                            colSpan={table.getAllColumns().length}
-                            className="p-0"
-                          >
-                            <motion.div
-                              initial={{ height: 0, opacity: 0 }}
-                              animate={{ height: "auto", opacity: 1 }}
-                              exit={{ height: 0, opacity: 0 }}
-                              transition={{ duration: 0.2, ease: "easeInOut" }}
-                              style={{ overflow: "hidden" }}
-                              className="bg-muted/30"
-                            >
-                              <div className="p-6">
-                                {renderExpandedRow(row)}
-                              </div>
-                            </motion.div>
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </AnimatePresence>
-                  </Fragment>
-                );
-              })
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={table.getAllColumns().length}
-                  className="h-24 text-center"
-                >
-                  No results.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
-      <div className="flex flex-col gap-2.5">
-        {table.getFilteredRowModel().rows.length > 0 && (
-          <DataTablePagination table={table} />
-        )}
-        {actionBar &&
-          table.getFilteredSelectedRowModel().rows.length > 0 &&
-          actionBar}
+                })
+              ) : (
+                <TableRow className="hover:bg-transparent">
+                  <TableCell
+                    colSpan={table.getAllColumns().length}
+                    className="text-muted-foreground h-32 text-center text-sm"
+                  >
+                    No results.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+        <div className="pt-2">
+          {table.getFilteredRowModel().rows.length > 0 && (
+            <DataTablePagination table={table} />
+          )}
+          {actionBar &&
+            table.getFilteredSelectedRowModel().rows.length > 0 &&
+            actionBar}
+        </div>
       </div>
     </div>
   );

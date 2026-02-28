@@ -1,5 +1,12 @@
 // Layout Components
 export { AppLayout } from "./AppLayout";
+export {
+  DASHBOARD_PAGE_CONTENT_CLASS,
+  DASHBOARD_PAGE_HEADER_CLASS,
+  DASHBOARD_PAGE_NO_PADDING_CLASS,
+  DASHBOARD_PAGE_SECTION_CLASS,
+  DashboardPageShell,
+} from "./DashboardPageShell";
 export { PageHeader, PageLayout, PageLayoutSkeleton } from "./PageLayout";
 
 // Scaffold Components

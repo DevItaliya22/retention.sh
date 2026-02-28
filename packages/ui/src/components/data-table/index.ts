@@ -14,4 +14,5 @@ export * from "./data-table-skeleton";
 export * from "./data-table-slider-filter";
 export * from "./data-table-sort-list";
 export * from "./data-table-toolbar";
+export * from "./data-table-toolbar-actions-context";
 export * from "./data-table-view-options";
