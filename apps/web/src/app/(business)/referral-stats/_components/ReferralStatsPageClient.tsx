@@ -1,6 +1,6 @@
 "use client";
 
-import { PageLayout, ScaffoldContainer } from "@/components/layouts";
+import { DashboardPageShell } from "@/components/layouts";
 import { ReferralStatsTable } from "@/components/referral-stats/ReferralStatsTable";
 import { useReferralStatsQuery } from "@/hooks/referral/useReferralProgram";
 import { isServiceEnabled } from "@/lib/utils/service-enabled";
@@ -49,11 +49,9 @@ export function ReferralStatsPageClient() {
     !isError && isServiceEnabled(data?.isServiceEnabled, "referral");
 
   return (
-    <PageLayout
+    <DashboardPageShell
       title="Referral stats"
       subtitle="Who referred and how many people they referred"
-      size="full"
-      scaffoldSectionClassName="h-full w-full pt-2 pb-0"
       primaryActions={
         referralEnabled ? (
           <Button
@@ -65,18 +63,16 @@ export function ReferralStatsPageClient() {
         ) : undefined
       }
     >
-      <ScaffoldContainer className="px-6">
-        <Suspense
-          fallback={
-            <div className="space-y-4">
-              <Skeleton className="h-32 w-full" />
-              <Skeleton className="h-64 w-full" />
-            </div>
-          }
-        >
-          <ReferralStatsContent />
-        </Suspense>
-      </ScaffoldContainer>
-    </PageLayout>
+      <Suspense
+        fallback={
+          <div className="space-y-4">
+            <Skeleton className="h-32 w-full" />
+            <Skeleton className="h-64 w-full" />
+          </div>
+        }
+      >
+        <ReferralStatsContent />
+      </Suspense>
+    </DashboardPageShell>
   );
 }

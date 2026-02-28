@@ -2,7 +2,7 @@
 
 import { BrandingFieldGroup } from "@/components/common/settings/BrandingFieldGroup";
 import { SettingsFieldGroup } from "@/components/common/settings/SettingsFieldGroup";
-import { PageLayout, ScaffoldContainer } from "@/components/layouts";
+import { DashboardPageShell } from "@/components/layouts";
 import type { CurrentBusiness } from "@/hooks/business/useCurrentBusiness";
 import { useUpdateBusiness } from "@/hooks/business/useCurrentBusiness";
 import { isServiceEnabled } from "@/lib/utils/service-enabled";
@@ -26,8 +26,8 @@ export function BusinessExistingSettings({
   business,
 }: BusinessExistingSettingsProps) {
   const { mutateAsync: updateBusiness } = useUpdateBusiness();
-  const [loyaltyPending, startLoyaltyTransition] = useTransition();
   const [referralPending, startReferralTransition] = useTransition();
+  const [loyaltyPending, startLoyaltyTransition] = useTransition();
   const [feedbackPending, startFeedbackTransition] = useTransition();
 
   const handleLoyaltyEnabledChange = (enabled: boolean) => {
@@ -35,8 +35,8 @@ export function BusinessExistingSettings({
       try {
         await updateBusiness({ serviceEnabled: { loyalty: enabled } });
         toast.success("Settings updated successfully");
-      } catch (error: unknown) {
-        toast.error((error as Error)?.message || "Failed to update");
+      } catch (error: any) {
+        toast.error(error?.message || "Failed to update");
       }
     });
   };
@@ -46,8 +46,8 @@ export function BusinessExistingSettings({
       try {
         await updateBusiness({ serviceEnabled: { referral: enabled } });
         toast.success("Settings updated successfully");
-      } catch (error: unknown) {
-        toast.error((error as Error)?.message || "Failed to update");
+      } catch (error: any) {
+        toast.error(error?.message || "Failed to update");
       }
     });
   };
@@ -57,8 +57,8 @@ export function BusinessExistingSettings({
       try {
         await updateBusiness({ serviceEnabled: { feedback: enabled } });
         toast.success("Settings updated successfully");
-      } catch (error: unknown) {
-        toast.error((error as Error)?.message || "Failed to update");
+      } catch (error: any) {
+        toast.error(error?.message || "Failed to update");
       }
     });
   };
@@ -161,225 +161,218 @@ export function BusinessExistingSettings({
   };
 
   return (
-    <PageLayout
-      size="default"
-      scaffoldSectionClassName="h-full w-full pt-2 pb-16"
+    <DashboardPageShell
+      title="Settings"
+      subtitle="Manage business info, points, branding, and enabled services"
+      contentVariant="contained"
+      sectionClassName="pb-16"
     >
-      <ScaffoldContainer>
-        <div className="space-y-6">
-          <SettingsFieldGroup
-            title="Basic Information"
-            description="Manage your business name, identifier, website, and next bill number"
-            fields={[
-              {
-                name: "name",
-                label: "Business Name",
-                placeholder: "e.g., Acme Store",
-                helpText: "This is the primary name for your business.",
-              },
-              {
-                name: "slug",
-                label: "Business Slug",
-                placeholder: "reelo.in/your-slug",
-                helpText: "This field is read-only.",
-                disabled: true,
-              },
-              {
-                name: "website",
-                label: "Website",
-                placeholder: "https://www.example.com",
-                helpText: "Your business website URL (optional).",
-                optional: true,
-              },
-              {
-                name: "nextBillNumber",
-                label: "Next Bill Number",
-                placeholder: "1",
-                helpText:
-                  "Auto-fills the bill number in the cashier form. Increments automatically when a bill is created.",
-                type: "number",
-                min: 1,
-              },
-            ]}
-            defaultValues={{
-              name: business.name,
-              slug: `reelo.in/${business.slug}`,
-              website: business.website ?? "",
-              nextBillNumber: String(business.nextBillNumber ?? 1),
-            }}
-            onSubmit={handleUpdateBasicInfo}
-          />
+      <div className="space-y-6">
+        <SettingsFieldGroup
+          title="Basic Information"
+          description="Manage your business name, identifier, website, and next bill number"
+          fields={[
+            {
+              name: "name",
+              label: "Business Name",
+              placeholder: "e.g., Acme Store",
+              helpText: "This is the primary name for your business.",
+            },
+            {
+              name: "slug",
+              label: "Business Slug",
+              placeholder: "reelo.in/your-slug",
+              helpText: "This field is read-only.",
+              disabled: true,
+            },
+            {
+              name: "website",
+              label: "Website",
+              placeholder: "https://www.example.com",
+              helpText: "Your business website URL (optional).",
+              optional: true,
+            },
+            {
+              name: "nextBillNumber",
+              label: "Next Bill Number",
+              placeholder: "1",
+              helpText:
+                "Auto-fills the bill number in the cashier form. Increments automatically when a bill is created.",
+              type: "number",
+              min: 1,
+            },
+          ]}
+          defaultValues={{
+            name: business.name,
+            slug: `reelo.in/${business.slug}`,
+            website: business.website ?? "",
+            nextBillNumber: String(business.nextBillNumber ?? 1),
+          }}
+          onSubmit={handleUpdateBasicInfo}
+        />
 
-          <SettingsFieldGroup
-            title="Points & Currency"
-            description="Configure your loyalty points system and currency settings"
-            fields={[
-              {
-                name: "defaultPointsName",
-                label: "Points Name",
-                placeholder: "e.g., Points",
-                helpText:
-                  "This will be displayed to customers when they earn or redeem points.",
-              },
-              {
-                name: "defaultCurrencySymbol",
-                label: "Currency Symbol",
-                placeholder: "e.g., ₹",
-                helpText: "Common examples: ₹, $, €, £",
-              },
-              {
-                name: "defaultCurrencyCode",
-                label: "Currency Code",
-                placeholder: "e.g., INR",
-                helpText: "Common examples: INR, USD, EUR, GBP",
-              },
-              {
-                name: "registrationBonusPoints",
-                label: "Registration bonus points",
-                placeholder: "0",
-                helpText:
-                  "Bonus points given when a customer registers from the loyalty login page. Set to 0 to disable.",
-              },
-            ]}
-            defaultValues={{
-              defaultPointsName: business.defaultPointsName,
-              defaultCurrencySymbol: business.defaultCurrencySymbol,
-              defaultCurrencyCode: business.defaultCurrencyCode,
-              registrationBonusPoints: String(
-                business.registrationBonusPoints ?? 0,
-              ),
-            }}
-            onSubmit={handleUpdateCurrencySettings}
-          />
+        <SettingsFieldGroup
+          title="Points & Currency"
+          description="Configure your loyalty points system and currency settings"
+          fields={[
+            {
+              name: "defaultPointsName",
+              label: "Points Name",
+              placeholder: "e.g., Points",
+              helpText:
+                "This will be displayed to customers when they earn or redeem points.",
+            },
+            {
+              name: "defaultCurrencySymbol",
+              label: "Currency Symbol",
+              placeholder: "e.g., ₹",
+              helpText: "Common examples: ₹, $, €, £",
+            },
+            {
+              name: "defaultCurrencyCode",
+              label: "Currency Code",
+              placeholder: "e.g., INR",
+              helpText: "Common examples: INR, USD, EUR, GBP",
+            },
+            {
+              name: "registrationBonusPoints",
+              label: "Registration bonus points",
+              placeholder: "0",
+              helpText:
+                "Bonus points given when a customer registers from the loyalty login page. Set to 0 to disable.",
+            },
+          ]}
+          defaultValues={{
+            defaultPointsName: business.defaultPointsName,
+            defaultCurrencySymbol: business.defaultCurrencySymbol,
+            defaultCurrencyCode: business.defaultCurrencyCode,
+            registrationBonusPoints: String(
+              business.registrationBonusPoints ?? 0,
+            ),
+          }}
+          onSubmit={handleUpdateCurrencySettings}
+        />
 
-          <BrandingFieldGroup
-            title="Branding"
-            description="Customize your business appearance and messaging"
-            defaultValues={{
-              logo: business.defaultBranding?.logo ?? "",
-              themeColor: business.defaultBranding?.themeColor ?? "",
-              textColor: business.defaultBranding?.textColor ?? "",
-              bannerImage: business.defaultBranding?.bannerImage ?? "",
-              header: business.defaultBranding?.header ?? "",
-              subtitle: business.defaultBranding?.subtitle ?? "",
-            }}
-            onSubmit={handleUpdateBranding}
-          />
+        <BrandingFieldGroup
+          title="Branding"
+          description="Customize your business appearance and messaging"
+          defaultValues={{
+            logo: business.defaultBranding?.logo ?? "",
+            themeColor: business.defaultBranding?.themeColor ?? "",
+            textColor: business.defaultBranding?.textColor ?? "",
+            bannerImage: business.defaultBranding?.bannerImage ?? "",
+            header: business.defaultBranding?.header ?? "",
+            subtitle: business.defaultBranding?.subtitle ?? "",
+          }}
+          onSubmit={handleUpdateBranding}
+        />
 
-          {/* Services - single card, same UI as SettingsFieldGroup (NestedCard) */}
-          <Card className="flex min-h-0 flex-col gap-0 rounded-xl border-0 bg-[#EDE7D9] p-2 pb-3 shadow-none">
-            <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
-              <CardTitle className="text-foreground text-base leading-none font-semibold">
-                Services
-              </CardTitle>
-              <CardDescription className="text-muted-foreground mt-0.5 text-sm">
-                Enable or disable loyalty, referral, and feedback for your
-                business
-              </CardDescription>
-            </CardHeader>
-            <Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border-0 bg-[#FAF8F1] shadow-none">
-              <CardContent className="flex flex-col divide-y px-4 py-4">
-                <div className="flex flex-col gap-1 py-4 first:pt-0">
-                  <div className="flex flex-row items-center justify-between">
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-sm font-medium">Loyalty</span>
-                      <span className="text-muted-foreground text-xs">
-                        Points and rewards
-                      </span>
-                    </div>
-                    <Switch
-                      checked={
-                        isServiceEnabled(
-                          business.isServiceEnabled,
-                          "loyalty",
-                        ) ?? false
-                      }
-                      onCheckedChange={handleLoyaltyEnabledChange}
-                      disabled={loyaltyPending}
-                    />
+        <Card className="bg-sidebar-accent/50 flex min-h-0 flex-col gap-0 rounded-lg border-0 p-2">
+          <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
+            <CardTitle className="text-base font-medium">Services</CardTitle>
+            <CardDescription className="text-xs">
+              Enable or disable loyalty, referral, and feedback for your
+              business
+            </CardDescription>
+          </CardHeader>
+          <Card className="border-border/45 bg-background/55 flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border shadow-none">
+            <CardContent className="flex flex-col divide-y px-4 py-0">
+              <div className="flex flex-col gap-1 py-4">
+                <div className="flex flex-row items-center justify-between">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-sm font-medium">Loyalty</span>
+                    <span className="text-muted-foreground text-xs">
+                      Points and rewards
+                    </span>
                   </div>
-                  {!isServiceEnabled(business.isServiceEnabled, "loyalty") &&
-                    !business.loyalty && (
-                      <p className="text-muted-foreground text-xs">
-                        Not set up yet.{" "}
-                        <Link
-                          href="/settings/loyalty"
-                          className="text-primary underline underline-offset-2 hover:no-underline"
-                        >
-                          Set up loyalty
-                        </Link>
-                      </p>
-                    )}
+                  <Switch
+                    checked={
+                      isServiceEnabled(business.isServiceEnabled, "loyalty") ??
+                      false
+                    }
+                    onCheckedChange={handleLoyaltyEnabledChange}
+                    disabled={loyaltyPending}
+                  />
                 </div>
-                <div className="flex flex-col gap-1 py-4">
-                  <div className="flex flex-row items-center justify-between">
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-sm font-medium">Referral</span>
-                      <span className="text-muted-foreground text-xs">
-                        Referral program (requires loyalty)
-                      </span>
-                    </div>
-                    <Switch
-                      checked={
-                        isServiceEnabled(
-                          business.isServiceEnabled,
-                          "referral",
-                        ) ?? false
-                      }
-                      onCheckedChange={handleReferralEnabledChange}
-                      disabled={referralPending}
-                    />
+                {!isServiceEnabled(business.isServiceEnabled, "loyalty") &&
+                  !business.loyalty && (
+                    <p className="text-muted-foreground text-xs">
+                      Not set up yet.{" "}
+                      <Link
+                        href="/settings/loyalty"
+                        className="text-primary underline underline-offset-2 hover:no-underline"
+                      >
+                        Set up loyalty
+                      </Link>
+                    </p>
+                  )}
+              </div>
+
+              <div className="flex flex-col gap-1 py-4">
+                <div className="flex flex-row items-center justify-between">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-sm font-medium">Referral</span>
+                    <span className="text-muted-foreground text-xs">
+                      Referral program (requires loyalty)
+                    </span>
                   </div>
-                  {!isServiceEnabled(business.isServiceEnabled, "referral") &&
-                    !business.referralProgram && (
-                      <p className="text-muted-foreground text-xs">
-                        Not set up yet.{" "}
-                        <Link
-                          href="/settings/referral"
-                          className="text-primary underline underline-offset-2 hover:no-underline"
-                        >
-                          Set up referral
-                        </Link>
-                      </p>
-                    )}
+                  <Switch
+                    checked={
+                      isServiceEnabled(business.isServiceEnabled, "referral") ??
+                      false
+                    }
+                    onCheckedChange={handleReferralEnabledChange}
+                    disabled={referralPending}
+                  />
                 </div>
-                <div className="flex flex-col gap-1 py-4">
-                  <div className="flex flex-row items-center justify-between">
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-sm font-medium">Feedback</span>
-                      <span className="text-muted-foreground text-xs">
-                        Feedback links on bills
-                      </span>
-                    </div>
-                    <Switch
-                      checked={
-                        isServiceEnabled(
-                          business.isServiceEnabled,
-                          "feedback",
-                        ) ?? false
-                      }
-                      onCheckedChange={handleFeedbackEnabledChange}
-                      disabled={feedbackPending}
-                    />
+                {!isServiceEnabled(business.isServiceEnabled, "referral") &&
+                  !business.referralProgram && (
+                    <p className="text-muted-foreground text-xs">
+                      Not set up yet.{" "}
+                      <Link
+                        href="/settings/referral"
+                        className="text-primary underline underline-offset-2 hover:no-underline"
+                      >
+                        Set up referral
+                      </Link>
+                    </p>
+                  )}
+              </div>
+
+              <div className="flex flex-col gap-1 py-4">
+                <div className="flex flex-row items-center justify-between">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-sm font-medium">Feedback</span>
+                    <span className="text-muted-foreground text-xs">
+                      Feedback links on bills
+                    </span>
                   </div>
-                  {!isServiceEnabled(business.isServiceEnabled, "feedback") &&
-                    !business.feedbackConfig && (
-                      <p className="text-muted-foreground text-xs">
-                        Not set up yet.{" "}
-                        <Link
-                          href="/settings/feedback"
-                          className="text-primary underline underline-offset-2 hover:no-underline"
-                        >
-                          Set up feedback
-                        </Link>
-                      </p>
-                    )}
+                  <Switch
+                    checked={
+                      isServiceEnabled(business.isServiceEnabled, "feedback") ??
+                      false
+                    }
+                    onCheckedChange={handleFeedbackEnabledChange}
+                    disabled={feedbackPending}
+                  />
                 </div>
-              </CardContent>
-            </Card>
+                {!isServiceEnabled(business.isServiceEnabled, "feedback") &&
+                  !business.feedbackConfig && (
+                    <p className="text-muted-foreground text-xs">
+                      Not set up yet.{" "}
+                      <Link
+                        href="/settings/feedback"
+                        className="text-primary underline underline-offset-2 hover:no-underline"
+                      >
+                        Set up feedback
+                      </Link>
+                    </p>
+                  )}
+              </div>
+            </CardContent>
           </Card>
-        </div>
-      </ScaffoldContainer>
-    </PageLayout>
+        </Card>
+      </div>
+    </DashboardPageShell>
   );
 }

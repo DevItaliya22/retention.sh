@@ -4,7 +4,13 @@ import {
   sanitizeErrorMessage,
   validateSchema,
 } from "@/lib/utils/error-handler";
-import { type CampaignRewardType, db } from "@reelo/db";
+import {
+  type BenefitAppliesTo,
+  type CampaignRewardType,
+  type CampaignStatus,
+  db,
+  type RedemptionLimit,
+} from "@reelo/db";
 import { NextRequest, NextResponse } from "next/server";
 
 export const GET = withAdminAuth(async (request: NextRequest, context) => {
@@ -15,24 +21,81 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
     const validation = validateSchema(campaignsQuerySchema, queryParams);
     if (!validation.success) {
       return NextResponse.json(
-        { error: validation.error, items: [], total: 0 },
+        { error: validation.error, items: [], total: 0, page: 1, perPage: 10 },
         { status: 400 },
       );
     }
 
-    const { rewardType } = validation.data;
+    const {
+      page = 1,
+      perPage = 10,
+      sort,
+      title,
+      status,
+      rewardType,
+      appliesTo,
+      redemptionLimit,
+    } = validation.data;
+    const skip = (page - 1) * perPage;
+    const take = perPage;
 
-    const where: { businessId: string; rewardType?: CampaignRewardType } = {
+    const where: {
+      businessId: string;
+      OR?: Array<
+        | { title: { contains: string; mode: "insensitive" } }
+        | { description: { contains: string; mode: "insensitive" } }
+      >;
+      status?: CampaignStatus;
+      rewardType?: CampaignRewardType;
+      appliesTo?: BenefitAppliesTo;
+      redemptionLimit?: RedemptionLimit;
+    } = {
       businessId: context.business.id,
     };
+    if (title) {
+      where.OR = [
+        { title: { contains: title, mode: "insensitive" } },
+        { description: { contains: title, mode: "insensitive" } },
+      ];
+    }
+    if (status) {
+      where.status = status as CampaignStatus;
+    }
     if (rewardType) {
       where.rewardType = rewardType as CampaignRewardType;
+    }
+    if (appliesTo) {
+      where.appliesTo = appliesTo as BenefitAppliesTo;
+    }
+    if (redemptionLimit) {
+      where.redemptionLimit = redemptionLimit as RedemptionLimit;
+    }
+
+    const orderBy: Record<string, "asc" | "desc"> = {};
+    if (sort) {
+      const [field, direction] = sort.split(":");
+      const sortDirection = direction === "desc" ? "desc" : "asc";
+      if (
+        field === "title" ||
+        field === "status" ||
+        field === "rewardType" ||
+        field === "expiresAt" ||
+        field === "updatedAt"
+      ) {
+        orderBy[field] = sortDirection;
+      } else {
+        orderBy.updatedAt = "desc";
+      }
+    } else {
+      orderBy.updatedAt = "desc";
     }
 
     const [items, total] = await Promise.all([
       db.campaign.findMany({
         where,
-        orderBy: { updatedAt: "desc" },
+        skip,
+        take,
+        orderBy,
         select: {
           id: true,
           slug: true,
@@ -41,6 +104,7 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
           status: true,
           rewardType: true,
           rewardValue: true,
+          appliesTo: true,
           expiresAt: true,
           themeColor: true,
           bannerImage: true,
@@ -65,6 +129,8 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
     return NextResponse.json({
       items,
       total,
+      page,
+      perPage,
     });
   } catch (error) {
     console.error("Campaigns list error:", error);
@@ -73,6 +139,8 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
         error: sanitizeErrorMessage(error),
         items: [],
         total: 0,
+        page: 1,
+        perPage: 10,
       },
       { status: 500 },
     );

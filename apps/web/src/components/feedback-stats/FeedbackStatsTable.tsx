@@ -311,7 +311,7 @@ export function FeedbackStatsTable() {
           return null;
         }}
       >
-        <DataTableToolbar table={table} />
+        <DataTableToolbar table={table} maxTextFilters={1} />
       </DataTable>
     </>
   );

@@ -19,7 +19,7 @@ export function ReferralSettingsSkeleton() {
   return (
     <div className="space-y-6">
       {/* New Customer Benefits - NestedCard, static title/description/labels */}
-      <Card className="flex min-h-0 flex-col gap-0 rounded-xl border-0 bg-[#EDE7D9] p-2 pb-3 shadow-none">
+      <Card className="bg-sidebar-accent/50 flex min-h-0 flex-col gap-0 rounded-lg border-0 p-2">
         <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
           <CardTitle className="text-foreground text-base leading-none font-semibold">
             New Customer Benefits
@@ -28,7 +28,7 @@ export function ReferralSettingsSkeleton() {
             Rewards for customers who join through a referral link
           </CardDescription>
         </CardHeader>
-        <Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border-0 bg-[#FAF8F1] shadow-none">
+        <Card className="border-border/45 bg-background/55 flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border shadow-none">
           <CardContent className="flex min-h-0 flex-1 flex-col gap-y-4 overflow-auto px-4 py-4">
             <div className={ROW_CLASS}>
               <div className={LABEL_CLASS}>
@@ -70,7 +70,7 @@ export function ReferralSettingsSkeleton() {
       </Card>
 
       {/* Existing Customer Benefits */}
-      <Card className="flex min-h-0 flex-col gap-0 rounded-xl border-0 bg-[#EDE7D9] p-2 pb-3 shadow-none">
+      <Card className="bg-sidebar-accent/50 flex min-h-0 flex-col gap-0 rounded-lg border-0 p-2">
         <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
           <CardTitle className="text-foreground text-base leading-none font-semibold">
             Existing Customer Benefits
@@ -79,7 +79,7 @@ export function ReferralSettingsSkeleton() {
             Rewards for customers who refer others
           </CardDescription>
         </CardHeader>
-        <Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border-0 bg-[#FAF8F1] shadow-none">
+        <Card className="border-border/45 bg-background/55 flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border shadow-none">
           <CardContent className="flex min-h-0 flex-1 flex-col gap-y-4 overflow-auto px-4 py-4">
             <div className={ROW_CLASS}>
               <div className={LABEL_CLASS}>
@@ -121,7 +121,7 @@ export function ReferralSettingsSkeleton() {
       </Card>
 
       {/* Send Reminder - SettingsField-style toggle, no footer */}
-      <Card className="flex min-h-0 flex-col gap-0 rounded-xl border-0 bg-[#EDE7D9] p-2 pb-3 shadow-none">
+      <Card className="bg-sidebar-accent/50 flex min-h-0 flex-col gap-0 rounded-lg border-0 p-2">
         <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
           <CardTitle className="text-foreground text-base leading-none font-semibold">
             Send Reminder
@@ -131,7 +131,7 @@ export function ReferralSettingsSkeleton() {
             rewards
           </CardDescription>
         </CardHeader>
-        <Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border-0 bg-[#FAF8F1] shadow-none">
+        <Card className="border-border/45 bg-background/55 flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border shadow-none">
           <CardContent className="flex flex-row items-center justify-between px-4 py-4">
             <span className="text-sm">Send reminder to customer</span>
             <Skeleton className="h-6 w-11 rounded-full" />
@@ -140,7 +140,7 @@ export function ReferralSettingsSkeleton() {
       </Card>
 
       {/* Branding - match SettingsFieldGroup title/description exactly */}
-      <Card className="flex min-h-0 flex-col gap-0 rounded-xl border-0 bg-[#EDE7D9] p-2 pb-3 shadow-none">
+      <Card className="bg-sidebar-accent/50 flex min-h-0 flex-col gap-0 rounded-lg border-0 p-2">
         <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
           <CardTitle className="text-foreground text-base leading-none font-semibold">
             Branding
@@ -149,7 +149,7 @@ export function ReferralSettingsSkeleton() {
             Customize appearance of referral pages
           </CardDescription>
         </CardHeader>
-        <Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border-0 bg-[#FAF8F1] shadow-none">
+        <Card className="border-border/45 bg-background/55 flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border shadow-none">
           <CardContent className="flex min-h-0 flex-1 flex-col gap-y-4 overflow-auto px-4 py-4">
             <div className={ROW_CLASS}>
               <div className={LABEL_CLASS}>
@@ -225,7 +225,7 @@ export function ReferralSettingsSkeleton() {
       </Card>
 
       {/* Terms & Conditions (New Customer) - match TermsCard exactly */}
-      <Card className="flex min-h-0 flex-col gap-0 rounded-xl border-0 bg-[#EDE7D9] p-2 pb-3 shadow-none">
+      <Card className="bg-sidebar-accent/50 flex min-h-0 flex-col gap-0 rounded-lg border-0 p-2">
         <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
           <CardTitle className="text-foreground text-base leading-none font-semibold">
             Terms & Conditions (New Customer)
@@ -234,7 +234,7 @@ export function ReferralSettingsSkeleton() {
             Terms shown to new customers who join via referral
           </CardDescription>
         </CardHeader>
-        <Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border-0 bg-[#FAF8F1] shadow-none">
+        <Card className="border-border/45 bg-background/55 flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border shadow-none">
           <CardContent className="flex min-h-0 flex-1 flex-col gap-y-3 overflow-auto px-4 py-4">
             <div className="flex items-start gap-2">
               <Skeleton className="min-h-[60px] flex-1 rounded-md" />
@@ -253,7 +253,7 @@ export function ReferralSettingsSkeleton() {
       </Card>
 
       {/* Terms & Conditions (Existing Customer) */}
-      <Card className="flex min-h-0 flex-col gap-0 rounded-xl border-0 bg-[#EDE7D9] p-2 pb-3 shadow-none">
+      <Card className="bg-sidebar-accent/50 flex min-h-0 flex-col gap-0 rounded-lg border-0 p-2">
         <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
           <CardTitle className="text-foreground text-base leading-none font-semibold">
             Terms & Conditions (Existing Customer)
@@ -262,7 +262,7 @@ export function ReferralSettingsSkeleton() {
             Terms for existing customers who refer others
           </CardDescription>
         </CardHeader>
-        <Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border-0 bg-[#FAF8F1] shadow-none">
+        <Card className="border-border/45 bg-background/55 flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border shadow-none">
           <CardContent className="flex min-h-0 flex-1 flex-col gap-y-3 overflow-auto px-4 py-4">
             <div className="flex items-start gap-2">
               <Skeleton className="min-h-[60px] flex-1 rounded-md" />

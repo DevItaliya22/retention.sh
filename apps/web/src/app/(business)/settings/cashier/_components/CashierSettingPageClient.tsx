@@ -1,6 +1,6 @@
 "use client";
 
-import { PageLayout, ScaffoldContainer } from "@/components/layouts";
+import { DashboardPageShell } from "@/components/layouts";
 import { Suspense } from "react";
 
 import { AddCashierModal } from "@/components/settings/cashier/AddCashierModal";
@@ -40,11 +40,9 @@ export function CashierSettingPageClient() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   return (
-    <PageLayout
+    <DashboardPageShell
       title="Cashier Settings"
       subtitle="Manage your cashier accounts"
-      size="full"
-      scaffoldSectionClassName="h-full w-full pt-2 pb-0"
       primaryActions={
         <Button
           icon={<Plus className="h-4 w-4" />}
@@ -54,24 +52,17 @@ export function CashierSettingPageClient() {
         </Button>
       }
     >
-      <ScaffoldContainer className="px-6">
-        <Suspense
-          fallback={
-            <CashierTable
-              cashiers={[]}
-              total={0}
-              perPage={10}
-              isLoading={true}
-            />
-          }
-        >
-          <CashierContent />
-        </Suspense>
-      </ScaffoldContainer>
+      <Suspense
+        fallback={
+          <CashierTable cashiers={[]} total={0} perPage={10} isLoading={true} />
+        }
+      >
+        <CashierContent />
+      </Suspense>
       <AddCashierModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
       />
-    </PageLayout>
+    </DashboardPageShell>
   );
 }
