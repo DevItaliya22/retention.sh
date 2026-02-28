@@ -5,11 +5,6 @@ import type { CategoryTreeNode } from "@/lib/utils/category-tree";
 import { buildCategoryTree } from "@/lib/utils/category-tree";
 import {
   Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
@@ -137,56 +132,50 @@ function CategoryRow({
 
 export function CategoryTree({ onAddSubcategory }: CategoryTreeProps) {
   const { data, isLoading, isError } = useCategoriesListQuery();
-  const items = data?.items ?? [];
+  const items = useMemo(() => data?.items ?? [], [data?.items]);
   const tree = useMemo(() => buildCategoryTree(items), [items]);
 
   if (isLoading && items.length === 0) {
     return (
-      <Card className="gap-0 p-0!">
-        <CardHeader className="flex flex-col gap-0 border-b py-2!">
-          <CardTitle className="text-base font-medium">
-            Category hierarchy
-          </CardTitle>
-          <CardDescription className="text-xs">
+      <div className="space-y-3">
+        <div className="border-border/60 border-b px-1 pb-3">
+          <h3 className="text-base font-medium">Category hierarchy</h3>
+          <p className="text-muted-foreground text-xs">
             Expand and manage your categories
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-2 px-6 py-4">
+          </p>
+        </div>
+        <div className="space-y-2 px-1 pb-1">
           {[1, 2, 3, 4].map((i) => (
             <Skeleton key={i} className="h-10 w-full rounded-md" />
           ))}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     );
   }
 
   if (isError) {
     return (
-      <Card className="gap-0 p-0!">
-        <CardHeader className="flex flex-col gap-0 border-b py-2!">
-          <CardTitle className="text-base font-medium">
-            Category hierarchy
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col items-center justify-center py-12">
+      <div className="space-y-3">
+        <div className="border-border/60 border-b px-1 pb-3">
+          <h3 className="text-base font-medium">Category hierarchy</h3>
+        </div>
+        <div className="flex flex-col items-center justify-center py-12">
           <p className="text-destructive">Failed to load categories</p>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     );
   }
 
   if (tree.length === 0) {
     return (
-      <Card className="gap-0 p-0!">
-        <CardHeader className="flex flex-col gap-0 border-b py-2!">
-          <CardTitle className="text-base font-medium">
-            Category hierarchy
-          </CardTitle>
-          <CardDescription className="text-xs">
+      <div className="space-y-3">
+        <div className="border-border/60 border-b px-1 pb-3">
+          <h3 className="text-base font-medium">Category hierarchy</h3>
+          <p className="text-muted-foreground text-xs">
             Add categories to organize your SKUs
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+          </p>
+        </div>
+        <div className="flex flex-col items-center justify-center py-12 text-center">
           <Folder className="text-muted-foreground/50 h-10 w-10" />
           <p className="text-muted-foreground mt-2 font-medium">
             No categories yet
@@ -194,34 +183,30 @@ export function CategoryTree({ onAddSubcategory }: CategoryTreeProps) {
           <p className="text-muted-foreground text-sm">
             Use &quot;Add Category&quot; above to create your first category
           </p>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     );
   }
 
   return (
-    <Card className="gap-0 p-0!">
-      <CardHeader className="flex flex-col gap-0 border-b py-2!">
-        <CardTitle className="text-base font-medium">
-          Category hierarchy
-        </CardTitle>
-        <CardDescription className="text-xs">
+    <div className="space-y-3">
+      <div className="border-border/60 border-b px-1 pb-3">
+        <h3 className="text-base font-medium">Category hierarchy</h3>
+        <p className="text-muted-foreground text-xs">
           Expand, reorder, and manage categories. Add subcategories from any
           row.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="px-0 py-2">
-        <div className="divide-border/60 divide-y">
-          {tree.map((node) => (
-            <CategoryRow
-              key={node.id}
-              node={node}
-              depth={0}
-              onAddSubcategory={onAddSubcategory}
-            />
-          ))}
-        </div>
-      </CardContent>
-    </Card>
+        </p>
+      </div>
+      <div className="divide-border/60 divide-y px-1 pb-1">
+        {tree.map((node) => (
+          <CategoryRow
+            key={node.id}
+            node={node}
+            depth={0}
+            onAddSubcategory={onAddSubcategory}
+          />
+        ))}
+      </div>
+    </div>
   );
 }

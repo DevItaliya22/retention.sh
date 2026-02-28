@@ -43,7 +43,7 @@ export function DataTableViewOptions<TData>({
           aria-label="Toggle columns"
           role="combobox"
           variant="outline"
-          className="ml-auto hidden h-8 font-normal lg:flex"
+          className="border-border/60 bg-background/50 ml-auto hidden h-10 rounded-lg font-normal lg:flex"
           icon={<Settings2 className="text-muted-foreground" />}
         >
           View

@@ -14,6 +14,11 @@ import {
 } from "@/hooks/feedback/useFeedbackConfig";
 import {
   Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
   Input,
   Sortable,
   SortableContent,
@@ -116,98 +121,104 @@ function SelectionOptionsSection({
   );
 
   return (
-    <div className="space-y-3">
-      <div>
-        <h3 className="text-sm font-medium">Selection options</h3>
-        <p className="text-muted-foreground text-xs">
-          Options customers can select when giving feedback (e.g. what they
-          liked or didn&apos;t like). Order is used on the feedback form.
-        </p>
-      </div>
-      <div className="flex flex-col gap-2">
-        <Sortable
-          value={options}
-          getItemValue={(item) => item.id}
-          onValueChange={(next) => handleReorder(next)}
-        >
-          <SortableContent className="flex flex-col gap-2">
-            {options.map((opt) => (
-              <SortableItem
-                key={opt.id}
-                value={opt.id}
-                className="border-input bg-background flex items-center gap-2 rounded-lg border px-3 py-2"
-              >
-                <SortableItemHandle
-                  className="text-muted-foreground cursor-grab touch-none active:cursor-grabbing"
-                  aria-label="Drag to reorder"
-                >
-                  <GripVertical className="size-4" />
-                </SortableItemHandle>
-                {editingId === opt.id ? (
-                  <Input
-                    className="min-h-9 flex-1"
-                    value={editLabel}
-                    onChange={(e) => setEditLabel(e.target.value)}
-                    onBlur={() => handleUpdateLabel(opt.id, editLabel)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        (e.target as HTMLInputElement).blur();
-                      }
-                    }}
-                    autoFocus
-                  />
-                ) : (
-                  <button
-                    type="button"
-                    className="min-h-9 flex-1 text-left text-sm"
-                    onClick={() => {
-                      setEditingId(opt.id);
-                      setEditLabel(opt.label);
-                    }}
+    <Card className="bg-sidebar-accent/50 flex min-h-0 flex-col gap-0 rounded-lg border-0 p-2">
+      <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
+        <CardTitle className="text-foreground text-base leading-none font-semibold">
+          Selection options
+        </CardTitle>
+        <CardDescription className="text-muted-foreground mt-0.5 text-sm">
+          Options customers can select when giving feedback (for example what
+          they liked or did not like). Order is used on the feedback form.
+        </CardDescription>
+      </CardHeader>
+      <Card className="border-border/45 bg-background/55 flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border shadow-none">
+        <CardContent className="overflow-hidden px-4 py-4">
+          <div className="flex flex-col gap-2">
+            <Sortable
+              value={options}
+              getItemValue={(item) => item.id}
+              onValueChange={(next) => handleReorder(next)}
+            >
+              <SortableContent className="flex flex-col gap-2">
+                {options.map((opt) => (
+                  <SortableItem
+                    key={opt.id}
+                    value={opt.id}
+                    className="border-input bg-background flex items-center gap-2 rounded-lg border px-3 py-2"
                   >
-                    {opt.label}
-                  </button>
-                )}
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="text-muted-foreground hover:text-destructive size-8 shrink-0"
-                  aria-label="Remove option"
-                  onClick={() => handleDelete(opt.id)}
-                  disabled={deleteOption.isPending}
-                >
-                  <Trash2 className="size-4" />
-                </Button>
-              </SortableItem>
-            ))}
-          </SortableContent>
-        </Sortable>
-        <div className="flex gap-2">
-          <Input
-            className="min-h-9 flex-1"
-            placeholder="Add option (e.g. Friendly staff)"
-            value={newLabel}
-            onChange={(e) => setNewLabel(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                handleAdd();
-              }
-            }}
-          />
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={handleAdd}
-            disabled={!newLabel.trim() || createOption.isPending}
-          >
-            Add
-          </Button>
-        </div>
-      </div>
-    </div>
+                    <SortableItemHandle
+                      className="text-muted-foreground cursor-grab touch-none active:cursor-grabbing"
+                      aria-label="Drag to reorder"
+                    >
+                      <GripVertical className="size-4" />
+                    </SortableItemHandle>
+                    {editingId === opt.id ? (
+                      <Input
+                        className="min-h-9 flex-1"
+                        value={editLabel}
+                        onChange={(e) => setEditLabel(e.target.value)}
+                        onBlur={() => handleUpdateLabel(opt.id, editLabel)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            (e.target as HTMLInputElement).blur();
+                          }
+                        }}
+                        autoFocus
+                      />
+                    ) : (
+                      <button
+                        type="button"
+                        className="min-h-9 flex-1 text-left text-sm"
+                        onClick={() => {
+                          setEditingId(opt.id);
+                          setEditLabel(opt.label);
+                        }}
+                      >
+                        {opt.label}
+                      </button>
+                    )}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="text-muted-foreground hover:text-destructive size-8 shrink-0"
+                      aria-label="Remove option"
+                      onClick={() => handleDelete(opt.id)}
+                      disabled={deleteOption.isPending}
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </SortableItem>
+                ))}
+              </SortableContent>
+            </Sortable>
+            <div className="flex gap-2">
+              <Input
+                className="min-h-9 flex-1"
+                placeholder="Add option (e.g. Friendly staff)"
+                value={newLabel}
+                onChange={(e) => setNewLabel(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleAdd();
+                  }
+                }}
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={handleAdd}
+                disabled={!newLabel.trim() || createOption.isPending}
+              >
+                Add
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </Card>
   );
 }
 

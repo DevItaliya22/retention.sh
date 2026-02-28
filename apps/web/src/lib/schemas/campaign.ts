@@ -35,9 +35,16 @@ export type CampaignRedemptionLimit = z.infer<
   typeof campaignRedemptionLimitSchema
 >;
 
-/** Query params for listing campaigns (filter by rewardType) */
+/** Query params for listing campaigns */
 export const campaignsQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1).optional(),
+  perPage: z.coerce.number().int().min(1).max(100).default(10).optional(),
+  sort: z.string().max(100, "Sort parameter is too long").optional(),
+  title: z.string().max(500, "Title filter is too long").trim().optional(),
+  status: campaignStatusSchema.optional(),
   rewardType: campaignRewardTypeSchema.optional(),
+  appliesTo: campaignAppliesToSchema.optional(),
+  redemptionLimit: campaignRedemptionLimitSchema.optional(),
 });
 
 export type CampaignsQueryInput = z.infer<typeof campaignsQuerySchema>;

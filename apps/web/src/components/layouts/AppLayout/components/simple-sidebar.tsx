@@ -1,6 +1,5 @@
 "use client";
 
-import { useSessionContext } from "@/hooks/auth/useSessionContext";
 import {
   Collapsible,
   CollapsibleContent,
@@ -39,13 +38,6 @@ import * as React from "react";
 import { SidebarHeader } from "./sidebar-header";
 import { UserSidebarFooter } from "./UserSidebarFooter";
 
-/** Render children only after mount to avoid Radix useId() hydration mismatch (React 19.2 / Next.js). */
-function useMounted() {
-  const [mounted, setMounted] = React.useState(false);
-  React.useEffect(() => setMounted(true), []);
-  return mounted;
-}
-
 const sidebarVariants = {
   initial: {},
   animate: {
@@ -66,9 +58,7 @@ export function SimpleSidebar({
   const pathname = usePathname();
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
-  const { user } = useSessionContext();
-  const [isContactModalOpen, setIsContactModalOpen] = React.useState(false);
-  const mounted = useMounted();
+  const [, setIsContactModalOpen] = React.useState(false);
 
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -288,7 +278,7 @@ export function SimpleSidebar({
         <div
           role="button"
           tabIndex={0}
-          className={`bg-sidebar-accent/50 focus-visible:ring-sidebar-accent/60 group flex w-full items-center rounded-md transition-colors focus-visible:ring-1 focus-visible:outline-none ${
+          className={`bg-sidebar-accent/50 focus-visible:ring-sidebar-accent/60 group flex w-full items-center rounded-lg transition-colors focus-visible:ring-1 focus-visible:outline-none ${
             isCollapsed ? "justify-center" : "px-2 py-2"
           }`}
         >

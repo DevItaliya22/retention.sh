@@ -1,10 +1,6 @@
 "use client";
 
-import {
-  PageLayout,
-  ScaffoldContainer,
-  ScaffoldSection,
-} from "@/components/layouts";
+import { DashboardPageShell, ScaffoldSection } from "@/components/layouts";
 import { AddSkuModal } from "@/components/settings/sku/AddSkuModal";
 import { SkuImportSheet } from "@/components/settings/sku/SkuImportSheet";
 import { SkuTable } from "@/components/settings/sku/SkuTable";
@@ -54,11 +50,9 @@ export function SkuSettingPageClient() {
   const activeTab = pathname === "/settings/sku" ? "sku" : "categories";
 
   return (
-    <PageLayout
+    <DashboardPageShell
       title="SKU"
       subtitle="Manage SKUs"
-      size="full"
-      scaffoldSectionClassName="h-full w-full pt-2 pb-0"
       primaryActions={
         activeTab === "sku" ? (
           <div className="flex items-center gap-2">
@@ -66,62 +60,57 @@ export function SkuSettingPageClient() {
               variant="outline"
               icon={<FileUp className="h-4 w-4" />}
               onClick={() => setIsImportSheetOpen(true)}
+              className="max-sm:size-10 max-sm:px-0"
+              aria-label="Import SKUs"
             >
-              Import
+              <span className="max-sm:sr-only">Import</span>
             </Button>
             <Button
               icon={<Plus className="h-4 w-4" />}
               onClick={() => setIsAddModalOpen(true)}
+              className="max-sm:size-10 max-sm:px-0"
+              aria-label="Add SKU"
             >
-              Add SKU
+              <span className="max-sm:sr-only">Add SKU</span>
             </Button>
           </div>
         ) : undefined
       }
     >
-      <ScaffoldContainer className="px-6">
-        <ScaffoldSection isFullWidth className="pt-0!">
-          <Tabs value={activeTab} className="w-full">
-            <div className="flex items-center justify-between gap-4">
-              <TabsList className="space-x-1 p-1">
-                <TabsTrigger
-                  value="sku"
-                  className="gap-2"
-                  onClick={() => router.push("/settings/sku")}
-                >
-                  <Package className="h-4 w-4" />
-                  <span>SKU</span>
-                </TabsTrigger>
-                <TabsTrigger
-                  value="categories"
-                  className="gap-2"
-                  onClick={() => router.push("/settings/sku/categories")}
-                >
-                  <Layers className="h-4 w-4" />
-                  <span>Categories</span>
-                </TabsTrigger>
-              </TabsList>
-            </div>
+      <ScaffoldSection isFullWidth className="pt-0!">
+        <Tabs value={activeTab} className="w-full">
+          <div className="flex items-center justify-between gap-4">
+            <TabsList className="space-x-1 p-1">
+              <TabsTrigger
+                value="sku"
+                className="gap-2"
+                onClick={() => router.push("/settings/sku")}
+              >
+                <Package className="h-4 w-4" />
+                <span>SKU</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="categories"
+                className="gap-2"
+                onClick={() => router.push("/settings/sku/categories")}
+              >
+                <Layers className="h-4 w-4" />
+                <span>Categories</span>
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
-            <TabsContent value="sku" className="mt-6">
-              <div className="flex flex-col gap-4">
-                <Suspense
-                  fallback={
-                    <SkuTable
-                      skus={[]}
-                      total={0}
-                      perPage={10}
-                      isLoading={true}
-                    />
-                  }
-                >
-                  <SkuContent />
-                </Suspense>
-              </div>
-            </TabsContent>
-          </Tabs>
-        </ScaffoldSection>
-      </ScaffoldContainer>
+          <TabsContent value="sku" className="mt-4">
+            <Suspense
+              fallback={
+                <SkuTable skus={[]} total={0} perPage={10} isLoading={true} />
+              }
+            >
+              <SkuContent />
+            </Suspense>
+          </TabsContent>
+        </Tabs>
+      </ScaffoldSection>
       <AddSkuModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
@@ -130,6 +119,6 @@ export function SkuSettingPageClient() {
         isOpen={isImportSheetOpen}
         onClose={() => setIsImportSheetOpen(false)}
       />
-    </PageLayout>
+    </DashboardPageShell>
   );
 }

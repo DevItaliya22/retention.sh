@@ -19,7 +19,7 @@ export function BusinessSettingsSkeleton() {
   return (
     <div className="space-y-6">
       {/* Basic Information - 4 fields */}
-      <Card className="flex min-h-0 flex-col gap-0 rounded-xl border-0 bg-[#EDE7D9] p-2 pb-3 shadow-none">
+      <Card className="bg-sidebar-accent/50 flex min-h-0 flex-col gap-0 rounded-lg border-0 p-2">
         <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
           <CardTitle className="text-foreground text-base leading-none font-semibold">
             Basic Information
@@ -28,7 +28,7 @@ export function BusinessSettingsSkeleton() {
             Manage your business name, identifier, website, and next bill number
           </CardDescription>
         </CardHeader>
-        <Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border-0 bg-[#FAF8F1] shadow-none">
+        <Card className="border-border/45 bg-background/55 flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border shadow-none">
           <CardContent className="flex min-h-0 flex-1 flex-col gap-y-4 overflow-auto px-4 py-4">
             <div className={ROW_CLASS}>
               <div className={LABEL_CLASS}>
@@ -83,7 +83,7 @@ export function BusinessSettingsSkeleton() {
       </Card>
 
       {/* Points & Currency - 4 fields */}
-      <Card className="flex min-h-0 flex-col gap-0 rounded-xl border-0 bg-[#EDE7D9] p-2 pb-3 shadow-none">
+      <Card className="bg-sidebar-accent/50 flex min-h-0 flex-col gap-0 rounded-lg border-0 p-2">
         <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
           <CardTitle className="text-foreground text-base leading-none font-semibold">
             Points & Currency
@@ -92,7 +92,7 @@ export function BusinessSettingsSkeleton() {
             Configure your loyalty points system and currency settings
           </CardDescription>
         </CardHeader>
-        <Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border-0 bg-[#FAF8F1] shadow-none">
+        <Card className="border-border/45 bg-background/55 flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border shadow-none">
           <CardContent className="flex min-h-0 flex-1 flex-col gap-y-4 overflow-auto px-4 py-4">
             <div className={ROW_CLASS}>
               <div className={LABEL_CLASS}>
@@ -148,7 +148,7 @@ export function BusinessSettingsSkeleton() {
       </Card>
 
       {/* Branding - 6 fields */}
-      <Card className="flex min-h-0 flex-col gap-0 rounded-xl border-0 bg-[#EDE7D9] p-2 pb-3 shadow-none">
+      <Card className="bg-sidebar-accent/50 flex min-h-0 flex-col gap-0 rounded-lg border-0 p-2">
         <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
           <CardTitle className="text-foreground text-base leading-none font-semibold">
             Branding
@@ -157,7 +157,7 @@ export function BusinessSettingsSkeleton() {
             Customize your business appearance and messaging
           </CardDescription>
         </CardHeader>
-        <Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border-0 bg-[#FAF8F1] shadow-none">
+        <Card className="border-border/45 bg-background/55 flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border shadow-none">
           <CardContent className="flex min-h-0 flex-1 flex-col gap-y-4 overflow-auto px-4 py-4">
             <div className={ROW_CLASS}>
               <div className={LABEL_CLASS}>
@@ -233,7 +233,7 @@ export function BusinessSettingsSkeleton() {
       </Card>
 
       {/* Services - 3 toggles */}
-      <Card className="flex min-h-0 flex-col gap-0 rounded-xl border-0 bg-[#EDE7D9] p-2 pb-3 shadow-none">
+      <Card className="bg-sidebar-accent/50 flex min-h-0 flex-col gap-0 rounded-lg border-0 p-2">
         <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
           <CardTitle className="text-foreground text-base leading-none font-semibold">
             Services
@@ -242,7 +242,7 @@ export function BusinessSettingsSkeleton() {
             Enable or disable loyalty, referral, and feedback for your business
           </CardDescription>
         </CardHeader>
-        <Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border-0 bg-[#FAF8F1] shadow-none">
+        <Card className="border-border/45 bg-background/55 flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border shadow-none">
           <CardContent className="flex flex-col divide-y px-4 py-4">
             <div className="flex flex-col gap-1 py-4 first:pt-0">
               <div className="flex flex-row items-center justify-between">

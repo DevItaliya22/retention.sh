@@ -1,6 +1,10 @@
 "use client";
 
 import { fetcher } from "@/lib/fetcher";
+import {
+  buildApiParams,
+  getDataTableConfig,
+} from "@/lib/utils/data-table-params";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 
@@ -22,6 +26,7 @@ export interface CampaignListItem {
   status: string;
   rewardType: string;
   rewardValue: string | null;
+  appliesTo: string;
   expiresAt: string;
   themeColor: string | null;
   bannerImage: string | null;
@@ -43,16 +48,23 @@ export interface CampaignListItem {
 export interface CampaignsResponse {
   items: CampaignListItem[];
   total: number;
+  page: number;
+  perPage: number;
   error?: string;
 }
 
 export function useCampaignsQuery() {
   const searchParams = useSearchParams();
-  const rewardType = searchParams.get("rewardType") ?? undefined;
-  const queryString = rewardType ? `rewardType=${rewardType}` : "";
+  const config = getDataTableConfig("campaigns");
+  const apiParams = buildApiParams(
+    searchParams,
+    config.prefix,
+    config.filterKeys,
+  );
+  const queryString = apiParams.toString();
 
   return useQuery<CampaignsResponse, Error>({
-    queryKey: ["campaigns", queryString],
+    queryKey: ["campaigns", searchParams.toString()],
     queryFn: () => {
       const url = queryString
         ? `/api/campaigns?${queryString}`
