@@ -9,24 +9,40 @@ import { Input } from "../input";
 import { DataTableDateFilter } from "./data-table-date-filter";
 import { DataTableFacetedFilter } from "./data-table-faceted-filter";
 import { DataTableSliderFilter } from "./data-table-slider-filter";
+import { useDataTableToolbarActions } from "./data-table-toolbar-actions-context";
 import { DataTableViewOptions } from "./data-table-view-options";
 
 interface DataTableToolbarProps<TData> extends React.ComponentProps<"div"> {
   table: Table<TData>;
+  maxTextFilters?: number;
 }
 
 export function DataTableToolbar<TData>({
   table,
+  maxTextFilters,
   children,
   className,
   ...props
 }: DataTableToolbarProps<TData>) {
   const isFiltered = table.getState().columnFilters.length > 0;
+  const injectedActions = useDataTableToolbarActions();
 
   const columns = React.useMemo(
     () => table.getAllColumns().filter((column) => column.getCanFilter()),
     [table],
   );
+  const toolbarColumns = React.useMemo(() => {
+    if (maxTextFilters === undefined) return columns;
+
+    let textFilterCount = 0;
+    return columns.filter((column) => {
+      const variant = column.columnDef.meta?.variant;
+      if (variant !== "text") return true;
+
+      textFilterCount += 1;
+      return textFilterCount <= Math.max(maxTextFilters, 0);
+    });
+  }, [columns, maxTextFilters]);
 
   const onReset = React.useCallback(() => {
     table.resetColumnFilters();
@@ -37,20 +53,20 @@ export function DataTableToolbar<TData>({
       role="toolbar"
       aria-orientation="horizontal"
       className={cn(
-        "flex w-full items-start justify-between gap-2 p-1",
+        "flex w-full flex-wrap items-start justify-between gap-3 py-1",
         className,
       )}
       {...props}
     >
-      <div className="flex flex-1 flex-wrap items-center gap-2">
-        {columns.map((column) => (
+      <div className="flex flex-1 flex-wrap items-center gap-2.5">
+        {toolbarColumns.map((column) => (
           <DataTableToolbarFilter key={column.id} column={column} />
         ))}
         {isFiltered && (
           <Button
             aria-label="Reset filters"
             variant="outline"
-            className="border-dashed"
+            className="border-border/60 bg-background/50 h-10 rounded-lg px-3 text-sm"
             icon={<X />}
             onClick={onReset}
           >
@@ -58,7 +74,8 @@ export function DataTableToolbar<TData>({
           </Button>
         )}
       </div>
-      <div className="flex items-center gap-2">
+      <div className="ml-auto flex items-center gap-2">
+        {injectedActions}
         {children}
         <DataTableViewOptions table={table} align="end" />
       </div>
@@ -92,7 +109,7 @@ function DataTableToolbarFilter<TData>({
                 }
               }}
               maxLength={columnMeta.maxLength ?? 255}
-              className="h-8 w-40 lg:w-56"
+              className="border-border/60 bg-background/50 placeholder:text-muted-foreground/75 h-10 w-full rounded-lg px-3 text-sm sm:w-[220px]"
             />
           );
 
@@ -105,10 +122,13 @@ function DataTableToolbarFilter<TData>({
                 placeholder={columnMeta.placeholder ?? columnMeta.label}
                 value={(column.getFilterValue() as string) ?? ""}
                 onChange={(event) => column.setFilterValue(event.target.value)}
-                className={cn("h-8 w-[120px]", columnMeta.unit && "pr-8")}
+                className={cn(
+                  "border-border/60 bg-background/50 h-10 w-[140px] rounded-lg px-3 text-sm",
+                  columnMeta.unit && "pr-8",
+                )}
               />
               {columnMeta.unit && (
-                <span className="bg-accent text-muted-foreground absolute top-0 right-0 bottom-0 flex items-center rounded-r-md px-2 text-sm">
+                <span className="bg-background/70 text-muted-foreground absolute top-0 right-0 bottom-0 flex items-center rounded-r-lg px-2 text-sm">
                   {columnMeta.unit}
                 </span>
               )}

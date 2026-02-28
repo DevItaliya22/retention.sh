@@ -286,9 +286,13 @@ export function SkuTable({
         return null;
       }}
     >
-      <DataTableToolbar table={table}>
-        <div className="flex items-center gap-2">
-          <span className="text-muted-foreground text-xs">
+      <DataTableToolbar
+        table={table}
+        maxTextFilters={1}
+        className="gap-2 py-1 [&>div:first-child]:w-full [&>div:last-child]:ml-0 [&>div:last-child]:w-full [&>div:last-child]:flex-wrap [&>div:last-child]:justify-between sm:[&>div:last-child]:w-auto sm:[&>div:last-child]:justify-end"
+      >
+        <div className="border-border/50 bg-background/40 flex items-center gap-1.5 rounded-md border px-2 py-1.5">
+          <span className="text-muted-foreground text-xs leading-none">
             Scroll inside table
           </span>
           <Switch

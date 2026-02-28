@@ -1,6 +1,6 @@
 "use client";
 
-import { PageLayout, ScaffoldContainer } from "@/components/layouts";
+import { DashboardPageShell } from "@/components/layouts";
 import { LoyaltyStatsTable } from "@/components/loyalty-stats/LoyaltyStatsTable";
 import { Skeleton } from "@reelo/ui/components";
 import { Suspense } from "react";
@@ -11,24 +11,20 @@ function LoyaltyStatsContent() {
 
 export function LoyaltyStatsPageClient() {
   return (
-    <PageLayout
+    <DashboardPageShell
       title="Loyalty stats"
       subtitle="Earned and redeemed points by source, customer and bill"
-      size="full"
-      scaffoldSectionClassName="h-full w-full pt-2 pb-0"
     >
-      <ScaffoldContainer>
-        <Suspense
-          fallback={
-            <div className="space-y-4">
-              <Skeleton className="h-32 w-full" />
-              <Skeleton className="h-64 w-full" />
-            </div>
-          }
-        >
-          <LoyaltyStatsContent />
-        </Suspense>
-      </ScaffoldContainer>
-    </PageLayout>
+      <Suspense
+        fallback={
+          <div className="space-y-4">
+            <Skeleton className="h-32 w-full" />
+            <Skeleton className="h-64 w-full" />
+          </div>
+        }
+      >
+        <LoyaltyStatsContent />
+      </Suspense>
+    </DashboardPageShell>
   );
 }
