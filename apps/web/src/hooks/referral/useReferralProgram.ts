@@ -125,6 +125,20 @@ export function usePublicReferralProgram(businessSlug: string) {
   });
 }
 
+/** Fetches referral program + business (with branding) by claim link slug for the claim page. */
+export function useReferralProgramByClaimSlug(referralSlug: string) {
+  return useQuery<PublicReferralProgramResponse, Error>({
+    queryKey: ["referralProgramByClaimSlug", referralSlug],
+    queryFn: () =>
+      fetcher<PublicReferralProgramResponse>(
+        `/api/referral/program/by-claim/${referralSlug}`,
+      ),
+    enabled: !!referralSlug,
+    placeholderData: (prev) => prev,
+    staleTime: 5000,
+  });
+}
+
 export interface CreateReferralProgramResponse {
   referralProgram: ReferralProgram | null;
   error?: string;

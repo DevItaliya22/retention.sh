@@ -1,5 +1,6 @@
 "use client";
 
+import { BrandingFieldGroup } from "@/components/common/settings/BrandingFieldGroup";
 import { SettingsFieldGroup } from "@/components/common/settings/SettingsFieldGroup";
 import type {
   FeedbackConfigDto,
@@ -396,47 +397,9 @@ export function FeedbackExistingSettings({
         onSubmit={handleUpdateRewards}
       />
 
-      <SettingsFieldGroup
+      <BrandingFieldGroup
         title="Branding"
         description="Customize appearance of the feedback page"
-        fields={[
-          {
-            name: "logo",
-            label: "Logo URL",
-            placeholder: "https://...",
-            helpText: "Image URL for your logo.",
-          },
-          {
-            name: "themeColor",
-            label: "Theme Color",
-            placeholder: "#7c3aed",
-            helpText: "Hex color (e.g. #7c3aed).",
-          },
-          {
-            name: "textColor",
-            label: "Text Color",
-            placeholder: "#ffffff",
-            helpText: "Hex color for text.",
-          },
-          {
-            name: "bannerImage",
-            label: "Banner Image URL",
-            placeholder: "https://...",
-            helpText: "Image URL for banner.",
-          },
-          {
-            name: "header",
-            label: "Header",
-            placeholder: "We'd love your feedback",
-            helpText: "Main heading on feedback pages.",
-          },
-          {
-            name: "subtitle",
-            label: "Subtitle",
-            placeholder: "Share your experience with us",
-            helpText: "Subheading or short description.",
-          },
-        ]}
         defaultValues={{
           logo: config.branding?.logo ?? "",
           themeColor: config.branding?.themeColor ?? "",

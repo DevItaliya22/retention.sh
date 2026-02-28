@@ -1,5 +1,6 @@
 "use client";
 
+import { BrandingFieldGroup } from "@/components/common/settings/BrandingFieldGroup";
 import { SettingsFieldGroup } from "@/components/common/settings/SettingsFieldGroup";
 import { PageLayout, ScaffoldContainer } from "@/components/layouts";
 import type { CurrentBusiness } from "@/hooks/business/useCurrentBusiness";
@@ -251,48 +252,9 @@ export function BusinessExistingSettings({
             onSubmit={handleUpdateCurrencySettings}
           />
 
-          <SettingsFieldGroup
+          <BrandingFieldGroup
             title="Branding"
             description="Customize your business appearance and messaging"
-            fields={[
-              {
-                name: "logo",
-                label: "Logo URL",
-                placeholder: "https://...",
-                helpText: "Enter a valid image URL for your business logo.",
-              },
-              {
-                name: "themeColor",
-                label: "Theme Color",
-                placeholder: "#7c3aed",
-                helpText: "Enter a hex color code (e.g., #7c3aed).",
-              },
-              {
-                name: "textColor",
-                label: "Text Color",
-                placeholder: "#ffffff",
-                helpText: "Enter a hex color code for text (e.g., #ffffff).",
-              },
-              {
-                name: "bannerImage",
-                label: "Banner Image URL",
-                placeholder: "https://...",
-                helpText: "Enter a valid image URL for your business banner.",
-              },
-              {
-                name: "header",
-                label: "Header",
-                placeholder: "Welcome to Acme Store",
-                helpText:
-                  "This text appears prominently on customer-facing pages.",
-              },
-              {
-                name: "subtitle",
-                label: "Subtitle",
-                placeholder: "Earn points on every purchase",
-                helpText: "This text provides additional context or messaging.",
-              },
-            ]}
             defaultValues={{
               logo: business.defaultBranding?.logo ?? "",
               themeColor: business.defaultBranding?.themeColor ?? "",
