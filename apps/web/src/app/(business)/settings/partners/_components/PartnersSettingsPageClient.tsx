@@ -1,11 +1,10 @@
 "use client";
 
+import { SettingsFieldGroup } from "@/components/common/settings/SettingsFieldGroup";
+import { SettingsSection } from "@/components/common/settings/SettingsSection";
+
 import { DashboardPageShell } from "@/components/layouts";
 import { useCurrentBusiness } from "@/hooks/business/useCurrentBusiness";
-import {
-  useCreatePartnerCampaign,
-  usePartnerCampaigns,
-} from "@/hooks/partnership/usePartnerCampaigns";
 import {
   usePartnerRequests,
   useRespondPartnerRequest,
@@ -23,41 +22,38 @@ import {
   usePartnershipSettings,
   useUpdatePartnershipSettings,
 } from "@/hooks/partnership/usePartnershipSettings";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Badge,
   Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+  Checkbox,
   DataTable,
   DataTableColumnHeader,
   DataTableToolbar,
   DateDisplay,
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
   Input,
   Label,
+  SaveButton,
   Skeleton,
   Switch,
 } from "@reelo/ui/components";
 import { useDataTable } from "@reelo/ui/hooks";
-import { cn } from "@reelo/ui/lib/utils";
 import type { ColumnDef } from "@tanstack/react-table";
-import {
-  AlertTriangle,
-  ArrowRight,
-  Check,
-  Handshake,
-  Plus,
-  Send,
-  Trash2,
-  Undo2,
-  X,
-} from "lucide-react";
-import { useCallback, useMemo, useState, type ReactNode } from "react";
+import { ArrowRight, Check, Trash2, Undo2, X } from "lucide-react";
+import { useCallback, useMemo, useState } from "react";
+import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import * as z from "zod";
 
-const MY_BUSINESS_LABEL = "Your business";
 const PARTNER_LABEL = "Partner";
 const PARTNER_TABLE_PAGE_SIZE = 8;
 
@@ -83,139 +79,131 @@ function buildRequestSkeletonRows(length: number): PartnerRequestItem[] {
   }));
 }
 
-function SettingsPanel({
-  title,
-  description,
-  children,
-  contentClassName,
+// ---------------------------------------------------------------------------
+// Single setting field: Receive + Send + Active (one card, no nested cards)
+// ---------------------------------------------------------------------------
+function PartnershipSettingsSingleSection({
+  myBusinessId,
 }: {
-  title: string;
-  description?: string;
-  children: ReactNode;
-  contentClassName?: string;
+  myBusinessId: string;
 }) {
-  return (
-    <Card className="bg-sidebar-accent/50 flex min-h-0 flex-col gap-0 rounded-lg border-0 p-2">
-      <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
-        <CardTitle className="text-foreground text-base leading-none font-semibold">
-          {title}
-        </CardTitle>
-        {description ? (
-          <CardDescription className="text-muted-foreground mt-0.5 text-sm">
-            {description}
-          </CardDescription>
-        ) : null}
-      </CardHeader>
-      <Card className="border-border/45 bg-background/55 flex min-h-0 flex-col gap-0 overflow-hidden rounded-lg border">
-        <CardContent
-          className={cn("min-h-0 overflow-hidden px-4 py-4", contentClassName)}
-        >
-          {children}
-        </CardContent>
-      </Card>
-    </Card>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// General settings
-// ---------------------------------------------------------------------------
-function GeneralSettings() {
-  const { data, isLoading } = usePartnershipSettings();
+  const { data: settingsData, isLoading: settingsLoading } =
+    usePartnershipSettings();
   const updateSettings = useUpdatePartnershipSettings();
-
-  if (isLoading) {
-    return (
-      <SettingsPanel
-        title="Receive partnership offers"
-        description="When enabled, other businesses can send you partnership requests."
-      >
-        <div className="space-y-2">
-          <Skeleton className="h-4 w-56 rounded-md" />
-          <Skeleton className="h-10 w-full rounded-lg" />
-        </div>
-      </SettingsPanel>
-    );
-  }
-
-  const handleToggle = async (checked: boolean) => {
-    try {
-      await updateSettings.mutateAsync({ receivePartnershipOffers: checked });
-      toast.success("Settings updated.");
-    } catch (e: unknown) {
-      toast.error(
-        e instanceof Error ? e.message : "Failed to update settings.",
-      );
-    }
-  };
-
-  return (
-    <SettingsPanel
-      title="Receive partnership offers"
-      description="When enabled, other businesses can send you partnership requests."
-    >
-      <div className="flex items-start justify-between gap-4">
-        <div className="space-y-1">
-          <Label className="text-sm font-medium">
-            Receive partnership offers
-          </Label>
-          <p className="text-muted-foreground text-xs">
-            Allow other businesses to send partnership requests to you.
-          </p>
-        </div>
-        <Switch
-          checked={data?.receivePartnershipOffers ?? false}
-          onCheckedChange={handleToggle}
-          disabled={updateSettings.isPending}
-        />
-      </div>
-    </SettingsPanel>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Send request
-// ---------------------------------------------------------------------------
-function SendRequest() {
-  const [slug, setSlug] = useState("");
   const sendRequest = useSendPartnerRequest();
+  const [sendSlug, setSendSlug] = useState("");
+  const { data: partnershipsData, isLoading: partnershipsLoading } =
+    usePartnerships();
+  const partnerships = partnershipsData?.items ?? [];
 
   const handleSend = async () => {
-    if (!slug.trim()) return;
+    if (!sendSlug.trim()) return;
     try {
-      await sendRequest.mutateAsync({ targetBusinessSlug: slug.trim() });
-      setSlug("");
+      await sendRequest.mutateAsync({ targetBusinessSlug: sendSlug.trim() });
+      setSendSlug("");
       toast.success("Request sent.");
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Failed to send request.");
     }
   };
 
-  return (
-    <SettingsPanel
-      title="Send request"
-      description="Enter the partner's business slug to send a partnership request."
-      contentClassName="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_auto] sm:items-end"
-    >
-      <div className="min-w-0 space-y-1.5">
-        <Label className="text-sm font-medium">Business slug</Label>
-        <Input
-          placeholder="e.g. partner-cafe"
-          className="border-border/80 bg-background rounded-lg"
-          value={slug}
-          onChange={(e) => setSlug(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleSend()}
-        />
-      </div>
-      <Button
-        onClick={handleSend}
-        disabled={!slug.trim() || sendRequest.isPending}
-        className="shrink-0 rounded-lg"
-        icon={<Send className="h-4 w-4" />}
+  if (settingsLoading) {
+    return (
+      <SettingsSection
+        title="Partnership settings"
+        description="Receive offers, send requests, and manage active partnerships."
       >
-        {sendRequest.isPending ? "Sending..." : "Send request"}
-      </Button>
-    </SettingsPanel>
+        <Skeleton className="h-32 w-full" />
+      </SettingsSection>
+    );
+  }
+
+  return (
+    <SettingsSection
+      title="Partnership settings"
+      description="Receive offers, send requests, and manage active partnerships."
+      contentClassName="flex flex-col gap-y-6"
+    >
+      {/* Receive partnership offers */}
+      <div className="flex flex-col gap-2 md:grid md:grid-cols-12">
+        <div className="col-span-4 flex flex-col gap-0.5">
+          <Label className="text-sm">Receive partnership offers</Label>
+          <p className="text-muted-foreground text-xs">
+            When enabled, other businesses can send you partnership requests.
+          </p>
+        </div>
+        <div className="col-span-8 flex items-center">
+          <Switch
+            checked={settingsData?.receivePartnershipOffers ?? false}
+            onCheckedChange={async (v) => {
+              try {
+                await updateSettings.mutateAsync({
+                  receivePartnershipOffers: v,
+                });
+                toast.success("Settings updated.");
+              } catch (e: unknown) {
+                toast.error(
+                  e instanceof Error ? e.message : "Failed to update settings.",
+                );
+              }
+            }}
+            disabled={updateSettings.isPending}
+          />
+        </div>
+      </div>
+
+      {/* Send request */}
+      <div className="flex flex-col gap-2 md:grid md:grid-cols-12">
+        <div className="col-span-4 flex flex-col gap-0.5">
+          <Label className="text-sm">Business slug</Label>
+          <p className="text-muted-foreground text-xs">
+            Enter partner&apos;s slug to send a partnership request.
+          </p>
+        </div>
+        <div className="col-span-8 flex flex-wrap items-end gap-2">
+          <Input
+            variant="underline"
+            placeholder="e.g. partner-cafe"
+            className="min-w-0 flex-1"
+            value={sendSlug}
+            onChange={(e) => setSendSlug(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleSend()}
+          />
+          <Button
+            onClick={handleSend}
+            disabled={!sendSlug.trim() || sendRequest.isPending}
+            className="shrink-0"
+          >
+            {sendRequest.isPending ? "Sending..." : "Send request"}
+          </Button>
+        </div>
+      </div>
+
+      {/* Active partnerships */}
+      <div className="border-border/45 flex flex-col gap-4 border-t pt-6">
+        <p className="text-foreground text-sm font-semibold">
+          Active partnerships
+        </p>
+        {partnershipsLoading ? (
+          <Skeleton className="h-40 w-full" />
+        ) : partnerships.length === 0 ? (
+          <p className="text-muted-foreground text-sm">
+            No partnerships yet. Send a request to get started.
+          </p>
+        ) : (
+          <div className="divide-border/45 flex flex-col divide-y">
+            {partnerships.map((p) => (
+              <PartnershipBlock
+                key={p.id}
+                partnership={p}
+                myBusinessId={myBusinessId}
+                embedded
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </SettingsSection>
   );
 }
 
@@ -253,21 +241,7 @@ function IncomingRequests() {
     if (isLoading && pending.length === 0) {
       return buildRequestSkeletonRows(PARTNER_TABLE_PAGE_SIZE);
     }
-    if (isEmpty) {
-      return [
-        {
-          id: "empty-state",
-          senderBusinessId: "",
-          receiverBusinessId: "",
-          status: "PENDING",
-          partnershipId: null,
-          senderBusiness: undefined,
-          receiverBusiness: undefined,
-          createdAt: "",
-          updatedAt: "",
-        },
-      ];
-    }
+    if (isEmpty) return [];
     return pending;
   }, [isEmpty, isLoading, pending]);
 
@@ -436,34 +410,27 @@ function IncomingRequests() {
   });
 
   return (
-    <DataTable
-      table={table}
-      renderRowFooter={(row) => {
-        if (isEmpty && row.original.id === "empty-state") {
-          return (
-            <div className="flex flex-col items-center justify-center px-4 py-12">
-              <p className="text-muted-foreground text-sm font-medium">
-                No pending requests
-              </p>
-              <p className="text-muted-foreground mt-1 text-xs">
-                When someone sends a request, it will show up here.
-              </p>
-            </div>
-          );
-        }
-        return null;
-      }}
+    <SettingsSection
+      title="Incoming"
+      description="Partnership requests sent to you by other businesses."
+      contentClassName="flex flex-col gap-2 px-1 pb-1"
     >
-      <div className="space-y-0.5 px-1 pb-1">
-        <p className="text-foreground text-base leading-none font-semibold">
-          Incoming
-        </p>
-        <p className="text-muted-foreground text-sm">
-          Partnership requests sent to you by other businesses.
-        </p>
-      </div>
-      <DataTableToolbar table={table} maxTextFilters={2} />
-    </DataTable>
+      <DataTable
+        table={table}
+        renderEmpty={() => (
+          <Empty className="py-12">
+            <EmptyHeader>
+              <EmptyTitle>No pending requests</EmptyTitle>
+              <EmptyDescription>
+                When someone sends a request, it will show up here.
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        )}
+      >
+        <DataTableToolbar table={table} maxTextFilters={2} />
+      </DataTable>
+    </SettingsSection>
   );
 }
 
@@ -478,21 +445,7 @@ function SentRequests() {
     if (isLoading && items.length === 0) {
       return buildRequestSkeletonRows(PARTNER_TABLE_PAGE_SIZE);
     }
-    if (isEmpty) {
-      return [
-        {
-          id: "empty-state",
-          senderBusinessId: "",
-          receiverBusinessId: "",
-          status: "PENDING",
-          partnershipId: null,
-          senderBusiness: undefined,
-          receiverBusiness: undefined,
-          createdAt: "",
-          updatedAt: "",
-        },
-      ];
-    }
+    if (isEmpty) return [];
     return items;
   }, [isEmpty, isLoading, items]);
 
@@ -678,34 +631,27 @@ function SentRequests() {
   });
 
   return (
-    <DataTable
-      table={table}
-      renderRowFooter={(row) => {
-        if (isEmpty && row.original.id === "empty-state") {
-          return (
-            <div className="flex flex-col items-center justify-center px-4 py-12">
-              <p className="text-muted-foreground text-sm font-medium">
-                No sent requests
-              </p>
-              <p className="text-muted-foreground mt-1 text-xs">
-                Requests you send will appear here.
-              </p>
-            </div>
-          );
-        }
-        return null;
-      }}
+    <SettingsSection
+      title="Sent"
+      description="Partnership requests you have sent."
+      contentClassName="flex flex-col gap-2 px-1 pb-1"
     >
-      <div className="space-y-0.5 px-1 pb-1">
-        <p className="text-foreground text-base leading-none font-semibold">
-          Sent
-        </p>
-        <p className="text-muted-foreground text-sm">
-          Partnership requests you have sent.
-        </p>
-      </div>
-      <DataTableToolbar table={table} maxTextFilters={2} />
-    </DataTable>
+      <DataTable
+        table={table}
+        renderEmpty={() => (
+          <Empty className="py-12">
+            <EmptyHeader>
+              <EmptyTitle>No sent requests</EmptyTitle>
+              <EmptyDescription>
+                Requests you send will appear here.
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        )}
+      >
+        <DataTableToolbar table={table} maxTextFilters={2} />
+      </DataTable>
+    </SettingsSection>
   );
 }
 
@@ -744,7 +690,7 @@ function PermanentlyRejected() {
   };
 
   return (
-    <SettingsPanel
+    <SettingsSection
       title="Permanently rejected"
       description="They cannot re-request until you move them back or send a request from your side."
     >
@@ -755,7 +701,7 @@ function PermanentlyRejected() {
         onMoveToRejected={handleMoveToRejected}
         onSendFromYourSide={handleSendFromYourSide}
       />
-    </SettingsPanel>
+    </SettingsSection>
   );
 }
 
@@ -874,14 +820,16 @@ function RejectedRequestsTable({
 }
 
 // ---------------------------------------------------------------------------
-// Single partnership block (no card)
+// Partner block: embedded = inline form (no card); else SettingsFieldGroup + footerActions
 // ---------------------------------------------------------------------------
 function PartnershipBlock({
   partnership,
   myBusinessId,
+  embedded = false,
 }: {
   partnership: Partnership;
   myBusinessId: string;
+  embedded?: boolean;
 }) {
   const myMember = partnership.members.find(
     (m) => m.businessId === myBusinessId,
@@ -892,48 +840,94 @@ function PartnershipBlock({
 
   const update = useUpdatePartnership(partnership.id);
   const dissolve = useDissolvePartnership();
-  const createCampaign = useCreatePartnerCampaign();
-
-  const [exchangeRate, setExchangeRate] = useState(
-    String(myMember?.exchangeRate ?? 1),
-  );
-  const [pointRate, setPointRate] = useState(
-    String(myMember?.pointToCurrencyRate ?? 1),
-  );
   const [confirmDissolve, setConfirmDissolve] = useState(false);
 
   const myLoyaltyType = myMember?.business.loyalty?.loyaltyType;
   const showPointRate =
     myLoyaltyType === "AMOUNT_SPENT" || myLoyaltyType === "VISIT_MADE";
-
-  const myRateNum = Number(exchangeRate) || 1;
   const partnerRateNum = partnerMember?.exchangeRate ?? 1;
-  const ratioLabel = `${myRateNum} : ${partnerRateNum}`;
-
-  const myBusinessName = myMember?.business.name ?? MY_BUSINESS_LABEL;
   const partnerBusinessName = partnerMember?.business.name ?? PARTNER_LABEL;
+  const slug = partnerMember?.business.slug ?? "";
+  const sinceDate = new Date(partnership.createdAt).toLocaleDateString();
 
-  const handleSaveRates = async () => {
+  const fields = useMemo(() => {
+    const base = [
+      {
+        name: "exchangeRate",
+        label: "Your rate",
+        type: "number" as const,
+        min: 0.01,
+        step: "0.01",
+      },
+      ...(showPointRate
+        ? [
+            {
+              name: "pointToCurrencyRate",
+              label: "Point to currency rate",
+              type: "number" as const,
+              optional: true,
+              min: 0.001,
+              step: "0.001",
+            },
+          ]
+        : []),
+      {
+        name: "partnerRate",
+        label: "Partner's rate",
+        disabled: true,
+      },
+      {
+        name: "sharedReferrals",
+        label: "Shared referrals",
+        type: "checkbox" as const,
+        checkboxLabel:
+          "New customers from either referral link join both businesses.",
+      },
+      {
+        name: "shareReferralRewards",
+        label: "Share referral rewards",
+        type: "checkbox" as const,
+        checkboxLabel:
+          "Rewards trigger from both programs (doubles cost per referral).",
+      },
+    ];
+    return base;
+  }, [showPointRate]);
+
+  const defaultValues = useMemo(
+    () => ({
+      exchangeRate: String(myMember?.exchangeRate ?? 1),
+      pointToCurrencyRate: String(myMember?.pointToCurrencyRate ?? 1),
+      partnerRate: String(partnerRateNum),
+      sharedReferrals: partnership.sharedReferrals ? "true" : "false",
+      shareReferralRewards: partnership.shareReferralRewards ? "true" : "false",
+    }),
+    [
+      myMember?.exchangeRate,
+      myMember?.pointToCurrencyRate,
+      partnerRateNum,
+      partnership.sharedReferrals,
+      partnership.shareReferralRewards,
+    ],
+  );
+
+  const handleSubmit = async (values: Record<string, string>) => {
     try {
       await update.mutateAsync({
-        exchangeRate: Number(exchangeRate),
-        ...(showPointRate && { pointToCurrencyRate: Number(pointRate) }),
+        exchangeRate: Number(values.exchangeRate),
+        ...(showPointRate &&
+          values.pointToCurrencyRate && {
+            pointToCurrencyRate: Number(values.pointToCurrencyRate),
+          }),
+        sharedReferrals: values.sharedReferrals === "true",
+        shareReferralRewards: values.shareReferralRewards === "true",
       });
-      toast.success("Rates updated.");
+      return { success: true };
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Failed to update.");
-    }
-  };
-
-  const handleToggle = async (
-    field: "sharedReferrals" | "shareReferralRewards" | "sharedCampaigns",
-    value: boolean,
-  ) => {
-    try {
-      await update.mutateAsync({ [field]: value });
-      toast.success("Updated.");
-    } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Failed to update.");
+      return {
+        success: false,
+        error: e instanceof Error ? e.message : "Failed to update.",
+      };
     }
   };
 
@@ -947,18 +941,9 @@ function PartnershipBlock({
     }
   };
 
-  const handleCreateCampaign = async () => {
-    try {
-      await createCampaign.mutateAsync({ partnershipId: partnership.id });
-      toast.success("Campaign draft created.");
-    } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Failed to create.");
-    }
-  };
-
   if (partnership.status === "DISSOLVED") {
     return (
-      <div className="border-border/60 bg-muted/10 flex items-center justify-between rounded-2xl border px-5 py-4 opacity-70">
+      <div className="border-border/60 bg-muted/10 flex items-center justify-between rounded-lg border px-4 py-3 opacity-70">
         <div>
           <p className="font-medium">
             {partnerMember?.business.name ?? "Unknown partner"}
@@ -971,291 +956,265 @@ function PartnershipBlock({
     );
   }
 
+  const footerActions = useMemo(() => {
+    if (confirmDissolve) {
+      return [
+        {
+          label: "Cancel",
+          variant: "outline" as const,
+          onAction: async () => setConfirmDissolve(false),
+        },
+        {
+          label: "Confirm dissolve",
+          variant: "destructive" as const,
+          loading: dissolve.isPending,
+          onAction: handleDissolve,
+        },
+      ];
+    }
+    return [
+      {
+        label: "Dissolve",
+        variant: "destructive" as const,
+        onAction: async () => setConfirmDissolve(true),
+      },
+    ];
+  }, [confirmDissolve, dissolve.isPending]);
+
+  if (embedded) {
+    return (
+      <PartnershipBlockEmbedded
+        partnerBusinessName={partnerBusinessName}
+        slug={slug}
+        sinceDate={sinceDate}
+        fields={fields}
+        defaultValues={defaultValues}
+        handleSubmit={handleSubmit}
+        updatePending={update.isPending}
+        footerActions={footerActions}
+      />
+    );
+  }
+
   return (
-    <div className="space-y-5 py-2">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="bg-primary/15 flex h-10 w-10 items-center justify-center rounded-lg">
-            <Handshake className="text-primary h-5 w-5" />
-          </div>
-          <div>
-            <p className="text-base font-semibold">{partnerBusinessName}</p>
-            <p className="text-muted-foreground text-xs">
-              @{partnerMember?.business.slug} · Since{" "}
-              {new Date(partnership.createdAt).toLocaleDateString()}
-            </p>
-          </div>
-        </div>
-        <Badge variant="default" className="rounded-full font-medium">
-          Active
-        </Badge>
-      </div>
-
-      {/* Exchange rates */}
-      <div className="space-y-3">
-        <p className="text-sm font-semibold">Exchange rates</p>
-        <p className="text-muted-foreground text-xs">
-          You set your rate; partner sets theirs. Your rate converts your coins
-          to their value; theirs converts their coins to yours.
-        </p>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <p className="text-muted-foreground text-xs font-medium">
-              Your rate (you set)
-            </p>
-            <p className="text-sm">
-              1 of your coins →{" "}
-              <span className="font-mono font-semibold">
-                {exchangeRate || "—"}
-              </span>{" "}
-              at {partnerBusinessName}
-            </p>
-            <Input
-              type="number"
-              step="0.01"
-              min={0.01}
-              className="rounded-lg"
-              value={exchangeRate}
-              onChange={(e) => setExchangeRate(e.target.value)}
-            />
-            {showPointRate && (
-              <div className="mt-2 space-y-1">
-                <Label className="text-xs">Point → currency</Label>
-                <Input
-                  type="number"
-                  step="0.001"
-                  min={0.001}
-                  className="rounded-lg"
-                  value={pointRate}
-                  onChange={(e) => setPointRate(e.target.value)}
-                />
-              </div>
-            )}
-            <Button
-              size="sm"
-              className="mt-1 rounded-lg"
-              onClick={handleSaveRates}
-              disabled={update.isPending}
-            >
-              {update.isPending ? "Saving…" : "Save your rate"}
-            </Button>
-          </div>
-          <div className="space-y-2">
-            <p className="text-muted-foreground text-xs font-medium">
-              Partner&apos;s rate (they set)
-            </p>
-            <p className="text-sm">
-              1 of {partnerBusinessName}&apos;s coins →{" "}
-              <span className="font-mono font-semibold">{partnerRateNum}</span>{" "}
-              at {myBusinessName}
-            </p>
-            <p className="text-muted-foreground text-xs">
-              They set this on their Partners page. Read-only for you.
-            </p>
-          </div>
-        </div>
-        <div className="bg-primary/10 flex flex-wrap items-center gap-2 rounded-lg px-3 py-2">
-          <span className="text-muted-foreground text-sm">
-            Ratio (you → them : them → you)
-          </span>
-          <span className="text-primary font-mono text-sm font-semibold">
-            {ratioLabel}
-          </span>
-        </div>
-      </div>
-
-      {/* Features */}
-      <div className="space-y-3">
-        <p className="text-sm font-semibold">Features</p>
-        <div className="space-y-2">
-          <div className="bg-background/60 hover:bg-background/80 flex items-start justify-between gap-4 rounded-lg px-4 py-2.5 transition-colors">
-            <div>
-              <Label className="text-sm">Shared referrals</Label>
-              <p className="text-muted-foreground text-xs">
-                New customers from either referral link join both businesses.
-              </p>
-            </div>
-            <Switch
-              checked={partnership.sharedReferrals}
-              onCheckedChange={(v) => handleToggle("sharedReferrals", v)}
-              disabled={update.isPending}
-            />
-          </div>
-          {partnership.sharedReferrals && (
-            <div className="bg-background/60 hover:bg-background/80 flex items-start justify-between gap-4 rounded-lg px-4 py-2.5 transition-colors">
-              <div>
-                <Label className="text-sm">Share referral rewards</Label>
-                <p className="text-muted-foreground text-xs">
-                  <AlertTriangle className="mr-1 inline h-3.5 w-3.5 text-amber-500" />
-                  Rewards trigger from both programs (doubles cost per
-                  referral).
-                </p>
-              </div>
-              <Switch
-                checked={partnership.shareReferralRewards}
-                onCheckedChange={(v) => handleToggle("shareReferralRewards", v)}
-                disabled={update.isPending}
-              />
-            </div>
-          )}
-          <div className="bg-background/60 hover:bg-background/80 flex items-start justify-between gap-4 rounded-lg px-4 py-2.5 transition-colors">
-            <div>
-              <Label className="text-sm">Shared campaigns</Label>
-              <p className="text-muted-foreground text-xs">
-                Joint campaigns visible in both dashboards.
-              </p>
-            </div>
-            <Switch
-              checked={partnership.sharedCampaigns}
-              onCheckedChange={(v) => handleToggle("sharedCampaigns", v)}
-              disabled={update.isPending}
-            />
-          </div>
-        </div>
-      </div>
-
-      {partnership.sharedCampaigns && (
-        <div className="bg-muted/30 flex flex-wrap items-center justify-between gap-3 rounded-lg px-4 py-2.5">
-          <p className="text-muted-foreground text-sm">
-            Create a partner campaign for this partnership.
+    <div className="flex flex-col gap-4">
+      <SettingsFieldGroup
+        title={partnerBusinessName}
+        description={`@${slug} · Since ${sinceDate}`}
+        fields={fields}
+        defaultValues={defaultValues}
+        onSubmit={handleSubmit}
+      />
+      {/* Dissolve as separate field */}
+      <div className="flex flex-col gap-2 py-2 md:grid md:grid-cols-12">
+        <div className="col-span-4 flex flex-col gap-0.5">
+          <Label className="text-sm">Dissolve partnership</Label>
+          <p className="text-muted-foreground text-xs">
+            Permanently end this partnership. This cannot be undone.
           </p>
-          <Button
-            size="sm"
-            variant="outline"
-            className="rounded-lg"
-            onClick={handleCreateCampaign}
-            disabled={createCampaign.isPending}
-            icon={<Plus className="h-3.5 w-3.5" />}
-          >
-            New campaign
-          </Button>
         </div>
-      )}
-
-      {/* Dissolve */}
-      <div className="bg-muted/30 rounded-lg px-4 py-2.5">
-        {confirmDissolve ? (
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-destructive mr-auto text-sm font-medium">
-              Are you sure? This can&apos;t be undone easily.
-            </span>
+        <div className="col-span-8 flex flex-wrap items-center gap-2">
+          {footerActions.map((action, i) => (
             <Button
+              key={i}
+              type="button"
+              variant={action.variant ?? "outline"}
               size="sm"
-              variant="outline"
-              className="rounded-lg"
-              onClick={() => setConfirmDissolve(false)}
+              disabled={"loading" in action ? action.loading : false}
+              loading={"loading" in action ? action.loading : false}
+              onClick={() => void action.onAction()}
             >
-              Cancel
+              {action.label}
             </Button>
-            <Button
-              size="sm"
-              variant="destructive"
-              className="rounded-lg"
-              onClick={handleDissolve}
-              disabled={dissolve.isPending}
-            >
-              Confirm dissolve
-            </Button>
-          </div>
-        ) : (
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-muted-foreground text-sm">
-              Dissolve this partnership
-            </p>
-            <Button
-              size="sm"
-              variant="destructive"
-              className="rounded-lg"
-              onClick={() => setConfirmDissolve(true)}
-              icon={<Trash2 className="h-3.5 w-3.5" />}
-            >
-              Dissolve
-            </Button>
-          </div>
-        )}
+          ))}
+        </div>
       </div>
     </div>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Active partnerships
-// ---------------------------------------------------------------------------
-function ActivePartnerships({ myBusinessId }: { myBusinessId: string }) {
-  const { data, isLoading } = usePartnerships();
-  const partnerships = data?.items ?? [];
-
-  if (isLoading) {
-    return (
-      <div className="space-y-4">
-        <Skeleton className="h-40 w-full rounded-xl" />
-        <Skeleton className="h-40 w-full rounded-xl" />
-      </div>
-    );
-  }
-
-  if (partnerships.length === 0) {
-    return (
-      <div className="flex flex-col items-center py-10 text-center">
-        <div className="bg-muted/50 flex h-12 w-12 items-center justify-center rounded-xl">
-          <Handshake className="text-muted-foreground/50 h-6 w-6" />
-        </div>
-        <p className="text-muted-foreground mt-3 text-sm font-semibold">
-          No partnerships yet
-        </p>
-        <p className="text-muted-foreground mt-1 max-w-sm text-xs">
-          Send a request to get started. When they accept, you can set exchange
-          rates and features here.
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="divide-border/30 divide-y">
-      {partnerships.map((p) => (
-        <PartnershipBlock
-          key={p.id}
-          partnership={p}
-          myBusinessId={myBusinessId}
-        />
-      ))}
-    </div>
+// Inline form (no card) for use inside single section
+function PartnershipBlockEmbedded({
+  partnerBusinessName,
+  slug,
+  sinceDate,
+  fields,
+  defaultValues,
+  handleSubmit,
+  updatePending,
+  footerActions,
+}: {
+  partnerBusinessName: string;
+  slug: string;
+  sinceDate: string;
+  fields: Array<{
+    name: string;
+    label: string;
+    type?: "number" | "checkbox";
+    optional?: boolean;
+    disabled?: boolean;
+    checkboxLabel?: string;
+    min?: number;
+    step?: string;
+  }>;
+  defaultValues: Record<string, string>;
+  handleSubmit: (v: Record<string, string>) => Promise<{
+    success: boolean;
+    error?: string;
+  }>;
+  updatePending: boolean;
+  footerActions: Array<{
+    label: string;
+    variant?: "destructive" | "outline";
+    onAction: () => Promise<void>;
+    loading?: boolean;
+  }>;
+}) {
+  const schema = useMemo(
+    () =>
+      z.object(
+        fields.reduce(
+          (acc, f) => {
+            acc[f.name] =
+              f.disabled || f.optional
+                ? z.string().optional()
+                : z.string().min(1, `${f.label} is required`);
+            return acc;
+          },
+          {} as Record<string, z.ZodString | z.ZodOptional<z.ZodString>>,
+        ),
+      ),
+    [fields],
   );
-}
 
-// ---------------------------------------------------------------------------
-// Partner campaigns list
-// ---------------------------------------------------------------------------
-function PartnerCampaignsList() {
-  const { data, isLoading } = usePartnerCampaigns();
-  const items = data?.items ?? [];
+  const form = useForm<Record<string, string | undefined>>({
+    resolver: zodResolver(schema),
+    defaultValues,
+  });
 
-  if (isLoading || items.length === 0) return null;
+  const runSubmit = async () => {
+    const valid = await form.trigger();
+    if (!valid) throw new Error("Validation failed");
+    const values = form.getValues() as Record<string, string>;
+    const result = await handleSubmit(values);
+    if (result.success) {
+      toast.success("Settings updated successfully");
+      form.reset(values, { keepDefaultValues: false });
+    } else {
+      toast.error(result.error || "Failed to update");
+      throw new Error(result.error);
+    }
+  };
 
   return (
-    <ul className="space-y-2">
-      {items.map((c) => (
-        <li
-          key={c.id}
-          className="border-border/60 bg-background/80 hover:bg-muted/30 flex items-center justify-between rounded-xl border px-4 py-3 transition-colors"
+    <div className="flex flex-col gap-y-4 py-4">
+      <div>
+        <p className="text-foreground text-base leading-none font-semibold">
+          {partnerBusinessName}
+        </p>
+        <p className="text-muted-foreground mt-0.5 text-sm">
+          @{slug} · Since {sinceDate}
+        </p>
+      </div>
+      <Form {...form}>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            void runSubmit();
+          }}
+          className="flex flex-col gap-y-4"
         >
-          <div>
-            <p className="font-medium">{c.title || "Untitled campaign"}</p>
-            <p className="text-muted-foreground text-xs">
-              {c.createdByBusiness.name} · {formatStatusLabel(c.status)}
-            </p>
+          {fields.map((field) => (
+            <FormField
+              key={field.name}
+              control={form.control}
+              name={field.name}
+              render={({ field: formField }) => (
+                <FormItem className="flex flex-col gap-2 md:grid md:grid-cols-12">
+                  <div className="col-span-4 flex flex-col gap-0.5">
+                    <FormLabel className="text-sm">{field.label}</FormLabel>
+                    {field.type !== "checkbox" && field.checkboxLabel && (
+                      <p className="text-muted-foreground text-xs">
+                        {field.checkboxLabel}
+                      </p>
+                    )}
+                  </div>
+                  <div className="col-span-8 flex flex-col gap-1">
+                    <FormControl>
+                      {field.type === "checkbox" ? (
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            checked={formField.value === "true"}
+                            onCheckedChange={(v) =>
+                              formField.onChange(v ? "true" : "false")
+                            }
+                            disabled={field.disabled}
+                          />
+                          {field.checkboxLabel && (
+                            <span className="text-muted-foreground text-sm">
+                              {field.checkboxLabel}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <Input
+                          variant="underline"
+                          type={field.type === "number" ? "number" : "text"}
+                          value={formField.value || ""}
+                          onChange={formField.onChange}
+                          onBlur={formField.onBlur}
+                          disabled={field.disabled}
+                          {...(field.type === "number"
+                            ? { min: field.min, step: field.step }
+                            : {})}
+                        />
+                      )}
+                    </FormControl>
+                  </div>
+                </FormItem>
+              )}
+            />
+          ))}
+
+          {/* Dissolve as separate field row */}
+          <div className="flex flex-col gap-2 md:grid md:grid-cols-12">
+            <div className="col-span-4 flex flex-col gap-0.5">
+              <Label className="text-sm">Dissolve partnership</Label>
+              <p className="text-muted-foreground text-xs">
+                Permanently end this partnership. This cannot be undone.
+              </p>
+            </div>
+            <div className="col-span-8 flex flex-wrap items-center gap-2">
+              {footerActions.map((action, i) => (
+                <Button
+                  key={i}
+                  type="button"
+                  variant={action.variant ?? "outline"}
+                  size="sm"
+                  disabled={"loading" in action ? action.loading : false}
+                  loading={"loading" in action ? action.loading : false}
+                  onClick={() => void action.onAction()}
+                >
+                  {action.label}
+                </Button>
+              ))}
+            </div>
           </div>
-          <Badge
-            variant={c.status === "DRAFT" ? "secondary" : "default"}
-            className="rounded-full font-medium"
-          >
-            {formatStatusLabel(c.status)}
-          </Badge>
-        </li>
-      ))}
-    </ul>
+
+          <div className="flex shrink-0 items-center justify-end border-0 pt-2">
+            <SaveButton
+              onSave={runSubmit}
+              disabled={updatePending || !form.formState.isDirty}
+              labels={{
+                idle: "Save changes",
+                loading: "Saving",
+                success: "Saved",
+              }}
+            />
+          </div>
+        </form>
+      </Form>
+    </div>
   );
 }
 
@@ -1275,41 +1234,17 @@ export function PartnersSettingsPageClient() {
       subtitle={PAGE_SUBTITLE}
       contentVariant="contained"
     >
-      <div className="space-y-4 pb-6">
-        {/* Setup */}
-        <section className="grid gap-4 xl:grid-cols-2">
-          <div>
-            <GeneralSettings />
-          </div>
-          <SendRequest />
-        </section>
+      <div className="space-y-6 pb-6">
+        {/* Single card: Receive + Send + Active partnerships */}
+        <PartnershipSettingsSingleSection myBusinessId={myBusinessId} />
 
-        {/* Requests */}
+        {/* Incoming + Sent requests */}
         <section className="grid gap-4 xl:grid-cols-2">
           <IncomingRequests />
           <SentRequests />
         </section>
 
         <PermanentlyRejected />
-
-        {/* Active partnerships */}
-        <section>
-          <SettingsPanel
-            title="Active partnerships"
-            description="Exchange rates and features per partner."
-            contentClassName="py-4 sm:p-4"
-          >
-            <ActivePartnerships myBusinessId={myBusinessId} />
-          </SettingsPanel>
-        </section>
-
-        <SettingsPanel
-          title="Partner campaigns"
-          description="Joint campaigns with your partners."
-          contentClassName="py-4 sm:p-4"
-        >
-          <PartnerCampaignsList />
-        </SettingsPanel>
       </div>
     </DashboardPageShell>
   );

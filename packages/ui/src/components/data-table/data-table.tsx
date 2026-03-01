@@ -35,6 +35,8 @@ interface DataTableProps<TData> extends React.ComponentProps<"div"> {
   onExpandedRowsChange?: (expandedRows: Set<string>) => void;
   renderExpandedRow?: (row: Row<TData>) => React.ReactNode;
   renderRowFooter?: (row: Row<TData>) => React.ReactNode;
+  /** When table has no rows, render this instead of the default "No results." row */
+  renderEmpty?: () => React.ReactNode;
   getRowId?: (row: TData) => string;
 }
 
@@ -55,6 +57,7 @@ export function DataTable<TData>({
   onExpandedRowsChange,
   renderExpandedRow,
   renderRowFooter,
+  renderEmpty,
   getRowId,
   ...props
 }: DataTableProps<TData>) {
@@ -236,6 +239,15 @@ export function DataTable<TData>({
                     </Fragment>
                   );
                 })
+              ) : renderEmpty ? (
+                <TableRow className="hover:bg-transparent">
+                  <TableCell
+                    colSpan={table.getAllColumns().length}
+                    className="p-0 align-top"
+                  >
+                    {renderEmpty()}
+                  </TableCell>
+                </TableRow>
               ) : (
                 <TableRow className="hover:bg-transparent">
                   <TableCell
