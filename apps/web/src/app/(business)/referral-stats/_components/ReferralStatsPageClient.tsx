@@ -3,16 +3,53 @@
 import { DashboardPageShell } from "@/components/layouts";
 import { ReferralStatsTable } from "@/components/referral-stats/ReferralStatsTable";
 import { useReferralStatsQuery } from "@/hooks/referral/useReferralProgram";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { REFERRAL_ONBOARDED_KEY } from "@/lib/constants/settings-storage";
 import { isServiceEnabled } from "@/lib/utils/service-enabled";
-import { Button, Skeleton } from "@reelo/ui/components";
+import {
+  Button,
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+  Skeleton,
+} from "@reelo/ui/components";
+import { Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Suspense } from "react";
 
-function ReferralStatsContent() {
+function ReferralEmptyState() {
   const router = useRouter();
-  const { data, isLoading, isError } = useReferralStatsQuery();
+  return (
+    <Empty className="border-border/45 bg-background rounded-lg border border-dashed py-12">
+      <EmptyHeader>
+        <EmptyMedia variant="icon">
+          <Users className="text-muted-foreground size-10" strokeWidth={1.25} />
+        </EmptyMedia>
+        <EmptyTitle>No referral stats yet</EmptyTitle>
+        <EmptyDescription>
+          You haven&apos;t set up the referral program yet. Get started by
+          enabling it in Settings to see who referred and reward referrers.
+        </EmptyDescription>
+      </EmptyHeader>
+      <EmptyContent className="mt-2">
+        <Button onClick={() => router.push("/settings")}>Go to Settings</Button>
+      </EmptyContent>
+    </Empty>
+  );
+}
+
+function ReferralStatsContent() {
+  const [referralOnboarded] = useLocalStorage(REFERRAL_ONBOARDED_KEY, false);
+  const { data, isLoading, isError } = useReferralStatsQuery({
+    enabled: referralOnboarded,
+  });
   const referralEnabled =
     !isError && isServiceEnabled(data?.isServiceEnabled, "referral");
+
+  if (!referralOnboarded) return <ReferralEmptyState />;
 
   if (isLoading && data == null) {
     return (
@@ -23,28 +60,17 @@ function ReferralStatsContent() {
     );
   }
 
-  if (!referralEnabled) {
-    return (
-      <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center">
-        <p className="text-muted-foreground mb-2 text-sm font-medium">
-          You have not enabled the referral scheme yet.
-        </p>
-        <p className="text-muted-foreground mb-6 text-sm">
-          Please enable it first to see referral stats and reward referrers.
-        </p>
-        <Button onClick={() => router.push("/settings/referral")}>
-          Set up referral program
-        </Button>
-      </div>
-    );
-  }
+  if (!referralEnabled) return <ReferralEmptyState />;
 
   return <ReferralStatsTable />;
 }
 
 export function ReferralStatsPageClient() {
   const router = useRouter();
-  const { data, isError } = useReferralStatsQuery();
+  const [referralOnboarded] = useLocalStorage(REFERRAL_ONBOARDED_KEY, false);
+  const { data, isError } = useReferralStatsQuery({
+    enabled: referralOnboarded,
+  });
   const referralEnabled =
     !isError && isServiceEnabled(data?.isServiceEnabled, "referral");
 

@@ -2,6 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
+  Button,
   Card,
   CardContent,
   CardDescription,
@@ -25,6 +26,7 @@ import {
   SelectValue,
   Textarea,
 } from "@reelo/ui/components";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import * as z from "zod";
@@ -50,6 +52,19 @@ interface FieldDefinition {
   step?: string;
 }
 
+export interface FooterActionConfig {
+  label: string;
+  variant?:
+    | "default"
+    | "destructive"
+    | "outline"
+    | "secondary"
+    | "ghost"
+    | "link";
+  onAction: () => Promise<void>;
+  loading?: boolean;
+}
+
 interface SettingsFieldGroupProps {
   title: string;
   description?: string;
@@ -59,6 +74,8 @@ interface SettingsFieldGroupProps {
     success: boolean;
     error?: string;
   }>;
+  /** Optional buttons (e.g. Dissolve) shown in footer left; Save stays right */
+  footerActions?: FooterActionConfig[];
 }
 
 export function SettingsFieldGroup({
@@ -67,7 +84,10 @@ export function SettingsFieldGroup({
   fields,
   defaultValues,
   onSubmit,
+  footerActions = [],
 }: SettingsFieldGroupProps) {
+  const [actionLoading, setActionLoading] = useState<number | null>(null);
+
   const schema = z.object(
     fields.reduce(
       (acc, field) => {
@@ -230,7 +250,29 @@ export function SettingsFieldGroup({
                 />
               ))}
             </CardContent>
-            <CardFooter className="flex shrink-0 items-center justify-end border-0 px-4 py-2">
+            <CardFooter className="flex shrink-0 items-center justify-between gap-2 border-0 px-4 py-2">
+              <div className="flex gap-2">
+                {footerActions.map((action, i) => (
+                  <Button
+                    key={i}
+                    type="button"
+                    variant={action.variant ?? "outline"}
+                    size="sm"
+                    disabled={action.loading ?? actionLoading === i}
+                    loading={action.loading ?? actionLoading === i}
+                    onClick={async () => {
+                      setActionLoading(i);
+                      try {
+                        await action.onAction();
+                      } finally {
+                        setActionLoading(null);
+                      }
+                    }}
+                  >
+                    {action.label}
+                  </Button>
+                ))}
+              </div>
               <SaveButton
                 onSave={runSubmit}
                 disabled={!isDirty}

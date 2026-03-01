@@ -12,6 +12,10 @@ import {
   DataTable,
   DataTableColumnHeader,
   DataTableToolbar,
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
   Skeleton,
   Table,
   TableBody,
@@ -144,16 +148,7 @@ export function ReferralStatsTable() {
         referredCount: 0,
       })) as ReferralStatRow[];
     }
-    if (isEmpty) {
-      return [
-        {
-          id: "empty-state",
-          referrerName: "",
-          referrerSlugId: "",
-          referredCount: 0,
-        },
-      ] as ReferralStatRow[];
-    }
+    if (isEmpty) return [] as ReferralStatRow[];
     return items;
   }, [items, isLoading, perPage, isEmpty]);
 
@@ -341,21 +336,16 @@ export function ReferralStatsTable() {
           />
         );
       }}
-      renderRowFooter={(row) => {
-        if (isEmpty && row.original.id === "empty-state") {
-          return (
-            <div className="flex flex-col items-center justify-center px-4 py-12">
-              <p className="text-muted-foreground text-sm font-medium">
-                No referrers yet
-              </p>
-              <p className="text-muted-foreground mt-1 text-xs">
-                Referral stats will appear when customers refer others
-              </p>
-            </div>
-          );
-        }
-        return null;
-      }}
+      renderEmpty={() => (
+        <Empty className="py-12">
+          <EmptyHeader>
+            <EmptyTitle>No referrers yet</EmptyTitle>
+            <EmptyDescription>
+              Referral stats will appear when customers refer others
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      )}
     >
       <DataTableToolbar table={table} maxTextFilters={1} />
     </DataTable>

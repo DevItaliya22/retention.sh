@@ -8,6 +8,10 @@ import {
   DataTableColumnHeader,
   DataTableToolbar,
   DateDisplay,
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
   Skeleton,
 } from "@reelo/ui/components";
 import { useDataTable } from "@reelo/ui/hooks";
@@ -42,22 +46,7 @@ export function BillsTable() {
         updatedAt: "",
       })) as Bill[];
     }
-    if (isEmpty) {
-      return [
-        {
-          id: "empty-state",
-          billNumber: "",
-          amount: null,
-          customerName: "",
-          customerPhone: null,
-          customerEmail: "",
-          feedbackLink: null,
-          lineItems: [],
-          createdAt: "",
-          updatedAt: "",
-        },
-      ] as Bill[];
-    }
+    if (isEmpty) return [] as Bill[];
     return bills;
   }, [bills, isLoading, perPage, isEmpty]);
 
@@ -444,21 +433,16 @@ export function BillsTable() {
   return (
     <DataTable
       table={table}
-      renderRowFooter={(row) => {
-        if (isEmpty && row.original.id === "empty-state") {
-          return (
-            <div className="flex flex-col items-center justify-center px-4 py-12">
-              <p className="text-muted-foreground text-sm font-medium">
-                No bills found
-              </p>
-              <p className="text-muted-foreground mt-1 text-xs">
-                Try adjusting your filters or create a new bill
-              </p>
-            </div>
-          );
-        }
-        return null;
-      }}
+      renderEmpty={() => (
+        <Empty className="py-12">
+          <EmptyHeader>
+            <EmptyTitle>No bills found</EmptyTitle>
+            <EmptyDescription>
+              Try adjusting your filters or create a new bill
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      )}
     >
       <DataTableToolbar table={table} maxTextFilters={1} />
     </DataTable>

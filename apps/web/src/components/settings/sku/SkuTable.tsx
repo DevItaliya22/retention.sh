@@ -7,6 +7,10 @@ import {
   DataTableColumnHeader,
   DataTableToolbar,
   DateDisplay,
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
   InfoTooltip,
   Skeleton,
   Switch,
@@ -50,23 +54,7 @@ export function SkuTable({
         updatedAt: "",
       })) as SkuItem[];
     }
-    if (isEmpty) {
-      return [
-        {
-          id: "empty-state",
-          sku: "",
-          name: "",
-          description: null,
-          price: null,
-          unit: null,
-          categoryId: null,
-          categoryName: null,
-          isActive: true,
-          createdAt: "",
-          updatedAt: "",
-        },
-      ] as SkuItem[];
-    }
+    if (isEmpty) return [] as SkuItem[];
     return skus;
   }, [skus, isLoading, perPage, isEmpty]);
 
@@ -270,21 +258,16 @@ export function SkuTable({
       table={table}
       scrollMode={scrollMode}
       tableMaxHeight="70vh"
-      renderRowFooter={(row) => {
-        if (isEmpty && row.original.id === "empty-state") {
-          return (
-            <div className="flex flex-col items-center justify-center px-4 py-12">
-              <p className="text-muted-foreground text-sm font-medium">
-                No SKUs found
-              </p>
-              <p className="text-muted-foreground mt-1 text-xs">
-                Add your first SKU or adjust your filters
-              </p>
-            </div>
-          );
-        }
-        return null;
-      }}
+      renderEmpty={() => (
+        <Empty className="py-12">
+          <EmptyHeader>
+            <EmptyTitle>No SKUs found</EmptyTitle>
+            <EmptyDescription>
+              Add your first SKU or adjust your filters
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      )}
     >
       <DataTableToolbar
         table={table}

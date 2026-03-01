@@ -30,7 +30,7 @@ export interface LoyaltyStatsResponse {
   error?: string;
 }
 
-export function useLoyaltyStatsQuery() {
+export function useLoyaltyStatsQuery(options?: { enabled?: boolean }) {
   const searchParams = useSearchParams();
   const config = getDataTableConfig("loyaltyStats");
   const apiParams = buildApiParams(
@@ -39,6 +39,7 @@ export function useLoyaltyStatsQuery() {
     config.filterKeys,
   );
   const queryString = apiParams.toString();
+  const enabled = options?.enabled !== false;
 
   return useQuery<LoyaltyStatsResponse, Error>({
     queryKey: ["loyaltyStats", queryString],
@@ -48,6 +49,7 @@ export function useLoyaltyStatsQuery() {
           ? `/api/loyalty-stats?${queryString}`
           : "/api/loyalty-stats",
       ),
+    enabled,
     placeholderData: (prev) => prev,
     staleTime: 5000,
   });
