@@ -7,6 +7,10 @@ import {
   DataTableColumnHeader,
   DataTableToolbar,
   DateDisplay,
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
   Skeleton,
 } from "@reelo/ui/components";
 import { useDataTable } from "@reelo/ui/hooks";
@@ -46,22 +50,7 @@ export function CategoryTable({
         updatedAt: "",
       })) as CategoryItem[];
     }
-    if (isEmpty) {
-      return [
-        {
-          id: "empty-state",
-          parentId: null,
-          parentName: null,
-          name: "",
-          description: null,
-          sortOrder: 0,
-          skuCount: 0,
-          subcategoryCount: 0,
-          createdAt: "",
-          updatedAt: "",
-        },
-      ] as CategoryItem[];
-    }
+    if (isEmpty) return [] as CategoryItem[];
     return categories;
   }, [categories, isLoading, perPage, isEmpty]);
 
@@ -244,21 +233,16 @@ export function CategoryTable({
   return (
     <DataTable
       table={table}
-      renderRowFooter={(row) => {
-        if (isEmpty && row.original.id === "empty-state") {
-          return (
-            <div className="flex flex-col items-center justify-center px-4 py-12">
-              <p className="text-muted-foreground text-sm font-medium">
-                No categories found
-              </p>
-              <p className="text-muted-foreground mt-1 text-xs">
-                Add your first category or adjust your filters
-              </p>
-            </div>
-          );
-        }
-        return null;
-      }}
+      renderEmpty={() => (
+        <Empty className="py-12">
+          <EmptyHeader>
+            <EmptyTitle>No categories found</EmptyTitle>
+            <EmptyDescription>
+              Add your first category or adjust your filters
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      )}
     >
       <DataTableToolbar table={table} />
     </DataTable>

@@ -13,14 +13,29 @@ import {
   useUpdateFeedbackConfig,
   useUpdateFeedbackSelectionOption,
 } from "@/hooks/feedback/useFeedbackConfig";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Button,
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
+  Checkbox,
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
   Input,
+  SaveButton,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   Sortable,
   SortableContent,
   SortableItem,
@@ -28,7 +43,9 @@ import {
 } from "@reelo/ui/components";
 import { GripVertical, Trash2 } from "lucide-react";
 import { useCallback, useState } from "react";
+import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import * as z from "zod";
 
 const TIMING_OPTIONS = [
   { value: "IMMEDIATELY", label: "Immediately" },
@@ -49,6 +66,226 @@ const ONLINE_REVIEW_PLATFORM_OPTIONS = [
   { value: "ZOMATO", label: "Zomato" },
   { value: "OTHER", label: "Other" },
 ];
+
+const discoveryAndReviewsSchema = z
+  .object({
+    isHowDidYouHearEnabled: z.string(),
+    askForOnlineReviews: z.string(),
+    onlineReviewPlatform: z.string(),
+    onlineReviewLink: z.string(),
+  })
+  .refine(
+    (data) => {
+      if (data.askForOnlineReviews !== "true") return true;
+      return (
+        (data.onlineReviewPlatform?.trim() ?? "").length > 0 &&
+        (data.onlineReviewLink?.trim() ?? "").length > 0
+      );
+    },
+    {
+      message:
+        "Platform and Review link are required when review prompt is on.",
+      path: ["onlineReviewLink"],
+    },
+  );
+
+type DiscoveryAndReviewsValues = z.infer<typeof discoveryAndReviewsSchema>;
+
+function DiscoveryAndReviewsCard({
+  config,
+  onSubmit,
+}: {
+  config: FeedbackConfigDto;
+  onSubmit: (values: Record<string, string>) => Promise<{
+    success: boolean;
+    error?: string;
+  }>;
+}) {
+  const form = useForm<DiscoveryAndReviewsValues>({
+    resolver: zodResolver(discoveryAndReviewsSchema),
+    defaultValues: {
+      isHowDidYouHearEnabled: config.isHowDidYouHearEnabled ? "true" : "false",
+      askForOnlineReviews: config.askForOnlineReviews ? "true" : "false",
+      onlineReviewPlatform: config.onlineReviewPlatform ?? "",
+      onlineReviewLink: config.onlineReviewLink ?? "",
+    },
+  });
+  const askForOnlineReviewsOn = form.watch("askForOnlineReviews") === "true";
+  const isDirty = form.formState.isDirty;
+
+  const runSubmit = async () => {
+    const valid = await form.trigger();
+    if (!valid) throw new Error("Validation failed");
+    const values = form.getValues();
+    const result = await onSubmit({
+      isHowDidYouHearEnabled: values.isHowDidYouHearEnabled,
+      askForOnlineReviews: values.askForOnlineReviews,
+      onlineReviewPlatform: values.onlineReviewPlatform,
+      onlineReviewLink: values.onlineReviewLink,
+    });
+    if (result.success) {
+      toast.success("Settings updated successfully");
+      form.reset(form.getValues(), { keepDefaultValues: false });
+    } else {
+      toast.error(result.error || "Failed to update settings");
+      throw new Error(result.error);
+    }
+  };
+
+  return (
+    <Card className="bg-sidebar-accent/50 flex min-h-0 flex-col gap-0 rounded-lg border-0 p-2">
+      <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
+        <CardTitle className="text-foreground text-base leading-none font-semibold">
+          Discovery & reviews
+        </CardTitle>
+        <CardDescription className="text-muted-foreground mt-0.5 text-sm">
+          Ask how customers found you and prompt them to leave a review after
+          feedback
+        </CardDescription>
+      </CardHeader>
+      <Card className="border-border/45 bg-background/55 flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border shadow-none">
+        <Form {...form}>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              void runSubmit();
+            }}
+            className="flex min-h-0 flex-1 flex-col"
+          >
+            <CardContent className="flex min-h-0 flex-1 flex-col gap-y-4 overflow-auto px-4 py-4">
+              <FormField
+                control={form.control}
+                name="isHowDidYouHearEnabled"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col gap-2 md:grid md:grid-cols-12">
+                    <div className="col-span-4 flex flex-col gap-2">
+                      <FormLabel className="text-sm">
+                        How did you hear
+                      </FormLabel>
+                    </div>
+                    <div className="col-span-8 flex flex-col gap-1">
+                      <FormControl>
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            checked={field.value === "true"}
+                            onCheckedChange={(v) =>
+                              field.onChange(v ? "true" : "false")
+                            }
+                          />
+                          <span className="text-muted-foreground text-sm">
+                            Ask customers how they discovered your business
+                          </span>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </div>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="askForOnlineReviews"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col gap-2 md:grid md:grid-cols-12">
+                    <div className="col-span-4 flex flex-col gap-2">
+                      <FormLabel className="text-sm">
+                        Ask for online reviews
+                      </FormLabel>
+                    </div>
+                    <div className="col-span-8 flex flex-col gap-1">
+                      <FormControl>
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            checked={field.value === "true"}
+                            onCheckedChange={(v) =>
+                              field.onChange(v ? "true" : "false")
+                            }
+                          />
+                          <span className="text-muted-foreground text-sm">
+                            Show review prompt after feedback
+                          </span>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </div>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="onlineReviewPlatform"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col gap-2 md:grid md:grid-cols-12">
+                    <div className="col-span-4 flex flex-col gap-2">
+                      <FormLabel className="text-sm">Platform</FormLabel>
+                    </div>
+                    <div className="col-span-8 flex flex-col gap-1">
+                      <FormControl>
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value || ""}
+                          disabled={!askForOnlineReviewsOn}
+                        >
+                          <SelectTrigger className="w-full rounded-none border-0 border-b bg-transparent px-0 py-3 shadow-none focus-visible:ring-0 dark:bg-transparent dark:hover:bg-transparent">
+                            <SelectValue placeholder="Select..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {ONLINE_REVIEW_PLATFORM_OPTIONS.map((opt) => (
+                              <SelectItem key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
+                      <FormMessage />
+                    </div>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="onlineReviewLink"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col gap-2 md:grid md:grid-cols-12">
+                    <div className="col-span-4 flex flex-col gap-2">
+                      <FormLabel className="text-sm">Review link</FormLabel>
+                    </div>
+                    <div className="col-span-8 flex flex-col gap-1">
+                      <FormControl>
+                        <Input
+                          variant="underline"
+                          type="text"
+                          {...field}
+                          value={field.value || ""}
+                          placeholder="https://..."
+                          disabled={!askForOnlineReviewsOn}
+                          className="rounded-none border-0 border-b bg-transparent px-0 shadow-none"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </div>
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+            <CardFooter className="flex shrink-0 items-center justify-end border-0 px-4 py-2">
+              <SaveButton
+                onSave={runSubmit}
+                disabled={!isDirty}
+                labels={{
+                  idle: "Save changes",
+                  loading: "Saving",
+                  success: "Saved",
+                }}
+              />
+            </CardFooter>
+          </form>
+        </Form>
+      </Card>
+    </Card>
+  );
+}
 
 function SelectionOptionsSection({
   options,
@@ -315,17 +552,21 @@ export function FeedbackExistingSettings({
     values: Record<string, string>,
   ) => {
     try {
+      const askOn = values.askForOnlineReviews === "true";
       await updateConfig({
         isHowDidYouHearEnabled: values.isHowDidYouHearEnabled === "true",
-        askForOnlineReviews: values.askForOnlineReviews === "true",
-        onlineReviewLink: values.onlineReviewLink || null,
-        onlineReviewPlatform:
-          (values.onlineReviewPlatform as
-            | "GOOGLE"
-            | "INSTAGRAM"
-            | "FACEBOOK"
-            | "ZOMATO"
-            | "OTHER") || null,
+        askForOnlineReviews: askOn,
+        onlineReviewLink: askOn
+          ? values.onlineReviewLink?.trim() || null
+          : null,
+        onlineReviewPlatform: askOn
+          ? (values.onlineReviewPlatform as
+              | "GOOGLE"
+              | "INSTAGRAM"
+              | "FACEBOOK"
+              | "ZOMATO"
+              | "OTHER") || null
+          : null,
       });
       return { success: true };
     } catch (error: unknown) {
@@ -464,44 +705,8 @@ export function FeedbackExistingSettings({
         onSubmit={handleUpdateTimingAndCollection}
       />
 
-      <SettingsFieldGroup
-        title="Discovery & reviews"
-        description="Ask how customers found you and prompt them to leave a review after feedback"
-        fields={[
-          {
-            name: "isHowDidYouHearEnabled",
-            label: "How did you hear about us?",
-            type: "checkbox",
-            checkboxLabel: "Ask customers how they discovered your business",
-          },
-          {
-            name: "askForOnlineReviews",
-            label: "Ask for online reviews",
-            type: "checkbox",
-            checkboxLabel: "Show review prompt after feedback",
-          },
-          {
-            name: "onlineReviewPlatform",
-            label: "Platform",
-            type: "select",
-            options: ONLINE_REVIEW_PLATFORM_OPTIONS,
-            optional: true,
-          },
-          {
-            name: "onlineReviewLink",
-            label: "Review link",
-            placeholder: "https://...",
-            optional: true,
-          },
-        ]}
-        defaultValues={{
-          isHowDidYouHearEnabled: config.isHowDidYouHearEnabled
-            ? "true"
-            : "false",
-          askForOnlineReviews: config.askForOnlineReviews ? "true" : "false",
-          onlineReviewPlatform: config.onlineReviewPlatform ?? "",
-          onlineReviewLink: config.onlineReviewLink ?? "",
-        }}
+      <DiscoveryAndReviewsCard
+        config={config}
         onSubmit={handleUpdateDiscoveryAndReviews}
       />
 

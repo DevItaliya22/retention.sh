@@ -34,9 +34,14 @@ export async function GET(
             billNumber: true,
             businessId: true,
             customerId: true,
+            finalAmount: true,
+            userPaidAmount: true,
+            createdAt: true,
             businessCustomer: {
               include: {
-                business: { select: { slug: true } },
+                business: {
+                  select: { slug: true, defaultCurrencySymbol: true },
+                },
               },
             },
           },
@@ -148,9 +153,17 @@ export async function GET(
               platform: followUpRewardConfig.onlineReviewPlatform,
             }
           : null;
+      // Include branding so thank-you view uses business theme (not default purple)
+      let alreadySubmittedBranding = link.config?.branding ?? null;
+      if (!alreadySubmittedBranding && link.bill.businessId) {
+        alreadySubmittedBranding = await db.branding.findUnique({
+          where: { businessId: link.bill.businessId },
+        });
+      }
       return NextResponse.json({
         alreadySubmitted: true,
         config: null,
+        branding: alreadySubmittedBranding,
         billNumber: link.bill.billNumber,
         followUpMessage: followUpMessage || "Thank you for your feedback.",
         reward,
@@ -170,6 +183,14 @@ export async function GET(
           selectionOptions: { orderBy: { seq: "asc" } },
           branding: true,
         },
+      });
+    }
+
+    // Fallback: if feedback config has no branding linked, use business's branding (same DB record when saved from feedback settings)
+    let brandingToUse = configToUse?.branding ?? null;
+    if (!brandingToUse && link.bill.businessId) {
+      brandingToUse = await db.branding.findUnique({
+        where: { businessId: link.bill.businessId },
       });
     }
 
@@ -200,7 +221,7 @@ export async function GET(
           askForOnlineReviews: configToUse.askForOnlineReviews,
           onlineReviewLink: configToUse.onlineReviewLink,
           onlineReviewPlatform: configToUse.onlineReviewPlatform,
-          branding: configToUse.branding,
+          branding: brandingToUse,
         }
       : {
           id: "",
@@ -217,10 +238,18 @@ export async function GET(
           branding: null,
         };
 
+    const billAmount =
+      link.bill.finalAmount ?? link.bill.userPaidAmount ?? null;
+    const currencySymbol =
+      link.bill.businessCustomer?.business?.defaultCurrencySymbol ?? "₹";
+
     return NextResponse.json({
       alreadySubmitted: false,
       config,
       billNumber: link.bill.billNumber,
+      billAmount: billAmount != null ? Number(billAmount) : null,
+      billCreatedAt: link.bill.createdAt?.toISOString() ?? null,
+      currencySymbol,
     });
   } catch (error: unknown) {
     console.error("Failed to fetch feedback link:", error);
@@ -229,6 +258,9 @@ export async function GET(
         error: sanitizeErrorMessage(error) || "Failed to load feedback",
         config: null,
         billNumber: null,
+        billAmount: null,
+        billCreatedAt: null,
+        currencySymbol: "₹",
       },
       { status: 500 },
     );
@@ -454,19 +486,35 @@ export async function POST(
       return res;
     });
 
+    // Use business's current config for thank-you content so latest "Show review prompt" + link always apply
+    const businessConfig =
+      businessId != null
+        ? await db.feedbackConfig.findUnique({
+            where: { businessId },
+            select: {
+              positiveFollowUp: true,
+              negativeFollowUp: true,
+              askForOnlineReviews: true,
+              onlineReviewLink: true,
+              onlineReviewPlatform: true,
+            },
+          })
+        : null;
+    const responseConfig = businessConfig ?? configFull;
+
     const isPositive = rating != null && rating >= 4;
     const followUpMessage = isPositive
-      ? configFull?.positiveFollowUp
-      : (configFull?.negativeFollowUp ?? "Thank you for your feedback.");
+      ? responseConfig?.positiveFollowUp
+      : (responseConfig?.negativeFollowUp ?? "Thank you for your feedback.");
     const reward =
       rewardAmount > 0
         ? { enabled: true, amount: rewardAmount }
         : { enabled: false, amount: null as number | null };
     const onlineReview =
-      configFull?.askForOnlineReviews && configFull.onlineReviewLink
+      responseConfig?.askForOnlineReviews && responseConfig.onlineReviewLink
         ? {
-            link: configFull.onlineReviewLink,
-            platform: configFull.onlineReviewPlatform,
+            link: responseConfig.onlineReviewLink,
+            platform: responseConfig.onlineReviewPlatform,
           }
         : null;
 

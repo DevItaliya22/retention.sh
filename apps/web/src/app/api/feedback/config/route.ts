@@ -127,13 +127,26 @@ export const PUT = withAdminAuth(async (request: NextRequest, context) => {
       }),
       ...(data.askForOnlineReviews !== undefined && {
         askForOnlineReviews: data.askForOnlineReviews,
+        // When off, clear link and platform. When on, use validated link and platform from data.
+        ...(data.askForOnlineReviews === false
+          ? { onlineReviewLink: null, onlineReviewPlatform: null }
+          : data.askForOnlineReviews === true &&
+              data.onlineReviewLink != null &&
+              data.onlineReviewPlatform != null
+            ? {
+                onlineReviewLink: String(data.onlineReviewLink).trim() || null,
+                onlineReviewPlatform: data.onlineReviewPlatform,
+              }
+            : {}),
       }),
-      ...(data.onlineReviewLink !== undefined && {
-        onlineReviewLink: data.onlineReviewLink ?? null,
-      }),
-      ...(data.onlineReviewPlatform !== undefined && {
-        onlineReviewPlatform: data.onlineReviewPlatform ?? null,
-      }),
+      ...(data.askForOnlineReviews === undefined &&
+        data.onlineReviewLink !== undefined && {
+          onlineReviewLink: data.onlineReviewLink ?? null,
+        }),
+      ...(data.askForOnlineReviews === undefined &&
+        data.onlineReviewPlatform !== undefined && {
+          onlineReviewPlatform: data.onlineReviewPlatform ?? null,
+        }),
       ...(brandingId !== undefined && { brandingId }),
     };
 
