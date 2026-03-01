@@ -10,6 +10,10 @@ import {
   DataTable,
   DataTableColumnHeader,
   DataTableToolbar,
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
   Skeleton,
 } from "@reelo/ui/components";
 import { useDataTable } from "@reelo/ui/hooks";
@@ -55,23 +59,7 @@ export function LoyaltyStatsTable() {
         billNumber: null as string | null,
       })) as LoyaltyStatRow[];
     }
-    if (isEmpty) {
-      return [
-        {
-          id: "empty-state",
-          type: "",
-          source: "",
-          valueKind: "",
-          amount: 0,
-          createdAt: "",
-          customerSlugId: "",
-          customerName: "",
-          customerPhone: null,
-          billId: null,
-          billNumber: null,
-        },
-      ] as LoyaltyStatRow[];
-    }
+    if (isEmpty) return [] as LoyaltyStatRow[];
     return items;
   }, [items, isLoading, perPage, isEmpty]);
 
@@ -341,21 +329,16 @@ export function LoyaltyStatsTable() {
   return (
     <DataTable
       table={table}
-      renderRowFooter={(row) => {
-        if (isEmpty && row.original.id === "empty-state") {
-          return (
-            <div className="flex flex-col items-center justify-center px-4 py-12">
-              <p className="text-muted-foreground text-sm font-medium">
-                No loyalty transactions yet
-              </p>
-              <p className="text-muted-foreground mt-1 text-xs">
-                Transactions will appear when customers earn or redeem points
-              </p>
-            </div>
-          );
-        }
-        return null;
-      }}
+      renderEmpty={() => (
+        <Empty className="py-12">
+          <EmptyHeader>
+            <EmptyTitle>No loyalty transactions yet</EmptyTitle>
+            <EmptyDescription>
+              Transactions will appear when customers earn or redeem points
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      )}
     >
       <DataTableToolbar table={table} maxTextFilters={1} />
     </DataTable>

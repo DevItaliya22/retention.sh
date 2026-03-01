@@ -12,7 +12,7 @@ import {
 } from "@reelo/ui/components";
 import { useQuery } from "@tanstack/react-query";
 import { ExternalLink, MessageSquare, Star } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 interface FeedbackPageClientProps {
   businessSlug: string;
@@ -49,7 +49,12 @@ interface OnlineReview {
 interface PublicFeedbackResponse {
   alreadySubmitted?: boolean;
   config: PublicFeedbackConfig | null;
+  /** When alreadySubmitted and config is null, API returns branding at top level */
+  branding?: PublicFeedbackConfig["branding"];
   billNumber: string | null;
+  billAmount?: number | null;
+  billCreatedAt?: string | null;
+  currencySymbol?: string;
   followUpMessage?: string;
   reward?: { enabled: boolean; amount: number | null };
   onlineReview?: OnlineReview | null;
@@ -64,13 +69,42 @@ interface SubmitResponse {
   error?: string;
 }
 
-const platformLabel: Record<string, string> = {
-  GOOGLE: "Google",
-  INSTAGRAM: "Instagram",
-  FACEBOOK: "Facebook",
-  ZOMATO: "Zomato",
+/** Platform-specific CTA label: Follow for Instagram, Review for Google, Rate for Zomato, etc. */
+const platformCtaLabel: Record<string, string> = {
+  GOOGLE: "Review us on Google",
+  INSTAGRAM: "Follow us on Instagram",
+  FACEBOOK: "Review us on Facebook",
+  ZOMATO: "Rate us on Zomato",
   OTHER: "Leave a review",
 };
+
+function formatBillDate(isoString: string | null | undefined): string {
+  if (!isoString) return "";
+  try {
+    const d = new Date(isoString);
+    return new Intl.DateTimeFormat("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    }).format(d);
+  } catch {
+    return "";
+  }
+}
+
+function formatBillTime(isoString: string | null | undefined): string {
+  if (!isoString) return "";
+  try {
+    const d = new Date(isoString);
+    return new Intl.DateTimeFormat("en-IN", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    }).format(d);
+  } catch {
+    return "";
+  }
+}
 
 const pageWrapperClass =
   "bg-[#F4F4F5] flex min-h-screen min-h-[100dvh] w-full items-center justify-center px-4 pb-4 pt-2 sm:px-6 sm:pb-6 sm:pt-4";
@@ -87,8 +121,8 @@ function OnlineReviewCTA({
   textColor?: string;
 }) {
   const label =
-    review.platform && platformLabel[review.platform]
-      ? `Leave us a review on ${platformLabel[review.platform]}`
+    review.platform && platformCtaLabel[review.platform]
+      ? platformCtaLabel[review.platform]
       : FEEDBACK_FORM_DEFAULTS.labels.leaveReview;
   return (
     <a
@@ -139,6 +173,13 @@ export function FeedbackPageClient({
     link: string;
     platform: string | null;
   } | null>(null);
+  /** Branding from config, kept in state so thank-you view uses same theme as form */
+  const [formBranding, setFormBranding] = useState<{
+    themeColor: string;
+    textColor: string;
+    logo: string | null;
+    bannerImage: string | null;
+  } | null>(null);
 
   const { data, isLoading, isError, error } = useQuery<
     PublicFeedbackResponse,
@@ -156,11 +197,26 @@ export function FeedbackPageClient({
   });
 
   const config = data?.config ?? null;
-  const billNumber = data?.billNumber ?? null;
+  const billAmount = data?.billAmount ?? null;
+  const billCreatedAt = data?.billCreatedAt ?? null;
+  const currencySymbol = data?.currencySymbol ?? "₹";
   const alreadySubmitted = data?.alreadySubmitted ?? false;
   const loadedFollowUp = data?.followUpMessage ?? null;
   const loadedReward = data?.reward ?? null;
   const loadedOnlineReview = data?.onlineReview ?? null;
+
+  // Keep form branding in state so thank-you view uses same theme (not default purple)
+  useEffect(() => {
+    if (submitStatus === "success") return;
+    const b = config?.branding;
+    if (!b) return;
+    setFormBranding({
+      themeColor: b.themeColor ?? "#000000",
+      textColor: b.textColor ?? "#ffffff",
+      logo: b.logo ?? null,
+      bannerImage: b.bannerImage ?? null,
+    });
+  }, [config?.branding, submitStatus]);
 
   const submitFeedback = useCallback(async () => {
     setSubmitStatus("submitting");
@@ -352,7 +408,7 @@ export function FeedbackPageClient({
     </div>
   );
 
-  const brandingFromConfig = config?.branding;
+  const brandingFromConfig = config?.branding ?? data?.branding ?? null;
   const themeColorFallback = brandingFromConfig?.themeColor || "#7c3aed";
   const textColorFallback = brandingFromConfig?.textColor || "#ffffff";
   const logoFallback = brandingFromConfig?.logo || null;
@@ -377,15 +433,38 @@ export function FeedbackPageClient({
 
   if (submitStatus === "success") {
     const showReward = Boolean(reward?.enabled && reward?.amount != null);
+    // Use review link from POST response, or fallback to form config so CTA always shows when enabled
+    const effectiveOnlineReview =
+      onlineReview ??
+      (config?.askForOnlineReviews && config?.onlineReviewLink
+        ? {
+            link: config.onlineReviewLink,
+            platform: config.onlineReviewPlatform ?? null,
+          }
+        : null);
+    // Use same source as form: config.branding (from API), then formBranding (synced in effect), then fallback
+    const theme =
+      brandingFromConfig?.themeColor ??
+      formBranding?.themeColor ??
+      themeColorFallback;
+    const text =
+      brandingFromConfig?.textColor ??
+      formBranding?.textColor ??
+      textColorFallback;
+    const logo = brandingFromConfig?.logo ?? formBranding?.logo ?? logoFallback;
+    const banner =
+      brandingFromConfig?.bannerImage ??
+      formBranding?.bannerImage ??
+      bannerFallback;
     return renderThemedThankYou(
       followUpMessage,
       showReward,
       reward?.amount ?? null,
-      onlineReview ?? null,
-      themeColorFallback,
-      textColorFallback,
-      logoFallback,
-      bannerFallback,
+      effectiveOnlineReview,
+      theme,
+      text,
+      logo,
+      banner,
     );
   }
 
@@ -423,9 +502,9 @@ export function FeedbackPageClient({
         className={cardClass}
         style={{ ["--feedback-theme" as string]: themeColor }}
       >
-        {/* Branded header – flush to card top, no white strip */}
+        {/* Merged header: logo left, text right, bill row inside same block */}
         <div
-          className="relative rounded-t-[32px] px-6 pt-10 pb-12 text-center"
+          className="relative rounded-t-[32px] px-4 py-5 sm:px-5 sm:py-6"
           style={{ backgroundColor: themeColor }}
         >
           {bannerImage && (
@@ -434,46 +513,109 @@ export function FeedbackPageClient({
               <img
                 src={bannerImage}
                 alt=""
-                className="absolute inset-0 h-full w-full object-cover"
+                className="absolute inset-0 h-full w-full rounded-t-[32px] object-cover"
               />
               <div
-                className="absolute inset-0"
+                className="absolute inset-0 rounded-t-[32px]"
                 style={{ backgroundColor: themeColor, opacity: 0.88 }}
               />
             </>
           )}
 
-          <div className="relative z-10 flex flex-col items-center">
-            <div className="mb-4 h-16 w-16 rounded-full bg-white/15 p-[3px]">
-              <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-white">
-                {logo ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={logo}
-                    alt={businessSlug}
-                    className="h-full w-full object-contain"
-                  />
-                ) : (
-                  <span className="text-lg font-medium text-neutral-400">
-                    {(businessSlug || "B").charAt(0).toUpperCase()}
-                  </span>
-                )}
+          <div className="relative z-10 flex flex-col gap-4">
+            {/* Row 1: Logo left, title + subtitle right */}
+            <div className="flex items-center gap-4">
+              <div className="h-14 w-14 shrink-0 rounded-full border border-white/20 bg-white p-[2px] sm:h-16 sm:w-16">
+                <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-full">
+                  {logo ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={logo}
+                      alt={businessSlug}
+                      className="h-full w-full object-contain"
+                    />
+                  ) : (
+                    <span className="text-base font-semibold text-neutral-400 sm:text-lg">
+                      {(businessSlug || "B").charAt(0).toUpperCase()}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="min-w-0 flex-1 text-left">
+                <h1
+                  className="text-[18px] leading-tight font-semibold sm:text-[20px]"
+                  style={{ color: textColor }}
+                >
+                  {headerText}
+                </h1>
+                <p
+                  className="mt-0.5 text-xs opacity-90 sm:text-sm"
+                  style={{ color: textColor }}
+                >
+                  {subtitleText}
+                </p>
               </div>
             </div>
-            <h1
-              className="text-[20px] leading-snug font-semibold"
-              style={{ color: textColor }}
-            >
-              {headerText}
-            </h1>
-            <p
-              className="mt-1 text-xs leading-relaxed opacity-80"
-              style={{ color: textColor }}
-            >
-              {subtitleText}
-            </p>
-            {billNumber && (
-              <p className="mt-2 text-xs text-white/70">Bill #{billNumber}</p>
+
+            {/* Row 2: Spent | Date | Time merged in header */}
+            {(billAmount != null || billCreatedAt) && (
+              <div
+                className="grid grid-cols-2 gap-2 rounded-lg px-3 py-3 sm:grid-cols-3 sm:gap-3 sm:px-4"
+                style={{ backgroundColor: "rgba(255,255,255,0.15)" }}
+              >
+                {billAmount != null && (
+                  <div className="min-w-0 text-center">
+                    <p
+                      className="text-[10px] font-medium opacity-90 sm:text-xs"
+                      style={{ color: textColor }}
+                    >
+                      Spent
+                    </p>
+                    <p
+                      className="mt-0.5 truncate text-xs font-bold sm:text-sm"
+                      style={{ color: textColor }}
+                    >
+                      {currencySymbol}{" "}
+                      {Number(billAmount).toLocaleString("en-IN", {
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 2,
+                      })}
+                    </p>
+                  </div>
+                )}
+                {billCreatedAt && (
+                  <>
+                    <div className="min-w-0 text-center">
+                      <p
+                        className="text-[10px] font-medium opacity-90 sm:text-xs"
+                        style={{ color: textColor }}
+                      >
+                        Date
+                      </p>
+                      <p
+                        className="mt-0.5 truncate text-xs font-bold sm:text-sm"
+                        style={{ color: textColor }}
+                      >
+                        {formatBillDate(billCreatedAt)}
+                      </p>
+                    </div>
+                    <div className="min-w-0 text-center">
+                      <p
+                        className="text-[10px] font-medium opacity-90 sm:text-xs"
+                        style={{ color: textColor }}
+                      >
+                        Time
+                      </p>
+                      <p
+                        className="mt-0.5 truncate text-xs font-bold sm:text-sm"
+                        style={{ color: textColor }}
+                      >
+                        {formatBillTime(billCreatedAt)}
+                      </p>
+                    </div>
+                  </>
+                )}
+              </div>
             )}
           </div>
         </div>
@@ -505,20 +647,74 @@ export function FeedbackPageClient({
             </div>
           </div>
 
-          {/* Comment */}
-          <div className="space-y-2">
-            <Label htmlFor="feedback-comment" className="text-sm">
-              {FEEDBACK_FORM_DEFAULTS.labels.commentOptional}
-            </Label>
-            <Textarea
-              id="feedback-comment"
-              placeholder={FEEDBACK_FORM_DEFAULTS.labels.commentPlaceholder}
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-              rows={3}
-              className="min-h-[88px] resize-none text-base"
-            />
-          </div>
+          {/* After star selection: selection options first, then comment */}
+          {rating !== null && (
+            <>
+              {/* Selection options – shown first after rating */}
+              {config.selectionOptions &&
+                config.selectionOptions.length > 0 && (
+                  <div className="space-y-2">
+                    <Label className="text-sm">
+                      What did you like or not like? (optional)
+                    </Label>
+                    <div
+                      className="overflow-hidden rounded-lg border"
+                      style={{
+                        borderColor: `${themeColor}40`,
+                        backgroundColor: `${themeColor}08`,
+                      }}
+                    >
+                      {config.selectionOptions.map((opt, index) => (
+                        <label
+                          key={opt.id}
+                          htmlFor={`sel-${opt.id}`}
+                          className="flex min-h-[44px] cursor-pointer touch-manipulation items-center justify-between gap-3 px-4 py-3 transition-colors hover:opacity-90"
+                          style={{
+                            borderBottom:
+                              index < config.selectionOptions!.length - 1
+                                ? `1px solid ${themeColor}20`
+                                : undefined,
+                            backgroundColor:
+                              selectedSelectionOptionIds.includes(opt.id)
+                                ? `${themeColor}12`
+                                : undefined,
+                          }}
+                        >
+                          <span className="text-sm font-normal text-gray-900">
+                            {opt.label}
+                          </span>
+                          <Checkbox
+                            id={`sel-${opt.id}`}
+                            checked={selectedSelectionOptionIds.includes(
+                              opt.id,
+                            )}
+                            onCheckedChange={() =>
+                              toggleSelectionOption(opt.id)
+                            }
+                            className="shrink-0 touch-manipulation data-[state=checked]:border-[var(--feedback-theme)] data-[state=checked]:bg-[var(--feedback-theme)] data-[state=checked]:text-white"
+                          />
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+              {/* Comment – shown after selection options */}
+              <div className="space-y-2">
+                <Label htmlFor="feedback-comment" className="text-sm">
+                  {FEEDBACK_FORM_DEFAULTS.labels.commentOptional}
+                </Label>
+                <Textarea
+                  id="feedback-comment"
+                  placeholder={FEEDBACK_FORM_DEFAULTS.labels.commentPlaceholder}
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                  rows={3}
+                  className="min-h-[88px] resize-none text-base"
+                />
+              </div>
+            </>
+          )}
 
           {/* Categories */}
           {config.categories.length > 0 && (
@@ -545,51 +741,6 @@ export function FeedbackPageClient({
                       {cat.name}
                     </Label>
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Selection options – themed to match branding */}
-          {config.selectionOptions && config.selectionOptions.length > 0 && (
-            <div className="space-y-2">
-              <Label className="text-sm">
-                What did you like or not like? (optional)
-              </Label>
-              <div
-                className="overflow-hidden rounded-lg border"
-                style={{
-                  borderColor: `${themeColor}40`,
-                  backgroundColor: `${themeColor}08`,
-                }}
-              >
-                {config.selectionOptions.map((opt, index) => (
-                  <label
-                    key={opt.id}
-                    htmlFor={`sel-${opt.id}`}
-                    className="flex min-h-[44px] cursor-pointer touch-manipulation items-center justify-between gap-3 px-4 py-3 transition-colors hover:opacity-90"
-                    style={{
-                      borderBottom:
-                        index < config.selectionOptions!.length - 1
-                          ? `1px solid ${themeColor}20`
-                          : undefined,
-                      backgroundColor: selectedSelectionOptionIds.includes(
-                        opt.id,
-                      )
-                        ? `${themeColor}12`
-                        : undefined,
-                    }}
-                  >
-                    <span className="text-sm font-normal text-gray-900">
-                      {opt.label}
-                    </span>
-                    <Checkbox
-                      id={`sel-${opt.id}`}
-                      checked={selectedSelectionOptionIds.includes(opt.id)}
-                      onCheckedChange={() => toggleSelectionOption(opt.id)}
-                      className="shrink-0 touch-manipulation data-[state=checked]:border-[var(--feedback-theme)] data-[state=checked]:bg-[var(--feedback-theme)] data-[state=checked]:text-white"
-                    />
-                  </label>
                 ))}
               </div>
             </div>
