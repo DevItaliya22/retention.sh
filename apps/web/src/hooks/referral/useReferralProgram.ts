@@ -68,7 +68,7 @@ export interface ReferralProgramResponse {
   error?: string;
 }
 
-export function useReferralStatsQuery() {
+export function useReferralStatsQuery(options?: { enabled?: boolean }) {
   const searchParams = useSearchParams();
   const config = getDataTableConfig("referralStats");
   const apiParams = buildApiParams(
@@ -77,6 +77,7 @@ export function useReferralStatsQuery() {
     config.filterKeys,
   );
   const queryString = apiParams.toString();
+  const enabled = options?.enabled !== false;
 
   return useQuery<ReferralStatsResponse, Error>({
     queryKey: ["referralStats", searchParams.toString()],
@@ -86,6 +87,7 @@ export function useReferralStatsQuery() {
         : "/api/referral/stats";
       return fetcher<ReferralStatsResponse>(url);
     },
+    enabled,
     placeholderData: (prev) => prev,
     staleTime: 5000,
   });

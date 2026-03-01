@@ -24,6 +24,11 @@ import {
   DataTableColumnHeader,
   DataTableToolbar,
   DateDisplay,
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
   Skeleton,
 } from "@reelo/ui/components";
 import { useDataTable } from "@reelo/ui/hooks";
@@ -76,36 +81,7 @@ export function CampaignsTable({ onEdit, onDownload }: CampaignsTableProps) {
       })) as CampaignListItem[];
     }
 
-    if (isEmpty) {
-      return [
-        {
-          id: "empty-state",
-          slug: "",
-          title: null,
-          description: null,
-          status: "DRAFT",
-          rewardType: "FREE_ITEM",
-          rewardValue: null,
-          appliesTo: "ENTIRE_PURCHASE",
-          expiresAt: "",
-          themeColor: null,
-          bannerImage: null,
-          logo: null,
-          contactNumber: null,
-          termsAndConditions: [],
-          maxRedemptionEnabled: false,
-          maxRedemptionAmount: null,
-          minPurchaseForEarningEnabled: false,
-          minPurchaseForEarning: null,
-          minPurchaseForRedemptionEnabled: false,
-          minPurchaseForRedemption: null,
-          instantCashbackRedeemable: false,
-          redemptionLimit: "ONCE",
-          createdAt: "",
-          updatedAt: "",
-        },
-      ] as CampaignListItem[];
-    }
+    if (isEmpty) return [] as CampaignListItem[];
 
     return items;
   }, [isEmpty, isLoading, items, perPage]);
@@ -382,22 +358,19 @@ export function CampaignsTable({ onEdit, onDownload }: CampaignsTableProps) {
   return (
     <DataTable
       table={table}
-      renderRowFooter={(row) => {
-        if (isEmpty && row.original.id === "empty-state") {
-          return (
-            <div className="flex flex-col items-center justify-center px-4 py-12 text-center">
-              <Megaphone className="text-muted-foreground/50 h-10 w-10" />
-              <p className="text-muted-foreground mt-2 text-sm font-medium">
-                No campaigns found
-              </p>
-              <p className="text-muted-foreground mt-1 text-xs">
-                Create a campaign or adjust your filters
-              </p>
-            </div>
-          );
-        }
-        return null;
-      }}
+      renderEmpty={() => (
+        <Empty className="py-12">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <Megaphone className="size-6" />
+            </EmptyMedia>
+            <EmptyTitle>No campaigns found</EmptyTitle>
+            <EmptyDescription>
+              Create a campaign or adjust your filters
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      )}
     >
       <DataTableToolbar table={table} maxTextFilters={1} />
     </DataTable>

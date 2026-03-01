@@ -3,8 +3,8 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "build": "turbo build",
-    "dev": "turbo dev",
+    "build": "node api.js && turbo build",
+    "dev": "node api.js && turbo dev",
     "lint": "turbo lint",
     "format": "prettier --write --log-level warn \"**/*.{ts,tsx,md}\"",
     "format:check": "prettier --check --log-level warn \"**/*.{ts,tsx,md}\"",

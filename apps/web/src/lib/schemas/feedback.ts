@@ -27,27 +27,49 @@ const brandingUpdateSchema = z
   .optional()
   .nullable();
 
-export const feedbackConfigUpdateSchema = z.object({
-  positiveFollowUp: z.string().max(500).optional().nullable(),
-  negativeFollowUp: z.string().max(500).optional().nullable(),
-  timing: feedbackTimingSchema.optional(),
-  delaySeconds: z.coerce.number().int().min(0).max(86400).optional().nullable(),
-  collectionChannel: feedbackCollectionChannelSchema.optional(),
-  sendViaSmsIfWpFailed: z.boolean().optional(),
-  feedbackRewardEnabled: z.boolean().optional(),
-  rewardAmount: z.coerce.number().min(0).optional().nullable(),
-  isHowDidYouHearEnabled: z.boolean().optional(),
-  negAlertChannelsWp: z.boolean().optional(),
-  negAlertChannelsSms: z.boolean().optional(),
-  negAlertChannelsEmail: z.boolean().optional(),
-  negFeedbackAlertNumber: z.string().max(50).optional().nullable(),
-  negFeedbackAlertSmsNumber: z.string().max(50).optional().nullable(),
-  negFeedbackAlertEmailAddress: z.string().max(254).optional().nullable(),
-  askForOnlineReviews: z.boolean().optional(),
-  onlineReviewLink: z.string().max(500).optional().nullable(),
-  onlineReviewPlatform: onlineReviewPlatformSchema.optional().nullable(),
-  branding: brandingUpdateSchema,
-});
+export const feedbackConfigUpdateSchema = z
+  .object({
+    positiveFollowUp: z.string().max(500).optional().nullable(),
+    negativeFollowUp: z.string().max(500).optional().nullable(),
+    timing: feedbackTimingSchema.optional(),
+    delaySeconds: z.coerce
+      .number()
+      .int()
+      .min(0)
+      .max(86400)
+      .optional()
+      .nullable(),
+    collectionChannel: feedbackCollectionChannelSchema.optional(),
+    sendViaSmsIfWpFailed: z.boolean().optional(),
+    feedbackRewardEnabled: z.boolean().optional(),
+    rewardAmount: z.coerce.number().min(0).optional().nullable(),
+    isHowDidYouHearEnabled: z.boolean().optional(),
+    negAlertChannelsWp: z.boolean().optional(),
+    negAlertChannelsSms: z.boolean().optional(),
+    negAlertChannelsEmail: z.boolean().optional(),
+    negFeedbackAlertNumber: z.string().max(50).optional().nullable(),
+    negFeedbackAlertSmsNumber: z.string().max(50).optional().nullable(),
+    negFeedbackAlertEmailAddress: z.string().max(254).optional().nullable(),
+    askForOnlineReviews: z.boolean().optional(),
+    onlineReviewLink: z.string().max(500).optional().nullable(),
+    onlineReviewPlatform: onlineReviewPlatformSchema.optional().nullable(),
+    branding: brandingUpdateSchema,
+  })
+  .refine(
+    (data) => {
+      if (data.askForOnlineReviews !== true) return true;
+      const hasLink =
+        data.onlineReviewLink != null &&
+        String(data.onlineReviewLink).trim().length > 0;
+      const hasPlatform = data.onlineReviewPlatform != null;
+      return hasLink && hasPlatform;
+    },
+    {
+      message:
+        "When “Show review prompt after feedback” is on, Platform and Review link are required.",
+      path: ["onlineReviewLink"],
+    },
+  );
 
 export const feedbackStatsQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1).optional(),

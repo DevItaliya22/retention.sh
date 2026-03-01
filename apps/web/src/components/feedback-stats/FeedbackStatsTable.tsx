@@ -11,6 +11,10 @@ import {
   DataTable,
   DataTableColumnHeader,
   DataTableToolbar,
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
   Skeleton,
 } from "@reelo/ui/components";
 import { useDataTable } from "@reelo/ui/hooks";
@@ -54,22 +58,7 @@ export function FeedbackStatsTable() {
         customerSlugId: "",
       })) as FeedbackStatRow[];
     }
-    if (isEmpty) {
-      return [
-        {
-          id: "empty-state",
-          rating: null,
-          comment: null,
-          howDidYouHear: null,
-          selectedCategories: [],
-          selectedSelectionOptions: [],
-          createdAt: "",
-          customerName: "",
-          customerPhone: null,
-          customerSlugId: "",
-        },
-      ] as FeedbackStatRow[];
-    }
+    if (isEmpty) return [] as FeedbackStatRow[];
     return items;
   }, [items, isLoading, perPage, isEmpty]);
 
@@ -294,22 +283,17 @@ export function FeedbackStatsTable() {
       />
       <DataTable
         table={table}
-        renderRowFooter={(row) => {
-          if (isEmpty && row.original.id === "empty-state") {
-            return (
-              <div className="flex flex-col items-center justify-center px-4 py-12">
-                <p className="text-muted-foreground text-sm font-medium">
-                  No feedback yet
-                </p>
-                <p className="text-muted-foreground mt-1 text-xs">
-                  Responses will appear when customers submit feedback from
-                  their bill link
-                </p>
-              </div>
-            );
-          }
-          return null;
-        }}
+        renderEmpty={() => (
+          <Empty className="py-12">
+            <EmptyHeader>
+              <EmptyTitle>No feedback yet</EmptyTitle>
+              <EmptyDescription>
+                Responses will appear when customers submit feedback from their
+                bill link
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        )}
       >
         <DataTableToolbar table={table} maxTextFilters={1} />
       </DataTable>
