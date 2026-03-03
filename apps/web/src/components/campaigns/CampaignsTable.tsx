@@ -43,6 +43,36 @@ interface CampaignsTableProps {
 
 const EMPTY_CAMPAIGNS: CampaignListItem[] = [];
 
+function createSkeletonCampaign(id: string): CampaignListItem {
+  return {
+    id,
+    slug: "",
+    title: null,
+    description: null,
+    status: "DRAFT",
+    rewardType: "FREE_ITEM",
+    rewardValue: null,
+    offerStatement: null,
+    appliesTo: "ENTIRE_PURCHASE",
+    expiresAt: new Date().toISOString(),
+    themeColor: null,
+    bannerImage: null,
+    logo: null,
+    contactNumber: null,
+    termsAndConditions: [],
+    maxRedemptionEnabled: false,
+    maxRedemptionAmount: null,
+    minPurchaseForEarningEnabled: false,
+    minPurchaseForEarning: null,
+    minPurchaseForRedemptionEnabled: false,
+    minPurchaseForRedemption: null,
+    instantCashbackRedeemable: false,
+    redemptionLimit: "ONCE",
+    createdAt: "",
+    updatedAt: "",
+  };
+}
+
 export function CampaignsTable({ onEdit, onDownload }: CampaignsTableProps) {
   const { data, isLoading, isError, error } = useCampaignsQuery();
   const items = data?.items ?? EMPTY_CAMPAIGNS;
@@ -53,32 +83,9 @@ export function CampaignsTable({ onEdit, onDownload }: CampaignsTableProps) {
 
   const displayItems = useMemo(() => {
     if (isLoading && items.length === 0) {
-      return Array.from({ length: perPage }, (_, i) => ({
-        id: `skeleton-${i}`,
-        slug: "",
-        title: null,
-        description: null,
-        status: "DRAFT",
-        rewardType: "FREE_ITEM",
-        rewardValue: null,
-        appliesTo: "ENTIRE_PURCHASE",
-        expiresAt: new Date().toISOString(),
-        themeColor: null,
-        bannerImage: null,
-        logo: null,
-        contactNumber: null,
-        termsAndConditions: [],
-        maxRedemptionEnabled: false,
-        maxRedemptionAmount: null,
-        minPurchaseForEarningEnabled: false,
-        minPurchaseForEarning: null,
-        minPurchaseForRedemptionEnabled: false,
-        minPurchaseForRedemption: null,
-        instantCashbackRedeemable: false,
-        redemptionLimit: "ONCE",
-        createdAt: "",
-        updatedAt: "",
-      })) as CampaignListItem[];
+      return Array.from({ length: perPage }, (_, i) =>
+        createSkeletonCampaign(`skeleton-${i}`),
+      );
     }
 
     if (isEmpty) return [] as CampaignListItem[];

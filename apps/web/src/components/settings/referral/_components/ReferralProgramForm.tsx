@@ -64,6 +64,8 @@ export function ReferralProgramForm({
               ? values.existingCustomerFreeItemSkuId || null
               : null,
           sendReminderToCustomer: values.sendReminderToCustomer,
+          lockReferralPointsUntilFirstPurchase:
+            values.lockReferralPointsUntilFirstPurchase ?? false,
           informationSections: [], // Information sections temporarily disabled
           branding: values.branding,
           termsAndConditionsNewCustomer:
@@ -130,6 +132,7 @@ export function ReferralProgramForm({
           "existingCustomerBenefitValue",
           "existingCustomerFreeItemSkuId",
           "existingCustomerBenefitExpiresInDays",
+          "lockReferralPointsUntilFirstPurchase",
           "termsAndConditionsNewCustomer",
           "termsAndConditionsExistingCustomer",
         ],
