@@ -4,6 +4,11 @@
  */
 export type ColumnMapping = Record<string, string>;
 
+/** Payload from a loaded CSV or Excel file. */
+export type FileLoadedPayload =
+  | { type: "csv"; text: string }
+  | { type: "excel"; rows: string[][] };
+
 export interface ColumnMappingConfig {
   /** Our column keys (required). Lowercase, no special chars. */
   requiredColumns: readonly string[];
@@ -358,4 +363,42 @@ export function createAutoMapping(
   }
 
   return mapping;
+}
+
+/**
+ * Parse a FileLoadedPayload (CSV or Excel) into an array of row objects.
+ * For CSV payloads the header row is normalised with `normalizeHeadersForSelect`
+ * (trims whitespace, strips BOM, replaces blank headers with `__empty_N`).
+ * For Excel payloads the headers are used as-is because the XLSX library
+ * already produces clean strings. The header row is excluded from the result.
+ * Returns an empty array when the payload is null or has fewer than two rows
+ * (header + at least one data row).
+ */
+export function buildDataRowsFromPayload(
+  filePayload: FileLoadedPayload | null,
+): Record<string, unknown>[] {
+  if (!filePayload) return [];
+
+  let headerRow: string[];
+  let dataRows: string[][];
+
+  if (filePayload.type === "csv") {
+    const rows = parseCsvToRows(filePayload.text);
+    if (rows.length < 2) return [];
+    headerRow = normalizeHeadersForSelect(rows[0] ?? []);
+    dataRows = rows.slice(1);
+  } else {
+    const rows = filePayload.rows;
+    if (rows.length < 2) return [];
+    headerRow = rows[0] ?? [];
+    dataRows = rows.slice(1);
+  }
+
+  return dataRows.map((row) => {
+    const obj: Record<string, unknown> = {};
+    headerRow.forEach((h, idx) => {
+      obj[h] = row[idx] ?? "";
+    });
+    return obj;
+  });
 }

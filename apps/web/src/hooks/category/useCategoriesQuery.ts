@@ -1,12 +1,6 @@
 "use client";
 
-import { fetcher } from "@/lib/fetcher";
-import {
-  buildApiParams,
-  getDataTableConfig,
-} from "@/lib/utils/data-table-params";
-import { useQuery } from "@tanstack/react-query";
-import { useSearchParams } from "next/navigation";
+import { useDataTableQuery } from "@/hooks/useDataTableQuery";
 
 export interface CategoryItem {
   id: string;
@@ -30,24 +24,9 @@ export interface CategoriesResponse {
 }
 
 export function useCategoriesQuery() {
-  const searchParams = useSearchParams();
-  const config = getDataTableConfig("categories");
-  const apiParams = buildApiParams(
-    searchParams,
-    config.prefix,
-    config.filterKeys,
+  return useDataTableQuery<CategoriesResponse>(
+    "categories",
+    "categories",
+    "/api/categories",
   );
-  const queryString = apiParams.toString();
-
-  return useQuery<CategoriesResponse, Error>({
-    queryKey: ["categories", searchParams.toString()],
-    queryFn: () => {
-      const url = queryString
-        ? `/api/categories?${queryString}`
-        : "/api/categories";
-      return fetcher<CategoriesResponse>(url);
-    },
-    placeholderData: (previousData) => previousData,
-    staleTime: 5000,
-  });
 }

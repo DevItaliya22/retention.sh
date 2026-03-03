@@ -1,12 +1,6 @@
 "use client";
 
-import { fetcher } from "@/lib/fetcher";
-import {
-  buildApiParams,
-  getDataTableConfig,
-} from "@/lib/utils/data-table-params";
-import { useQuery } from "@tanstack/react-query";
-import { useSearchParams } from "next/navigation";
+import { useDataTableQuery } from "@/hooks/useDataTableQuery";
 
 export interface BillLineItemSku {
   id: string;
@@ -53,22 +47,5 @@ export interface BillsResponse {
 }
 
 export function useBillsQuery() {
-  const searchParams = useSearchParams();
-  const config = getDataTableConfig("bills");
-  const apiParams = buildApiParams(
-    searchParams,
-    config.prefix,
-    config.filterKeys,
-  );
-  const queryString = apiParams.toString();
-
-  return useQuery<BillsResponse, Error>({
-    queryKey: ["bills", searchParams.toString()],
-    queryFn: () => {
-      const url = queryString ? `/api/bills?${queryString}` : "/api/bills";
-      return fetcher<BillsResponse>(url);
-    },
-    placeholderData: (previousData) => previousData,
-    staleTime: 5000,
-  });
+  return useDataTableQuery<BillsResponse>("bills", "bills", "/api/bills");
 }

@@ -5,10 +5,9 @@ import { CsvHeaderMapping } from "@/components/common/csv-mapping";
 import { useManageSku } from "@/hooks/sku/useManageSku";
 import {
   applyMappingToRow,
+  buildDataRowsFromPayload,
   getMappingForBackend,
   isMappingValid,
-  normalizeHeadersForSelect,
-  parseCsvToRows,
   type ColumnMapping,
 } from "@/lib/utils/csv-mapping";
 import { getErrorMessageFromResponse } from "@/lib/utils/error-handler";
@@ -64,45 +63,6 @@ export function SkuImportSheet({ isOpen, onClose }: SkuImportSheetProps) {
     setFilePayload(payload);
   }, []);
 
-  const buildDataRows = useCallback((): Record<string, unknown>[] => {
-    if (!filePayload) return [];
-
-    if (filePayload.type === "csv") {
-      const rows = parseCsvToRows(filePayload.text);
-      if (rows.length < 2) return [];
-      const rawHeaders = rows[0] ?? [];
-      const headers = normalizeHeadersForSelect(rawHeaders);
-      const result: Record<string, unknown>[] = [];
-      for (let i = 1; i < rows.length; i++) {
-        const row = rows[i] ?? [];
-        const obj: Record<string, unknown> = {};
-        headers.forEach((h, idx) => {
-          obj[h] = row[idx] ?? "";
-        });
-        result.push(obj);
-      }
-      return result;
-    }
-
-    if (filePayload.type === "excel") {
-      const rows = filePayload.rows;
-      if (rows.length < 2) return [];
-      const headers = rows[0] ?? [];
-      const result: Record<string, unknown>[] = [];
-      for (let i = 1; i < rows.length; i++) {
-        const row = rows[i] ?? [];
-        const obj: Record<string, unknown> = {};
-        headers.forEach((h, idx) => {
-          obj[h] = row[idx] ?? "";
-        });
-        result.push(obj);
-      }
-      return result;
-    }
-
-    return [];
-  }, [filePayload]);
-
   const handleImport = useCallback(() => {
     const backendMapping = getMappingForBackend(mappingRef.current);
     if (Object.keys(backendMapping).length === 0) {
@@ -110,7 +70,7 @@ export function SkuImportSheet({ isOpen, onClose }: SkuImportSheetProps) {
       return;
     }
 
-    const dataRows = buildDataRows();
+    const dataRows = buildDataRowsFromPayload(filePayload);
     if (dataRows.length === 0) {
       toast.error("No data rows to import");
       return;
@@ -183,7 +143,7 @@ export function SkuImportSheet({ isOpen, onClose }: SkuImportSheetProps) {
         },
       },
     );
-  }, [buildDataRows, importMutation, onClose]);
+  }, [filePayload, importMutation, onClose]);
 
   const canImport =
     filePayload &&
