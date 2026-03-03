@@ -1,12 +1,8 @@
 "use client";
 
+import { useDataTableQuery } from "@/hooks/useDataTableQuery";
 import { fetcher } from "@/lib/fetcher";
-import {
-  buildApiParams,
-  getDataTableConfig,
-} from "@/lib/utils/data-table-params";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useSearchParams } from "next/navigation";
 
 export type CampaignRewardType =
   | "FREE_ITEM"
@@ -55,26 +51,11 @@ export interface CampaignsResponse {
 }
 
 export function useCampaignsQuery() {
-  const searchParams = useSearchParams();
-  const config = getDataTableConfig("campaigns");
-  const apiParams = buildApiParams(
-    searchParams,
-    config.prefix,
-    config.filterKeys,
+  return useDataTableQuery<CampaignsResponse>(
+    "campaigns",
+    "campaigns",
+    "/api/campaigns",
   );
-  const queryString = apiParams.toString();
-
-  return useQuery<CampaignsResponse, Error>({
-    queryKey: ["campaigns", searchParams.toString()],
-    queryFn: () => {
-      const url = queryString
-        ? `/api/campaigns?${queryString}`
-        : "/api/campaigns";
-      return fetcher<CampaignsResponse>(url);
-    },
-    placeholderData: (prev) => prev,
-    staleTime: 5000,
-  });
 }
 
 export interface CreateCampaignDraftResponse {
