@@ -1,0 +1,33 @@
+{
+  "default_branch": "main",
+  "branches": [
+    "bugfixes",
+    "copilot/refactor-duplicated-code",
+    "copilot/vscode-mng1pbbp-iwmz",
+    "game-of-chance",
+    "main",
+    "origin",
+    "r2",
+    "ui/refactor"
+  ],
+  "parent": {
+    "bugfixes": "main",
+    "copilot/refactor-duplicated-code": "main",
+    "copilot/vscode-mng1pbbp-iwmz": "main",
+    "game-of-chance": "main",
+    "main": null,
+    "origin": "main",
+    "r2": "main",
+    "ui/refactor": "main"
+  },
+  "order": [
+    "main",
+    "bugfixes",
+    "copilot/refactor-duplicated-code",
+    "copilot/vscode-mng1pbbp-iwmz",
+    "game-of-chance",
+    "origin",
+    "r2",
+    "ui/refactor"
+  ]
+}
