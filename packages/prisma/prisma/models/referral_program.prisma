@@ -25,6 +25,9 @@ model ReferralProgram {
   // Reminder Settings
   sendReminderToCustomer Boolean @default(false)
 
+  // Lock referrer's cashback until referred customer's first bill in this business
+  lockReferralPointsUntilFirstPurchase Boolean @default(false)
+
   // Information Sections (Array of JSON)
   informationSections Json // [{ title: string, content: string }]
 
@@ -63,6 +66,12 @@ model ReferralLog {
 
   // Reward points (not yet given)
   rewardPoints Int @default(0)
+
+  // The referred customer (set when they claim). Used to unlock referrer reward on first bill.
+  referredBusinessId       String?
+  referredCustomerId       String?
+  // When set, referrer's referral cashback for this log is unlocked (referred made first bill).
+  referrerRewardUnlockedAt DateTime?
 
   createdAt DateTime @default(now())
 

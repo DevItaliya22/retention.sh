@@ -46,7 +46,7 @@ export const CAMPAIGN_REWARD_TEMPLATES: Record<string, string> = {
   CASH_DISCOUNT:
     "Flat {value} off on your next visit. Treat yourself to something special!",
   FREE_ITEM:
-    "Get a {value} absolutely FREE on a minimum purchase of ₹1000. Don't miss out!",
+    "Get a {value} absolutely FREE on a **minimum purchase of ₹1000**. Don't miss out!",
   NO_REWARD: "",
 };
 

@@ -104,6 +104,7 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
           status: true,
           rewardType: true,
           rewardValue: true,
+          offerStatement: true,
           appliesTo: true,
           expiresAt: true,
           themeColor: true,

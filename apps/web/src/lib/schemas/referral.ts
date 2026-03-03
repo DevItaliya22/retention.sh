@@ -58,6 +58,7 @@ const referralProgramBaseSchema = z.object({
     .optional()
     .default([]),
   sendReminderToCustomer: z.boolean().default(false),
+  lockReferralPointsUntilFirstPurchase: z.boolean().optional().default(false),
 
   existingCustomerBenefitType: referralBenefitTypeSchema,
   existingCustomerBenefitValue: z.coerce.number().int().min(0).optional(),

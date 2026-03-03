@@ -1,5 +1,6 @@
 "use client";
 
+import { INDUSTRIES } from "@/lib/constants/industry";
 import type { WelcomeFormValues } from "@/lib/schemas/onboarding";
 import { buildCashierEmail } from "@/lib/utils/cashier-email";
 import { useFormContext } from "@reelo/ui/components";
@@ -53,6 +54,16 @@ export function ReviewStep() {
             <div>
               <p className="text-muted-foreground">Website</p>
               <p className="font-medium">{values.website}</p>
+            </div>
+          )}
+          {Array.isArray(values.industries) && values.industries.length > 0 && (
+            <div className="col-span-2">
+              <p className="text-muted-foreground">Industry</p>
+              <p className="font-medium">
+                {values.industries
+                  .map((id) => INDUSTRIES.find((i) => i.id === id)?.label ?? id)
+                  .join(", ")}
+              </p>
             </div>
           )}
         </div>

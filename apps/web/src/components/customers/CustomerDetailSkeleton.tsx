@@ -1,7 +1,6 @@
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
   Skeleton,
@@ -9,81 +8,34 @@ import {
 
 /**
  * Skeleton for customer detail page. Mirrors CustomerDetailPageClient layout.
- * Only dynamic content is skeletonized (per component-architecture).
  */
 export function CustomerDetailSkeleton() {
   return (
-    <div className="space-y-8">
-      {/* Profile header */}
-      <Card className="bg-muted/30 overflow-hidden border-0 shadow-none">
-        <CardContent className="flex flex-col gap-6 p-6 sm:flex-row sm:items-center sm:gap-8">
-          <Skeleton className="size-16 shrink-0 rounded-full" />
-          <div className="min-w-0 flex-1 space-y-2">
-            <Skeleton className="h-7 w-48" />
-            <Skeleton className="h-5 w-36" />
+    <div className="space-y-6">
+      {/* Summary hero */}
+      <div className="bg-muted/20 rounded-xl border px-5 py-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6">
+          <Skeleton className="size-14 shrink-0 rounded-full sm:size-16" />
+          <div className="min-w-0 flex-1 space-y-4">
+            <div>
+              <Skeleton className="h-7 w-48" />
+              <Skeleton className="mt-2 h-5 w-36" />
+            </div>
+            <div className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <Skeleton key={i} className="h-5 w-40" />
+              ))}
+            </div>
           </div>
-        </CardContent>
-      </Card>
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Skeleton className="size-4 rounded" />
-              Contact & details
-            </CardTitle>
-            <CardDescription>Email, phone and basic info</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-0">
-            {[1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="flex items-start gap-3 py-3 first:pt-0 last:pb-0"
-              >
-                <Skeleton className="size-9 shrink-0 rounded-lg" />
-                <div className="min-w-0 flex-1 space-y-2">
-                  <Skeleton className="h-3 w-12" />
-                  <Skeleton className="h-5 w-40" />
-                </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Skeleton className="size-4 rounded" />
-              Loyalty
-            </CardTitle>
-            <CardDescription>Points and membership</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-0">
-            {[1, 2].map((i) => (
-              <div
-                key={i}
-                className="flex items-start gap-3 py-3 first:pt-0 last:pb-0"
-              >
-                <Skeleton className="size-9 shrink-0 rounded-lg" />
-                <div className="min-w-0 flex-1 space-y-2">
-                  <Skeleton className="h-3 w-20" />
-                  <Skeleton className="h-5 w-24" />
-                </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
+        </div>
       </div>
 
+      {/* Bills card */}
       <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Skeleton className="size-4 rounded" />
-            Bills
-          </CardTitle>
-          <CardDescription>Transaction history</CardDescription>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Bills</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-0">
           <div className="space-y-2">
             {[1, 2, 3].map((i) => (
               <Skeleton key={i} className="h-12 w-full rounded-lg" />

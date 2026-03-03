@@ -26,7 +26,7 @@ import {
   ChevronRight,
   FileText,
   Gift,
-  Inbox,
+  LayoutDashboard,
   Megaphone,
   MessageSquare,
   Settings,
@@ -79,12 +79,12 @@ export function SimpleSidebar({
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     asChild
-                    isActive={pathname === "/inbox"}
-                    tooltip="Inbox"
+                    isActive={pathname === "/dashboard"}
+                    tooltip="Dashboard"
                   >
-                    <Link href="/inbox">
-                      <Inbox className="h-4 w-4" />
-                      <span className="sidebar-text">Inbox</span>
+                    <Link href="/dashboard">
+                      <LayoutDashboard className="h-4 w-4" />
+                      <span className="sidebar-text">Dashboard</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

@@ -183,6 +183,8 @@ export function ReferralProgramForm({
           null,
         existingCustomerBenefitExpiresInDays:
           initialData.existingCustomerBenefitExpiresInDays,
+        lockReferralPointsUntilFirstPurchase:
+          initialData.lockReferralPointsUntilFirstPurchase ?? false,
         sendReminderToCustomer: initialData.sendReminderToCustomer,
         informationSections: initialData.informationSections || [],
         branding: initialData.branding,
@@ -210,6 +212,7 @@ export function ReferralProgramForm({
         existingCustomerBenefitType: "AMOUNT_CASHBACK",
         existingCustomerBenefitValue: 50,
         existingCustomerFreeItemSkuId: null,
+        lockReferralPointsUntilFirstPurchase: false,
         sendReminderToCustomer: false,
         informationSections: [],
         branding: null,

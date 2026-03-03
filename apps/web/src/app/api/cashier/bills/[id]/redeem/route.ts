@@ -243,6 +243,7 @@ export const POST = withCashierAuth<{ id: string }>(
               redeemPartnerCashback > 0 ? redeemPartnerCashback : undefined,
             redeemPartnerPoints:
               redeemPartnerPoints > 0 ? redeemPartnerPoints : undefined,
+            billAmount: currentAmountToPay,
           });
           const currentUserPaid =
             billToReturn.userPaidAmount ?? billToReturn.finalAmount ?? 0;

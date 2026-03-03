@@ -68,6 +68,7 @@ export const campaignUpdateSchema = z.object({
   // Reward
   rewardType: campaignRewardTypeSchema.optional(),
   rewardValue: z.string().max(200).trim().optional().nullable(),
+  offerStatement: z.string().max(2000).trim().optional().nullable(),
   appliesTo: campaignAppliesToSchema.optional(),
   maxRedemptionAmount: z.number().min(0).optional().nullable(),
   maxRedemptionEnabled: z.boolean().optional(),

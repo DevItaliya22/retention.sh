@@ -82,7 +82,7 @@ export function LoginPageClient() {
           // Check if admin has a business
           const { hasBusiness } = await checkAdminHasBusiness();
           if (hasBusiness) {
-            router.push("/inbox");
+            router.push("/dashboard");
           } else {
             router.push("/welcome");
           }
@@ -123,7 +123,7 @@ export function LoginPageClient() {
 
       const result = await authClient.signIn.magicLink({
         email: validationResult.data,
-        callbackURL: "/inbox",
+        callbackURL: "/dashboard",
         newUserCallbackURL: "/welcome",
       });
 

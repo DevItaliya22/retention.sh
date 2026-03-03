@@ -157,8 +157,9 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // Create referral log for tracking (claim was via BusinessCustomer.referralSlug)
-      await tx.referralLog.create({
+      // Create referral log for tracking (claim was via BusinessCustomer.referralSlug).
+      // Set referred ids so we can unlock referrer reward when B makes first bill.
+      const referralLog = await tx.referralLog.create({
         data: {
           slug: crypto.randomUUID(),
           referrerBusinessId: referrer.businessId,
@@ -166,6 +167,8 @@ export async function POST(request: NextRequest) {
           newCustomerPhone: formattedPhone,
           newCustomerName: name?.trim() || null,
           becameCustomer: true,
+          referredBusinessId: businessId,
+          referredCustomerId: customer.id,
         },
       });
 
@@ -204,6 +207,7 @@ export async function POST(request: NextRequest) {
               source: "REFERRAL",
               loyaltyId: business.loyalty?.id ?? null,
               description: "Referral cashback",
+              metadata: { referralLogId: referralLog.id },
             },
           });
         }

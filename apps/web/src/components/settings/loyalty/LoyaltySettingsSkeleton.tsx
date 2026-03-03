@@ -151,12 +151,7 @@ function CashbackSkeleton() {
                 </p>
               </div>
               <div className={SETTINGS_CONTROL_CLASS}>
-                <div className="flex items-center gap-2">
-                  <Skeleton className="h-6 w-11 rounded-full" />
-                  <Label className="text-sm font-normal">
-                    Limit redemption on wallet balance
-                  </Label>
-                </div>
+                <Skeleton className="h-6 w-11 rounded-full" />
               </div>
             </div>
             <div className={SETTINGS_ROW_CLASS}>
@@ -169,12 +164,7 @@ function CashbackSkeleton() {
                 </p>
               </div>
               <div className={SETTINGS_CONTROL_CLASS}>
-                <div className="flex items-center gap-2">
-                  <Skeleton className="h-6 w-11 rounded-full" />
-                  <Label className="text-sm font-normal">
-                    Limit redemption on bill amount
-                  </Label>
-                </div>
+                <Skeleton className="h-6 w-11 rounded-full" />
               </div>
             </div>
           </div>

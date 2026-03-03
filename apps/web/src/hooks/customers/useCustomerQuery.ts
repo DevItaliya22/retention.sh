@@ -51,6 +51,11 @@ export interface PartnerRedemptionSummary {
   createdAt: string;
 }
 
+/** Activity item: partner redemption or referral log (merged, sorted by date). */
+export type CustomerActivityItem =
+  | (PartnerRedemptionSummary & { type: "partner" })
+  | (ReferralLogSummary & { type: "referral" });
+
 export interface CustomerDetail {
   id: string;
   slugId: string;
@@ -71,8 +76,9 @@ export interface CustomerDetail {
   referrals?: { name: string; slugId: string }[];
   referralLogs?: ReferralLogSummary[];
   bills: CustomerBillSummary[];
-  /** This customer used our balance at these partner stores (for analytics). */
-  partnerRedemptions?: PartnerRedemptionSummary[];
+  billsTotal: number;
+  activityItems: CustomerActivityItem[];
+  activityTotal: number;
 }
 
 export interface CustomerDetailResponse {
@@ -80,10 +86,34 @@ export interface CustomerDetailResponse {
   error?: string;
 }
 
-export function useCustomerQuery(slugId: string | null) {
+export interface CustomerDetailQueryParams {
+  billsPage?: number;
+  billsPerPage?: number;
+  activityPage?: number;
+  activityPerPage?: number;
+}
+
+export function useCustomerQuery(
+  slugId: string | null,
+  params?: CustomerDetailQueryParams,
+) {
+  const search = new URLSearchParams();
+  if (params?.billsPage != null)
+    search.set("billsPage", String(params.billsPage));
+  if (params?.billsPerPage != null)
+    search.set("billsPerPage", String(params.billsPerPage));
+  if (params?.activityPage != null)
+    search.set("activityPage", String(params.activityPage));
+  if (params?.activityPerPage != null)
+    search.set("activityPerPage", String(params.activityPerPage));
+  const queryString = search.toString();
+  const url = queryString
+    ? `/api/customers/${slugId}?${queryString}`
+    : `/api/customers/${slugId}`;
+
   return useQuery<CustomerDetailResponse, Error>({
-    queryKey: ["customer", slugId],
-    queryFn: () => fetcher<CustomerDetailResponse>(`/api/customers/${slugId}`),
+    queryKey: ["customer", slugId, queryString],
+    queryFn: () => fetcher<CustomerDetailResponse>(url),
     enabled: !!slugId,
     staleTime: 5000,
   });

@@ -1,10 +1,15 @@
+import {
+  getLockedReferralBalance,
+  getLockedShopifyBalance,
+} from "@/lib/actions/loyalty";
 import { withAdminAuth } from "@/lib/auth/middleware";
+import { runTransaction } from "@/lib/db/transaction";
 import { customersQuerySchema } from "@/lib/schemas/customer";
 import {
   sanitizeErrorMessage,
   validateSchema,
 } from "@/lib/utils/error-handler";
-import { db } from "@reelo/db";
+import { db, TransactionValueKind } from "@reelo/db";
 import { NextRequest, NextResponse } from "next/server";
 
 export const GET = withAdminAuth(async (request: NextRequest, context) => {
@@ -130,20 +135,58 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
       db.businessCustomer.count({ where }),
     ]);
 
-    const formattedCustomers = businessCustomers.map((bc) => ({
-      id: bc.slugId,
-      slugId: bc.slugId,
-      customerId: bc.customer.id,
-      name: bc.customer.user.name,
-      email: bc.customer.email,
-      phone: bc.customer.user.phoneNumber,
-      pointsBalance:
-        (bc.wallet?.amountSpentBalance ?? 0) +
-        (bc.wallet?.visitPointsBalance ?? 0),
-      cashbackBalance: bc.wallet?.cashbackBalance ?? 0,
-      createdAt: bc.createdAt.toISOString(),
-      updatedAt: bc.updatedAt.toISOString(),
-    }));
+    const lockedByCustomerId = await runTransaction(async (tx) => {
+      const entries: Array<{
+        customerId: string;
+        lockedShopify: number;
+        lockedReferral: number;
+      }> = [];
+      for (const bc of businessCustomers) {
+        const [lockedShopify, lockedReferral] = await Promise.all([
+          getLockedShopifyBalance(tx, {
+            businessId: context.business.id,
+            customerId: bc.customerId,
+            valueKind: TransactionValueKind.CASHBACK,
+          }),
+          getLockedReferralBalance(tx, {
+            businessId: context.business.id,
+            customerId: bc.customerId,
+          }),
+        ]);
+        entries.push({
+          customerId: bc.customerId,
+          lockedShopify,
+          lockedReferral,
+        });
+      }
+      return new Map(entries.map((e) => [e.customerId, e]));
+    });
+
+    const formattedCustomers = businessCustomers.map((bc) => {
+      const locked = lockedByCustomerId.get(bc.customerId);
+      const rawCashback = bc.wallet?.cashbackBalance ?? 0;
+      const cashbackBalance =
+        locked != null
+          ? Math.max(
+              0,
+              rawCashback - locked.lockedShopify - locked.lockedReferral,
+            )
+          : rawCashback;
+      return {
+        id: bc.slugId,
+        slugId: bc.slugId,
+        customerId: bc.customer.id,
+        name: bc.customer.user.name,
+        email: bc.customer.email,
+        phone: bc.customer.user.phoneNumber,
+        pointsBalance:
+          (bc.wallet?.amountSpentBalance ?? 0) +
+          (bc.wallet?.visitPointsBalance ?? 0),
+        cashbackBalance,
+        createdAt: bc.createdAt.toISOString(),
+        updatedAt: bc.updatedAt.toISOString(),
+      };
+    });
 
     return NextResponse.json({
       items: formattedCustomers,

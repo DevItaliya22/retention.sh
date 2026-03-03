@@ -141,6 +141,8 @@ export const POST = withAdminAuth(async (request, context) => {
           ? (validatedData.existingCustomerFreeItemSkuId ?? null)
           : null,
       sendReminderToCustomer: validatedData.sendReminderToCustomer,
+      lockReferralPointsUntilFirstPurchase:
+        validatedData.lockReferralPointsUntilFirstPurchase ?? false,
       informationSections: validatedData.informationSections as any,
       branding: validatedData.branding as any,
     };
@@ -320,6 +322,9 @@ export const PUT = withAdminAuth(async (request, context) => {
         validatedData.existingCustomerBenefitExpiresInDays ?? null;
     if (validatedData.sendReminderToCustomer !== undefined)
       updateData.sendReminderToCustomer = validatedData.sendReminderToCustomer;
+    if (validatedData.lockReferralPointsUntilFirstPurchase !== undefined)
+      updateData.lockReferralPointsUntilFirstPurchase =
+        validatedData.lockReferralPointsUntilFirstPurchase;
     if (validatedData.informationSections !== undefined)
       updateData.informationSections = validatedData.informationSections;
     if (validatedData.branding !== undefined)

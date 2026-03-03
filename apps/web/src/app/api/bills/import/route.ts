@@ -1,4 +1,7 @@
-import { applyLoyaltyForBill } from "@/lib/actions/loyalty";
+import {
+  applyLoyaltyForBill,
+  unlockReferrerRewardIfFirstBill,
+} from "@/lib/actions/loyalty";
 import { withAdminAuth } from "@/lib/auth/middleware";
 import { APP_CONSTANTS } from "@/lib/constants/app";
 import { billImportSchema } from "@/lib/schemas/bill";
@@ -274,6 +277,11 @@ export const POST = withAdminAuth(async (request: NextRequest, context) => {
                   : undefined,
               userPaidAmount: loyalty.finalAmount,
             },
+          });
+
+          await unlockReferrerRewardIfFirstBill(tx, {
+            businessId,
+            customerId: customer.id,
           });
 
           return bill;

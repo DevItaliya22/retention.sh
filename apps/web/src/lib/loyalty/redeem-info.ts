@@ -6,10 +6,14 @@
  * Available for redeem = wallet.cashbackBalance - cashbackEarnedThisBill (when applicable).
  */
 
-import { getLockedShopifyBalance } from "@/lib/actions/loyalty";
+import {
+  getLockedReferralBalance,
+  getLockedShopifyBalance,
+} from "@/lib/actions/loyalty";
 import type { Prisma } from "@reelo/db";
 import { TransactionValueKind } from "@reelo/db";
 import {
+  calculateCashbackRedeemable,
   calculatePointsEarnedForBill,
   calculateRedeemable,
   getAmountForEarning,
@@ -208,7 +212,14 @@ export async function getRedeemableInfo(
     customerId,
     valueKind: TransactionValueKind.VISIT_POINTS,
   });
-  const effectiveCashbackBal = Math.max(0, cashbackBal - lockedCashback);
+  const lockedReferralCashback = await getLockedReferralBalance(tx, {
+    businessId,
+    customerId,
+  });
+  const effectiveCashbackBal = Math.max(
+    0,
+    cashbackBal - lockedCashback - lockedReferralCashback,
+  );
   const effectiveAmountSpentBal = Math.max(
     0,
     amountSpentBal - lockedAmountSpent,
@@ -445,7 +456,11 @@ export async function getPartnerRedeemableInfo(
       partnerLoyalty.loyaltyType === "CASHBACK" ||
       partnerLoyalty.loyaltyType === "TIER"
     ) {
-      balance = Math.max(0, wallet.cashbackBalance ?? 0);
+      const lockedReferral = await getLockedReferralBalance(tx, {
+        businessId: partnerMember.businessId,
+        customerId,
+      });
+      balance = Math.max(0, (wallet.cashbackBalance ?? 0) - lockedReferral);
       valueAtCurrentStore = balance * exchangeRate;
     } else if (partnerLoyalty.loyaltyType === "AMOUNT_SPENT") {
       balance = Math.max(0, Math.floor(wallet.amountSpentBalance ?? 0));
@@ -468,36 +483,44 @@ export async function getPartnerRedeemableInfo(
         currentContext.type === "CASHBACK" || currentContext.type === "TIER";
 
       if (isCashbackOrTier) {
-        const minPurchase =
-          currentContext.type === "CASHBACK"
-            ? currentContext.config.minPurchaseForRedemption
-            : resolvedTier?.minPurchaseForRedemption;
-        const minEnabled =
-          currentContext.type === "CASHBACK"
-            ? currentContext.config.minPurchaseForRedemptionEnabled
-            : resolvedTier?.minPurchaseForRedemptionEnabled;
-        if (
-          minEnabled &&
-          minPurchase != null &&
-          minPurchase > 0 &&
-          amt < minPurchase
-        ) {
-          maxRedeemableOnBill = 0;
-        } else {
-          const loyaltyCapPartnerUnits = getMaxCashbackCapFromContext(
-            currentContext,
-            resolvedTier ?? undefined,
-          );
-          const capInOurCurrency =
-            (loyaltyCapPartnerUnits ?? Infinity) * exchangeRate;
+        if (currentContext.type === "CASHBACK") {
+          // calculateCashbackRedeemable applies ALL caps: minPurchaseForRedemption,
+          // redemptionBalanceLimit (% or ₹), redemptionBillLimit (% or ₹), maxCashbackCap
           maxRedeemableOnBill =
             Math.floor(
-              Math.min(
+              calculateCashbackRedeemable(
+                amt,
+                currentContext.config,
                 valueAtCurrentStore,
-                capInOurCurrency,
-                Math.floor(amt * 100) / 100,
               ) * 100,
             ) / 100;
+        } else {
+          // TIER: use tier-specific limits (minPurchaseForRedemption, maxCashbackCap)
+          const minPurchase = resolvedTier?.minPurchaseForRedemption;
+          const minEnabled = resolvedTier?.minPurchaseForRedemptionEnabled;
+          if (
+            minEnabled &&
+            minPurchase != null &&
+            minPurchase > 0 &&
+            amt < minPurchase
+          ) {
+            maxRedeemableOnBill = 0;
+          } else {
+            const loyaltyCapPartnerUnits = getMaxCashbackCapFromContext(
+              currentContext,
+              resolvedTier ?? undefined,
+            );
+            const capInOurCurrency =
+              (loyaltyCapPartnerUnits ?? Infinity) * exchangeRate;
+            maxRedeemableOnBill =
+              Math.floor(
+                Math.min(
+                  valueAtCurrentStore,
+                  capInOurCurrency,
+                  Math.floor(amt * 100) / 100,
+                ) * 100,
+              ) / 100;
+          }
         }
       } else {
         maxRedeemableOnBill = Math.min(

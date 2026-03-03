@@ -47,6 +47,7 @@ export interface ReferralProgram {
     name: string;
     sku: string;
   } | null;
+  lockReferralPointsUntilFirstPurchase?: boolean;
   sendReminderToCustomer: boolean;
   informationSections: Array<{ title: string; content: string }>;
   branding: {
