@@ -111,11 +111,24 @@ export interface CampaignFull extends CampaignListItem {
   emailEnabled: boolean;
 }
 
-export function useCampaignQuery(id: string | null) {
+export function useCampaignQuery(
+  id: string | null,
+  initialData?: CampaignFull,
+) {
   return useQuery<CampaignFull, Error>({
-    queryKey: ["campaigns", id],
-    queryFn: () => fetcher<CampaignFull>(`/api/campaigns/${id}`),
+    queryKey: ["campaign", id],
+    queryFn: async () => {
+      const campaign = await fetcher<CampaignFull>(`/api/campaigns/${id}`, {
+        cache: "no-store",
+      });
+      if (id && campaign.id !== id) {
+        throw new Error("Loaded campaign does not match requested campaign.");
+      }
+      return campaign;
+    },
     enabled: !!id,
+    initialData:
+      id && initialData && initialData.id === id ? initialData : undefined,
   });
 }
 
@@ -169,7 +182,8 @@ export function useUpdateCampaign(id: string | null) {
         body: JSON.stringify(data),
       }),
     onSuccess: (updated) => {
-      queryClient.setQueryData(["campaigns", id], updated);
+      queryClient.setQueryData(["campaign", id], updated);
+      queryClient.invalidateQueries({ queryKey: ["campaign", id] });
       queryClient.invalidateQueries({ queryKey: ["campaigns"] });
     },
   });
