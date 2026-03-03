@@ -67,14 +67,6 @@ export interface CustomerFrequencyResponse {
   error?: string;
 }
 
-export interface ProfileCompletionResponse {
-  complete: number;
-  incomplete: number;
-  percentage: number;
-  total: number;
-  error?: string;
-}
-
 // --- Section 4: Loyalty (3 separate responses) ---
 
 export interface LoyaltyOverviewResponse {

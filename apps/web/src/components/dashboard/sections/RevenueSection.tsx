@@ -78,23 +78,23 @@ export function RevenueSection() {
               <div className="divide-border bg-muted/20 grid grid-cols-2 divide-x overflow-hidden rounded-md border">
                 <div className="px-4 py-2 text-right">
                   <p className="text-muted-foreground text-xs">Revenue</p>
-                  <p className="text-foreground mt-1 text-xl font-semibold tabular-nums">
+                  <div className="text-foreground mt-1 text-xl font-semibold tabular-nums">
                     {isLoading ? (
                       <Skeleton className="ml-auto inline-block h-6 w-24" />
                     ) : (
                       formatCurrency(data?.totalRevenue ?? 0, currencySymbol)
                     )}
-                  </p>
+                  </div>
                 </div>
                 <div className="px-4 py-2 text-right">
                   <p className="text-muted-foreground text-xs">Orders</p>
-                  <p className="text-foreground mt-1 text-xl font-semibold tabular-nums">
+                  <div className="text-foreground mt-1 text-xl font-semibold tabular-nums">
                     {isLoading ? (
                       <Skeleton className="ml-auto inline-block h-6 w-16" />
                     ) : (
                       (data?.totalOrders ?? 0).toLocaleString()
                     )}
-                  </p>
+                  </div>
                 </div>
               </div>
             </div>

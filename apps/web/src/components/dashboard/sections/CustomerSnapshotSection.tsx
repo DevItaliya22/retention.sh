@@ -4,7 +4,6 @@ import {
   useCustomerFrequencyQuery,
   useCustomerSnapshotQuery,
   useNewVsRepeatQuery,
-  useProfileCompletionQuery,
 } from "@/hooks/analytics/useAnalyticsQuery";
 import type { AnalyticsPeriod } from "@/lib/schemas/analytics";
 import {
@@ -19,16 +18,7 @@ import {
 } from "@reelo/ui/components";
 import { Skeleton } from "@reelo/ui/components/skeleton";
 import { useState } from "react";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  Pie,
-  PieChart,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { PeriodSelector, SectionHeader } from "../shared";
 
 function formatDateLabel(dateStr: string): string {
@@ -39,11 +29,6 @@ function formatDateLabel(dateStr: string): string {
 const barChartConfig = {
   new: { label: "New", color: "var(--chart-7)" },
   repeat: { label: "Returning", color: "var(--chart-9)" },
-} satisfies ChartConfig;
-
-const pieConfig = {
-  complete: { label: "Complete", color: "var(--chart-2)" },
-  incomplete: { label: "Incomplete", color: "var(--chart-5)" },
 } satisfies ChartConfig;
 
 const frequencyConfig = {
@@ -67,13 +52,13 @@ function SnapshotCards({ period }: { period: AnalyticsPeriod }) {
             <p className="text-muted-foreground text-xs font-medium">
               {card.label}
             </p>
-            <p className="text-foreground mt-1 text-2xl font-semibold tabular-nums">
+            <div className="text-foreground mt-1 text-2xl font-semibold tabular-nums">
               {isLoading ? (
                 <Skeleton className="inline-block h-7 w-20" />
               ) : (
                 (card.value ?? 0).toLocaleString()
               )}
-            </p>
+            </div>
           </CardContent>
         </Card>
       ))}
@@ -166,7 +151,15 @@ function FrequencyChart() {
               margin={{ top: 4, right: 20, left: 0, bottom: 0 }}
             >
               <CartesianGrid horizontal={false} strokeDasharray="3 3" />
-              <XAxis type="number" tickLine={false} axisLine={false} />
+              <XAxis
+                type="number"
+                tickLine={false}
+                axisLine={false}
+                allowDecimals={false}
+                tickFormatter={(value) =>
+                  Math.round(value as number).toString()
+                }
+              />
               <YAxis
                 dataKey="bucket"
                 type="category"
@@ -194,63 +187,6 @@ function FrequencyChart() {
   );
 }
 
-function ProfileCompletionChart() {
-  const { data, isLoading } = useProfileCompletionQuery();
-
-  const pieData = data
-    ? [
-        { name: "complete", value: data.complete },
-        { name: "incomplete", value: data.incomplete },
-      ]
-    : [];
-
-  return (
-    <Card className="flex-1">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium">
-          Profile Completion
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-col items-center px-4 pb-4">
-        {isLoading ? (
-          <Skeleton className="h-[160px] w-[160px] rounded-full" />
-        ) : (
-          <ChartContainer config={pieConfig} className="h-[160px] w-[160px]">
-            <PieChart>
-              <Pie
-                data={pieData}
-                dataKey="value"
-                nameKey="name"
-                cx="50%"
-                cy="50%"
-                innerRadius={50}
-                outerRadius={70}
-                paddingAngle={2}
-              >
-                <Cell fill="var(--color-complete)" />
-                <Cell fill="var(--color-incomplete)" />
-              </Pie>
-            </PieChart>
-          </ChartContainer>
-        )}
-        <div className="mt-2 text-center">
-          {isLoading ? (
-            <Skeleton className="mx-auto h-5 w-16" />
-          ) : (
-            <>
-              <p className="text-lg font-semibold">{data?.percentage ?? 0}%</p>
-              <p className="text-muted-foreground text-xs">
-                {(data?.complete ?? 0).toLocaleString()} of{" "}
-                {(data?.total ?? 0).toLocaleString()} complete
-              </p>
-            </>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
 export function CustomerSnapshotSection() {
   const [period, setPeriod] = useState<AnalyticsPeriod>("30d");
 
@@ -262,10 +198,7 @@ export function CustomerSnapshotSection() {
       />
       <SnapshotCards period={period} />
       <NewVsRepeatChart period={period} />
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-        <FrequencyChart />
-        <ProfileCompletionChart />
-      </div>
+      <FrequencyChart />
     </section>
   );
 }

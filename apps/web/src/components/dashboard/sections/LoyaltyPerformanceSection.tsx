@@ -64,13 +64,13 @@ function LoyaltyKpiCards({ period }: { period: AnalyticsPeriod }) {
             <p className="text-muted-foreground text-xs font-medium">
               {kpi.label}
             </p>
-            <p className="text-foreground mt-1 text-xl font-semibold tabular-nums">
+            <div className="text-foreground mt-1 text-xl font-semibold tabular-nums">
               {isLoading ? (
                 <Skeleton className="inline-block h-6 w-20" />
               ) : (
                 kpi.value
               )}
-            </p>
+            </div>
           </CardContent>
         </Card>
       ))}
