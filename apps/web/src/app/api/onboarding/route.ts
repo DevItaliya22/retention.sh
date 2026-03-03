@@ -44,6 +44,12 @@ export const POST = withAdminAuthOptionalBusiness(
       }
 
       await db.$transaction(async (tx) => {
+        const industries =
+          Array.isArray(validatedData.industries) &&
+          validatedData.industries.length > 0
+            ? validatedData.industries
+            : [];
+
         const business = await tx.business.create({
           data: {
             name: validatedData.businessName,
@@ -52,6 +58,7 @@ export const POST = withAdminAuthOptionalBusiness(
             defaultPointsName: validatedData.defaultPointsName || "Points",
             defaultCurrencySymbol: validatedData.defaultCurrencySymbol || "₹",
             defaultCurrencyCode: validatedData.defaultCurrencyCode || "INR",
+            industries,
             isServiceEnabled: DEFAULT_SERVICES_ON_CREATION,
             defaultBranding: {
               create: {

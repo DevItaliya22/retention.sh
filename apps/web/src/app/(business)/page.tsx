@@ -19,7 +19,7 @@ export default async function BusinessPage() {
   const user = session.user as any;
 
   if (user?.role === "ADMIN") {
-    redirect("/inbox");
+    redirect("/dashboard");
   } else {
     // If they are not ADMIN, they likely haven't completed onboarding
     redirect("/welcome");

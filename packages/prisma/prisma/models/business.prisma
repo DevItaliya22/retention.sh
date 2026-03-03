@@ -7,6 +7,7 @@ model Business {
   defaultPointsName       String    @default("Points")
   defaultCurrencySymbol   String    @default("₹")
   defaultCurrencyCode     String    @default("INR")
+  industries              String[]  @default([]) // From onboarding: industry tags (e.g. retail, food-beverage)
   registrationBonusPoints Int       @default(0) // Bonus points when customer registers from loyalty login page
   nextBillNumber          Int       @default(1) // Next bill number to use in cashier (auto-incremented on bill create)
   defaultBranding         Branding?

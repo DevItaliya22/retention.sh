@@ -20,7 +20,7 @@ export function useRouteConfig(): RouteConfig {
     // Organization routes with sidebar
     if (
       pathname.startsWith("/organization/") ||
-      pathname === "/inbox" ||
+      pathname === "/dashboard" ||
       pathname === "/members" ||
       pathname === "/org-settings"
     ) {

@@ -15,6 +15,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Switch,
   Textarea,
   useFormContext,
 } from "@reelo/ui/components";
@@ -143,6 +144,31 @@ export function ReferralProgramStep2() {
           )}
         />
       )}
+
+      <FormField
+        control={form.control}
+        name="lockReferralPointsUntilFirstPurchase"
+        render={({ field }) => (
+          <FormItem className="flex flex-row items-center justify-between gap-4 rounded-lg border p-4">
+            <div className="space-y-0.5">
+              <FormLabel className="text-base">
+                Lock referrer's reward until referred customer's first purchase
+              </FormLabel>
+              <p className="text-muted-foreground text-sm">
+                Referrer's cashback will be locked until the person they
+                referred makes their first bill at your business. The referred
+                customer can use their reward normally.
+              </p>
+            </div>
+            <FormControl>
+              <Switch
+                checked={field.value ?? false}
+                onCheckedChange={field.onChange}
+              />
+            </FormControl>
+          </FormItem>
+        )}
+      />
 
       <FormField
         control={form.control}

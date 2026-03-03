@@ -1,4 +1,7 @@
-import { applyLoyaltyForBill } from "@/lib/actions/loyalty";
+import {
+  applyLoyaltyForBill,
+  unlockReferrerRewardIfFirstBill,
+} from "@/lib/actions/loyalty";
 import { withCashierAuth } from "@/lib/auth/middleware";
 import { APP_CONSTANTS } from "@/lib/constants/app";
 import { runTransaction } from "@/lib/db/transaction";
@@ -309,6 +312,12 @@ export const POST = withCashierAuth(async (request: NextRequest, context) => {
               : undefined,
           userPaidAmount: loyalty.finalAmount,
         },
+      });
+
+      // Unlock referrer's referral cashback when referred customer makes first bill
+      await unlockReferrerRewardIfFirstBill(tx, {
+        businessId,
+        customerId: customer.id,
       });
 
       // Fetch reward stages for AMOUNT_SPENT / VISIT_MADE types

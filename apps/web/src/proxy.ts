@@ -23,7 +23,7 @@ import { NextRequest, NextResponse } from "next/server";
  */
 const protectedAdminRoutes = [
   "/",
-  "/inbox",
+  "/dashboard",
   "/welcome",
   "/bills",
   "/customers",

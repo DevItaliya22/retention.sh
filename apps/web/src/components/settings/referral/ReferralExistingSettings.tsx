@@ -27,6 +27,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Switch,
   Textarea,
 } from "@reelo/ui/components";
 import { Plus, Trash2 } from "lucide-react";
@@ -90,6 +91,7 @@ const existingCustomerBenefitSchema = z
     existingCustomerBenefitValue: z.string().default(""),
     existingCustomerFreeItemSkuId: z.string().default(""),
     existingCustomerBenefitExpiresInDays: z.string().default(""),
+    lockReferralPointsUntilFirstPurchase: z.boolean().optional().default(false),
   })
   .superRefine((data, ctx) => {
     if (
@@ -383,6 +385,8 @@ function ExistingCustomerBenefitsCard({
         referralProgram.existingCustomerBenefitExpiresInDays
           ? String(referralProgram.existingCustomerBenefitExpiresInDays)
           : "",
+      lockReferralPointsUntilFirstPurchase:
+        referralProgram.lockReferralPointsUntilFirstPurchase ?? false,
     },
   });
 
@@ -405,6 +409,8 @@ function ExistingCustomerBenefitsCard({
         referralProgram.existingCustomerBenefitExpiresInDays
           ? String(referralProgram.existingCustomerBenefitExpiresInDays)
           : "",
+      lockReferralPointsUntilFirstPurchase:
+        referralProgram.lockReferralPointsUntilFirstPurchase ?? false,
     });
   }, [referralProgram, form]);
 
@@ -544,6 +550,31 @@ function ExistingCustomerBenefitsCard({
               )}
               <FormField
                 control={form.control}
+                name="lockReferralPointsUntilFirstPurchase"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between gap-4 rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">
+                        Lock referrer's reward until referred customer's first
+                        purchase
+                      </FormLabel>
+                      <p className="text-muted-foreground text-sm">
+                        Referrer's cashback will be locked until the person they
+                        referred makes their first bill at your business. The
+                        referred customer can use their reward normally.
+                      </p>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value ?? false}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
                 name="existingCustomerBenefitExpiresInDays"
                 render={({ field }) => (
                   <FormItem className="flex flex-col gap-2 md:grid md:grid-cols-12">
@@ -668,6 +699,9 @@ export function ReferralExistingSettings({
           values.existingCustomerBenefitExpiresInDays
             ? Number(values.existingCustomerBenefitExpiresInDays)
             : null,
+        lockReferralPointsUntilFirstPurchase: Boolean(
+          values.lockReferralPointsUntilFirstPurchase,
+        ),
       });
       return { success: true };
     } catch (error: any) {

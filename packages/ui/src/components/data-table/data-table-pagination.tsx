@@ -57,7 +57,7 @@ export function DataTablePagination<TData>({
           ? `${selectedCount} of ${table.getFilteredRowModel().rows.length} row(s) selected.`
           : selectedCount > 0
             ? `${selectedCount} of ${table.getFilteredRowModel().rows.length} row(s) selected.`
-            : `${startRow}-${endRow} of ${estimatedTotalRows}`}
+            : ``}
       </div>
       <div className="flex flex-wrap items-center gap-3 sm:justify-end lg:gap-5">
         <div className="flex items-center space-x-2">

@@ -100,11 +100,9 @@ export const CampaignPreview = forwardRef<HTMLDivElement, CampaignPreviewProps>(
 
     // Build redemption line
     const redemptionLabel =
-      redemptionLimit === "UNLIMITED"
-        ? "This offer can be redeemed unlimited times."
-        : redemptionLimit === "TWICE"
-          ? "This offer can be redeemed twice per customer."
-          : "This offer can be redeemed once per customer.";
+      redemptionLimit === "MULTIPLE"
+        ? "This offer can be redeemed multiple times per customer."
+        : "This offer can be redeemed once per customer.";
 
     const hasLogo = !!logo;
     const hasBusinessName = !!businessName;
@@ -206,7 +204,7 @@ export const CampaignPreview = forwardRef<HTMLDivElement, CampaignPreviewProps>(
               {/* Expiry */}
               {expiryFormatted && (
                 <p className="text-center text-[1rem] font-extrabold tracking-wide">
-                  Expires on {expiryFormatted}
+                  Offer valid till {expiryFormatted}
                 </p>
               )}
 
@@ -231,23 +229,30 @@ export const CampaignPreview = forwardRef<HTMLDivElement, CampaignPreviewProps>(
                   maxRedemptionAmount != null &&
                   maxRedemptionAmount > 0 && (
                     <p className="text-[0.85rem] opacity-85">
-                      Max discount up to ₹{maxRedemptionAmount}.
+                      <span className="font-semibold">
+                        Max discount up to ₹{maxRedemptionAmount}
+                      </span>
+                      .
                     </p>
                   )}
                 {minEarningEnabled &&
                   minEarningAmount != null &&
                   minEarningAmount > 0 && (
                     <p className="text-[0.85rem] opacity-85">
-                      Min. purchase of ₹{minEarningAmount} required to earn
-                      reward.
+                      <span className="font-semibold">
+                        Min. purchase of ₹{minEarningAmount}
+                      </span>{" "}
+                      required to earn reward.
                     </p>
                   )}
                 {minRedemptionEnabled &&
                   minRedemptionAmount != null &&
                   minRedemptionAmount > 0 && (
                     <p className="text-[0.85rem] opacity-85">
-                      Min. purchase of ₹{minRedemptionAmount} required to
-                      redeem.
+                      <span className="font-semibold">
+                        Min. purchase of ₹{minRedemptionAmount}
+                      </span>{" "}
+                      required to redeem.
                     </p>
                   )}
                 {instantCashback && (

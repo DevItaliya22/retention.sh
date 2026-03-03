@@ -2,6 +2,7 @@
 
 import { BusinessStep } from "@/components/forms/onboarding/steps/BusinessStep";
 import { CashierStep } from "@/components/forms/onboarding/steps/CashierStep";
+import { IndustryStep } from "@/components/forms/onboarding/steps/IndustryStep";
 import { ReviewStep } from "@/components/forms/onboarding/steps/ReviewStep";
 import { useCurrentBusiness } from "@/hooks/business/useCurrentBusiness";
 import { useManageCashier } from "@/hooks/cashier/useManageCashier";
@@ -10,6 +11,7 @@ import { DEFAULT_EMAIL_DOMAIN_SUFFIX } from "@/lib/constants/email-domains";
 import {
   businessStepSchema,
   cashierStepSchema,
+  industryStepSchema,
   type WelcomeFormValues,
 } from "@/lib/schemas/onboarding";
 import { buildCashierEmail } from "@/lib/utils/cashier-email";
@@ -54,6 +56,7 @@ export function WelcomeForm({
           defaultCurrencyCode: values.defaultCurrencyCode,
           themeColor: values.themeColor,
           logo: values.logo,
+          industries: values.industries ?? [],
           createCashier: false,
         };
 
@@ -121,7 +124,7 @@ export function WelcomeForm({
           if (onCompleted) {
             onCompleted();
           } else {
-            router.replace("/inbox");
+            router.replace("/dashboard");
           }
         } else {
           const errorMsg = getErrorMessageFromResponse(
@@ -180,6 +183,22 @@ export function WelcomeForm({
         ),
       },
       {
+        id: "industry",
+        title: "Industry",
+        fields: ["industries"],
+        schema: industryStepSchema,
+        Component: ({ stepIndex, totalSteps }) => (
+          <StepContent
+            stepIndex={stepIndex}
+            totalSteps={totalSteps}
+            title="What industry are you in?"
+            description=""
+          >
+            <IndustryStep />
+          </StepContent>
+        ),
+      },
+      {
         id: "cashier",
         title: "Team Setup",
         fields: [
@@ -218,6 +237,7 @@ export function WelcomeForm({
     defaultPointsName: "Points",
     defaultCurrencySymbol: "₹",
     defaultCurrencyCode: "INR",
+    industries: [] as string[],
     createCashier: false,
     cashierName: "",
     cashierEmailLocalPart: "",

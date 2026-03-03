@@ -105,8 +105,8 @@ export function useBreadcrumbs(): BreadcrumbConfig {
     }
 
     // Handle other routes
-    if (pathname === "/inbox") {
-      items.push({ label: "Inbox", isActive: true });
+    if (pathname === "/dashboard") {
+      items.push({ label: "Dashboard", isActive: true });
     }
 
     if (pathname === "/members") {

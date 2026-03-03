@@ -76,6 +76,7 @@ export const PATCH = withAdminAuth(
         bannerImage,
         rewardType,
         rewardValue,
+        offerStatement,
         appliesTo,
         maxRedemptionAmount,
         maxRedemptionEnabled,
@@ -109,6 +110,8 @@ export const PATCH = withAdminAuth(
       // Reward
       if (rewardType !== undefined) updateData.rewardType = rewardType;
       if (rewardValue !== undefined) updateData.rewardValue = rewardValue;
+      if (offerStatement !== undefined)
+        updateData.offerStatement = offerStatement;
       if (appliesTo !== undefined) updateData.appliesTo = appliesTo;
       if (maxRedemptionAmount !== undefined)
         updateData.maxRedemptionAmount = maxRedemptionAmount;

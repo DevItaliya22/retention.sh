@@ -19,6 +19,17 @@ export const customerSlugIdParamSchema = z.object({
 });
 export type CustomerSlugIdParam = z.infer<typeof customerSlugIdParamSchema>;
 
+/** Query params for customer detail (bills + activity pagination) */
+export const customerDetailQuerySchema = z.object({
+  billsPage: z.coerce.number().int().min(1).default(1).optional(),
+  billsPerPage: z.coerce.number().int().min(1).max(50).default(5).optional(),
+  activityPage: z.coerce.number().int().min(1).default(1).optional(),
+  activityPerPage: z.coerce.number().int().min(1).max(50).default(5).optional(),
+});
+export type CustomerDetailQueryInput = z.infer<
+  typeof customerDetailQuerySchema
+>;
+
 // Customer validation limits
 const MAX_PHONE_LENGTH = 20;
 const MAX_NAME_LENGTH = 255;

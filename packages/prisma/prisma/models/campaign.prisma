@@ -28,7 +28,8 @@ model Campaign {
 
     // Reward configuration
     rewardType           CampaignRewardType @default(FREE_ITEM)
-    rewardValue          String? // e.g. "10% OFF", "₹200 OFF", "Free Dessert"
+    rewardValue          String? // Raw reward value like "coke", "10", "200"
+    offerStatement       String? // Full offer sentence shown on card
     appliesTo            BenefitAppliesTo   @default(ENTIRE_PURCHASE)
     maxRedemptionAmount  Float?
     maxRedemptionEnabled Boolean            @default(false)

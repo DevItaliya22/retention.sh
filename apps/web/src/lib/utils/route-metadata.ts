@@ -43,9 +43,9 @@ const ROUTE_METADATA_MAP: Record<string, RouteMetadataConfig> = {
       "Set up your business to get started with loyalty programs and marketing",
     noIndex: true,
   },
-  "/inbox": {
-    title: "Inbox",
-    description: "View and manage your customer messages and notifications",
+  "/dashboard": {
+    title: "Dashboard",
+    description: "Overview of your business performance and activity",
   },
   "/bills": {
     title: "Bills",
@@ -146,7 +146,7 @@ function formatSlug(slug: string | undefined): string {
 const STATIC_ROUTE_SEGMENTS = new Set([
   "settings",
   "welcome",
-  "inbox",
+  "dashboard",
   "login",
   "register",
   "auth",

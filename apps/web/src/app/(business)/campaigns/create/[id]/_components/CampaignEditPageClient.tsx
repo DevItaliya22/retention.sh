@@ -57,7 +57,7 @@ import {
   X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Resolver } from "react-hook-form";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -72,7 +72,8 @@ const formSchema = z.object({
   description: z.string().max(2000).trim().optional().nullable(),
   contactNumber: z.string().max(20).trim().optional().nullable(),
   rewardType: z.enum(CAMPAIGN_REWARD_TYPES as unknown as [string, ...string[]]),
-  rewardValue: z.string().max(200).trim().optional().nullable(),
+  rewardValue: z.string().max(200).trim().optional().nullable(), // raw value: "coke", "10", "200"
+  offerStatement: z.string().max(2000).trim().optional().nullable(), // full sentence
   appliesTo: z.enum(CAMPAIGN_APPLIES_TO as unknown as [string, ...string[]]),
   maxRedemptionEnabled: z.boolean(),
   maxRedemptionAmount: z.coerce.number().min(0).optional().nullable(),
@@ -135,7 +136,7 @@ function buildRewardSentence(
   let formatted = amount;
   if (type === "PERCENTAGE_DISCOUNT") formatted = `${amount}%`;
   else if (type === "CASH_DISCOUNT") formatted = `₹${amount}`;
-  else if (type === "FREE_ITEM") formatted = `Free ${amount}`;
+  else if (type === "FREE_ITEM") formatted = amount;
   let sentence = tpl.replace("{value}", `**${formatted}**`);
   if (maxEnabled && maxAmount && maxAmount > 0) {
     sentence += ` Maximum discount up to **₹${maxAmount}**.`;
@@ -143,12 +144,32 @@ function buildRewardSentence(
   return sentence;
 }
 
+function extractRewardValueFromStatement(
+  rewardType: string,
+  statement: string | null | undefined,
+): string {
+  if (!statement) return "";
+  const match = statement.match(/\*\*([^*]+)\*\*/);
+  const boldValue = match?.[1]?.trim();
+  if (!boldValue) return "";
+
+  if (rewardType === "PERCENTAGE_DISCOUNT") {
+    return boldValue.replace(/%$/g, "").trim();
+  }
+  if (rewardType === "CASH_DISCOUNT") {
+    return boldValue.replace(/^₹/g, "").trim();
+  }
+  if (rewardType === "FREE_ITEM") {
+    return boldValue;
+  }
+  return "";
+}
+
 export function CampaignEditPageClient({
   campaignId,
 }: CampaignEditPageClientProps) {
   const router = useRouter();
   const previewRef = useRef<HTMLDivElement>(null);
-  const [discountAmount, setDiscountAmount] = useState("");
   const [sentenceEdited, setSentenceEdited] = useState(false);
   const {
     data: campaign,
@@ -167,6 +188,7 @@ export function CampaignEditPageClient({
       contactNumber: "",
       rewardType: "PERCENTAGE_DISCOUNT",
       rewardValue: "",
+      offerStatement: "",
       appliesTo: "ENTIRE_PURCHASE",
       maxRedemptionEnabled: false,
       maxRedemptionAmount: null,
@@ -188,50 +210,76 @@ export function CampaignEditPageClient({
       emailEnabled: false,
       targetCustomerTags: "",
     },
-    values: campaign
-      ? {
-          title: campaign.title ?? "",
-          description: campaign.description ?? "",
-          contactNumber: campaign.contactNumber ?? "",
-          rewardType:
-            (campaign.rewardType as CampaignRewardType) ??
-            "PERCENTAGE_DISCOUNT",
-          rewardValue: campaign.rewardValue ?? "",
-          appliesTo:
-            (campaign.appliesTo as CampaignAppliesTo) ?? "ENTIRE_PURCHASE",
-          maxRedemptionEnabled: campaign.maxRedemptionEnabled ?? false,
-          maxRedemptionAmount: campaign.maxRedemptionAmount ?? null,
-          minPurchaseForEarningEnabled:
-            campaign.minPurchaseForEarningEnabled ?? false,
-          minPurchaseForEarning: campaign.minPurchaseForEarning ?? null,
-          minPurchaseForRedemptionEnabled:
-            campaign.minPurchaseForRedemptionEnabled ?? false,
-          minPurchaseForRedemption: campaign.minPurchaseForRedemption ?? null,
-          instantCashbackRedeemable:
-            campaign.instantCashbackRedeemable ?? false,
-          expiresAt: campaign.expiresAt
-            ? new Date(campaign.expiresAt).toISOString().slice(0, 16)
-            : "",
-          redemptionLimit:
-            (campaign.redemptionLimit as CampaignRedemptionLimit) ?? "ONCE",
-          termsAndConditions:
-            campaign.termsAndConditions?.length > 0
-              ? campaign.termsAndConditions
-              : DEFAULT_TERMS,
-          themeColor: campaign.themeColor || DEFAULT_THEME_COLOR,
-          textColor: campaign.textColor || DEFAULT_TEXT_COLOR,
-          logo: campaign.logo ?? "",
-          bannerImage: campaign.bannerImage ?? "",
-          status: campaign.status ?? "DRAFT",
-          emailSubject: campaign.emailSubject ?? "",
-          whatsappEnabled: campaign.whatsappEnabled ?? false,
-          emailEnabled: campaign.emailEnabled ?? false,
-          targetCustomerTags: (campaign.targetCustomerTags ?? []).join(", "),
-        }
-      : undefined,
   });
 
   const watched = form.watch();
+
+  useEffect(() => {
+    if (!campaign) return;
+
+    const rewardType =
+      (campaign.rewardType as CampaignRewardType) ?? "PERCENTAGE_DISCOUNT";
+
+    const rawValue =
+      campaign.rewardValue ??
+      extractRewardValueFromStatement(
+        rewardType,
+        campaign.offerStatement ?? campaign.rewardValue,
+      ) ??
+      "";
+
+    const autoSentence = buildRewardSentence(
+      rewardType,
+      rawValue,
+      campaign.maxRedemptionEnabled,
+      campaign.maxRedemptionAmount,
+    );
+
+    const currentOffer =
+      campaign.offerStatement ?? (campaign.rewardValue ? autoSentence : "");
+
+    form.reset({
+      title: campaign.title ?? "",
+      description: campaign.description ?? "",
+      contactNumber: campaign.contactNumber ?? "",
+      rewardType,
+      rewardValue: rawValue,
+      offerStatement: currentOffer,
+      appliesTo: (campaign.appliesTo as CampaignAppliesTo) ?? "ENTIRE_PURCHASE",
+      maxRedemptionEnabled: campaign.maxRedemptionEnabled ?? false,
+      maxRedemptionAmount: campaign.maxRedemptionAmount ?? null,
+      minPurchaseForEarningEnabled:
+        campaign.minPurchaseForEarningEnabled ?? false,
+      minPurchaseForEarning: campaign.minPurchaseForEarning ?? null,
+      minPurchaseForRedemptionEnabled:
+        campaign.minPurchaseForRedemptionEnabled ?? false,
+      minPurchaseForRedemption: campaign.minPurchaseForRedemption ?? null,
+      instantCashbackRedeemable: campaign.instantCashbackRedeemable ?? false,
+      expiresAt: campaign.expiresAt
+        ? new Date(campaign.expiresAt).toISOString().slice(0, 16)
+        : "",
+      redemptionLimit:
+        (campaign.redemptionLimit as CampaignRedemptionLimit) ?? "ONCE",
+      termsAndConditions:
+        campaign.termsAndConditions?.length > 0
+          ? campaign.termsAndConditions
+          : DEFAULT_TERMS,
+      themeColor: campaign.themeColor || DEFAULT_THEME_COLOR,
+      textColor: campaign.textColor || DEFAULT_TEXT_COLOR,
+      logo: campaign.logo ?? "",
+      bannerImage: campaign.bannerImage ?? "",
+      status: campaign.status ?? "DRAFT",
+      emailSubject: campaign.emailSubject ?? "",
+      whatsappEnabled: campaign.whatsappEnabled ?? false,
+      emailEnabled: campaign.emailEnabled ?? false,
+      targetCustomerTags: (campaign.targetCustomerTags ?? []).join(", "),
+    });
+
+    // If server sentence differs from auto-generated, treat as edited.
+    setSentenceEdited(
+      !!currentOffer && currentOffer.trim() !== autoSentence.trim(),
+    );
+  }, [campaign, form]);
 
   const onSubmit = form.handleSubmit(async (values) => {
     try {
@@ -248,6 +296,7 @@ export function CampaignEditPageClient({
         contactNumber: values.contactNumber || null,
         rewardType: values.rewardType as CampaignRewardType,
         rewardValue: values.rewardValue || null,
+        offerStatement: values.offerStatement || null,
         appliesTo: values.appliesTo as CampaignAppliesTo,
         maxRedemptionEnabled: values.maxRedemptionEnabled,
         maxRedemptionAmount: values.maxRedemptionEnabled
@@ -317,7 +366,7 @@ export function CampaignEditPageClient({
     title: watched.title ?? null,
     description: watched.description ?? null,
     contactNumber: watched.contactNumber ?? null,
-    rewardValue: watched.rewardValue ?? null,
+    rewardValue: watched.offerStatement ?? null,
     expiresAt: watched.expiresAt ?? null,
     termsAndConditions: watched.termsAndConditions ?? [],
     maxRedemptionEnabled: watched.maxRedemptionEnabled ?? false,
@@ -453,16 +502,20 @@ export function CampaignEditPageClient({
                     <FormItem>
                       <FormLabel>Reward Type</FormLabel>
                       <Select
-                        value={field.value}
+                        value={
+                          field.value ??
+                          (campaign?.rewardType as CampaignRewardType) ??
+                          "PERCENTAGE_DISCOUNT"
+                        }
                         onValueChange={(val) => {
                           field.onChange(val);
                           // Regenerate sentence when type changes (unless user manually edited)
                           if (!sentenceEdited) {
                             form.setValue(
-                              "rewardValue",
+                              "offerStatement",
                               buildRewardSentence(
                                 val,
-                                discountAmount,
+                                watched.rewardValue ?? "",
                                 watched.maxRedemptionEnabled,
                                 watched.maxRedemptionAmount,
                               ),
@@ -497,38 +550,48 @@ export function CampaignEditPageClient({
                           ? "Free item name"
                           : "Discount amount"}
                       </FormLabel>
-                      <Input
-                        type={
-                          watched.rewardType === "FREE_ITEM" ? "text" : "text"
-                        }
-                        placeholder={
-                          CAMPAIGN_REWARD_PLACEHOLDERS[watched.rewardType] ??
-                          "..."
-                        }
-                        value={discountAmount}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setDiscountAmount(val);
-                          // Auto-update sentence unless user manually edited it
-                          if (!sentenceEdited) {
-                            form.setValue(
-                              "rewardValue",
-                              buildRewardSentence(
-                                watched.rewardType,
-                                val,
-                                watched.maxRedemptionEnabled,
-                                watched.maxRedemptionAmount,
-                              ),
-                            );
-                          }
-                        }}
+                      <FormField
+                        control={form.control}
+                        name="rewardValue"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Input
+                                type="text"
+                                placeholder={
+                                  CAMPAIGN_REWARD_PLACEHOLDERS[
+                                    watched.rewardType
+                                  ] ?? "..."
+                                }
+                                {...field}
+                                value={field.value ?? ""}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  field.onChange(val);
+                                  if (!sentenceEdited) {
+                                    form.setValue(
+                                      "offerStatement",
+                                      buildRewardSentence(
+                                        watched.rewardType,
+                                        val,
+                                        watched.maxRedemptionEnabled,
+                                        watched.maxRedemptionAmount,
+                                      ),
+                                    );
+                                  }
+                                }}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
                       />
                     </div>
 
                     {/* Auto-generated sentence — editable */}
                     <FormField
                       control={form.control}
-                      name="rewardValue"
+                      name="offerStatement"
                       render={({ field }) => (
                         <FormItem>
                           <div className="flex items-center justify-between">
@@ -542,7 +605,7 @@ export function CampaignEditPageClient({
                                   field.onChange(
                                     buildRewardSentence(
                                       watched.rewardType,
-                                      discountAmount,
+                                      watched.rewardValue ?? "",
                                       watched.maxRedemptionEnabled,
                                       watched.maxRedemptionAmount,
                                     ),
@@ -623,10 +686,10 @@ export function CampaignEditPageClient({
                                 field.onChange(checked);
                                 if (!sentenceEdited) {
                                   form.setValue(
-                                    "rewardValue",
+                                    "offerStatement",
                                     buildRewardSentence(
                                       watched.rewardType,
-                                      discountAmount,
+                                      watched.rewardValue ?? "",
                                       checked,
                                       watched.maxRedemptionAmount,
                                     ),
@@ -661,10 +724,10 @@ export function CampaignEditPageClient({
                                   field.onChange(val);
                                   if (!sentenceEdited) {
                                     form.setValue(
-                                      "rewardValue",
+                                      "offerStatement",
                                       buildRewardSentence(
                                         watched.rewardType,
-                                        discountAmount,
+                                        watched.rewardValue ?? "",
                                         watched.maxRedemptionEnabled,
                                         val,
                                       ),

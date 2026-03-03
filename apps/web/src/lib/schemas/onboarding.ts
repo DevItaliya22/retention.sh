@@ -15,6 +15,10 @@ export const businessStepSchema = z
     { message: "Not available", path: ["businessSlug"] },
   );
 
+export const industryStepSchema = z.object({
+  industries: z.array(z.string().max(64)).default([]),
+});
+
 export const cashierStepSchema = z
   .object({
     ...baseCashierSchema,
@@ -42,6 +46,7 @@ export const cashierStepSchema = z
 
 export const welcomeFormSchema = z.object({
   ...businessStepSchema.shape,
+  ...industryStepSchema.shape,
   ...cashierStepSchema.shape,
 });
 

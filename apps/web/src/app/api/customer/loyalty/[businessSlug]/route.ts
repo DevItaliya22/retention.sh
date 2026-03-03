@@ -1,4 +1,8 @@
-import { expirePointsForCustomer } from "@/lib/actions/loyalty";
+import {
+  expirePointsForCustomer,
+  getLockedReferralBalance,
+  getLockedShopifyBalance,
+} from "@/lib/actions/loyalty";
 import { withCustomerAuth } from "@/lib/auth/middleware";
 import { runTransaction } from "@/lib/db/transaction";
 import {
@@ -15,7 +19,7 @@ import {
   type IsServiceEnabled,
   isServiceEnabled,
 } from "@/lib/utils/service-enabled";
-import { db } from "@reelo/db";
+import { db, TransactionValueKind } from "@reelo/db";
 import { NextRequest, NextResponse } from "next/server";
 
 export const GET = withCustomerAuth<{ businessSlug: string }>(
@@ -107,8 +111,26 @@ export const GET = withCustomerAuth<{ businessSlug: string }>(
 
       const amountSpentBalance = wallet?.amountSpentBalance ?? 0;
       const visitPointsBalance = wallet?.visitPointsBalance ?? 0;
-      const cashbackBalance = wallet?.cashbackBalance ?? 0;
+      const rawCashbackBalance = wallet?.cashbackBalance ?? 0;
       const visitCount = wallet?.visitCount ?? 0;
+
+      const { lockedCashback, lockedReferralCashback } = await runTransaction(
+        async (tx) => ({
+          lockedCashback: await getLockedShopifyBalance(tx, {
+            businessId: business.id,
+            customerId: businessCustomer.customerId,
+            valueKind: TransactionValueKind.CASHBACK,
+          }),
+          lockedReferralCashback: await getLockedReferralBalance(tx, {
+            businessId: business.id,
+            customerId: businessCustomer.customerId,
+          }),
+        }),
+      );
+      const cashbackBalance = Math.max(
+        0,
+        rawCashbackBalance - lockedCashback - lockedReferralCashback,
+      );
 
       const billsAgg = await db.bill.aggregate({
         where: {

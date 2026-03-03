@@ -1,5 +1,6 @@
 import { runTransaction } from "@/lib/db/transaction";
 import {
+  calculateCashbackRedeemable,
   calculateDiscountFromStage,
   calculatePointsEarnedForBill,
   calculateRedeemable,
@@ -57,6 +58,76 @@ export async function getLockedShopifyBalance(
     }
   }
   return sum;
+}
+
+/** Sum of EARNED REFERRAL CASHBACK that is still locked (referrer reward until referred's first bill). */
+export async function getLockedReferralBalance(
+  tx: Prisma.TransactionClient,
+  params: { businessId: string; customerId: string },
+): Promise<number> {
+  const rows = await tx.transaction.findMany({
+    where: {
+      businessId: params.businessId,
+      customerId: params.customerId,
+      source: TransactionSource.REFERRAL,
+      type: TransactionType.EARNED,
+      valueKind: TransactionValueKind.CASHBACK,
+    },
+    select: { amount: true, metadata: true },
+  });
+
+  const program = await tx.referralProgram.findUnique({
+    where: { businessId: params.businessId },
+    select: { lockReferralPointsUntilFirstPurchase: true },
+  });
+  if (!program?.lockReferralPointsUntilFirstPurchase) return 0;
+
+  let sum = 0;
+  for (const r of rows) {
+    const meta = r.metadata as { referralLogId?: string } | null;
+    const referralLogId = meta?.referralLogId;
+    if (!referralLogId || r.amount <= 0) continue;
+
+    const log = await tx.referralLog.findUnique({
+      where: { id: referralLogId },
+      select: {
+        referredCustomerId: true,
+        referrerRewardUnlockedAt: true,
+      },
+    });
+    if (!log?.referredCustomerId || log.referrerRewardUnlockedAt != null)
+      continue;
+    sum += r.amount;
+  }
+  return sum;
+}
+
+/** When the referred customer (B) has their first bill in this business, unlock referrer's referral cashback. */
+export async function unlockReferrerRewardIfFirstBill(
+  tx: Prisma.TransactionClient,
+  params: { businessId: string; customerId: string },
+): Promise<void> {
+  const { businessId, customerId } = params;
+
+  const bc = await tx.businessCustomer.findUnique({
+    where: { businessId_customerId: { businessId, customerId } },
+    select: { referredByBusinessId: true, referredByCustomerId: true },
+  });
+  if (!bc?.referredByBusinessId || !bc.referredByCustomerId) return;
+
+  const billCount = await tx.bill.count({
+    where: { businessId, customerId },
+  });
+  if (billCount !== 1) return;
+
+  await tx.referralLog.updateMany({
+    where: {
+      referredBusinessId: businessId,
+      referredCustomerId: customerId,
+      referrerRewardUnlockedAt: null,
+    },
+    data: { referrerRewardUnlockedAt: new Date() },
+  });
 }
 
 export async function getBusinessLoyaltyContext(
@@ -886,8 +957,15 @@ export async function applyRedemptionForBill(
     customerId,
     valueKind: TransactionValueKind.VISIT_POINTS,
   });
+  const lockedReferralCashback = await getLockedReferralBalance(tx, {
+    businessId,
+    customerId,
+  });
 
-  const effectiveCashbackBal = Math.max(0, cashbackBal - lockedCashback);
+  const effectiveCashbackBal = Math.max(
+    0,
+    cashbackBal - lockedCashback - lockedReferralCashback,
+  );
   const effectiveAmountSpentBal = Math.max(
     0,
     amountSpentBal - lockedAmountSpent,
@@ -998,6 +1076,8 @@ export async function applyPartnerRedemptionForBill(
     redeemPartnerCashback?: number;
     /** For AMOUNT_SPENT/VISIT_MADE partner: points to redeem. */
     redeemPartnerPoints?: number;
+    /** Bill amount (userPaidAmount) for server-side cap validation against current business's loyalty limits. */
+    billAmount?: number;
   },
 ): Promise<number> {
   const {
@@ -1158,6 +1238,49 @@ export async function applyPartnerRedemptionForBill(
     throw new Error("Unsupported partner loyalty type.");
   }
 
+  // Server-side cap: enforce current business's redemption limits on partner discount
+  if (params.billAmount != null && params.billAmount > 0) {
+    const currentLoyalty = await tx.loyalty.findUnique({
+      where: { businessId: currentBusinessId },
+      include: {
+        cashbackConfig: true,
+        tierConfig: { include: { tiers: { orderBy: { rank: "asc" } } } },
+      },
+    });
+    const currentCtx = currentLoyalty
+      ? loyaltyRecordToContext(currentLoyalty)
+      : null;
+    if (currentCtx?.type === "CASHBACK") {
+      const fullValueAtStore =
+        partnerLoyalty.loyaltyType === "CASHBACK" ||
+        partnerLoyalty.loyaltyType === "TIER"
+          ? Math.max(0, wallet.cashbackBalance ?? 0) * exchangeRate
+          : Math.max(
+              0,
+              Math.floor(
+                (partnerLoyalty.loyaltyType === "AMOUNT_SPENT"
+                  ? (wallet.amountSpentBalance ?? 0)
+                  : (wallet.visitPointsBalance ?? 0)) as number,
+              ),
+            ) *
+            pointToCurrencyRate *
+            exchangeRate;
+      const maxAllowed =
+        Math.floor(
+          calculateCashbackRedeemable(
+            safeAmount(params.billAmount),
+            currentCtx.config,
+            Math.floor(fullValueAtStore * 100) / 100,
+          ) * 100,
+        ) / 100;
+      if (discountAtCurrentStore > maxAllowed + 0.01) {
+        throw new Error(
+          `Partner redemption ₹${discountAtCurrentStore.toFixed(2)} exceeds allowed limit ₹${maxAllowed.toFixed(2)}.`,
+        );
+      }
+    }
+  }
+
   return discountAtCurrentStore;
 }
 
@@ -1250,8 +1373,15 @@ export async function applyLoyaltyForBill(
     customerId,
     valueKind: TransactionValueKind.VISIT_POINTS,
   });
+  const lockedReferralCashback = await getLockedReferralBalance(tx, {
+    businessId,
+    customerId,
+  });
 
-  const effectiveCashbackBal = Math.max(0, cashbackBal - lockedCashback);
+  const effectiveCashbackBal = Math.max(
+    0,
+    cashbackBal - lockedCashback - lockedReferralCashback,
+  );
   const effectiveAmountSpentBal = Math.max(
     0,
     amountSpentBal - lockedAmountSpent,
@@ -1394,6 +1524,7 @@ export async function applyLoyaltyForBill(
       partnerBusinessId: partnerId,
       redeemPartnerCashback: partnerCashback > 0 ? partnerCashback : undefined,
       redeemPartnerPoints: partnerPoints > 0 ? partnerPoints : undefined,
+      billAmount: finalAmount,
     });
     finalAmount = Math.max(0, finalAmount - partnerDiscount);
     partnerRedeemedAmount = partnerDiscount;

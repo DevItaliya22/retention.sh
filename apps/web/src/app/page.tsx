@@ -6,5 +6,5 @@ import { redirect } from "next/navigation";
 export const metadata: Metadata = generateRouteMetadata("/");
 
 export default function HomePage() {
-  return redirect("inbox");
+  return redirect("/dashboard");
 }

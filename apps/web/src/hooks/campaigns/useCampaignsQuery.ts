@@ -25,7 +25,8 @@ export interface CampaignListItem {
   description: string | null;
   status: string;
   rewardType: string;
-  rewardValue: string | null;
+  rewardValue: string | null; // raw value (e.g. "coke", "10", "200")
+  offerStatement: string | null; // full sentence
   appliesTo: string;
   expiresAt: string;
   themeColor: string | null;
@@ -136,6 +137,7 @@ export interface UpdateCampaignInput {
   // Reward
   rewardType?: CampaignRewardType;
   rewardValue?: string | null;
+  offerStatement?: string | null;
   appliesTo?: CampaignAppliesTo;
   maxRedemptionAmount?: number | null;
   maxRedemptionEnabled?: boolean;

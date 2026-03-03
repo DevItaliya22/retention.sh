@@ -1,12 +1,20 @@
+import {
+  getLockedReferralBalance,
+  getLockedShopifyBalance,
+} from "@/lib/actions/loyalty";
 import { withAdminAuth } from "@/lib/auth/middleware";
+import { runTransaction } from "@/lib/db/transaction";
 import { sumCashbackEarnedFromTransactions } from "@/lib/loyalty";
-import { customerSlugIdParamSchema } from "@/lib/schemas/customer";
+import {
+  customerDetailQuerySchema,
+  customerSlugIdParamSchema,
+} from "@/lib/schemas/customer";
 import {
   sanitizeErrorMessage,
   validateSchema,
 } from "@/lib/utils/error-handler";
 import { parseFreeItems } from "@/lib/utils/free-items";
-import { db } from "@reelo/db";
+import { db, TransactionValueKind } from "@reelo/db";
 import { NextRequest, NextResponse } from "next/server";
 
 /**
@@ -29,6 +37,16 @@ export const GET = withAdminAuth<{ slugId: string }>(
       }
 
       const { slugId } = validation.data;
+
+      const queryValidation = validateSchema(
+        customerDetailQuerySchema,
+        Object.fromEntries(request.nextUrl.searchParams.entries()),
+      );
+      const query = queryValidation.success ? queryValidation.data : undefined;
+      const billsPage = query?.billsPage ?? 1;
+      const billsPerPage = query?.billsPerPage ?? 5;
+      const activityPage = query?.activityPage ?? 1;
+      const activityPerPage = query?.activityPerPage ?? 5;
 
       const businessCustomer = await db.businessCustomer.findFirst({
         where: {
@@ -69,41 +87,7 @@ export const GET = withAdminAuth<{ slugId: string }>(
               },
             },
           },
-          referralLogs: {
-            orderBy: { createdAt: "desc" },
-            take: 20,
-            select: {
-              id: true,
-              newCustomerName: true,
-              newCustomerPhone: true,
-              becameCustomer: true,
-              createdAt: true,
-            },
-          },
           wallet: true,
-          bills: {
-            orderBy: { createdAt: "desc" },
-            take: 50,
-            include: {
-              lineItems: {
-                include: {
-                  sku: {
-                    select: {
-                      id: true,
-                      sku: true,
-                      name: true,
-                      price: true,
-                      unit: true,
-                    },
-                  },
-                },
-              },
-              transactions: {
-                where: { type: "EARNED", valueKind: "CASHBACK" },
-                select: { type: true, valueKind: true, amount: true },
-              },
-            },
-          },
         },
       });
 
@@ -114,7 +98,45 @@ export const GET = withAdminAuth<{ slugId: string }>(
         );
       }
 
-      // Partner redemption logs: this customer used our balance at a partner store (Transaction at us, REDEEMED, BILL, metadata.redeemedAtBusinessId).
+      // Bills: paginated, sorted by latest first (server-side)
+      const [billsRows, billsTotal] = await Promise.all([
+        db.bill.findMany({
+          where: {
+            businessId: context.business.id,
+            customerId: businessCustomer.customerId,
+          },
+          orderBy: { createdAt: "desc" },
+          skip: (billsPage - 1) * billsPerPage,
+          take: billsPerPage,
+          include: {
+            lineItems: {
+              include: {
+                sku: {
+                  select: {
+                    id: true,
+                    sku: true,
+                    name: true,
+                    price: true,
+                    unit: true,
+                  },
+                },
+              },
+            },
+            transactions: {
+              where: { type: "EARNED", valueKind: "CASHBACK" },
+              select: { type: true, valueKind: true, amount: true },
+            },
+          },
+        }),
+        db.bill.count({
+          where: {
+            businessId: context.business.id,
+            customerId: businessCustomer.customerId,
+          },
+        }),
+      ]);
+
+      // Partner redemption logs (for activity merge)
       const partnerRedemptionTxs = await db.transaction.findMany({
         where: {
           businessId: context.business.id,
@@ -123,9 +145,8 @@ export const GET = withAdminAuth<{ slugId: string }>(
           source: "BILL",
         },
         orderBy: { createdAt: "desc" },
-        take: 50,
       });
-      const partnerRedemptions = partnerRedemptionTxs
+      const partnerRedemptionsRaw = partnerRedemptionTxs
         .filter(
           (t) =>
             t.metadata != null &&
@@ -146,7 +167,9 @@ export const GET = withAdminAuth<{ slugId: string }>(
         });
       const redeemedAtBusinessIds = [
         ...new Set(
-          partnerRedemptions.map((r) => r.redeemedAtBusinessId).filter(Boolean),
+          partnerRedemptionsRaw
+            .map((r) => r.redeemedAtBusinessId)
+            .filter(Boolean),
         ),
       ];
       const businessNames =
@@ -157,11 +180,77 @@ export const GET = withAdminAuth<{ slugId: string }>(
             })
           : [];
       const businessNameMap = new Map(businessNames.map((b) => [b.id, b.name]));
-      const partnerRedemptionsWithNames = partnerRedemptions.map((r) => ({
+      const partnerRedemptionsWithNames = partnerRedemptionsRaw.map((r) => ({
         ...r,
         redeemedAtBusinessName:
           businessNameMap.get(r.redeemedAtBusinessId) ?? null,
       }));
+
+      // Referral logs (for activity merge) — ReferralLog has referrer = BusinessCustomer (composite)
+      const referralLogsAll = await db.referralLog.findMany({
+        where: {
+          referrerBusinessId: context.business.id,
+          referrerCustomerId: businessCustomer.customerId,
+        },
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          newCustomerName: true,
+          newCustomerPhone: true,
+          becameCustomer: true,
+          createdAt: true,
+        },
+      });
+      const referralLogsMapped = referralLogsAll.map((log) => ({
+        id: log.id,
+        newCustomerName: log.newCustomerName,
+        newCustomerPhone: log.newCustomerPhone,
+        becameCustomer: log.becameCustomer,
+        createdAt: log.createdAt.toISOString(),
+      }));
+
+      // Activity: merge partner redemptions + referral logs, sort by date desc, paginate
+      type ActivityPartner = (typeof partnerRedemptionsWithNames)[number] & {
+        type: "partner";
+      };
+      type ActivityReferral = (typeof referralLogsMapped)[number] & {
+        type: "referral";
+      };
+      const activityAll: (ActivityPartner | ActivityReferral)[] = [
+        ...partnerRedemptionsWithNames.map(
+          (r): ActivityPartner => ({ ...r, type: "partner" }),
+        ),
+        ...referralLogsMapped.map(
+          (r): ActivityReferral => ({ ...r, type: "referral" }),
+        ),
+      ].sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      );
+      const activityTotal = activityAll.length;
+      const activityItems = activityAll.slice(
+        (activityPage - 1) * activityPerPage,
+        activityPage * activityPerPage,
+      );
+
+      const rawCashback = businessCustomer.wallet?.cashbackBalance ?? 0;
+      const { lockedCashback, lockedReferralCashback } = await runTransaction(
+        async (tx) => ({
+          lockedCashback: await getLockedShopifyBalance(tx, {
+            businessId: context.business.id,
+            customerId: businessCustomer.customerId,
+            valueKind: TransactionValueKind.CASHBACK,
+          }),
+          lockedReferralCashback: await getLockedReferralBalance(tx, {
+            businessId: context.business.id,
+            customerId: businessCustomer.customerId,
+          }),
+        }),
+      );
+      const cashbackBalance = Math.max(
+        0,
+        rawCashback - lockedCashback - lockedReferralCashback,
+      );
 
       const customer = {
         id: businessCustomer.slugId,
@@ -173,7 +262,7 @@ export const GET = withAdminAuth<{ slugId: string }>(
         pointsBalance:
           (businessCustomer.wallet?.amountSpentBalance ?? 0) +
           (businessCustomer.wallet?.visitPointsBalance ?? 0),
-        cashbackBalance: businessCustomer.wallet?.cashbackBalance ?? 0,
+        cashbackBalance,
         freeItems: parseFreeItems(businessCustomer.wallet?.freeItems),
         createdAt: businessCustomer.createdAt.toISOString(),
         updatedAt: businessCustomer.updatedAt.toISOString(),
@@ -190,18 +279,13 @@ export const GET = withAdminAuth<{ slugId: string }>(
           name: r.customer.user.name,
           slugId: r.slugId,
         })),
-        referralLogs: businessCustomer.referralLogs.map((log) => ({
-          id: log.id,
-          newCustomerName: log.newCustomerName,
-          newCustomerPhone: log.newCustomerPhone,
-          becameCustomer: log.becameCustomer,
-          createdAt: log.createdAt.toISOString(),
-        })),
-        bills: businessCustomer.bills.map((b) => {
+        referralLogs: referralLogsMapped,
+        bills: billsRows.map((b) => {
           const amountToShow = b.userPaidAmount ?? b.finalAmount ?? null;
           const cashbackEarnedFromTx = sumCashbackEarnedFromTransactions(
-            b.transactions,
+            "transactions" in b ? b.transactions : [],
           );
+          const lineItems = "lineItems" in b ? b.lineItems : [];
           return {
             id: b.id,
             billNumber: b.billNumber,
@@ -213,23 +297,39 @@ export const GET = withAdminAuth<{ slugId: string }>(
                 ? cashbackEarnedFromTx
                 : (b.cashbackAmount ?? null),
             cashbackRedeemedAmount: b.cashbackRedeemedAmount ?? null,
-            lineItems: b.lineItems.map((li) => ({
-              id: li.id,
-              skuId: li.skuId,
-              qty: li.qty,
-              unitPrice: li.unitPrice,
-              sku: {
-                id: li.sku.id,
-                sku: li.sku.sku,
-                name: li.sku.name,
-                price: li.sku.price,
-                unit: li.sku.unit,
-              },
-            })),
+            lineItems: lineItems.map(
+              (li: {
+                id: string;
+                skuId: string;
+                qty: number;
+                unitPrice: number | null;
+                sku: {
+                  id: string;
+                  sku: string;
+                  name: string;
+                  price: number | null;
+                  unit: string | null;
+                };
+              }) => ({
+                id: li.id,
+                skuId: li.skuId,
+                qty: li.qty,
+                unitPrice: li.unitPrice,
+                sku: {
+                  id: li.sku.id,
+                  sku: li.sku.sku,
+                  name: li.sku.name,
+                  price: li.sku.price,
+                  unit: li.sku.unit,
+                },
+              }),
+            ),
             createdAt: b.createdAt.toISOString(),
           };
         }),
-        partnerRedemptions: partnerRedemptionsWithNames,
+        billsTotal,
+        activityItems,
+        activityTotal,
       };
 
       return NextResponse.json({ customer });
