@@ -167,6 +167,10 @@ export const POST = withAdminAuth(async (request: NextRequest, context) => {
         slug: `draft-${crypto.randomUUID()}`,
         status: "DRAFT",
         expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        rewardType: "FREE_ITEM",
+        rewardValue: "Dessert",
+        offerStatement:
+          "Get a **Dessert** absolutely FREE on a **minimum purchase of ₹1000**. Don't miss out!",
         themeColor: defaultBranding?.themeColor ?? null,
         textColor: defaultBranding?.textColor ?? null,
         logo: defaultBranding?.logo ?? null,

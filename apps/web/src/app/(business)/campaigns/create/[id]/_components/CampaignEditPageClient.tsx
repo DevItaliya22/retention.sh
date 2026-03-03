@@ -7,6 +7,7 @@ import {
   useCampaignQuery,
   useUpdateCampaign,
   type CampaignAppliesTo,
+  type CampaignFull,
   type CampaignRedemptionLimit,
   type CampaignRewardType,
 } from "@/hooks/campaigns/useCampaignsQuery";
@@ -110,6 +111,13 @@ const DEFAULT_TERMS = [
   "2 offers cannot be clubbed.",
   "Reward cannot be exchanged for cash.",
 ];
+const DEFAULT_REWARD_TYPE: CampaignRewardType = "FREE_ITEM";
+const DEFAULT_REWARD_VALUE_BY_TYPE: Record<CampaignRewardType, string> = {
+  FREE_ITEM: "Dessert",
+  PERCENTAGE_DISCOUNT: "10",
+  CASH_DISCOUNT: "200",
+  NO_REWARD: "",
+};
 
 // ---------------------------------------------------------------------------
 // Component
@@ -117,6 +125,7 @@ const DEFAULT_TERMS = [
 
 interface CampaignEditPageClientProps {
   campaignId: string;
+  initialCampaign?: CampaignFull;
 }
 
 /**
@@ -165,18 +174,36 @@ function extractRewardValueFromStatement(
   return "";
 }
 
+function isCampaignRewardType(value: unknown): value is CampaignRewardType {
+  return (
+    typeof value === "string" &&
+    CAMPAIGN_REWARD_TYPES.includes(value as CampaignRewardType)
+  );
+}
+
+function normalizeRewardType(value: unknown): CampaignRewardType {
+  if (isCampaignRewardType(value)) return value;
+  return DEFAULT_REWARD_TYPE;
+}
+
+function getDefaultRewardValue(type: CampaignRewardType): string {
+  return DEFAULT_REWARD_VALUE_BY_TYPE[type];
+}
+
 export function CampaignEditPageClient({
   campaignId,
+  initialCampaign,
 }: CampaignEditPageClientProps) {
   const router = useRouter();
   const previewRef = useRef<HTMLDivElement>(null);
   const [sentenceEdited, setSentenceEdited] = useState(false);
+  const [isFormHydrated, setIsFormHydrated] = useState(false);
   const {
     data: campaign,
     isLoading,
     isError,
     error,
-  } = useCampaignQuery(campaignId);
+  } = useCampaignQuery(campaignId, initialCampaign);
   const { data: businessData } = useCurrentBusiness();
   const updateCampaign = useUpdateCampaign(campaignId);
 
@@ -186,9 +213,12 @@ export function CampaignEditPageClient({
       title: "",
       description: "",
       contactNumber: "",
-      rewardType: "PERCENTAGE_DISCOUNT",
-      rewardValue: "",
-      offerStatement: "",
+      rewardType: DEFAULT_REWARD_TYPE,
+      rewardValue: getDefaultRewardValue(DEFAULT_REWARD_TYPE),
+      offerStatement: buildRewardSentence(
+        DEFAULT_REWARD_TYPE,
+        getDefaultRewardValue(DEFAULT_REWARD_TYPE),
+      ),
       appliesTo: "ENTIRE_PURCHASE",
       maxRedemptionEnabled: false,
       maxRedemptionAmount: null,
@@ -215,28 +245,36 @@ export function CampaignEditPageClient({
   const watched = form.watch();
 
   useEffect(() => {
+    setIsFormHydrated(false);
+  }, [campaignId]);
+
+  useEffect(() => {
     if (!campaign) return;
 
-    const rewardType =
-      (campaign.rewardType as CampaignRewardType) ?? "PERCENTAGE_DISCOUNT";
+    const rewardType = normalizeRewardType(campaign.rewardType);
 
-    const rawValue =
-      campaign.rewardValue ??
-      extractRewardValueFromStatement(
-        rewardType,
-        campaign.offerStatement ?? campaign.rewardValue,
-      ) ??
-      "";
-
-    const autoSentence = buildRewardSentence(
+    const extractedValue = extractRewardValueFromStatement(
       rewardType,
-      rawValue,
-      campaign.maxRedemptionEnabled,
-      campaign.maxRedemptionAmount,
+      campaign.offerStatement ?? campaign.rewardValue,
     );
+    const rawValueCandidate = campaign.rewardValue ?? extractedValue ?? "";
+    const rawValue = rewardType === "NO_REWARD" ? "" : rawValueCandidate.trim();
+
+    const autoSentence =
+      rewardType === "NO_REWARD"
+        ? ""
+        : buildRewardSentence(
+            rewardType,
+            rawValue,
+            campaign.maxRedemptionEnabled,
+            campaign.maxRedemptionAmount,
+          );
 
     const currentOffer =
-      campaign.offerStatement ?? (campaign.rewardValue ? autoSentence : "");
+      rewardType === "NO_REWARD"
+        ? ""
+        : (campaign.offerStatement ?? "").trim() ||
+          (campaign.rewardValue ? autoSentence : "");
 
     form.reset({
       title: campaign.title ?? "",
@@ -260,10 +298,7 @@ export function CampaignEditPageClient({
         : "",
       redemptionLimit:
         (campaign.redemptionLimit as CampaignRedemptionLimit) ?? "ONCE",
-      termsAndConditions:
-        campaign.termsAndConditions?.length > 0
-          ? campaign.termsAndConditions
-          : DEFAULT_TERMS,
+      termsAndConditions: campaign.termsAndConditions ?? [],
       themeColor: campaign.themeColor || DEFAULT_THEME_COLOR,
       textColor: campaign.textColor || DEFAULT_TEXT_COLOR,
       logo: campaign.logo ?? "",
@@ -279,6 +314,7 @@ export function CampaignEditPageClient({
     setSentenceEdited(
       !!currentOffer && currentOffer.trim() !== autoSentence.trim(),
     );
+    setIsFormHydrated(true);
   }, [campaign, form]);
 
   const onSubmit = form.handleSubmit(async (values) => {
@@ -346,7 +382,7 @@ export function CampaignEditPageClient({
   }
 
   // Loading skeleton
-  if (isLoading || !campaign) {
+  if (isLoading || !campaign || !isFormHydrated) {
     return (
       <div className="space-y-6">
         <Skeleton className="h-14 w-full rounded-xl" />
@@ -502,25 +538,28 @@ export function CampaignEditPageClient({
                     <FormItem>
                       <FormLabel>Reward Type</FormLabel>
                       <Select
-                        value={
-                          field.value ??
-                          (campaign?.rewardType as CampaignRewardType) ??
-                          "PERCENTAGE_DISCOUNT"
-                        }
+                        value={normalizeRewardType(field.value)}
                         onValueChange={(val) => {
-                          field.onChange(val);
-                          // Regenerate sentence when type changes (unless user manually edited)
-                          if (!sentenceEdited) {
-                            form.setValue(
-                              "offerStatement",
-                              buildRewardSentence(
-                                val,
-                                watched.rewardValue ?? "",
-                                watched.maxRedemptionEnabled,
-                                watched.maxRedemptionAmount,
-                              ),
-                            );
-                          }
+                          const nextRewardType = normalizeRewardType(val);
+                          const nextRewardValue =
+                            nextRewardType === "NO_REWARD"
+                              ? ""
+                              : getDefaultRewardValue(nextRewardType);
+
+                          field.onChange(nextRewardType);
+                          form.setValue("rewardValue", nextRewardValue);
+                          setSentenceEdited(false);
+                          form.setValue(
+                            "offerStatement",
+                            nextRewardType === "NO_REWARD"
+                              ? ""
+                              : buildRewardSentence(
+                                  nextRewardType,
+                                  nextRewardValue,
+                                  watched.maxRedemptionEnabled,
+                                  watched.maxRedemptionAmount,
+                                ),
+                          );
                         }}
                       >
                         <FormControl>
@@ -574,6 +613,27 @@ export function CampaignEditPageClient({
                                       buildRewardSentence(
                                         watched.rewardType,
                                         val,
+                                        watched.maxRedemptionEnabled,
+                                        watched.maxRedemptionAmount,
+                                      ),
+                                    );
+                                  }
+                                }}
+                                onBlur={(e) => {
+                                  if (watched.rewardType === "NO_REWARD")
+                                    return;
+                                  if (e.target.value.trim()) return;
+
+                                  const fallbackValue = getDefaultRewardValue(
+                                    normalizeRewardType(watched.rewardType),
+                                  );
+                                  form.setValue("rewardValue", fallbackValue);
+                                  if (!sentenceEdited) {
+                                    form.setValue(
+                                      "offerStatement",
+                                      buildRewardSentence(
+                                        watched.rewardType,
+                                        fallbackValue,
                                         watched.maxRedemptionEnabled,
                                         watched.maxRedemptionAmount,
                                       ),
