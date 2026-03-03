@@ -16,7 +16,10 @@ const ROW_2 = INDUSTRIES.slice(4, 8); // 4 items
 const ROW_3 = INDUSTRIES.slice(8, 12); // 4 items
 const ROW_4 = INDUSTRIES.slice(12); // 1 item (Other...)
 
-const ROWS: { items: typeof INDUSTRIES; widthClass: string }[] = [
+const ROWS: {
+  items: ReadonlyArray<(typeof INDUSTRIES)[number]>;
+  widthClass: string;
+}[] = [
   { items: ROW_1, widthClass: "max-w-2xl" },
   { items: ROW_2, widthClass: "max-w-4xl" },
   { items: ROW_3, widthClass: "max-w-4xl" },

@@ -130,7 +130,7 @@ function NewCustomerBenefitsCard({
   referralProgram: ReferralProgram;
   skus: SkuItem[];
   onSubmit: (
-    values: Record<string, string | undefined>,
+    values: NewCustomerBenefitForm,
   ) => Promise<{ success: boolean; error?: string }>;
 }) {
   const form = useForm<NewCustomerBenefitForm>({
@@ -362,7 +362,7 @@ function ExistingCustomerBenefitsCard({
   referralProgram: ReferralProgram;
   skus: SkuItem[];
   onSubmit: (
-    values: Record<string, string | undefined>,
+    values: ExistingCustomerBenefitForm,
   ) => Promise<{ success: boolean; error?: string }>;
 }) {
   const form = useForm<ExistingCustomerBenefitForm>({
@@ -652,7 +652,7 @@ export function ReferralExistingSettings({
   };
 
   const handleUpdateNewCustomerBenefits = async (
-    values: Record<string, string | undefined>,
+    values: NewCustomerBenefitForm,
   ) => {
     try {
       const type = values.newCustomerBenefitType as
@@ -679,7 +679,7 @@ export function ReferralExistingSettings({
   };
 
   const handleUpdateExistingCustomerBenefits = async (
-    values: Record<string, string | undefined>,
+    values: ExistingCustomerBenefitForm,
   ) => {
     try {
       const type = values.existingCustomerBenefitType as
