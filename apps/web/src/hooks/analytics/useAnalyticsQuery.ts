@@ -12,7 +12,6 @@ import type {
   LoyaltyChartResponse,
   LoyaltyOverviewResponse,
   NewVsRepeatResponse,
-  ProfileCompletionResponse,
   ReferralAnalyticsResponse,
   RevenueResponse,
   RfmResponse,
@@ -84,17 +83,6 @@ export function useCustomerFrequencyQuery() {
     queryKey: ["analytics", "customers", "frequency"],
     queryFn: () =>
       fetcher<CustomerFrequencyResponse>("/api/analytics/customers/frequency"),
-    staleTime: 60_000,
-  });
-}
-
-export function useProfileCompletionQuery() {
-  return useQuery<ProfileCompletionResponse, Error>({
-    queryKey: ["analytics", "customers", "profile-completion"],
-    queryFn: () =>
-      fetcher<ProfileCompletionResponse>(
-        "/api/analytics/customers/profile-completion",
-      ),
     staleTime: 60_000,
   });
 }

@@ -89,10 +89,6 @@ Activate Offer
 You will see upcoming celebrations here
 
 no customers
-Customer Profile Completion
-view Details
-9404
-11.34% of customers have completed their profile.
 
 Top insights for you
 You gained estimated $839927 revenue and 1264 visits via Reelo. 🚀
@@ -573,6 +569,7 @@ mobile: chartData.reduce((acc, curr) => acc + curr.mobile, 0),
 return (
 <Card className="py-4 sm:py-0">
 <CardHeader className="flex flex-col items-stretch border-b p-0! sm:flex-row">
+
 <div className="flex flex-1 flex-col justify-center gap-1 px-6 pb-3 sm:pb-0">
 <CardTitle>Line Chart - Interactive</CardTitle>
 <CardDescription>
