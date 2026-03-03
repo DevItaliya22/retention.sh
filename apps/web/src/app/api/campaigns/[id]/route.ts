@@ -9,10 +9,23 @@ import { NextRequest, NextResponse } from "next/server";
 
 type Params = { id: string };
 
+function parseCampaignId(raw: string | string[] | undefined): string | null {
+  const id = Array.isArray(raw) ? raw[0] : raw;
+  if (typeof id !== "string") return null;
+  const trimmed = id.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
 export const GET = withAdminAuth(
   async (request: NextRequest, context, params: Params) => {
     try {
-      const id = Array.isArray(params.id) ? params.id[0] : params.id;
+      const id = parseCampaignId(params.id);
+      if (!id) {
+        return NextResponse.json(
+          { error: "Invalid campaign id" },
+          { status: 400 },
+        );
+      }
       const campaign = await db.campaign.findFirst({
         where: {
           id,
@@ -27,7 +40,13 @@ export const GET = withAdminAuth(
         );
       }
 
-      return NextResponse.json(campaign);
+      return NextResponse.json(campaign, {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate",
+          Pragma: "no-cache",
+          Expires: "0",
+        },
+      });
     } catch (error) {
       console.error("Campaign get error:", error);
       return NextResponse.json(
@@ -41,7 +60,13 @@ export const GET = withAdminAuth(
 export const PATCH = withAdminAuth(
   async (request: NextRequest, context, params: Params) => {
     try {
-      const id = Array.isArray(params.id) ? params.id[0] : params.id;
+      const id = parseCampaignId(params.id);
+      if (!id) {
+        return NextResponse.json(
+          { error: "Invalid campaign id" },
+          { status: 400 },
+        );
+      }
       const existing = await db.campaign.findFirst({
         where: {
           id,
