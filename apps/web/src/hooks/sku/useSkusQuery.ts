@@ -1,12 +1,8 @@
 "use client";
 
+import { useDataTableQuery } from "@/hooks/useDataTableQuery";
 import { fetcher } from "@/lib/fetcher";
-import {
-  buildApiParams,
-  getDataTableConfig,
-} from "@/lib/utils/data-table-params";
 import { useQuery } from "@tanstack/react-query";
-import { useSearchParams } from "next/navigation";
 
 export interface SkuItem {
   id: string;
@@ -31,24 +27,7 @@ export interface SkusResponse {
 }
 
 export function useSkusQuery() {
-  const searchParams = useSearchParams();
-  const config = getDataTableConfig("skus");
-  const apiParams = buildApiParams(
-    searchParams,
-    config.prefix,
-    config.filterKeys,
-  );
-  const queryString = apiParams.toString();
-
-  return useQuery<SkusResponse, Error>({
-    queryKey: ["skus", searchParams.toString()],
-    queryFn: () => {
-      const url = queryString ? `/api/sku?${queryString}` : "/api/sku";
-      return fetcher<SkusResponse>(url);
-    },
-    placeholderData: (previousData) => previousData,
-    staleTime: 5000,
-  });
+  return useDataTableQuery<SkusResponse>("skus", "skus", "/api/sku");
 }
 
 /** Fetch active SKUs for dropdowns (e.g. referral free item, loyalty reward stage). */
