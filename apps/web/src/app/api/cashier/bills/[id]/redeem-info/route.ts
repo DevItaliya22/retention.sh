@@ -34,19 +34,22 @@ export const GET = withCashierAuth<{ id: string }>(
 
       const currentAmountToPay = bill.userPaidAmount ?? bill.finalAmount ?? 0;
 
-      // "Already redeemed" = cashback has been applied to this bill (one cashback redemption per bill)
       const alreadyCashbackRedeemedCount = await db.transaction.count({
         where: {
           billId: bill.id,
           type: "REDEEMED",
           valueKind: "CASHBACK",
+          source: { not: "CAMPAIGN" },
         },
       });
       const alreadyRedeemedOnThisBill = alreadyCashbackRedeemedCount > 0;
 
-      // Deferred earn: no EARNED tx yet for this bill → earn will be applied on "Create Another Bill"
       const earnedCountForBill = await db.transaction.count({
-        where: { billId: bill.id, type: "EARNED" },
+        where: {
+          billId: bill.id,
+          type: "EARNED",
+          source: { not: "CAMPAIGN" },
+        },
       });
       const earnNotYetApplied = earnedCountForBill === 0;
 
@@ -60,59 +63,118 @@ export const GET = withCashierAuth<{ id: string }>(
       });
       const freeItems = parseFreeItems(wallet?.freeItems);
 
-      const [txResult, earnedFromTransactions, redeemedFreeItemTxs] =
-        await Promise.all([
-          runTransaction(async (tx) => {
-            const redeemInfo = await getRedeemableInfo(tx, {
-              businessId: context.business.id,
-              customerId: bill.customerId,
-              billAmount: currentAmountToPay,
-              billSubtotal: bill.subtotal,
-              cashbackEarnedThisBill: earnNotYetApplied
-                ? 0
-                : (bill.cashbackAmount ?? 0),
-            });
-            const partnerRedeemable = await getPartnerRedeemableInfo(tx, {
-              currentBusinessId: context.business.id,
-              customerId: bill.customerId,
-              billAmount: currentAmountToPay,
-            });
-            return { redeemInfo, partnerRedeemable };
-          }),
-          db.transaction
-            .findMany({
-              where: {
-                billId: bill.id,
-                type: "EARNED",
-              },
-              select: { valueKind: true, amount: true },
-            })
-            .then((txs) => {
-              const cashbackEarned = txs
-                .filter((t) => t.valueKind === "CASHBACK")
-                .reduce((s, t) => s + Math.max(0, t.amount), 0);
-              const pointsEarned = txs
-                .filter(
-                  (t) =>
-                    t.valueKind === "AMOUNT_SPENT_POINTS" ||
-                    t.valueKind === "VISIT_POINTS",
-                )
-                .reduce((s, t) => s + Math.max(0, t.amount), 0);
-              return {
-                cashbackEarned: cashbackEarned > 0 ? cashbackEarned : null,
-                pointsEarned:
-                  pointsEarned > 0 ? Math.round(pointsEarned) : null,
-              };
-            }),
-          db.transaction.findMany({
+      const [
+        txResult,
+        earnedFromTransactions,
+        redeemedFreeItemTxs,
+        campaignEarnings,
+      ] = await Promise.all([
+        runTransaction(async (tx) => {
+          const redeemInfo = await getRedeemableInfo(tx, {
+            businessId: context.business.id,
+            customerId: bill.customerId,
+            billAmount: currentAmountToPay,
+            billSubtotal: bill.subtotal,
+            cashbackEarnedThisBill: earnNotYetApplied
+              ? 0
+              : (bill.cashbackAmount ?? 0),
+          });
+          const partnerRedeemable = await getPartnerRedeemableInfo(tx, {
+            currentBusinessId: context.business.id,
+            customerId: bill.customerId,
+            billAmount: currentAmountToPay,
+          });
+          return { redeemInfo, partnerRedeemable };
+        }),
+        db.transaction
+          .findMany({
             where: {
               billId: bill.id,
-              type: "REDEEMED",
-              valueKind: { in: ["AMOUNT_SPENT_POINTS", "VISIT_POINTS"] },
+              type: "EARNED",
+              source: { not: "CAMPAIGN" },
             },
-            select: { metadata: true },
+            select: { valueKind: true, amount: true },
+          })
+          .then((txs) => {
+            const cashbackEarned = txs
+              .filter((t) => t.valueKind === "CASHBACK")
+              .reduce((s, t) => s + Math.max(0, t.amount), 0);
+            const pointsEarned = txs
+              .filter(
+                (t) =>
+                  t.valueKind === "AMOUNT_SPENT_POINTS" ||
+                  t.valueKind === "VISIT_POINTS",
+              )
+              .reduce((s, t) => s + Math.max(0, t.amount), 0);
+            return {
+              cashbackEarned: cashbackEarned > 0 ? cashbackEarned : null,
+              pointsEarned: pointsEarned > 0 ? Math.round(pointsEarned) : null,
+            };
           }),
-        ]);
+        db.transaction.findMany({
+          where: {
+            billId: bill.id,
+            type: "REDEEMED",
+            valueKind: { in: ["AMOUNT_SPENT_POINTS", "VISIT_POINTS"] },
+          },
+          select: { metadata: true },
+        }),
+        db.transaction
+          .findMany({
+            where: { billId: bill.id, source: "CAMPAIGN" },
+            select: {
+              type: true,
+              valueKind: true,
+              amount: true,
+              metadata: true,
+              campaignId: true,
+              campaign: { select: { title: true, rewardType: true } },
+            },
+          })
+          .then((txs) => {
+            const grouped = new Map<
+              string,
+              {
+                campaignId: string;
+                campaignTitle: string | null;
+                rewardType: string;
+                earnedAmount: number;
+                autoRedeemed: number;
+                freeItemName: string | null;
+              }
+            >();
+            for (const tx of txs) {
+              if (!tx.campaignId) continue;
+              let entry = grouped.get(tx.campaignId);
+              if (!entry) {
+                entry = {
+                  campaignId: tx.campaignId,
+                  campaignTitle: tx.campaign?.title ?? null,
+                  rewardType: tx.campaign?.rewardType ?? "CASH_DISCOUNT",
+                  earnedAmount: 0,
+                  autoRedeemed: 0,
+                  freeItemName: null,
+                };
+                grouped.set(tx.campaignId, entry);
+              }
+              if (tx.type === "EARNED" && tx.valueKind === "CASHBACK") {
+                entry.earnedAmount += Math.max(0, tx.amount);
+              } else if (
+                tx.type === "REDEEMED" &&
+                tx.valueKind === "CASHBACK"
+              ) {
+                entry.autoRedeemed += Math.abs(tx.amount);
+              } else if (tx.type === "EARNED" && tx.valueKind === "FREE_ITEM") {
+                entry.rewardType = "FREE_ITEM";
+                const meta = tx.metadata as {
+                  freeItemName?: string;
+                } | null;
+                entry.freeItemName = meta?.freeItemName ?? null;
+              }
+            }
+            return Array.from(grouped.values());
+          }),
+      ]);
 
       const redeemedFreeItems = redeemedFreeItemTxs
         .map(
@@ -178,6 +240,7 @@ export const GET = withCashierAuth<{ id: string }>(
           cashbackAmount: bill.cashbackAmount,
           cashbackRedeemedAmount: bill.cashbackRedeemedAmount,
           partnerRedeemedAmount: bill.partnerRedeemedAmount ?? undefined,
+          campaignDiscountAmount: bill.campaignDiscountAmount ?? undefined,
           redeemedFromPartnerBusinessId:
             bill.redeemedFromPartnerBusinessId ?? undefined,
           earnedCashback: earnNotYetApplied
@@ -199,6 +262,8 @@ export const GET = withCashierAuth<{ id: string }>(
         redeemInfo,
         partnerRedeemable,
         freeItems,
+        campaignEarnings:
+          campaignEarnings.length > 0 ? campaignEarnings : undefined,
       });
     } catch (error: unknown) {
       console.error("Failed to fetch redeem info:", error);

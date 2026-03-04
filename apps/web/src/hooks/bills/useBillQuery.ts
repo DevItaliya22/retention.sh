@@ -25,8 +25,9 @@ export interface BillLoyaltyLog {
   type: string;
   source: string;
   amount: number;
-  /** True when this redemption was partner balance used at this store (display as --amount). */
   isPartnerRedemption?: boolean;
+  campaignTitle?: string | null;
+  freeItemName?: string | null;
   createdAt: string;
 }
 

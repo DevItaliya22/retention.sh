@@ -49,14 +49,7 @@ import {
   Textarea,
 } from "@reelo/ui/components";
 import { cn } from "@reelo/ui/lib/utils";
-import {
-  ArrowLeft,
-  ArrowRight,
-  Download,
-  ImagePlus,
-  Upload,
-  X,
-} from "lucide-react";
+import { ArrowLeft, Download, ImagePlus, Upload, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Resolver } from "react-hook-form";
@@ -83,6 +76,7 @@ const formSchema = z.object({
   minPurchaseForRedemptionEnabled: z.boolean(),
   minPurchaseForRedemption: z.coerce.number().min(0).optional().nullable(),
   instantCashbackRedeemable: z.boolean(),
+  startsAt: z.string().optional(),
   expiresAt: z.string().optional(),
   redemptionLimit: z.enum(
     CAMPAIGN_REDEMPTION_LIMITS as unknown as [string, ...string[]],
@@ -227,6 +221,7 @@ export function CampaignEditPageClient({
       minPurchaseForRedemptionEnabled: false,
       minPurchaseForRedemption: null,
       instantCashbackRedeemable: false,
+      startsAt: "",
       expiresAt: "",
       redemptionLimit: "ONCE",
       termsAndConditions: DEFAULT_TERMS,
@@ -293,6 +288,9 @@ export function CampaignEditPageClient({
         campaign.minPurchaseForRedemptionEnabled ?? false,
       minPurchaseForRedemption: campaign.minPurchaseForRedemption ?? null,
       instantCashbackRedeemable: campaign.instantCashbackRedeemable ?? false,
+      startsAt: campaign.startsAt
+        ? new Date(campaign.startsAt).toISOString().slice(0, 16)
+        : "",
       expiresAt: campaign.expiresAt
         ? new Date(campaign.expiresAt).toISOString().slice(0, 16)
         : "",
@@ -347,6 +345,7 @@ export function CampaignEditPageClient({
           ? (values.minPurchaseForRedemption ?? null)
           : null,
         instantCashbackRedeemable: values.instantCashbackRedeemable,
+        startsAt: values.startsAt || undefined,
         expiresAt: values.expiresAt || undefined,
         redemptionLimit: values.redemptionLimit as CampaignRedemptionLimit,
         termsAndConditions: values.termsAndConditions,
@@ -361,7 +360,6 @@ export function CampaignEditPageClient({
         targetCustomerTags: tags,
       });
       toast.success("Campaign saved");
-      router.push("/campaigns");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to save");
     }
@@ -428,16 +426,36 @@ export function CampaignEditPageClient({
       {/* ====== TOP BAR ====== */}
       <div className="bg-background sticky top-0 z-10 border-b">
         <ScaffoldContainer className="flex h-14 items-center justify-between">
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground hover:text-foreground -ml-2 gap-1.5"
             onClick={() => router.push("/campaigns")}
-            className="text-muted-foreground hover:text-foreground flex items-center gap-1.5 text-sm font-medium transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back
-          </button>
+            Back to campaigns
+          </Button>
 
           <div className="flex items-center gap-2">
+            <FormField
+              control={form.control}
+              name="status"
+              render={({ field }) => (
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger className="h-8 w-[120px] text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CAMPAIGN_STATUSES.map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {CAMPAIGN_STATUS_LABELS[s] ?? s}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
             <Button
               type="button"
               variant="outline"
@@ -456,20 +474,11 @@ export function CampaignEditPageClient({
             </Button>
             <Button
               type="button"
-              variant="outline"
               size="sm"
               onClick={onSubmit}
               loading={updateCampaign.isPending}
             >
-              Save and exit
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              onClick={onSubmit}
-              loading={updateCampaign.isPending}
-            >
-              Next <ArrowRight className="ml-1 h-3.5 w-3.5" />
+              Save
             </Button>
           </div>
         </ScaffoldContainer>
@@ -952,6 +961,24 @@ export function CampaignEditPageClient({
                 <div className="grid gap-4 sm:grid-cols-2">
                   <FormField
                     control={form.control}
+                    name="startsAt"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Campaign Starts on</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="datetime-local"
+                            {...field}
+                            value={field.value ?? ""}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
                     name="expiresAt"
                     render={({ field }) => (
                       <FormItem>
@@ -967,25 +994,25 @@ export function CampaignEditPageClient({
                       </FormItem>
                     )}
                   />
-
-                  <FormField
-                    control={form.control}
-                    name="contactNumber"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Contact number</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="e.g. 9707840311"
-                            {...field}
-                            value={field.value ?? ""}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
                 </div>
+
+                <FormField
+                  control={form.control}
+                  name="contactNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Contact number</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="e.g. 9707840311"
+                          {...field}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
                 <FormField
                   control={form.control}
@@ -1239,34 +1266,6 @@ export function CampaignEditPageClient({
                 title="Channels & Delivery"
                 description="How and when this campaign is sent."
               >
-                <FormField
-                  control={form.control}
-                  name="status"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Status</FormLabel>
-                      <Select
-                        value={field.value}
-                        onValueChange={field.onChange}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {CAMPAIGN_STATUSES.map((s) => (
-                            <SelectItem key={s} value={s}>
-                              {CAMPAIGN_STATUS_LABELS[s] ?? s}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
                 <div className="space-y-2">
                   <FormField
                     control={form.control}

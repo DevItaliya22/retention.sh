@@ -59,7 +59,7 @@ export const partnerCampaignUpdateSchema = z.object({
   description: z.string().max(2000).trim().optional().nullable(),
   contactNumber: z.string().max(20).trim().optional().nullable(),
   expiresAt: z.string().optional(),
-  status: z.enum(["DRAFT", "SCHEDULED", "SENT", "FAILED"]).optional(),
+  status: z.enum(["DRAFT", "ACTIVE", "EXPIRED"]).optional(),
 
   themeColor: z.string().max(30).trim().optional().nullable(),
   textColor: z.string().max(30).trim().optional().nullable(),

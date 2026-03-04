@@ -4,7 +4,12 @@ import {
   validateSchema,
 } from "@/lib/utils/error-handler";
 import { parseFreeItems } from "@/lib/utils/free-items";
-import { db } from "@reelo/db";
+import {
+  db,
+  TransactionSource,
+  TransactionType,
+  TransactionValueKind,
+} from "@reelo/db";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -66,34 +71,93 @@ export const POST = withCashierAuth<{ id: string }>(
       }
 
       const currentFreeItems = parseFreeItems(wallet.freeItems);
-      const remaining = currentFreeItems.filter(
-        (item) => item.id !== freeItemId,
+      const claimedItem = currentFreeItems.find(
+        (item) => item.id === freeItemId,
       );
 
-      if (remaining.length === currentFreeItems.length) {
+      if (!claimedItem) {
         return NextResponse.json(
           { error: "Free item not found or already claimed", success: false },
           { status: 404 },
         );
       }
 
+      if (claimedItem.source === "CAMPAIGN" && claimedItem.sourceId) {
+        const campaign = await db.campaign.findUnique({
+          where: { id: claimedItem.sourceId },
+          select: {
+            minPurchaseForRedemptionEnabled: true,
+            minPurchaseForRedemption: true,
+          },
+        });
+        if (
+          campaign?.minPurchaseForRedemptionEnabled &&
+          campaign.minPurchaseForRedemption != null &&
+          (bill.finalAmount ?? 0) < campaign.minPurchaseForRedemption
+        ) {
+          return NextResponse.json(
+            {
+              error: `Minimum bill of ₹${campaign.minPurchaseForRedemption} is required to claim this free item.`,
+              success: false,
+            },
+            { status: 400 },
+          );
+        }
+      }
+
+      const remaining = currentFreeItems.filter(
+        (item) => item.id !== freeItemId,
+      );
+
       const updatedFreeItems = remaining.map((item) => ({
         id: item.id,
         skuId: item.skuId,
         skuName: item.skuName,
         source: item.source,
+        sourceId: item.sourceId ?? null,
+        expiresAt: item.expiresAt ?? null,
         createdAt: item.createdAt,
       }));
 
-      await db.wallet.update({
-        where: {
-          businessId_customerId: {
+      const isCampaignSource = claimedItem.source === "CAMPAIGN";
+      const txSource = isCampaignSource
+        ? TransactionSource.CAMPAIGN
+        : claimedItem.source === "REFERRAL"
+          ? TransactionSource.REFERRAL
+          : TransactionSource.BILL;
+
+      await db.$transaction([
+        db.wallet.update({
+          where: {
+            businessId_customerId: {
+              businessId: context.business.id,
+              customerId: bill.customerId,
+            },
+          },
+          data: { freeItems: updatedFreeItems as any },
+        }),
+        db.transaction.create({
+          data: {
             businessId: context.business.id,
             customerId: bill.customerId,
+            billId: bill.id,
+            campaignId: isCampaignSource
+              ? (claimedItem.sourceId ?? null)
+              : null,
+            valueKind: TransactionValueKind.FREE_ITEM,
+            amount: 0,
+            type: TransactionType.REDEEMED,
+            source: txSource,
+            sourceId: claimedItem.sourceId ?? null,
+            description: `Claimed: ${claimedItem.skuName}`,
+            metadata: {
+              freeItemName: claimedItem.skuName,
+              freeItemId: claimedItem.id,
+              claimedOnBillId: bill.id,
+            },
           },
-        },
-        data: { freeItems: updatedFreeItems as any },
-      });
+        }),
+      ]);
 
       return NextResponse.json({ success: true });
     } catch (error: unknown) {

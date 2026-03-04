@@ -5,6 +5,7 @@ import { PageLayout, ScaffoldContainer } from "@/components/layouts";
 import { fetcher } from "@/lib/fetcher";
 import {
   Badge,
+  Button,
   Card,
   CardContent,
   CardDescription,
@@ -28,7 +29,8 @@ import { useQuery } from "@tanstack/react-query";
 import {
   ArrowUpRight,
   CheckCircle2,
-  Clock,
+  ChevronLeft,
+  ChevronRight,
   Coins,
   Footprints,
   Gift,
@@ -39,7 +41,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { useParams } from "next/navigation";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -107,6 +109,7 @@ interface LoyaltyDetailResponse {
       createdAt: string;
       expiresAt: string | null;
       metadata: unknown;
+      campaignTitle: string | null;
     }[];
     /** CASHBACK / TIER: history from CashbackTransaction + Bill (date, amount spent, cashback, tier). */
     cashbackHistory: Array<{
@@ -465,6 +468,67 @@ function TransactionTypeBadge({ type }: { type: string }) {
   );
 }
 
+// ─── Transaction Label Helper ────────────────────────────────────────────────
+
+const TX_PER_PAGE = 15;
+
+type TxItem = {
+  type: string;
+  source: string;
+  valueKind: string;
+  description: string | null;
+  campaignTitle: string | null;
+  metadata: unknown;
+};
+
+function getFreeItemName(tx: TxItem): string | null {
+  const meta = tx.metadata as { freeItemName?: string } | null;
+  return meta?.freeItemName ?? null;
+}
+
+function getTransactionLabel(tx: TxItem): string {
+  if (tx.type === "EXPIRED")
+    return tx.valueKind === "CASHBACK" ? "Cashback expired" : "Points expired";
+  if (tx.type === "ADJUSTMENT") return "Balance adjustment";
+  if (tx.type === "REFUNDED") return "Refund";
+  if (tx.type === "GIFTED") return "Gift";
+
+  if (tx.source === "CAMPAIGN") {
+    const campName = tx.campaignTitle ?? "";
+    if (tx.valueKind === "FREE_ITEM") {
+      const itemName = getFreeItemName(tx) ?? "Free item";
+      return campName ? `${itemName} (${campName})` : itemName;
+    }
+    if (tx.type === "EARNED")
+      return campName ? `Campaign cashback: ${campName}` : "Campaign cashback";
+    if (tx.type === "REDEEMED")
+      return campName ? `Campaign discount: ${campName}` : "Campaign discount";
+  }
+
+  if (tx.source === "REFERRAL")
+    return tx.type === "EARNED" ? "Referral reward" : "Referral";
+  if (tx.source === "FEEDBACK") return "Feedback reward";
+
+  if (tx.type === "EARNED") {
+    if (tx.valueKind === "CASHBACK") return "Loyalty cashback";
+    if (tx.valueKind === "FREE_ITEM") {
+      const itemName = getFreeItemName(tx);
+      return itemName ? `Free item: ${itemName}` : "Free item earned";
+    }
+    return "Points earned";
+  }
+  if (tx.type === "REDEEMED") {
+    if (tx.valueKind === "CASHBACK") return "Cashback redeemed";
+    if (tx.valueKind === "FREE_ITEM") {
+      const itemName = getFreeItemName(tx);
+      return itemName ? `Claimed: ${itemName}` : "Free item claimed";
+    }
+    return "Points redeemed";
+  }
+
+  return tx.description || tx.source;
+}
+
 // ─── Main Page ──────────────────────────────────────────────────────────────
 
 export default function LoyaltyDetailPage() {
@@ -481,17 +545,21 @@ export default function LoyaltyDetailPage() {
     enabled: !!businessSlug,
   });
 
-  // Must run before any early return to keep hook order stable (Rules of Hooks)
-  const expiryFromTransactions = useMemo(() => {
-    const transactions = data?.loyalty?.transactions ?? [];
-    return transactions
-      .filter((t) => t.expiresAt != null && t.amount > 0)
-      .map((t) => ({
-        id: t.id,
-        remainingAmount: t.amount,
-        expiresAt: t.expiresAt!,
-      }));
-  }, [data?.loyalty?.transactions]);
+  const [txPage, setTxPage] = useState(1);
+
+  const paginatedTxs = useMemo(() => {
+    const all = data?.loyalty?.transactions ?? [];
+    const total = all.length;
+    const totalPages = Math.max(1, Math.ceil(total / TX_PER_PAGE));
+    const safePage = Math.min(txPage, totalPages);
+    const start = (safePage - 1) * TX_PER_PAGE;
+    return {
+      items: all.slice(start, start + TX_PER_PAGE),
+      total,
+      totalPages,
+      page: safePage,
+    };
+  }, [data?.loyalty?.transactions, txPage]);
 
   if (!businessSlug) {
     return (
@@ -766,198 +834,126 @@ export default function LoyaltyDetailPage() {
             </Card>
           )}
 
-          {/* ─── Points / balance expiry (derived from transactions.expiresAt only) ───────────────────────────────────────── */}
-          {expiryFromTransactions.length > 0 && (
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Clock className="size-5 text-amber-500" />
-                  {isCashbackType ? "Balance expiry" : "Points expiry"}
-                </CardTitle>
-                <CardDescription>
-                  Unused {isCashbackType ? "cashback" : "points"} and when they
-                  expire. Used or already expired amounts are in transaction
-                  history below.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {expiryFromTransactions.map((bucket) => (
-                    <div
-                      key={bucket.id}
-                      className="flex items-center justify-between rounded-md bg-amber-50 px-3 py-2 text-sm dark:bg-amber-900/20"
-                    >
-                      <span>
-                        {isCashbackType ? "₹" : ""}
-                        {bucket.remainingAmount} {isCashbackType ? "" : "pts"}
-                      </span>
-                      <span className="text-muted-foreground text-xs">
-                        Expires <DateDisplay date={bucket.expiresAt} />
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* ─── Transaction History (cashback history for CASHBACK/TIER, points for AMOUNT_SPENT/VISIT_MADE) ──────────────────────────────────────────── */}
+          {/* ─── Unified Transaction History ──────────────────────────────────────────── */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <Receipt className="size-5" />
                 Transaction History
               </CardTitle>
-              {isCashbackType ? (
-                <CardDescription>
-                  All your bills; cashback shown when earned on that bill.
-                </CardDescription>
-              ) : (
-                <CardDescription>
-                  Earned, redeemed, and expired (unused) points. Used or expired
-                  amounts appear here.
-                </CardDescription>
-              )}
+              <CardDescription>
+                All earned, redeemed, and expired transactions — loyalty,
+                campaigns, referrals, and more.
+              </CardDescription>
             </CardHeader>
-            <CardContent>
-              {isCashbackType && (loyalty.cashbackHistory?.length ?? 0) > 0 ? (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Bill #</TableHead>
-                        <TableHead className="text-right">
-                          Amount spent
-                        </TableHead>
-                        <TableHead className="text-right">
-                          Cashback received
-                        </TableHead>
-                        {loyaltyType === "TIER" && <TableHead>Tier</TableHead>}
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {loyalty.cashbackHistory.map((row) => (
-                        <TableRow key={row.id}>
-                          <TableCell className="text-sm whitespace-nowrap">
-                            <DateDisplay date={row.date} />
-                          </TableCell>
-                          <TableCell className="font-mono text-sm">
-                            {row.billNumber}
-                          </TableCell>
-                          <TableCell className="text-right font-medium tabular-nums">
-                            ₹
-                            {row.amountSpent.toLocaleString("en-IN", {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
-                            })}
-                          </TableCell>
-                          <TableCell className="text-right font-medium tabular-nums">
-                            {row.cashbackReceived > 0 ? (
-                              <span className="text-emerald-600 dark:text-emerald-400">
-                                +₹
-                                {row.cashbackReceived.toLocaleString("en-IN", {
-                                  minimumFractionDigits: 2,
-                                  maximumFractionDigits: 2,
-                                })}
-                              </span>
-                            ) : (
-                              <span className="text-muted-foreground">—</span>
-                            )}
-                          </TableCell>
-                          {loyaltyType === "TIER" && (
-                            <TableCell>
-                              {row.tierName ? (
-                                <span className="text-amber-700 dark:text-amber-300">
-                                  {row.tierName}
-                                  {row.cashbackPercentage != null && (
-                                    <span className="text-muted-foreground ml-1 text-xs">
-                                      ({row.cashbackPercentage}%)
-                                    </span>
-                                  )}
-                                </span>
-                              ) : (
-                                <span className="text-muted-foreground">—</span>
-                              )}
-                            </TableCell>
-                          )}
+            <CardContent className="space-y-4">
+              {paginatedTxs.total > 0 ? (
+                <>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Date</TableHead>
+                          <TableHead>Description</TableHead>
+                          <TableHead>Type</TableHead>
+                          <TableHead className="text-right">Amount</TableHead>
+                          <TableHead className="text-right">Expires</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              ) : !isCashbackType && loyalty.transactions.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Kind</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead className="text-right">Amount</TableHead>
-                        <TableHead className="text-muted-foreground text-xs whitespace-nowrap">
-                          Expires
-                        </TableHead>
-                        <TableHead>Description</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {loyalty.transactions.map((tx) => {
-                        const isCashback = tx.valueKind === "CASHBACK";
-                        const amountStr = isCashback
-                          ? `₹${Math.abs(tx.amount).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                          : `${Math.abs(tx.amount)} pts`;
-                        return (
-                          <TableRow key={tx.id}>
-                            <TableCell className="text-sm whitespace-nowrap">
-                              <DateDisplay date={tx.createdAt} />
-                            </TableCell>
-                            <TableCell>
-                              <span
-                                className={
-                                  isCashback
-                                    ? "font-medium text-emerald-600 dark:text-emerald-400"
-                                    : "font-medium text-blue-600 dark:text-blue-400"
-                                }
-                              >
-                                {isCashback ? "Cashback" : "Points"}
-                              </span>
-                            </TableCell>
-                            <TableCell>
-                              <TransactionTypeBadge type={tx.type} />
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <span
-                                className={`font-medium ${
-                                  tx.amount > 0
-                                    ? "text-emerald-600 dark:text-emerald-400"
-                                    : "text-red-600 dark:text-red-400"
-                                }`}
-                              >
-                                {tx.amount > 0 ? "+" : "-"}
-                                {amountStr}
-                              </span>
-                            </TableCell>
-                            <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
-                              {tx.type === "EXPIRED" ? (
-                                <span className="text-red-600 dark:text-red-400">
-                                  Expired (unused)
+                      </TableHeader>
+                      <TableBody>
+                        {paginatedTxs.items.map((tx) => {
+                          const isCb = tx.valueKind === "CASHBACK";
+                          const isFreeItem = tx.valueKind === "FREE_ITEM";
+                          const freeItem = isFreeItem
+                            ? getFreeItemName(tx)
+                            : null;
+                          const amountStr = isCb
+                            ? `₹${Math.abs(tx.amount).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                            : isFreeItem
+                              ? freeItem || "Free item"
+                              : `${Math.abs(tx.amount)} pts`;
+                          return (
+                            <TableRow key={tx.id}>
+                              <TableCell className="text-sm whitespace-nowrap">
+                                <DateDisplay date={tx.createdAt} />
+                              </TableCell>
+                              <TableCell className="max-w-[220px] text-sm">
+                                <span className="font-medium">
+                                  {getTransactionLabel(tx)}
                                 </span>
-                              ) : tx.expiresAt ? (
-                                <DateDisplay date={tx.expiresAt} />
-                              ) : (
-                                "—"
-                              )}
-                            </TableCell>
-                            <TableCell className="text-muted-foreground max-w-[200px] truncate text-sm">
-                              {tx.description || tx.source}
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                </div>
+                              </TableCell>
+                              <TableCell>
+                                <TransactionTypeBadge type={tx.type} />
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {isFreeItem ? (
+                                  <span className="font-medium text-purple-600 dark:text-purple-400">
+                                    {tx.type === "REDEEMED"
+                                      ? "Claimed"
+                                      : "1 item"}
+                                  </span>
+                                ) : (
+                                  <span
+                                    className={`font-medium ${
+                                      tx.amount > 0
+                                        ? "text-emerald-600 dark:text-emerald-400"
+                                        : "text-red-600 dark:text-red-400"
+                                    }`}
+                                  >
+                                    {tx.amount > 0 ? "+" : "−"}
+                                    {amountStr}
+                                  </span>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-muted-foreground text-right text-xs whitespace-nowrap">
+                                {tx.type === "EXPIRED" ? (
+                                  <span className="text-red-600 dark:text-red-400">
+                                    Expired
+                                  </span>
+                                ) : tx.expiresAt ? (
+                                  <DateDisplay date={tx.expiresAt} />
+                                ) : (
+                                  "—"
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+
+                  {paginatedTxs.totalPages > 1 && (
+                    <div className="flex items-center justify-between pt-2">
+                      <p className="text-muted-foreground text-xs">
+                        Page {paginatedTxs.page} of {paginatedTxs.totalPages} (
+                        {paginatedTxs.total} transactions)
+                      </p>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="size-8"
+                          disabled={paginatedTxs.page <= 1}
+                          onClick={() => setTxPage((p) => Math.max(1, p - 1))}
+                        >
+                          <ChevronLeft className="size-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="size-8"
+                          disabled={
+                            paginatedTxs.page >= paginatedTxs.totalPages
+                          }
+                          onClick={() => setTxPage((p) => p + 1)}
+                        >
+                          <ChevronRight className="size-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </>
               ) : (
                 <Empty className="py-8">
                   <EmptyHeader>

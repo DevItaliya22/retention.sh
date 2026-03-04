@@ -20,9 +20,8 @@ export const CAMPAIGN_REWARD_TYPE_LABELS: Record<string, string> = {
 
 export const CAMPAIGN_STATUS_LABELS: Record<string, string> = {
   DRAFT: "Draft",
-  SCHEDULED: "Scheduled",
-  SENT: "Sent",
-  FAILED: "Failed",
+  ACTIVE: "Active",
+  EXPIRED: "Expired",
 };
 
 export const CAMPAIGN_APPLIES_TO_LABELS: Record<string, string> = {

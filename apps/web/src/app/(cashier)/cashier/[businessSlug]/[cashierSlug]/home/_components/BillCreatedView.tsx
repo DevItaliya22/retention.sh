@@ -18,7 +18,7 @@ import {
   Trophy,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 interface RedeemInfo {
@@ -52,6 +52,15 @@ interface FreeItemToClaim {
   createdAt: string;
 }
 
+interface CampaignEarning {
+  campaignId: string;
+  campaignTitle: string | null;
+  rewardType: string;
+  earnedAmount: number;
+  autoRedeemed: number;
+  freeItemName: string | null;
+}
+
 interface PartnerRedeemableItem {
   partnerBusinessId: string;
   partnerBusinessName: string;
@@ -69,6 +78,7 @@ interface RedeemInfoBill {
   cashbackAmount: number | null;
   cashbackRedeemedAmount: number | null;
   partnerRedeemedAmount?: number | null;
+  campaignDiscountAmount?: number | null;
   /** Which partner was used on this bill (one partner per bill). */
   redeemedFromPartnerBusinessId?: string | null;
   earnedCashback?: number;
@@ -101,6 +111,7 @@ export function BillCreatedView({
     redeemInfo: RedeemInfo | null;
     partnerRedeemable: PartnerRedeemableItem[];
     freeItems: FreeItemToClaim[];
+    campaignEarnings: CampaignEarning[];
   } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -131,6 +142,7 @@ export function BillCreatedView({
         redeemInfo: RedeemInfo | null;
         partnerRedeemable?: PartnerRedeemableItem[];
         freeItems?: FreeItemToClaim[];
+        campaignEarnings?: CampaignEarning[];
         error?: string;
       }>(`${basePath}/redeem-info`);
       if (res.error) throw new Error(res.error);
@@ -139,6 +151,7 @@ export function BillCreatedView({
         redeemInfo: res.redeemInfo,
         partnerRedeemable: res.partnerRedeemable ?? [],
         freeItems: res.freeItems ?? [],
+        campaignEarnings: res.campaignEarnings ?? [],
       });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to load bill");
@@ -353,6 +366,42 @@ export function BillCreatedView({
     }
   };
 
+  const dynamicCashbackEarn = useMemo(() => {
+    const bill = data?.bill;
+    if (!bill) return 0;
+    if (!bill.earnNotYetApplied) return bill.earnedCashback ?? 0;
+    const baseEarn =
+      bill.cashbackAmount ??
+      bill.pendingCashbackEarn ??
+      bill.earnedCashback ??
+      0;
+    if (baseEarn <= 0) return 0;
+    const currentPay = bill.userPaidAmount ?? bill.finalAmount ?? 0;
+    const alreadyRedeemed =
+      (bill.cashbackRedeemedAmount ?? 0) + (bill.partnerRedeemedAmount ?? 0);
+    const originalPayable = currentPay + alreadyRedeemed;
+    if (originalPayable <= 0) return 0;
+    const typed = Math.max(0, parseFloat(redeemCashbackValue) || 0);
+    const newPay = Math.max(0, currentPay - typed);
+    return Math.round(baseEarn * (newPay / originalPayable) * 100) / 100;
+  }, [data?.bill, redeemCashbackValue]);
+
+  const dynamicPointsEarn = useMemo(() => {
+    const bill = data?.bill;
+    if (!bill) return 0;
+    if (!bill.earnNotYetApplied) return bill.earnedPoints ?? 0;
+    const baseEarn = bill.pendingPointsEarn ?? bill.earnedPoints ?? 0;
+    if (baseEarn <= 0) return 0;
+    const currentPay = bill.userPaidAmount ?? bill.finalAmount ?? 0;
+    const alreadyRedeemed =
+      (bill.cashbackRedeemedAmount ?? 0) + (bill.partnerRedeemedAmount ?? 0);
+    const originalPayable = currentPay + alreadyRedeemed;
+    if (originalPayable <= 0) return 0;
+    const typed = Math.max(0, parseFloat(redeemCashbackValue) || 0);
+    const newPay = Math.max(0, currentPay - typed);
+    return Math.round(baseEarn * (newPay / originalPayable));
+  }, [data?.bill, redeemCashbackValue]);
+
   if (loading) {
     return (
       <Card className="w-full max-w-md">
@@ -422,6 +471,23 @@ export function BillCreatedView({
         <Separator />
 
         <div className="bg-muted/40 space-y-1 rounded-lg px-4 py-3">
+          {(bill.finalAmount ?? 0) > 0 &&
+            (bill.campaignDiscountAmount ?? 0) > 0 && (
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Bill total</span>
+                <span className="font-medium">
+                  ₹{(bill.finalAmount ?? 0).toFixed(2)}
+                </span>
+              </div>
+            )}
+          {(bill.campaignDiscountAmount ?? 0) > 0 && (
+            <div className="flex items-center justify-between text-sm text-emerald-600 dark:text-emerald-400">
+              <span>Campaign discount</span>
+              <span className="font-medium">
+                -₹{(bill.campaignDiscountAmount ?? 0).toFixed(2)}
+              </span>
+            </div>
+          )}
           {(bill.partnerRedeemedAmount ?? 0) > 0 && (
             <div className="flex items-center justify-between text-sm text-violet-600 dark:text-violet-400">
               <span>Partner balance redeemed</span>
@@ -440,28 +506,78 @@ export function BillCreatedView({
           </div>
         </div>
 
-        {(bill.earnedCashback ?? 0) > 0 && (
-          <div className="flex items-center gap-3 rounded-lg bg-emerald-50 p-3 dark:bg-emerald-900/20">
-            <Sparkles className="size-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
-            <div className="text-sm">
-              <p className="font-medium text-emerald-700 dark:text-emerald-300">
-                {bill.earnNotYetApplied
-                  ? `You will earn ₹${(bill.earnedCashback ?? 0).toFixed(2)} cashback when you finish (click Create Another Bill).`
-                  : `You have earned ₹${(bill.earnedCashback ?? 0).toFixed(2)} cashback on this bill!`}
-              </p>
-            </div>
+        {data.campaignEarnings.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
+              Campaign rewards
+            </p>
+            {data.campaignEarnings.map((c) => (
+              <div
+                key={c.campaignId}
+                className="flex items-center gap-3 rounded-lg bg-orange-50 p-3 dark:bg-orange-900/20"
+              >
+                <Sparkles className="size-5 shrink-0 text-orange-600 dark:text-orange-400" />
+                <div className="text-sm">
+                  {c.rewardType === "FREE_ITEM" ? (
+                    <p className="font-medium text-orange-700 dark:text-orange-300">
+                      {c.freeItemName
+                        ? `${c.freeItemName} earned`
+                        : "Free item earned"}
+                    </p>
+                  ) : c.autoRedeemed > 0 ? (
+                    <p className="font-medium text-orange-700 dark:text-orange-300">
+                      ₹{c.autoRedeemed.toFixed(2)} cashback applied to this bill
+                    </p>
+                  ) : c.earnedAmount > 0 ? (
+                    <>
+                      <p className="font-medium text-orange-700 dark:text-orange-300">
+                        ₹{c.earnedAmount.toFixed(2)} cashback earned
+                      </p>
+                      <p className="text-muted-foreground">
+                        Redeemable on your next bill
+                      </p>
+                    </>
+                  ) : null}
+                  {c.campaignTitle && (
+                    <p className="text-muted-foreground text-xs">
+                      {c.campaignTitle}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         )}
-        {(bill.earnedPoints ?? 0) > 0 && (
-          <div className="flex items-center gap-3 rounded-lg bg-blue-50 p-3 dark:bg-blue-900/20">
-            <TrendingUp className="size-5 shrink-0 text-blue-600 dark:text-blue-400" />
-            <div className="text-sm">
-              <p className="font-medium text-blue-700 dark:text-blue-300">
-                {bill.earnNotYetApplied
-                  ? `You will earn ${bill.earnedPoints} points when you finish (click Create Another Bill).`
-                  : `You have earned ${bill.earnedPoints} points on this bill!`}
-              </p>
-            </div>
+
+        {((bill.earnedCashback ?? 0) > 0 || (bill.earnedPoints ?? 0) > 0) && (
+          <div className="space-y-2">
+            <p className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
+              Loyalty rewards
+            </p>
+            {(bill.earnedCashback ?? 0) > 0 && (
+              <div className="flex items-center gap-3 rounded-lg bg-emerald-50 p-3 dark:bg-emerald-900/20">
+                <Sparkles className="size-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                <div className="text-sm">
+                  <p className="font-medium text-emerald-700 dark:text-emerald-300">
+                    {bill.earnNotYetApplied
+                      ? `You will earn ₹${dynamicCashbackEarn.toFixed(2)} cashback from loyalty when you finish (click Create Another Bill).`
+                      : `You have earned ₹${(bill.earnedCashback ?? 0).toFixed(2)} cashback from loyalty on this bill!`}
+                  </p>
+                </div>
+              </div>
+            )}
+            {(bill.earnedPoints ?? 0) > 0 && (
+              <div className="flex items-center gap-3 rounded-lg bg-blue-50 p-3 dark:bg-blue-900/20">
+                <TrendingUp className="size-5 shrink-0 text-blue-600 dark:text-blue-400" />
+                <div className="text-sm">
+                  <p className="font-medium text-blue-700 dark:text-blue-300">
+                    {bill.earnNotYetApplied
+                      ? `You will earn ${dynamicPointsEarn} points from loyalty when you finish (click Create Another Bill).`
+                      : `You have earned ${bill.earnedPoints} points from loyalty on this bill!`}
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

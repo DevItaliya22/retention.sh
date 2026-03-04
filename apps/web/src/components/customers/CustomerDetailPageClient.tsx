@@ -313,48 +313,96 @@ export function CustomerDetailPageClient({
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {activityItems.map((item: CustomerActivityItem) =>
-                        item.type === "partner" ? (
-                          <TableRow key={`p-${item.id}`}>
+                      {activityItems.map((item: CustomerActivityItem) => {
+                        if (item.type === "partner") {
+                          return (
+                            <TableRow key={`p-${item.id}`}>
+                              <TableCell className="text-xs font-medium">
+                                Partner
+                              </TableCell>
+                              <TableCell className="text-muted-foreground text-sm">
+                                <DateDisplay date={item.createdAt} />
+                              </TableCell>
+                              <TableCell className="text-sm">
+                                {item.valueKind === "CASHBACK"
+                                  ? `₹${item.amount.toFixed(2)}`
+                                  : `${Math.abs(Math.floor(item.amount))} pts`}{" "}
+                                at{" "}
+                                {item.redeemedAtBusinessName ??
+                                  item.redeemedAtBusinessId}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        }
+                        if (item.type === "referral") {
+                          return (
+                            <TableRow key={`r-${item.id}`}>
+                              <TableCell className="text-xs font-medium">
+                                Referral
+                              </TableCell>
+                              <TableCell className="text-muted-foreground text-sm">
+                                <DateDisplay date={item.createdAt} />
+                              </TableCell>
+                              <TableCell className="text-sm">
+                                {item.newCustomerName || "—"} (
+                                {item.newCustomerPhone})
+                                {item.becameCustomer && (
+                                  <Badge
+                                    variant="secondary"
+                                    size="xs"
+                                    className="ml-2"
+                                  >
+                                    Claimed
+                                  </Badge>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        }
+                        const isFreeItem = item.valueKind === "FREE_ITEM";
+                        const isCashback = item.valueKind === "CASHBACK";
+                        const sourceLabel =
+                          item.source === "CAMPAIGN"
+                            ? item.campaignTitle
+                              ? `Campaign: ${item.campaignTitle}`
+                              : "Campaign"
+                            : item.source === "REFERRAL"
+                              ? "Referral"
+                              : item.source;
+                        const itemName = isFreeItem
+                          ? (item.freeItemName ?? "Free item")
+                          : null;
+                        const typeLabel = isFreeItem
+                          ? item.txType === "EARNED"
+                            ? `${itemName} Earned`
+                            : `${itemName} Claimed`
+                          : isCashback
+                            ? item.txType === "EARNED"
+                              ? "Cashback Earned"
+                              : "Cashback Redeemed"
+                            : item.txType;
+                        const amountLabel = isFreeItem
+                          ? itemName!
+                          : isCashback
+                            ? `${item.amount > 0 ? "+" : "−"}₹${Math.abs(item.amount).toFixed(2)}`
+                            : `${item.amount > 0 ? "+" : "−"}${Math.abs(item.amount)} pts`;
+                        return (
+                          <TableRow key={`tx-${item.id}`}>
                             <TableCell className="text-xs font-medium">
-                              Partner
+                              {typeLabel}
                             </TableCell>
                             <TableCell className="text-muted-foreground text-sm">
                               <DateDisplay date={item.createdAt} />
                             </TableCell>
                             <TableCell className="text-sm">
-                              {item.valueKind === "CASHBACK"
-                                ? `₹${item.amount.toFixed(2)}`
-                                : `${Math.abs(Math.floor(item.amount))} pts`}{" "}
-                              at{" "}
-                              {item.redeemedAtBusinessName ??
-                                item.redeemedAtBusinessId}
+                              {amountLabel}{" "}
+                              <span className="text-muted-foreground">
+                                ({sourceLabel})
+                              </span>
                             </TableCell>
                           </TableRow>
-                        ) : (
-                          <TableRow key={`r-${item.id}`}>
-                            <TableCell className="text-xs font-medium">
-                              Referral
-                            </TableCell>
-                            <TableCell className="text-muted-foreground text-sm">
-                              <DateDisplay date={item.createdAt} />
-                            </TableCell>
-                            <TableCell className="text-sm">
-                              {item.newCustomerName || "—"} (
-                              {item.newCustomerPhone})
-                              {item.becameCustomer && (
-                                <Badge
-                                  variant="secondary"
-                                  size="xs"
-                                  className="ml-2"
-                                >
-                                  Claimed
-                                </Badge>
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        ),
-                      )}
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 </div>

@@ -150,8 +150,9 @@ export const GET = withCustomerAuth<{ businessSlug: string }>(
           businessId: business.id,
           customerId: businessCustomer.customerId,
         },
+        include: { campaign: { select: { title: true } } },
         orderBy: { createdAt: "desc" },
-        take: 50,
+        take: 200,
       });
 
       let cashbackHistory: Array<{
@@ -369,6 +370,7 @@ export const GET = withCustomerAuth<{ businessSlug: string }>(
             createdAt: t.createdAt.toISOString(),
             expiresAt: t.expiresAt ? t.expiresAt.toISOString() : null,
             metadata: t.metadata,
+            campaignTitle: t.campaign?.title ?? null,
           })),
           cashbackHistory,
           tierInfo,

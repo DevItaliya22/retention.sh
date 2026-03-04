@@ -54,6 +54,7 @@ function createSkeletonCampaign(id: string): CampaignListItem {
     rewardValue: null,
     offerStatement: null,
     appliesTo: "ENTIRE_PURCHASE",
+    startsAt: null,
     expiresAt: new Date().toISOString(),
     themeColor: null,
     bannerImage: null,
@@ -143,7 +144,13 @@ export function CampaignsTable({ onEdit, onDownload }: CampaignsTableProps) {
           }
           return (
             <Badge
-              variant={campaign.status === "DRAFT" ? "secondary" : "default"}
+              variant={
+                campaign.status === "DRAFT"
+                  ? "secondary"
+                  : campaign.status === "EXPIRED"
+                    ? "outline"
+                    : "default"
+              }
             >
               {CAMPAIGN_STATUS_LABELS[campaign.status] ?? campaign.status}
             </Badge>

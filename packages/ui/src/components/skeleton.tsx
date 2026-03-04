@@ -1,8 +1,8 @@
 import { cn } from "@reelo/ui/lib/utils";
 
-function Skeleton({ className, ...props }: React.ComponentProps<"div">) {
+function Skeleton({ className, ...props }: React.ComponentProps<"span">) {
   return (
-    <div
+    <span
       data-slot="skeleton"
       className={cn("bg-accent animate-pulse rounded-md", className)}
       {...props}

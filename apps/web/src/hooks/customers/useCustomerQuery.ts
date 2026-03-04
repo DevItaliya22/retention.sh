@@ -51,10 +51,21 @@ export interface PartnerRedemptionSummary {
   createdAt: string;
 }
 
-/** Activity item: partner redemption or referral log (merged, sorted by date). */
+export interface WalletTxSummary {
+  id: string;
+  valueKind: string;
+  txType: string;
+  source: string;
+  amount: number;
+  campaignTitle: string | null;
+  freeItemName: string | null;
+  createdAt: string;
+}
+
 export type CustomerActivityItem =
   | (PartnerRedemptionSummary & { type: "partner" })
-  | (ReferralLogSummary & { type: "referral" });
+  | (ReferralLogSummary & { type: "referral" })
+  | (WalletTxSummary & { type: "walletTx" });
 
 export interface CustomerDetail {
   id: string;

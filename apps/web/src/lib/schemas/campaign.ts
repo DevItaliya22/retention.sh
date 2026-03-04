@@ -7,12 +7,7 @@ export const CAMPAIGN_REWARD_TYPES = [
   "NO_REWARD",
 ] as const;
 
-export const CAMPAIGN_STATUSES = [
-  "DRAFT",
-  "SCHEDULED",
-  "SENT",
-  "FAILED",
-] as const;
+export const CAMPAIGN_STATUSES = ["DRAFT", "ACTIVE", "EXPIRED"] as const;
 
 export const CAMPAIGN_APPLIES_TO = [
   "ENTIRE_PURCHASE",
@@ -54,6 +49,7 @@ export const campaignUpdateSchema = z.object({
   title: z.string().max(500).trim().optional().nullable(),
   description: z.string().max(2000).trim().optional().nullable(),
   contactNumber: z.string().max(20).trim().optional().nullable(),
+  startsAt: z.string().optional(),
   expiresAt: z.string().optional(),
   targetCustomerTags: z.array(z.string().max(100)).optional(),
   status: campaignStatusSchema.optional(),
