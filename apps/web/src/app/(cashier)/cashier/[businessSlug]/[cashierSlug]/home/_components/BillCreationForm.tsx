@@ -63,6 +63,7 @@ function BillSuccessCard({
   const bill = data.bill;
   const loyalty = data.loyalty;
   const rewardStages = data.rewardStages ?? [];
+  const campaignDiscount = data.campaignDiscount;
 
   if (!bill) return null;
 
@@ -120,6 +121,14 @@ function BillSuccessCard({
               </span>
             </div>
           )}
+          {(bill.campaignDiscountAmount ?? 0) > 0 && (
+            <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
+              <span>Campaign discount</span>
+              <span className="font-medium">
+                -₹{(bill.campaignDiscountAmount ?? 0).toFixed(2)}
+              </span>
+            </div>
+          )}
           {isCashbackType &&
             (loyalty?.cashbackRedeemedAmount ??
               bill.cashbackRedeemedAmount ??
@@ -159,12 +168,59 @@ function BillSuccessCard({
           </div>
         </div>
 
+        {/* Campaign Earnings */}
+        {(campaignDiscount?.appliedCampaigns?.length ?? 0) > 0 && (
+          <>
+            <Separator />
+            <div className="space-y-2">
+              <p className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
+                Campaign rewards
+              </p>
+              {campaignDiscount!.appliedCampaigns.map((c) => (
+                <div
+                  key={c.campaignId}
+                  className="flex items-center gap-3 rounded-lg bg-orange-50 p-3 dark:bg-orange-900/20"
+                >
+                  <Sparkles className="size-5 shrink-0 text-orange-600 dark:text-orange-400" />
+                  <div className="text-sm">
+                    {c.rewardType === "FREE_ITEM" ? (
+                      <p className="font-medium text-orange-700 dark:text-orange-300">
+                        Free item earned: {c.freeItemName ?? "Free item"}
+                      </p>
+                    ) : c.discountAmount > 0 ? (
+                      <p className="font-medium text-orange-700 dark:text-orange-300">
+                        ₹{c.discountAmount.toFixed(2)} applied to this bill
+                      </p>
+                    ) : c.earnedAmount > 0 ? (
+                      <>
+                        <p className="font-medium text-orange-700 dark:text-orange-300">
+                          ₹{c.earnedAmount.toFixed(2)} cashback earned
+                        </p>
+                        <p className="text-muted-foreground">
+                          Redeemable on your next bill
+                        </p>
+                      </>
+                    ) : null}
+                    {c.campaignTitle && (
+                      <p className="text-muted-foreground text-xs">
+                        {c.campaignTitle}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
         {/* Loyalty Info */}
         {hasLoyalty && (
           <>
             <Separator />
             <div className="space-y-3">
-              {/* Customer's tier (TIER type) — show name and range, or message when not in tier yet */}
+              <p className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
+                Loyalty rewards
+              </p>
               {loyalty?.loyaltyType === "TIER" && loyalty?.currentTier && (
                 <div className="bg-muted/30 flex items-center gap-3 rounded-lg border p-3">
                   <Trophy className="size-5 shrink-0 text-amber-600 dark:text-amber-400" />
@@ -192,13 +248,12 @@ function BillSuccessCard({
                   </div>
                 )}
 
-              {/* Cashback / Tier earned (added to wallet) */}
               {isCashbackType && (loyalty?.earnedPoints ?? 0) > 0 && (
                 <div className="flex items-center gap-3 rounded-lg bg-emerald-50 p-3 dark:bg-emerald-900/20">
                   <Sparkles className="size-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
                   <div className="text-sm">
                     <p className="font-medium text-emerald-700 dark:text-emerald-300">
-                      ₹{loyalty!.earnedPoints} cashback earned!
+                      ₹{loyalty!.earnedPoints} cashback earned from loyalty!
                     </p>
                     <p className="text-muted-foreground">
                       New wallet balance: ₹{loyalty!.pointsBalance}
@@ -236,7 +291,7 @@ function BillSuccessCard({
                   <TrendingUp className="size-5 shrink-0 text-blue-600 dark:text-blue-400" />
                   <div className="text-sm">
                     <p className="font-medium text-blue-700 dark:text-blue-300">
-                      +{loyalty!.earnedPoints} points earned!
+                      +{loyalty!.earnedPoints} points earned from loyalty!
                     </p>
                     <p className="text-muted-foreground">
                       Balance: {loyalty!.pointsBalance} points

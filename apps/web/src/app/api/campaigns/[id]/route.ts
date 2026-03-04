@@ -91,6 +91,7 @@ export const PATCH = withAdminAuth(
         title,
         description,
         contactNumber,
+        startsAt,
         expiresAt,
         targetCustomerTags,
         status,
@@ -120,6 +121,8 @@ export const PATCH = withAdminAuth(
       if (title !== undefined) updateData.title = title;
       if (description !== undefined) updateData.description = description;
       if (contactNumber !== undefined) updateData.contactNumber = contactNumber;
+      if (startsAt !== undefined)
+        updateData.startsAt = startsAt ? new Date(startsAt) : null;
       if (expiresAt !== undefined) updateData.expiresAt = new Date(expiresAt);
       if (targetCustomerTags !== undefined)
         updateData.targetCustomerTags = targetCustomerTags;

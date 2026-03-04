@@ -47,7 +47,7 @@ CREATE TYPE "CustomerTargetGroup" AS ENUM ('NEW_CUSTOMERS', 'NEW_AND_EXISTING', 
 CREATE TYPE "RedemptionLimit" AS ENUM ('ONCE', 'MULTIPLE');
 
 -- CreateEnum
-CREATE TYPE "CampaignStatus" AS ENUM ('DRAFT', 'SCHEDULED', 'SENT', 'FAILED');
+CREATE TYPE "CampaignStatus" AS ENUM ('DRAFT', 'ACTIVE', 'EXPIRED');
 
 -- CreateEnum
 CREATE TYPE "CampaignChannel" AS ENUM ('SMS', 'EMAIL', 'WHATSAPP');
@@ -59,7 +59,7 @@ CREATE TYPE "AutoCampaignTrigger" AS ENUM ('BIRTHDAY', 'ANNIVERSARY', 'FIRST_PUR
 CREATE TYPE "TransactionType" AS ENUM ('EARNED', 'REDEEMED', 'EXPIRED', 'GIFTED', 'ADJUSTMENT', 'REFUNDED');
 
 -- CreateEnum
-CREATE TYPE "TransactionSource" AS ENUM ('BILL', 'FEEDBACK', 'SCRATCH_CARD', 'CAMPAIGN', 'REFERRAL', 'REGISTRATION', 'MANUAL_ADJUSTMENT');
+CREATE TYPE "TransactionSource" AS ENUM ('BILL', 'FEEDBACK', 'SCRATCH_CARD', 'CAMPAIGN', 'REFERRAL', 'REGISTRATION', 'MANUAL_ADJUSTMENT', 'SHOPIFY_ORDER', 'PARTNER_EXCHANGE');
 
 -- CreateEnum
 CREATE TYPE "TransactionValueKind" AS ENUM ('CASHBACK', 'AMOUNT_SPENT_POINTS', 'VISIT_POINTS', 'FREE_ITEM');
@@ -69,6 +69,12 @@ CREATE TYPE "WalletType" AS ENUM ('POINTS', 'STORE_CREDIT');
 
 -- CreateEnum
 CREATE TYPE "Role" AS ENUM ('CUSTOMER', 'ADMIN', 'CASHIER');
+
+-- CreateEnum
+CREATE TYPE "PartnerRequestStatus" AS ENUM ('PENDING', 'ACCEPTED', 'REJECTED', 'PERMANENTLY_REJECTED');
+
+-- CreateEnum
+CREATE TYPE "PartnershipStatus" AS ENUM ('ACTIVE', 'DISSOLVED');
 
 -- CreateTable
 CREATE TABLE "bill" (
@@ -80,6 +86,10 @@ CREATE TABLE "bill" (
     "finalAmount" DOUBLE PRECISION,
     "cashbackAmount" DOUBLE PRECISION,
     "cashbackRedeemedAmount" DOUBLE PRECISION,
+    "partnerRedeemedAmount" DOUBLE PRECISION,
+    "redeemedFromPartnerBusinessId" TEXT,
+    "campaignDiscountAmount" DOUBLE PRECISION,
+    "campaignId" TEXT,
     "userPaidAmount" DOUBLE PRECISION,
     "notes" TEXT,
     "paymentMethod" TEXT,
@@ -133,9 +143,12 @@ CREATE TABLE "business" (
     "defaultPointsName" TEXT NOT NULL DEFAULT 'Points',
     "defaultCurrencySymbol" TEXT NOT NULL DEFAULT '₹',
     "defaultCurrencyCode" TEXT NOT NULL DEFAULT 'INR',
+    "industries" TEXT[] DEFAULT ARRAY[]::TEXT[],
     "registrationBonusPoints" INTEGER NOT NULL DEFAULT 0,
     "nextBillNumber" INTEGER NOT NULL DEFAULT 1,
     "isServiceEnabled" JSONB,
+    "receivePartnershipOffers" BOOLEAN NOT NULL DEFAULT false,
+    "maxPartnerAllowed" INTEGER NOT NULL DEFAULT 1,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -180,6 +193,7 @@ CREATE TABLE "campaign" (
     "title" TEXT,
     "description" TEXT,
     "contactNumber" TEXT,
+    "startsAt" TIMESTAMP(3),
     "expiresAt" TIMESTAMP(3) NOT NULL,
     "targetCustomerTags" TEXT[] DEFAULT ARRAY[]::TEXT[],
     "status" "CampaignStatus" NOT NULL DEFAULT 'DRAFT',
@@ -190,6 +204,7 @@ CREATE TABLE "campaign" (
     "bannerImage" TEXT,
     "rewardType" "CampaignRewardType" NOT NULL DEFAULT 'FREE_ITEM',
     "rewardValue" TEXT,
+    "offerStatement" TEXT,
     "appliesTo" "BenefitAppliesTo" NOT NULL DEFAULT 'ENTIRE_PURCHASE',
     "maxRedemptionAmount" DOUBLE PRECISION,
     "maxRedemptionEnabled" BOOLEAN NOT NULL DEFAULT false,
@@ -528,6 +543,78 @@ CREATE TABLE "membership_action" (
 );
 
 -- CreateTable
+CREATE TABLE "partner_request" (
+    "id" TEXT NOT NULL,
+    "senderBusinessId" TEXT NOT NULL,
+    "receiverBusinessId" TEXT NOT NULL,
+    "status" "PartnerRequestStatus" NOT NULL DEFAULT 'PENDING',
+    "partnershipId" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "partner_request_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "business_partnership" (
+    "id" TEXT NOT NULL,
+    "status" "PartnershipStatus" NOT NULL DEFAULT 'ACTIVE',
+    "sharedReferrals" BOOLEAN NOT NULL DEFAULT false,
+    "shareReferralRewards" BOOLEAN NOT NULL DEFAULT false,
+    "sharedCampaigns" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "business_partnership_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "partnership_member" (
+    "id" TEXT NOT NULL,
+    "partnershipId" TEXT NOT NULL,
+    "businessId" TEXT NOT NULL,
+    "exchangeRate" DOUBLE PRECISION NOT NULL DEFAULT 1.0,
+    "pointToCurrencyRate" DOUBLE PRECISION NOT NULL DEFAULT 1.0,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "partnership_member_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "partner_campaign" (
+    "id" TEXT NOT NULL,
+    "slug" TEXT NOT NULL,
+    "partnershipId" TEXT NOT NULL,
+    "createdByBusinessId" TEXT NOT NULL,
+    "title" TEXT,
+    "description" TEXT,
+    "contactNumber" TEXT,
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "status" "CampaignStatus" NOT NULL DEFAULT 'DRAFT',
+    "themeColor" TEXT,
+    "textColor" TEXT,
+    "logo" TEXT,
+    "bannerImage" TEXT,
+    "rewardType" "CampaignRewardType" NOT NULL DEFAULT 'FREE_ITEM',
+    "rewardValue" TEXT,
+    "appliesTo" "BenefitAppliesTo" NOT NULL DEFAULT 'ENTIRE_PURCHASE',
+    "maxRedemptionAmount" DOUBLE PRECISION,
+    "maxRedemptionEnabled" BOOLEAN NOT NULL DEFAULT false,
+    "minPurchaseForEarningEnabled" BOOLEAN NOT NULL DEFAULT false,
+    "minPurchaseForEarning" DOUBLE PRECISION,
+    "minPurchaseForRedemptionEnabled" BOOLEAN NOT NULL DEFAULT false,
+    "minPurchaseForRedemption" DOUBLE PRECISION,
+    "instantCashbackRedeemable" BOOLEAN NOT NULL DEFAULT false,
+    "redemptionLimit" "RedemptionLimit" NOT NULL DEFAULT 'ONCE',
+    "termsAndConditions" TEXT[] DEFAULT ARRAY[]::TEXT[],
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "partner_campaign_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "qr" (
     "id" TEXT NOT NULL,
     "businessId" TEXT NOT NULL,
@@ -602,6 +689,7 @@ CREATE TABLE "referral_program" (
     "existingCustomerBenefitExpiresInDays" INTEGER,
     "existingCustomerFreeItemSkuId" TEXT,
     "sendReminderToCustomer" BOOLEAN NOT NULL DEFAULT false,
+    "lockReferralPointsUntilFirstPurchase" BOOLEAN NOT NULL DEFAULT false,
     "informationSections" JSONB NOT NULL,
     "branding" JSONB,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -620,6 +708,9 @@ CREATE TABLE "referral_log" (
     "newCustomerName" TEXT,
     "becameCustomer" BOOLEAN NOT NULL DEFAULT false,
     "rewardPoints" INTEGER NOT NULL DEFAULT 0,
+    "referredBusinessId" TEXT,
+    "referredCustomerId" TEXT,
+    "referrerRewardUnlockedAt" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "referral_log_pkey" PRIMARY KEY ("id")
@@ -685,6 +776,59 @@ CREATE TABLE "scratch_card_action" (
 );
 
 -- CreateTable
+CREATE TABLE "shopify_store" (
+    "id" TEXT NOT NULL,
+    "businessId" TEXT NOT NULL,
+    "shopDomain" TEXT NOT NULL,
+    "shopName" TEXT,
+    "accessToken" TEXT NOT NULL,
+    "scope" TEXT,
+    "webhookSecret" TEXT,
+    "lastSyncedAt" TIMESTAMP(3),
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "returnWindowDays" INTEGER NOT NULL DEFAULT 7,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "shopify_store_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "shopify_order" (
+    "id" TEXT NOT NULL,
+    "shopifyStoreId" TEXT NOT NULL,
+    "shopifyOrderId" TEXT NOT NULL,
+    "businessId" TEXT NOT NULL,
+    "customerId" TEXT NOT NULL,
+    "totalAmount" DOUBLE PRECISION NOT NULL,
+    "fulfillmentStatus" TEXT,
+    "financialStatus" TEXT,
+    "fulfilledAt" TIMESTAMP(3),
+    "returnWindowEndsAt" TIMESTAMP(3),
+    "loyaltyGrantedAt" TIMESTAMP(3),
+    "refundedAt" TIMESTAMP(3),
+    "billId" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "shopify_order_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "shopify_product_sync" (
+    "id" TEXT NOT NULL,
+    "shopifyStoreId" TEXT NOT NULL,
+    "skuId" TEXT NOT NULL,
+    "shopifyProductId" TEXT NOT NULL,
+    "shopifyVariantId" TEXT,
+    "lastSyncedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "shopify_product_sync_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "terms_and_conditions" (
     "id" TEXT NOT NULL,
     "content" TEXT NOT NULL,
@@ -716,6 +860,8 @@ CREATE TABLE "transaction" (
     "feedbackResponseId" TEXT,
     "scratchCardResponseId" TEXT,
     "loyaltyId" TEXT,
+    "campaignId" TEXT,
+    "shopifyOrderId" TEXT,
     "sourceId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -845,6 +991,9 @@ CREATE INDEX "bill_customerId_idx" ON "bill"("customerId");
 
 -- CreateIndex
 CREATE INDEX "bill_cashierId_idx" ON "bill"("cashierId");
+
+-- CreateIndex
+CREATE INDEX "bill_campaignId_idx" ON "bill"("campaignId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "bill_businessId_billNumber_key" ON "bill"("businessId", "billNumber");
@@ -1009,6 +1158,30 @@ CREATE INDEX "membership_benefit_membershipId_idx" ON "membership_benefit"("memb
 CREATE INDEX "membership_action_membershipId_idx" ON "membership_action"("membershipId");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "partner_request_partnershipId_key" ON "partner_request"("partnershipId");
+
+-- CreateIndex
+CREATE INDEX "partner_request_receiverBusinessId_idx" ON "partner_request"("receiverBusinessId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "partner_request_senderBusinessId_receiverBusinessId_key" ON "partner_request"("senderBusinessId", "receiverBusinessId");
+
+-- CreateIndex
+CREATE INDEX "partnership_member_businessId_idx" ON "partnership_member"("businessId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "partnership_member_partnershipId_businessId_key" ON "partnership_member"("partnershipId", "businessId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "partner_campaign_slug_key" ON "partner_campaign"("slug");
+
+-- CreateIndex
+CREATE INDEX "partner_campaign_partnershipId_idx" ON "partner_campaign"("partnershipId");
+
+-- CreateIndex
+CREATE INDEX "partner_campaign_createdByBusinessId_idx" ON "partner_campaign"("createdByBusinessId");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "qr_brandingId_key" ON "qr"("brandingId");
 
 -- CreateIndex
@@ -1075,6 +1248,42 @@ CREATE UNIQUE INDEX "scratch_card_response_scratchCardId_businessId_customerId_b
 CREATE INDEX "scratch_card_action_scratchCardId_idx" ON "scratch_card_action"("scratchCardId");
 
 -- CreateIndex
+CREATE INDEX "shopify_store_businessId_idx" ON "shopify_store"("businessId");
+
+-- CreateIndex
+CREATE INDEX "shopify_store_shopDomain_idx" ON "shopify_store"("shopDomain");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "shopify_store_businessId_shopDomain_key" ON "shopify_store"("businessId", "shopDomain");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "shopify_order_billId_key" ON "shopify_order"("billId");
+
+-- CreateIndex
+CREATE INDEX "shopify_order_businessId_idx" ON "shopify_order"("businessId");
+
+-- CreateIndex
+CREATE INDEX "shopify_order_customerId_idx" ON "shopify_order"("customerId");
+
+-- CreateIndex
+CREATE INDEX "shopify_order_returnWindowEndsAt_idx" ON "shopify_order"("returnWindowEndsAt");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "shopify_order_shopifyStoreId_shopifyOrderId_key" ON "shopify_order"("shopifyStoreId", "shopifyOrderId");
+
+-- CreateIndex
+CREATE INDEX "shopify_product_sync_shopifyStoreId_idx" ON "shopify_product_sync"("shopifyStoreId");
+
+-- CreateIndex
+CREATE INDEX "shopify_product_sync_skuId_idx" ON "shopify_product_sync"("skuId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "shopify_product_sync_shopifyStoreId_skuId_key" ON "shopify_product_sync"("shopifyStoreId", "skuId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "shopify_product_sync_shopifyStoreId_shopifyProductId_shopif_key" ON "shopify_product_sync"("shopifyStoreId", "shopifyProductId", "shopifyVariantId");
+
+-- CreateIndex
 CREATE INDEX "terms_and_conditions_loyaltyId_idx" ON "terms_and_conditions"("loyaltyId");
 
 -- CreateIndex
@@ -1135,6 +1344,12 @@ CREATE INDEX "transaction_valueKind_idx" ON "transaction"("valueKind");
 CREATE INDEX "transaction_expiresAt_idx" ON "transaction"("expiresAt");
 
 -- CreateIndex
+CREATE INDEX "transaction_shopifyOrderId_idx" ON "transaction"("shopifyOrderId");
+
+-- CreateIndex
+CREATE INDEX "transaction_campaignId_idx" ON "transaction"("campaignId");
+
+-- CreateIndex
 CREATE INDEX "wallet_businessId_customerId_idx" ON "wallet"("businessId", "customerId");
 
 -- CreateIndex
@@ -1190,6 +1405,9 @@ CREATE INDEX "verification_identifier_idx" ON "verification"("identifier");
 
 -- CreateIndex
 CREATE INDEX "_FeedbackResponseToFeedbackSelectionOption_B_index" ON "_FeedbackResponseToFeedbackSelectionOption"("B");
+
+-- AddForeignKey
+ALTER TABLE "bill" ADD CONSTRAINT "bill_campaignId_fkey" FOREIGN KEY ("campaignId") REFERENCES "campaign"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "bill" ADD CONSTRAINT "bill_businessId_customerId_fkey" FOREIGN KEY ("businessId", "customerId") REFERENCES "business_customer"("businessId", "customerId") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -1309,6 +1527,27 @@ ALTER TABLE "membership_benefit" ADD CONSTRAINT "membership_benefit_membershipId
 ALTER TABLE "membership_action" ADD CONSTRAINT "membership_action_membershipId_fkey" FOREIGN KEY ("membershipId") REFERENCES "membership"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "partner_request" ADD CONSTRAINT "partner_request_senderBusinessId_fkey" FOREIGN KEY ("senderBusinessId") REFERENCES "business"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "partner_request" ADD CONSTRAINT "partner_request_receiverBusinessId_fkey" FOREIGN KEY ("receiverBusinessId") REFERENCES "business"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "partner_request" ADD CONSTRAINT "partner_request_partnershipId_fkey" FOREIGN KEY ("partnershipId") REFERENCES "business_partnership"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "partnership_member" ADD CONSTRAINT "partnership_member_partnershipId_fkey" FOREIGN KEY ("partnershipId") REFERENCES "business_partnership"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "partnership_member" ADD CONSTRAINT "partnership_member_businessId_fkey" FOREIGN KEY ("businessId") REFERENCES "business"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "partner_campaign" ADD CONSTRAINT "partner_campaign_partnershipId_fkey" FOREIGN KEY ("partnershipId") REFERENCES "business_partnership"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "partner_campaign" ADD CONSTRAINT "partner_campaign_createdByBusinessId_fkey" FOREIGN KEY ("createdByBusinessId") REFERENCES "business"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "qr" ADD CONSTRAINT "qr_businessId_fkey" FOREIGN KEY ("businessId") REFERENCES "business"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -1363,6 +1602,21 @@ ALTER TABLE "scratch_card_response" ADD CONSTRAINT "scratch_card_response_billId
 ALTER TABLE "scratch_card_action" ADD CONSTRAINT "scratch_card_action_scratchCardId_fkey" FOREIGN KEY ("scratchCardId") REFERENCES "scratch_card"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "shopify_store" ADD CONSTRAINT "shopify_store_businessId_fkey" FOREIGN KEY ("businessId") REFERENCES "business"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "shopify_order" ADD CONSTRAINT "shopify_order_shopifyStoreId_fkey" FOREIGN KEY ("shopifyStoreId") REFERENCES "shopify_store"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "shopify_order" ADD CONSTRAINT "shopify_order_billId_fkey" FOREIGN KEY ("billId") REFERENCES "bill"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "shopify_product_sync" ADD CONSTRAINT "shopify_product_sync_shopifyStoreId_fkey" FOREIGN KEY ("shopifyStoreId") REFERENCES "shopify_store"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "shopify_product_sync" ADD CONSTRAINT "shopify_product_sync_skuId_fkey" FOREIGN KEY ("skuId") REFERENCES "sku"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "terms_and_conditions" ADD CONSTRAINT "terms_and_conditions_loyaltyId_fkey" FOREIGN KEY ("loyaltyId") REFERENCES "loyalty"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -1394,6 +1648,12 @@ ALTER TABLE "transaction" ADD CONSTRAINT "transaction_scratchCardResponseId_fkey
 
 -- AddForeignKey
 ALTER TABLE "transaction" ADD CONSTRAINT "transaction_loyaltyId_fkey" FOREIGN KEY ("loyaltyId") REFERENCES "loyalty"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "transaction" ADD CONSTRAINT "transaction_campaignId_fkey" FOREIGN KEY ("campaignId") REFERENCES "campaign"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "transaction" ADD CONSTRAINT "transaction_shopifyOrderId_fkey" FOREIGN KEY ("shopifyOrderId") REFERENCES "shopify_order"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "wallet" ADD CONSTRAINT "wallet_businessId_customerId_fkey" FOREIGN KEY ("businessId", "customerId") REFERENCES "business_customer"("businessId", "customerId") ON DELETE CASCADE ON UPDATE CASCADE;

@@ -282,7 +282,6 @@ async function recordPointsRedemptionAsCashbackFlow(
     },
   });
 
-  // FREE_ITEM: 2nd tx = audit only (free item claimed), no wallet change
   if (freeItemReward) {
     await tx.transaction.create({
       data: {
@@ -290,16 +289,17 @@ async function recordPointsRedemptionAsCashbackFlow(
         customerId,
         billId,
         loyaltyId,
-        valueKind,
+        valueKind: TransactionValueKind.FREE_ITEM,
         amount: 0,
         type: TransactionType.REDEEMED,
         source: TransactionSource.BILL,
         sourceId: billId,
-        description: `Free item claimed: ${freeItemReward.freeItemName ?? freeItemReward.rewardName}`,
+        description: `Claimed: ${freeItemReward.freeItemName ?? freeItemReward.rewardName}`,
         metadata: {
           freeItemClaimed: true,
+          freeItemName:
+            freeItemReward.freeItemName ?? freeItemReward.rewardName,
           rewardName: freeItemReward.rewardName,
-          freeItemName: freeItemReward.freeItemName,
         },
       },
     });
@@ -847,6 +847,7 @@ export async function applyCashbackRedemptionForBill(
       billId,
       type: TransactionType.REDEEMED,
       valueKind: TransactionValueKind.CASHBACK,
+      source: { not: TransactionSource.CAMPAIGN },
     },
   });
   if (alreadyCashbackRedeemed > 0) {
@@ -899,12 +900,12 @@ export async function applyRedemptionForBill(
   if (!context) return noLoyaltyResult(billAmount);
 
   const isCashbackType = context.type === "CASHBACK" || context.type === "TIER";
-  // Only "cashback applied to bill" counts as "already redeemed" (one per bill)
   const alreadyCashbackRedeemedCount = await tx.transaction.count({
     where: {
       billId,
       type: TransactionType.REDEEMED,
       valueKind: TransactionValueKind.CASHBACK,
+      source: { not: TransactionSource.CAMPAIGN },
     },
   });
   if (alreadyCashbackRedeemedCount > 0 && redeemCashbackReq > 0) {
@@ -1729,7 +1730,11 @@ export async function finalizeBillEarn(
   }
 
   const existingEarned = await tx.transaction.count({
-    where: { billId, type: TransactionType.EARNED },
+    where: {
+      billId,
+      type: TransactionType.EARNED,
+      source: { not: TransactionSource.CAMPAIGN },
+    },
   });
   if (existingEarned > 0) {
     return { applied: false, cashbackAmount: null, earnedPoints: 0 };

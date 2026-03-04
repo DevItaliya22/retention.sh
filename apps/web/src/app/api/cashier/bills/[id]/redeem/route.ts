@@ -34,7 +34,11 @@ const redeemSchema = z.object({
 
 const billRedeemInclude = {
   transactions: {
-    where: { type: "EARNED" as const, valueKind: "CASHBACK" as const },
+    where: {
+      type: "EARNED" as const,
+      valueKind: "CASHBACK" as const,
+      source: { not: "CAMPAIGN" as const },
+    },
     select: { type: true, valueKind: true, amount: true },
   },
 };
@@ -129,16 +133,17 @@ export const POST = withCashierAuth<{ id: string }>(
         bill.transactions,
       );
 
+      const earnNotYetApplied = cashbackEarnedThisBill <= 0;
+
       const result = await runTransaction(async (tx) => {
         const redeemInfo = await getRedeemableInfo(tx, {
           businessId: context.business.id,
           customerId: bill.customerId,
           billAmount: currentAmountToPay,
           billSubtotal: bill.subtotal,
-          cashbackEarnedThisBill:
-            cashbackEarnedThisBill > 0
-              ? cashbackEarnedThisBill
-              : (bill.cashbackAmount ?? 0),
+          cashbackEarnedThisBill: earnNotYetApplied
+            ? 0
+            : cashbackEarnedThisBill,
         });
 
         if (!redeemInfo) {

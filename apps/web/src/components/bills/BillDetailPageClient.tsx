@@ -506,26 +506,43 @@ export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
                 <tbody>
                   {loyaltyLogs.map((log) => {
                     const isCashback = log.valueKind === "CASHBACK";
-                    const amountDisplay =
-                      isCashback && typeof log.amount === "number"
+                    const isFreeItem = log.valueKind === "FREE_ITEM";
+                    const kindLabel = isCashback
+                      ? "Cashback"
+                      : isFreeItem
+                        ? (log.freeItemName ?? "Free Item")
+                        : (log.valueKind ?? "—");
+                    const amountDisplay = isFreeItem
+                      ? (log.freeItemName ?? "Free item")
+                      : isCashback && typeof log.amount === "number"
                         ? `₹${Math.abs(log.amount).toFixed(2)}`
                         : String(Math.abs(log.amount));
-                    const prefix =
-                      log.type === "REDEEMED"
+                    const prefix = isFreeItem
+                      ? ""
+                      : log.type === "REDEEMED"
                         ? log.isPartnerRedemption
                           ? "––"
                           : "–"
                         : "+";
+                    const sourceLabel = log.isPartnerRedemption
+                      ? "Partner"
+                      : log.source === "CAMPAIGN"
+                        ? log.campaignTitle
+                          ? `Campaign: ${log.campaignTitle}`
+                          : "Campaign"
+                        : log.source === "BILL"
+                          ? "Loyalty"
+                          : log.source === "REFERRAL"
+                            ? "Referral"
+                            : log.source;
                     return (
                       <tr key={log.id} className="border-b last:border-b-0">
-                        <td className="px-4 py-3 font-medium">
-                          {log.valueKind ?? "—"}
-                        </td>
+                        <td className="px-4 py-3 font-medium">{kindLabel}</td>
                         <td className="px-4 py-3 font-medium">
                           {formatLoyaltyType(log.type)}
                         </td>
                         <td className="text-muted-foreground px-4 py-3">
-                          {log.isPartnerRedemption ? "Partner" : log.source}
+                          {sourceLabel}
                         </td>
                         <td className="px-4 py-3 text-right tabular-nums">
                           {prefix}

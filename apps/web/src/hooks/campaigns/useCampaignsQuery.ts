@@ -28,6 +28,7 @@ export interface CampaignListItem {
   rewardValue: string | null; // raw value (e.g. "coke", "10", "200")
   offerStatement: string | null; // full sentence
   appliesTo: string;
+  startsAt: string | null;
   expiresAt: string;
   themeColor: string | null;
   bannerImage: string | null;
@@ -136,6 +137,7 @@ export interface UpdateCampaignInput {
   title?: string | null;
   description?: string | null;
   contactNumber?: string | null;
+  startsAt?: string;
   expiresAt?: string;
   targetCustomerTags?: string[];
   status?: string;

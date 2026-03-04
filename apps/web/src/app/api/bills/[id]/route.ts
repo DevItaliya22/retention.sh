@@ -70,8 +70,10 @@ export const GET = withAdminAuth<{ id: string }>(
               type: true,
               source: true,
               amount: true,
+              description: true,
               metadata: true,
               createdAt: true,
+              campaign: { select: { title: true, rewardType: true } },
             },
           },
         },
@@ -145,7 +147,10 @@ export const GET = withAdminAuth<{ id: string }>(
         createdAt: bill.createdAt.toISOString(),
         updatedAt: bill.updatedAt.toISOString(),
         loyaltyLogs: bill.transactions.map((log) => {
-          const meta = log.metadata as { redeemedAtBusinessId?: string } | null;
+          const meta = log.metadata as {
+            redeemedAtBusinessId?: string;
+            freeItemName?: string;
+          } | null;
           const redeemedAtOurStore =
             meta != null &&
             typeof meta.redeemedAtBusinessId === "string" &&
@@ -157,8 +162,9 @@ export const GET = withAdminAuth<{ id: string }>(
             type: log.type,
             source: log.source,
             amount: log.amount,
-            /** True when this redemption was partner balance used at this store (shows as --amount). */
             isPartnerRedemption: redeemedAtOurStore,
+            campaignTitle: log.campaign?.title ?? null,
+            freeItemName: meta?.freeItemName ?? null,
             createdAt: log.createdAt.toISOString(),
           };
         }),

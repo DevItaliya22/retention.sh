@@ -7,8 +7,10 @@
 //   subtotal - storeDiscount + sum(tax) = finalAmount (bill total before loyalty).
 //   cashbackRedeemedAmount = discount from wallet (prev cashback) applied this bill.
 //   cashbackAmount = cashback EARNED this bill (added to wallet; not subtracted from bill).
-//   userPaidAmount = finalAmount - cashbackRedeemedAmount (what customer actually pays).
-//   If loyalty onFinalAmount: earning calculated on (finalAmount - cashbackRedeemedAmount);
+//   campaignDiscountAmount = auto-applied discount from active campaigns.
+//   userPaidAmount = finalAmount - campaignDiscountAmount - cashbackRedeemedAmount - partnerRedeemedAmount.
+//   Loyalty earning is calculated on (finalAmount - campaignDiscountAmount) (the post-campaign amount).
+//   If loyalty onFinalAmount: earning calculated on (finalAmount - campaignDiscountAmount - cashbackRedeemedAmount);
 //   else: earning calculated on subtotal.
 //
 // Transaction: type=EARNED/REDEEMED, source=BILL, valueKind=CASHBACK or POINTS.
@@ -44,7 +46,14 @@ model Bill {
   // Which partner's balance was used on this bill (one partner per bill). Set when first partner redemption is applied; used for analytics and to block a second partner.
   redeemedFromPartnerBusinessId String?
 
-  // What the customer actually pays after cashback and partner redemption.
+  // Discount (₹) auto-applied from active campaign(s) at billing time.
+  campaignDiscountAmount Float?
+
+  // Campaign that provided the discount (first matching active campaign).
+  campaignId String?
+  campaign   Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+
+  // What the customer actually pays after campaign, cashback, and partner redemption.
   userPaidAmount Float?
 
   // Optional notes on the bill.
@@ -79,6 +88,7 @@ model Bill {
   @@index([businessId])
   @@index([customerId])
   @@index([cashierId])
+  @@index([campaignId])
   @@map("bill")
 }
 

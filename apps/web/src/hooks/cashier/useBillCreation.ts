@@ -63,6 +63,21 @@ export interface RewardStageResult {
   cashAmount: number | null;
 }
 
+export interface CampaignAppliedItem {
+  campaignId: string;
+  campaignTitle: string | null;
+  rewardType: string;
+  discountAmount: number;
+  earnedAmount: number;
+  freeItemName: string | null;
+}
+
+export interface CampaignDiscountResult {
+  totalDiscount: number;
+  appliedCampaigns: CampaignAppliedItem[];
+  primaryCampaignId: string | null;
+}
+
 export interface CreateBillResponse {
   bill: {
     id: string;
@@ -75,6 +90,9 @@ export interface CreateBillResponse {
     cashbackRedeemedAmount: number | null;
     /** Discount from redeeming partner loyalty (cashback/points) at this bill. */
     partnerRedeemedAmount: number | null;
+    /** Discount auto-applied from active campaign(s). */
+    campaignDiscountAmount: number | null;
+    campaignId: string | null;
     userPaidAmount: number | null;
     amount?: number | null;
     businessId: string;
@@ -84,6 +102,7 @@ export interface CreateBillResponse {
   } | null;
   loyalty?: LoyaltyResult;
   rewardStages?: RewardStageResult[];
+  campaignDiscount?: CampaignDiscountResult;
   error?: string;
 }
 

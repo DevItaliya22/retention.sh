@@ -38,7 +38,7 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
     const campaigns = await db.campaign.findMany({
       where: {
         businessId,
-        status: "SENT",
+        status: { in: ["ACTIVE", "EXPIRED"] },
         createdAt: { gte: from, lte: to },
       },
       select: {

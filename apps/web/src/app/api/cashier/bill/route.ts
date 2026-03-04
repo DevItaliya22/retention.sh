@@ -1,3 +1,4 @@
+import { applyCampaignForBill } from "@/lib/actions/campaign";
 import {
   applyLoyaltyForBill,
   unlockReferrerRewardIfFirstBill,
@@ -280,11 +281,23 @@ export const POST = withCashierAuth(async (request: NextRequest, context) => {
         },
       });
 
-      const loyalty = await applyLoyaltyForBill(tx, {
+      const campaignResult = await applyCampaignForBill(tx, {
         businessId,
         customerId: customer.id,
         billId: bill.id,
         billAmount: finalAmountBeforeLoyalty,
+      });
+
+      const amountAfterCampaign = Math.max(
+        0,
+        finalAmountBeforeLoyalty - campaignResult.totalDiscount,
+      );
+
+      const loyalty = await applyLoyaltyForBill(tx, {
+        businessId,
+        customerId: customer.id,
+        billId: bill.id,
+        billAmount: amountAfterCampaign,
         billSubtotal,
         redeemPointsRequested: redeemPoints ?? null,
         redeemCashbackRequested: redeemCashback ?? null,
@@ -300,6 +313,11 @@ export const POST = withCashierAuth(async (request: NextRequest, context) => {
       const updatedBill = await tx.bill.update({
         where: { id: bill.id },
         data: {
+          campaignDiscountAmount:
+            campaignResult.totalDiscount > 0
+              ? campaignResult.totalDiscount
+              : undefined,
+          campaignId: campaignResult.primaryCampaignId ?? undefined,
           cashbackAmount:
             loyalty.cashbackAmount != null ? loyalty.cashbackAmount : undefined,
           cashbackRedeemedAmount:
@@ -369,7 +387,12 @@ export const POST = withCashierAuth(async (request: NextRequest, context) => {
         }));
       }
 
-      return { bill: updatedBill, loyalty, rewardStages };
+      return {
+        bill: updatedBill,
+        loyalty,
+        rewardStages,
+        campaignDiscount: campaignResult,
+      };
     });
 
     return NextResponse.json(result);

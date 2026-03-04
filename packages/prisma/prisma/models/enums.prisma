@@ -96,9 +96,8 @@ enum RedemptionLimit {
 
 enum CampaignStatus {
   DRAFT
-  SCHEDULED
-  SENT
-  FAILED
+  ACTIVE
+  EXPIRED
 }
 
 enum CampaignChannel {

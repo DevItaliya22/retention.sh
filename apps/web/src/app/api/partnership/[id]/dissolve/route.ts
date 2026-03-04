@@ -46,9 +46,9 @@ export const POST = withAdminAuth<{ id: string }>(
         db.partnerCampaign.updateMany({
           where: {
             partnershipId,
-            status: { in: ["DRAFT", "SCHEDULED"] },
+            status: { in: ["DRAFT", "ACTIVE"] },
           },
-          data: { status: "FAILED" },
+          data: { status: "EXPIRED" },
         }),
       ]);
 

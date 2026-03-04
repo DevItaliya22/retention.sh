@@ -209,19 +209,56 @@ export const GET = withAdminAuth<{ slugId: string }>(
         createdAt: log.createdAt.toISOString(),
       }));
 
-      // Activity: merge partner redemptions + referral logs, sort by date desc, paginate
+      const walletTxLogs = await db.transaction.findMany({
+        where: {
+          businessId: context.business.id,
+          customerId: businessCustomer.customerId,
+          OR: [
+            { valueKind: "FREE_ITEM" },
+            { source: "CAMPAIGN" },
+            { source: "REFERRAL", valueKind: "CASHBACK" },
+          ],
+        },
+        include: { campaign: { select: { title: true } } },
+        orderBy: { createdAt: "desc" },
+        take: 200,
+      });
+      const walletTxMapped = walletTxLogs.map((tx) => {
+        const meta = tx.metadata as { freeItemName?: string } | null;
+        return {
+          id: tx.id,
+          valueKind: tx.valueKind,
+          txType: tx.type,
+          source: tx.source,
+          amount: tx.amount,
+          campaignTitle: tx.campaign?.title ?? null,
+          freeItemName: meta?.freeItemName ?? null,
+          createdAt: tx.createdAt.toISOString(),
+        };
+      });
+
       type ActivityPartner = (typeof partnerRedemptionsWithNames)[number] & {
         type: "partner";
       };
       type ActivityReferral = (typeof referralLogsMapped)[number] & {
         type: "referral";
       };
-      const activityAll: (ActivityPartner | ActivityReferral)[] = [
+      type ActivityWalletTx = (typeof walletTxMapped)[number] & {
+        type: "walletTx";
+      };
+      const activityAll: (
+        | ActivityPartner
+        | ActivityReferral
+        | ActivityWalletTx
+      )[] = [
         ...partnerRedemptionsWithNames.map(
           (r): ActivityPartner => ({ ...r, type: "partner" }),
         ),
         ...referralLogsMapped.map(
           (r): ActivityReferral => ({ ...r, type: "referral" }),
+        ),
+        ...walletTxMapped.map(
+          (r): ActivityWalletTx => ({ ...r, type: "walletTx" }),
         ),
       ].sort(
         (a, b) =>
