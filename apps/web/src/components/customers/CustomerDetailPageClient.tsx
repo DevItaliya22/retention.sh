@@ -12,10 +12,6 @@ import {
   Button,
   ButtonGroup,
   buttonVariants,
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
   DateDisplay,
   Separator,
   Skeleton,
@@ -27,10 +23,13 @@ import {
   TableRow,
 } from "@reelo/ui/components";
 import { cn } from "@reelo/ui/lib/utils";
+import { motion, useReducedMotion } from "framer-motion";
 import {
   ChevronLeft,
   ChevronRight,
+  ExternalLink,
   Eye,
+  Gift,
   Receipt,
   User,
   UserPlus,
@@ -57,8 +56,20 @@ function formatUnclaimedFreeItems(
     .join(", ");
 }
 
-const BILLS_PER_PAGE = 5;
-const ACTIVITY_PER_PAGE = 5;
+const BILLS_PER_PAGE = 10;
+const ACTIVITY_PER_PAGE = 10;
+
+const stagger = (prefersReduced = false) => ({
+  container: {
+    transition: prefersReduced
+      ? { duration: 0 }
+      : { staggerChildren: 0.05, delayChildren: 0.02 },
+  },
+  item: {
+    initial: prefersReduced ? { opacity: 1 } : { opacity: 0, y: 8 },
+    animate: { opacity: 1, y: 0 },
+  },
+});
 
 function PaginationRow({
   page,
@@ -79,11 +90,11 @@ function PaginationRow({
   const start = total === 0 ? 0 : (page - 1) * perPage + 1;
   const end = Math.min(page * perPage, total);
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-3">
+    <div className="flex flex-wrap items-center justify-between gap-3 border-t px-6 py-4">
       <p className="text-muted-foreground text-sm">
         {label}: {total === 0 ? "0" : `${start}–${end} of ${total}`}
       </p>
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-2">
         <Button
           variant="outline"
           size="icon"
@@ -94,8 +105,8 @@ function PaginationRow({
         >
           <ChevronLeft className="size-4" />
         </Button>
-        <span className="text-muted-foreground min-w-[4rem] text-center text-sm">
-          Page {page} of {pageCount}
+        <span className="text-muted-foreground min-w-[5rem] text-center text-sm tabular-nums">
+          {page} / {pageCount}
         </span>
         <Button
           variant="outline"
@@ -117,6 +128,7 @@ export function CustomerDetailPageClient({
 }: CustomerDetailPageClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const prefersReducedMotion = useReducedMotion();
   const billsPage = Math.max(1, Number(searchParams.get("billsPage")) || 1);
   const activityPage = Math.max(
     1,
@@ -160,14 +172,14 @@ export function CustomerDetailPageClient({
 
   if (isError) {
     return (
-      <div className="bg-muted/30 flex min-h-[280px] flex-col items-center justify-center rounded-xl border border-dashed px-6 py-16 text-center">
-        <div className="bg-destructive/10 text-destructive flex size-12 items-center justify-center rounded-full">
-          <User className="size-6" />
+      <div className="bg-muted/20 flex min-h-[320px] flex-col items-center justify-center rounded-2xl border border-dashed px-8 py-20 text-center">
+        <div className="bg-destructive/10 text-destructive flex size-14 items-center justify-center rounded-2xl">
+          <User className="size-7" />
         </div>
-        <p className="text-foreground mt-4 font-medium">
+        <p className="text-foreground mt-5 text-base font-semibold">
           Failed to load customer
         </p>
-        <p className="text-muted-foreground mt-1 text-sm">
+        <p className="text-muted-foreground mt-1.5 text-sm">
           {error?.message ?? "Please try again later"}
         </p>
       </div>
@@ -186,7 +198,7 @@ export function CustomerDetailPageClient({
   const billsTotal = customer?.billsTotal ?? 0;
   const activityTotal = customer?.activityTotal ?? 0;
   const activityItems = customer?.activityItems ?? [];
-  const hasActivity = activityTotal > 0 || Boolean(customer?.referredBy);
+  const hasActivity = activityTotal > 0;
 
   const loyaltyUrl =
     typeof window !== "undefined" && customer?.phone && customer?.businessSlug
@@ -204,366 +216,422 @@ export function CustomerDetailPageClient({
       ? formatUnclaimedFreeItems(customer.freeItems)
       : null;
 
-  return (
-    <div className="space-y-6">
-      {/* Single panel: name, email, number, then loyalty; link buttons in ButtonGroup */}
-      <div className="bg-muted/20 flex flex-col gap-4 rounded-xl border px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
-        <div className="min-w-0 flex-1 space-y-3">
-          {isLoading && !customer ? (
-            <Skeleton className="h-6 w-64" />
-          ) : (
-            <div className="flex flex-wrap items-center gap-x-2 text-sm">
-              <span className="font-semibold">{customer?.name ?? "—"}</span>
-              <Separator orientation="vertical" className="h-4" />
-              <span className="text-muted-foreground truncate">
-                {customer?.email ?? "—"}
-              </span>
-              <Separator orientation="vertical" className="h-4" />
-              <span className="text-muted-foreground tabular-nums">
-                {customer?.phone ?? "—"}
-              </span>
-            </div>
-          )}
-          <Separator />
-          {isLoading && !customer ? (
-            <Skeleton className="h-5 w-72" />
-          ) : (
-            <div className="text-muted-foreground text-sm">
-              Cashback{" "}
-              <span className="text-foreground font-medium tabular-nums">
-                {customer?.cashbackBalance != null
-                  ? `₹${customer.cashbackBalance.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                  : "—"}
-              </span>
-              {" · "}
-              Points{" "}
-              <span className="text-foreground font-medium tabular-nums">
-                {customer?.pointsBalance != null
-                  ? customer.pointsBalance.toLocaleString("en-IN")
-                  : "—"}
-              </span>
-              {" · "}
-              Free (unclaimed): {unclaimedFreeItemsDisplay ?? "—"}
-            </div>
-          )}
-        </div>
-        {(hasLoyaltyLink || hasReferralLink) && !isLoading && (
-          <ButtonGroup className="shrink-0">
-            {hasLoyaltyLink && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  window.open(loyaltyUrl, "_blank", "noopener,noreferrer")
-                }
-              >
-                Loyalty
-              </Button>
-            )}
-            {hasReferralLink && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  window.open(referralUrl, "_blank", "noopener,noreferrer")
-                }
-              >
-                Referral
-              </Button>
-            )}
-          </ButtonGroup>
-        )}
-      </div>
+  const s = stagger(!!prefersReducedMotion);
 
-      {/* Activity: merged list (partner redemptions + referral logs), paginated */}
-      {hasActivity && !isLoading && customer && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Activity</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {customer.referredBy && (
-              <div>
-                <p className="text-muted-foreground mb-1 text-xs font-medium tracking-wide uppercase">
+  return (
+    <motion.div
+      className="space-y-8"
+      initial="initial"
+      animate="animate"
+      variants={s.container}
+    >
+      {/* Hero */}
+      <motion.section
+        variants={s.item}
+        className="from-muted/30 via-muted/10 relative overflow-hidden rounded-2xl border bg-gradient-to-br to-transparent px-6 py-6 sm:px-8 sm:py-8"
+      >
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,hsl(var(--primary)/0.06),transparent)]" />
+        <div className="relative flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0 flex-1 space-y-4">
+            <div>
+              <p className="text-muted-foreground text-[11px] font-medium tracking-widest uppercase">
+                Customer
+              </p>
+              {isLoading && !customer ? (
+                <Skeleton className="mt-1 h-8 w-56" />
+              ) : (
+                <p className="mt-1 text-xl font-semibold tracking-tight">
+                  {customer?.name ?? "—"}
+                </p>
+              )}
+            </div>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+              {isLoading && !customer ? (
+                <Skeleton className="h-5 w-40" />
+              ) : (
+                <>
+                  <span className="text-muted-foreground truncate">
+                    {customer?.email ?? "—"}
+                  </span>
+                  <Separator orientation="vertical" className="h-4" />
+                  <span className="text-muted-foreground tabular-nums">
+                    {customer?.phone ?? "—"}
+                  </span>
+                </>
+              )}
+            </div>
+            <Separator />
+            {isLoading && !customer ? (
+              <Skeleton className="h-6 w-72" />
+            ) : (
+              <div className="text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+                <span>
+                  Cashback{" "}
+                  <span className="text-foreground font-mono font-medium tabular-nums">
+                    {customer?.cashbackBalance != null
+                      ? `₹${customer.cashbackBalance.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                      : "—"}
+                  </span>
+                </span>
+                <span>
+                  Points{" "}
+                  <span className="text-foreground font-mono font-medium tabular-nums">
+                    {customer?.pointsBalance != null
+                      ? customer.pointsBalance.toLocaleString("en-IN")
+                      : "—"}
+                  </span>
+                </span>
+                <span>
+                  Free (unclaimed): {unclaimedFreeItemsDisplay ?? "—"}
+                </span>
+              </div>
+            )}
+            {!isLoading && customer?.referredBy && (
+              <div className="mt-4 flex items-center gap-2 border-t pt-4">
+                <p className="text-muted-foreground text-[11px] font-medium tracking-wider uppercase">
                   Referred by
                 </p>
                 <Link
                   href={`/customers/${customer.referredBy.slugId}`}
                   className={cn(
                     buttonVariants({ variant: "ghost", size: "sm" }),
-                    "h-auto justify-start gap-2 font-medium",
+                    "h-auto justify-start gap-2 py-1 font-medium",
                   )}
                 >
-                  <UserPlus className="text-muted-foreground size-4" />
+                  <UserPlus className="text-muted-foreground size-4 shrink-0" />
                   {customer.referredBy.name}
                 </Link>
               </div>
             )}
-            {activityItems.length > 0 ? (
-              <>
-                <div className="overflow-hidden rounded-lg border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="hover:bg-transparent">
-                        <TableHead className="text-xs">Type</TableHead>
-                        <TableHead className="text-xs">Date</TableHead>
-                        <TableHead className="text-xs">Details</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {activityItems.map((item: CustomerActivityItem) => {
-                        if (item.type === "partner") {
-                          return (
-                            <TableRow key={`p-${item.id}`}>
-                              <TableCell className="text-xs font-medium">
-                                Partner
-                              </TableCell>
-                              <TableCell className="text-muted-foreground text-sm">
-                                <DateDisplay date={item.createdAt} />
-                              </TableCell>
-                              <TableCell className="text-sm">
-                                {item.valueKind === "CASHBACK"
-                                  ? `₹${item.amount.toFixed(2)}`
-                                  : `${Math.abs(Math.floor(item.amount))} pts`}{" "}
-                                at{" "}
-                                {item.redeemedAtBusinessName ??
-                                  item.redeemedAtBusinessId}
-                              </TableCell>
-                            </TableRow>
-                          );
-                        }
-                        if (item.type === "referral") {
-                          return (
-                            <TableRow key={`r-${item.id}`}>
-                              <TableCell className="text-xs font-medium">
-                                Referral
-                              </TableCell>
-                              <TableCell className="text-muted-foreground text-sm">
-                                <DateDisplay date={item.createdAt} />
-                              </TableCell>
-                              <TableCell className="text-sm">
-                                {item.newCustomerName || "—"} (
-                                {item.newCustomerPhone})
-                                {item.becameCustomer && (
-                                  <Badge
-                                    variant="secondary"
-                                    size="xs"
-                                    className="ml-2"
-                                  >
-                                    Claimed
-                                  </Badge>
-                                )}
-                              </TableCell>
-                            </TableRow>
-                          );
-                        }
-                        const isFreeItem = item.valueKind === "FREE_ITEM";
-                        const isCashback = item.valueKind === "CASHBACK";
-                        const sourceLabel =
-                          item.source === "CAMPAIGN"
-                            ? item.campaignTitle
-                              ? `Campaign: ${item.campaignTitle}`
-                              : "Campaign"
-                            : item.source === "REFERRAL"
-                              ? "Referral"
-                              : item.source;
-                        const itemName = isFreeItem
-                          ? (item.freeItemName ?? "Free item")
-                          : null;
-                        const typeLabel = isFreeItem
-                          ? item.txType === "EARNED"
-                            ? `${itemName} Earned`
-                            : `${itemName} Claimed`
-                          : isCashback
+          </div>
+          {(hasLoyaltyLink || hasReferralLink) && !isLoading && (
+            <ButtonGroup className="shrink-0 gap-2">
+              {hasLoyaltyLink && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={() =>
+                    window.open(loyaltyUrl, "_blank", "noopener,noreferrer")
+                  }
+                >
+                  Loyalty
+                  <ExternalLink className="size-3.5" />
+                </Button>
+              )}
+              {hasReferralLink && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={() =>
+                    window.open(referralUrl, "_blank", "noopener,noreferrer")
+                  }
+                >
+                  Referral
+                  <ExternalLink className="size-3.5" />
+                </Button>
+              )}
+            </ButtonGroup>
+          )}
+        </div>
+      </motion.section>
+
+      {/* Activity */}
+      {hasActivity && !isLoading && customer && (
+        <motion.section variants={s.item}>
+          <div className="bg-card overflow-hidden rounded-2xl border shadow-sm">
+            <div className="bg-muted/20 border-b px-6 py-4">
+              <h3 className="text-foreground/90 flex items-center gap-2 text-sm font-semibold tracking-wider uppercase">
+                <Gift className="text-muted-foreground size-4" />
+                Activity
+              </h3>
+            </div>
+            <div className="space-y-5 p-6">
+              {activityItems.length > 0 || activityTotal > 0 ? (
+                <>
+                  {activityItems.length > 0 && (
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-muted/30 border-b hover:bg-transparent">
+                          <TableHead className="px-6 py-3 font-medium">
+                            Type
+                          </TableHead>
+                          <TableHead className="px-6 py-3 font-medium">
+                            Date
+                          </TableHead>
+                          <TableHead className="px-6 py-3 font-medium">
+                            Details
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {activityItems.map((item: CustomerActivityItem) => {
+                          if (item.type === "partner") {
+                            return (
+                              <TableRow
+                                key={`p-${item.id}`}
+                                className="border-b last:border-b-0"
+                              >
+                                <TableCell className="px-6 py-3 font-medium">
+                                  Partner
+                                </TableCell>
+                                <TableCell className="text-muted-foreground px-6 py-3 text-sm">
+                                  <DateDisplay date={item.createdAt} />
+                                </TableCell>
+                                <TableCell className="px-6 py-3 text-sm">
+                                  {item.valueKind === "CASHBACK"
+                                    ? `₹${item.amount.toFixed(2)}`
+                                    : `${Math.abs(Math.floor(item.amount))} pts`}{" "}
+                                  at{" "}
+                                  {item.redeemedAtBusinessName ??
+                                    item.redeemedAtBusinessId}
+                                </TableCell>
+                              </TableRow>
+                            );
+                          }
+                          if (item.type === "referral") {
+                            return (
+                              <TableRow
+                                key={`r-${item.id}`}
+                                className="border-b last:border-b-0"
+                              >
+                                <TableCell className="px-6 py-3 font-medium">
+                                  Referral
+                                </TableCell>
+                                <TableCell className="text-muted-foreground px-6 py-3 text-sm">
+                                  <DateDisplay date={item.createdAt} />
+                                </TableCell>
+                                <TableCell className="px-6 py-3 text-sm">
+                                  {item.newCustomerName || "—"} (
+                                  {item.newCustomerPhone})
+                                  {item.becameCustomer && (
+                                    <Badge
+                                      variant="secondary"
+                                      size="xs"
+                                      className="ml-2"
+                                    >
+                                      Claimed
+                                    </Badge>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            );
+                          }
+                          const isFreeItem = item.valueKind === "FREE_ITEM";
+                          const isCashback = item.valueKind === "CASHBACK";
+                          const sourceLabel =
+                            item.source === "CAMPAIGN"
+                              ? item.campaignTitle
+                                ? `Campaign: ${item.campaignTitle}`
+                                : "Campaign"
+                              : item.source === "REFERRAL"
+                                ? "Referral"
+                                : item.source;
+                          const itemName = isFreeItem
+                            ? (item.freeItemName ?? "Free item")
+                            : null;
+                          const typeLabel = isFreeItem
                             ? item.txType === "EARNED"
-                              ? "Cashback Earned"
-                              : "Cashback Redeemed"
-                            : item.txType;
-                        const amountLabel = isFreeItem
-                          ? itemName!
-                          : isCashback
-                            ? `${item.amount > 0 ? "+" : "−"}₹${Math.abs(item.amount).toFixed(2)}`
-                            : `${item.amount > 0 ? "+" : "−"}${Math.abs(item.amount)} pts`;
-                        return (
-                          <TableRow key={`tx-${item.id}`}>
-                            <TableCell className="text-xs font-medium">
-                              {typeLabel}
-                            </TableCell>
-                            <TableCell className="text-muted-foreground text-sm">
-                              <DateDisplay date={item.createdAt} />
-                            </TableCell>
-                            <TableCell className="text-sm">
-                              {amountLabel}{" "}
-                              <span className="text-muted-foreground">
-                                ({sourceLabel})
-                              </span>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                </div>
-                <PaginationRow
-                  label="Activity"
-                  page={activityPage}
-                  total={activityTotal}
-                  perPage={ACTIVITY_PER_PAGE}
-                  onPrev={() => setActivityPage(activityPage - 1)}
-                  onNext={() => setActivityPage(activityPage + 1)}
-                />
-              </>
-            ) : activityTotal === 0 && !customer.referredBy ? null : (
-              <p className="text-muted-foreground text-sm">
-                No activity on this page.
-              </p>
-            )}
-          </CardContent>
-        </Card>
+                              ? `${itemName} Earned`
+                              : `${itemName} Claimed`
+                            : isCashback
+                              ? item.txType === "EARNED"
+                                ? "Cashback Earned"
+                                : "Cashback Redeemed"
+                              : item.txType;
+                          const amountLabel = isFreeItem
+                            ? itemName!
+                            : isCashback
+                              ? `${item.amount > 0 ? "+" : "−"}₹${Math.abs(item.amount).toFixed(2)}`
+                              : `${item.amount > 0 ? "+" : "−"}${Math.abs(item.amount)} pts`;
+                          return (
+                            <TableRow
+                              key={`tx-${item.id}`}
+                              className="border-b last:border-b-0"
+                            >
+                              <TableCell className="px-6 py-3 font-medium">
+                                {typeLabel}
+                              </TableCell>
+                              <TableCell className="text-muted-foreground px-6 py-3 text-sm">
+                                <DateDisplay date={item.createdAt} />
+                              </TableCell>
+                              <TableCell className="px-6 py-3 text-sm">
+                                {amountLabel}{" "}
+                                <span className="text-muted-foreground">
+                                  ({sourceLabel})
+                                </span>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  )}
+                  <PaginationRow
+                    label="Activity"
+                    page={activityPage}
+                    total={activityTotal}
+                    perPage={ACTIVITY_PER_PAGE}
+                    onPrev={() => setActivityPage(activityPage - 1)}
+                    onNext={() => setActivityPage(activityPage + 1)}
+                  />
+                </>
+              ) : activityTotal === 0 ? null : (
+                <p className="text-muted-foreground text-sm">
+                  No activity on this page.
+                </p>
+              )}
+            </div>
+          </div>
+        </motion.section>
       )}
 
       {/* Bills */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Receipt className="text-muted-foreground size-4" />
-            Bills
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-0">
+      <motion.section variants={s.item}>
+        <div className="bg-card overflow-hidden rounded-2xl border shadow-sm">
+          <div className="bg-muted/20 border-b px-6 py-4">
+            <h3 className="text-foreground/90 flex items-center gap-2 text-sm font-semibold tracking-wider uppercase">
+              <Receipt className="text-muted-foreground size-4" />
+              Bills
+            </h3>
+          </div>
           {showBillsSkeleton ? (
-            <div className="space-y-2">
-              {[1, 2, 3].map((i) => (
-                <Skeleton key={i} className="h-12 w-full rounded-lg" />
+            <div className="space-y-0 p-6">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <Skeleton key={i} className="h-14 w-full rounded-lg" />
               ))}
             </div>
           ) : bills.length === 0 ? (
-            <div className="bg-muted/20 flex flex-col items-center justify-center rounded-lg border border-dashed py-12 text-center">
-              <div className="text-muted-foreground bg-muted flex size-10 items-center justify-center rounded-full">
-                <Receipt className="size-5" />
+            <div className="flex flex-col items-center justify-center border-b border-dashed py-16 text-center">
+              <div className="text-muted-foreground bg-muted/50 flex size-12 items-center justify-center rounded-2xl">
+                <Receipt className="size-6" />
               </div>
-              <p className="text-foreground mt-3 text-sm font-medium">
+              <p className="text-foreground mt-4 text-sm font-medium">
                 No bills yet
               </p>
-              <p className="text-muted-foreground mt-1 max-w-[240px] text-xs">
+              <p className="text-muted-foreground mt-1.5 max-w-[260px] text-sm">
                 Bills will appear here after purchases.
               </p>
             </div>
           ) : (
             <>
-              <div className="overflow-hidden rounded-lg border">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-b hover:bg-transparent">
-                      <TableHead className="font-medium">Bill #</TableHead>
-                      <TableHead className="text-right font-medium">
-                        Amount
-                      </TableHead>
-                      <TableHead className="text-right font-medium">
-                        Cashback
-                      </TableHead>
-                      <TableHead className="font-medium">Date</TableHead>
-                      <TableHead className="w-12" />
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {bills.map((bill) => {
-                      const amount =
-                        bill.amount ??
-                        bill.userPaidAmount ??
-                        bill.finalAmount ??
-                        null;
-                      const hasCashbackEarned = (bill.cashbackAmount ?? 0) > 0;
-                      const hasCashbackRedeemed =
-                        (bill.cashbackRedeemedAmount ?? 0) > 0;
-                      const hasCashback =
-                        hasCashbackEarned || hasCashbackRedeemed;
-                      return (
-                        <TableRow key={bill.id} className="group">
-                          <TableCell className="font-mono text-sm font-medium">
-                            {bill.billNumber}
-                          </TableCell>
-                          <TableCell className="text-right font-medium tabular-nums">
-                            {amount != null
-                              ? `₹${amount.toLocaleString("en-IN", {
-                                  minimumFractionDigits: 2,
-                                  maximumFractionDigits: 2,
-                                })}`
-                              : "—"}
-                          </TableCell>
-                          <TableCell className="text-right text-sm tabular-nums">
-                            {hasCashback ? (
-                              <span className="text-muted-foreground flex flex-col items-end gap-0.5">
-                                {hasCashbackEarned && (
-                                  <span className="text-emerald-600 dark:text-emerald-400">
-                                    +₹
-                                    {(bill.cashbackAmount ?? 0).toLocaleString(
-                                      "en-IN",
-                                      {
-                                        minimumFractionDigits: 2,
-                                        maximumFractionDigits: 2,
-                                      },
-                                    )}{" "}
-                                    earned
-                                  </span>
-                                )}
-                                {hasCashbackRedeemed && (
-                                  <span className="text-blue-600 dark:text-blue-400">
-                                    −₹
-                                    {(
-                                      bill.cashbackRedeemedAmount ?? 0
-                                    ).toLocaleString("en-IN", {
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/30 border-b hover:bg-transparent">
+                    <TableHead className="px-6 py-4 font-medium">
+                      Bill #
+                    </TableHead>
+                    <TableHead className="px-6 py-4 text-right font-medium">
+                      Amount
+                    </TableHead>
+                    <TableHead className="px-6 py-4 text-right font-medium">
+                      Cashback
+                    </TableHead>
+                    <TableHead className="px-6 py-4 font-medium">
+                      Date
+                    </TableHead>
+                    <TableHead className="w-14 px-6 py-4" />
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {bills.map((bill) => {
+                    const amount =
+                      bill.amount ??
+                      bill.userPaidAmount ??
+                      bill.finalAmount ??
+                      null;
+                    const hasCashbackEarned = (bill.cashbackAmount ?? 0) > 0;
+                    const hasCashbackRedeemed =
+                      (bill.cashbackRedeemedAmount ?? 0) > 0;
+                    const hasCashback =
+                      hasCashbackEarned || hasCashbackRedeemed;
+                    return (
+                      <TableRow
+                        key={bill.id}
+                        className="group border-b last:border-b-0"
+                      >
+                        <TableCell className="px-6 py-3 font-mono text-sm font-medium">
+                          {bill.billNumber}
+                        </TableCell>
+                        <TableCell className="px-6 py-3 text-right font-mono font-medium tabular-nums">
+                          {amount != null
+                            ? `₹${amount.toLocaleString("en-IN", {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })}`
+                            : "—"}
+                        </TableCell>
+                        <TableCell className="px-6 py-3 text-right text-sm tabular-nums">
+                          {hasCashback ? (
+                            <span className="flex flex-col items-end gap-0.5">
+                              {hasCashbackEarned && (
+                                <span className="text-emerald-600 dark:text-emerald-400">
+                                  +₹
+                                  {(bill.cashbackAmount ?? 0).toLocaleString(
+                                    "en-IN",
+                                    {
                                       minimumFractionDigits: 2,
                                       maximumFractionDigits: 2,
-                                    })}{" "}
-                                    redeemed
-                                  </span>
-                                )}
-                              </span>
-                            ) : (
-                              "—"
-                            )}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground text-sm">
-                            <DateDisplay date={bill.createdAt} />
-                          </TableCell>
-                          <TableCell>
-                            <Link
-                              href={`/bills/${bill.id}`}
-                              aria-label={`View bill ${bill.billNumber}`}
-                              className={cn(
-                                buttonVariants({
-                                  variant: "ghost",
-                                  size: "xs",
-                                }),
-                                "h-8 w-8 p-0 opacity-70 transition-opacity hover:opacity-100",
+                                    },
+                                  )}{" "}
+                                  earned
+                                </span>
                               )}
-                            >
-                              <Eye className="size-4" />
-                            </Link>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-              {bills.length > 0 && (
-                <PaginationRow
-                  label="Bills"
-                  page={billsPage}
-                  total={billsTotal}
-                  perPage={BILLS_PER_PAGE}
-                  onPrev={() => setBillsPage(billsPage - 1)}
-                  onNext={() => setBillsPage(billsPage + 1)}
-                />
-              )}
+                              {hasCashbackRedeemed && (
+                                <span className="text-blue-600 dark:text-blue-400">
+                                  −₹
+                                  {(
+                                    bill.cashbackRedeemedAmount ?? 0
+                                  ).toLocaleString("en-IN", {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  })}{" "}
+                                  redeemed
+                                </span>
+                              )}
+                            </span>
+                          ) : (
+                            "—"
+                          )}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground px-6 py-3 text-sm">
+                          <DateDisplay date={bill.createdAt} />
+                        </TableCell>
+                        <TableCell className="px-6 py-3">
+                          <Link
+                            href={`/bills/${bill.id}`}
+                            aria-label={`View bill ${bill.billNumber}`}
+                            className={cn(
+                              buttonVariants({
+                                variant: "ghost",
+                                size: "xs",
+                              }),
+                              "h-8 w-8 p-0 opacity-70 transition-opacity hover:opacity-100",
+                            )}
+                          >
+                            <Eye className="size-4" />
+                          </Link>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+              <PaginationRow
+                label="Bills"
+                page={billsPage}
+                total={billsTotal}
+                perPage={BILLS_PER_PAGE}
+                onPrev={() => setBillsPage(billsPage - 1)}
+                onNext={() => setBillsPage(billsPage + 1)}
+              />
             </>
           )}
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+      </motion.section>
+    </motion.div>
   );
 }

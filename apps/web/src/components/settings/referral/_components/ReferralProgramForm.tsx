@@ -64,6 +64,9 @@ export function ReferralProgramForm({
               ? values.existingCustomerFreeItemSkuId || null
               : null,
           sendReminderToCustomer: values.sendReminderToCustomer,
+          whatsappEnabled: values.whatsappEnabled ?? false,
+          emailEnabled: values.emailEnabled ?? false,
+          smsEnabled: values.smsEnabled ?? false,
           lockReferralPointsUntilFirstPurchase:
             values.lockReferralPointsUntilFirstPurchase ?? false,
           informationSections: [], // Information sections temporarily disabled
@@ -133,6 +136,9 @@ export function ReferralProgramForm({
           "existingCustomerFreeItemSkuId",
           "existingCustomerBenefitExpiresInDays",
           "lockReferralPointsUntilFirstPurchase",
+          "whatsappEnabled",
+          "emailEnabled",
+          "smsEnabled",
           "termsAndConditionsNewCustomer",
           "termsAndConditionsExistingCustomer",
         ],
@@ -188,6 +194,9 @@ export function ReferralProgramForm({
           initialData.existingCustomerBenefitExpiresInDays,
         lockReferralPointsUntilFirstPurchase:
           initialData.lockReferralPointsUntilFirstPurchase ?? false,
+        whatsappEnabled: initialData.whatsappEnabled ?? false,
+        emailEnabled: initialData.emailEnabled ?? false,
+        smsEnabled: initialData.smsEnabled ?? false,
         sendReminderToCustomer: initialData.sendReminderToCustomer,
         informationSections: initialData.informationSections || [],
         branding: initialData.branding,
@@ -215,7 +224,10 @@ export function ReferralProgramForm({
         existingCustomerBenefitType: "AMOUNT_CASHBACK",
         existingCustomerBenefitValue: 50,
         existingCustomerFreeItemSkuId: null,
-        lockReferralPointsUntilFirstPurchase: false,
+        lockReferralPointsUntilFirstPurchase: true,
+        whatsappEnabled: false,
+        emailEnabled: false,
+        smsEnabled: false,
         sendReminderToCustomer: false,
         informationSections: [],
         branding: null,

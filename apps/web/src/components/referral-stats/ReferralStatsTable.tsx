@@ -317,6 +317,8 @@ export function ReferralStatsTable() {
   return (
     <DataTable
       table={table}
+      className="[&>div:last-child]:p-0"
+      expandedRowContentClassName="p-0"
       enableExpanding
       expandedRows={expandedRows}
       onExpandedRowsChange={setExpandedRows}

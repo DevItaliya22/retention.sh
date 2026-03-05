@@ -42,6 +42,10 @@ interface RedeemInfo {
   }>;
   /** True when this bill was already redeemed (one redemption per bill). */
   alreadyRedeemedOnThisBill?: boolean;
+  /** Locked cashback (Shopify return window). Not redeemable. */
+  lockedCashback?: number;
+  /** Locked referral cashback (until referred's first bill). Not redeemable. */
+  lockedReferralCashback?: number;
 }
 
 interface FreeItemToClaim {
@@ -68,6 +72,8 @@ interface PartnerRedeemableItem {
   balance: number;
   valueAtCurrentStore: number;
   maxRedeemableOnBill: number;
+  lockedCashback?: number;
+  lockedReferralCashback?: number;
 }
 
 interface RedeemInfoBill {
@@ -701,10 +707,31 @@ export function BillCreatedView({
                     ((bill.pendingCashbackEarn ?? 0) > 0 ||
                       (bill.pendingPointsEarn ?? 0) > 0)
                       ? isCashback
-                        ? `Available: ₹${(redeemInfo.balance ?? 0).toFixed(2)} (existing) + ₹${(bill.pendingCashbackEarn ?? 0).toFixed(2)} from this bill (not redeemable until you finish). Max redeemable now: ₹${redeemInfo.maxRedeemable.toFixed(2)}`
+                        ? (() => {
+                            const unlocked = redeemInfo.balance ?? 0;
+                            const locked =
+                              (redeemInfo.lockedCashback ?? 0) +
+                              (redeemInfo.lockedReferralCashback ?? 0);
+                            const pending = bill.pendingCashbackEarn ?? 0;
+                            const lockedPart =
+                              locked > 0
+                                ? ` · ₹${locked.toFixed(2)} locked`
+                                : "";
+                            return `Available: ₹${unlocked.toFixed(2)} (unlocked)${lockedPart} + ₹${pending.toFixed(2)} from this bill (not redeemable until you finish). Max redeemable now: ₹${redeemInfo.maxRedeemable.toFixed(2)}`;
+                          })()
                         : `Available: ₹${(redeemInfo.cashbackBalance ?? 0).toFixed(2)} cashback · ${redeemInfo.pointsBalance ?? 0} points + ${bill.pendingPointsEarn ?? 0} pts from this bill (not redeemable until you finish). Max on bill: ${redeemInfo.maxRedeemable} pts`
                       : isCashback
-                        ? `Available: ₹${(redeemInfo.balance ?? 0).toFixed(2)} · Max on this bill: ₹${redeemInfo.maxRedeemable.toFixed(2)}`
+                        ? (() => {
+                            const unlocked = redeemInfo.balance ?? 0;
+                            const locked =
+                              (redeemInfo.lockedCashback ?? 0) +
+                              (redeemInfo.lockedReferralCashback ?? 0);
+                            const lockedPart =
+                              locked > 0
+                                ? ` · ₹${locked.toFixed(2)} locked`
+                                : "";
+                            return `Available: ₹${unlocked.toFixed(2)} (unlocked)${lockedPart} · Max on this bill: ₹${redeemInfo.maxRedeemable.toFixed(2)}`;
+                          })()
                         : `Cashback: ₹${(redeemInfo.cashbackBalance ?? 0).toFixed(2)} · Points: ${redeemInfo.pointsBalance ?? 0} (convert via reward below)`}
                   </p>
                   <div className="space-y-4">
@@ -898,9 +925,18 @@ export function BillCreatedView({
                               {p.partnerBusinessName}
                             </span>
                             <span className="text-muted-foreground text-sm">
-                              {balanceLabel} at partner → ₹
-                              {p.valueAtCurrentStore.toFixed(2)} here · max ₹
-                              {p.maxRedeemableOnBill.toFixed(2)} on this bill
+                              {isPartnerCashback
+                                ? (() => {
+                                    const locked =
+                                      (p.lockedCashback ?? 0) +
+                                      (p.lockedReferralCashback ?? 0);
+                                    const lockedPart =
+                                      locked > 0
+                                        ? ` · ₹${locked.toFixed(2)} locked`
+                                        : "";
+                                    return `₹${p.balance.toFixed(2)} (unlocked)${lockedPart} at partner → ₹${p.valueAtCurrentStore.toFixed(2)} here · max ₹${p.maxRedeemableOnBill.toFixed(2)} on this bill`;
+                                  })()
+                                : `${balanceLabel} at partner → ₹${p.valueAtCurrentStore.toFixed(2)} here · max ₹${p.maxRedeemableOnBill.toFixed(2)} on this bill`}
                             </span>
                           </div>
                           {billUsedAnotherPartner ? (

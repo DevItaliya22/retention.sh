@@ -121,40 +121,6 @@ export function BillsTable() {
         },
       },
       {
-        id: "items",
-        accessorKey: "lineItems",
-        size: 100,
-        minSize: 80,
-        maxSize: 120,
-        header: () => (
-          <div className="text-center">
-            <span>Items</span>
-          </div>
-        ),
-        cell: ({ row }) => {
-          const bill = row.original;
-          if (bill.id === "empty-state") {
-            return null;
-          }
-          if (isLoading && bill.id.startsWith("skeleton-")) {
-            return (
-              <div className="flex justify-center">
-                <Skeleton className="h-4 w-8" />
-              </div>
-            );
-          }
-          const count = bill.lineItems?.length ?? 0;
-          const totalQty =
-            bill.lineItems?.reduce((s, li) => s + li.qty, 0) ?? 0;
-          return (
-            <div className="text-muted-foreground flex justify-center text-sm tabular-nums">
-              {count === 0 ? "—" : totalQty}
-            </div>
-          );
-        },
-        enableSorting: false,
-      },
-      {
         id: "amount",
         accessorKey: "amount",
         size: 120,
@@ -201,6 +167,40 @@ export function BillsTable() {
           label: "Amount paid",
           variant: "range" as const,
         },
+      },
+      {
+        id: "items",
+        accessorKey: "lineItems",
+        size: 100,
+        minSize: 80,
+        maxSize: 120,
+        header: () => (
+          <div className="text-center">
+            <span>Items</span>
+          </div>
+        ),
+        cell: ({ row }) => {
+          const bill = row.original;
+          if (bill.id === "empty-state") {
+            return null;
+          }
+          if (isLoading && bill.id.startsWith("skeleton-")) {
+            return (
+              <div className="flex justify-center">
+                <Skeleton className="h-4 w-8" />
+              </div>
+            );
+          }
+          const count = bill.lineItems?.length ?? 0;
+          const totalQty =
+            bill.lineItems?.reduce((s, li) => s + li.qty, 0) ?? 0;
+          return (
+            <div className="text-muted-foreground flex justify-center text-sm tabular-nums">
+              {count === 0 ? "—" : totalQty}
+            </div>
+          );
+        },
+        enableSorting: false,
       },
       {
         id: "redeemed",

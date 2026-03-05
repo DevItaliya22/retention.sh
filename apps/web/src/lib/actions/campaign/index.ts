@@ -147,6 +147,53 @@ export async function applyCampaignForBill(
 
   const discountCampaign = appliedCampaigns.find((c) => c.discountAmount > 0);
 
+  if (appliedCampaigns.length > 0) {
+    const customer = await tx.customer.findUnique({
+      where: { id: customerId },
+      include: { user: { select: { phoneNumber: true } } },
+    });
+    const phone = customer?.user?.phoneNumber;
+    const email = customer?.email;
+
+    const { logCampaignAppliedEmail, logCampaignAppliedWhatsApp } =
+      await import("@/lib/messaging");
+
+    for (const applied of appliedCampaigns) {
+      const campaign = activeCampaigns.find((c) => c.id === applied.campaignId);
+      if (!campaign || (!campaign.whatsappEnabled && !campaign.emailEnabled))
+        continue;
+
+      const rewardDesc =
+        applied.rewardType === "FREE_ITEM"
+          ? (applied.freeItemName ?? "Free item")
+          : applied.rewardType === "CASH_DISCOUNT"
+            ? `₹${(applied.earnedAmount ?? applied.discountAmount ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })} off`
+            : applied.rewardType === "PERCENTAGE_DISCOUNT"
+              ? `${(((applied.earnedAmount ?? applied.discountAmount ?? 0) / (billAmount || 1)) * 100).toFixed(0)}% off`
+              : "Reward earned";
+      const title = applied.campaignTitle ?? "Campaign reward";
+
+      if (campaign.whatsappEnabled && phone) {
+        await logCampaignAppliedWhatsApp(tx, {
+          businessId,
+          recipient: phone,
+          campaignTitle: title,
+          rewardDescription: rewardDesc,
+          sourceId: billId,
+        });
+      }
+      if (campaign.emailEnabled && email) {
+        await logCampaignAppliedEmail(tx, {
+          businessId,
+          recipient: email,
+          campaignTitle: title,
+          rewardDescription: rewardDesc,
+          sourceId: billId,
+        });
+      }
+    }
+  }
+
   return {
     totalDiscount,
     appliedCampaigns,

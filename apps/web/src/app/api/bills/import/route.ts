@@ -4,6 +4,11 @@ import {
 } from "@/lib/actions/loyalty";
 import { withAdminAuth } from "@/lib/auth/middleware";
 import { APP_CONSTANTS } from "@/lib/constants/app";
+import {
+  logFeedbackLinkEmail,
+  logFeedbackLinkSms,
+  logFeedbackLinkWhatsApp,
+} from "@/lib/messaging";
 import { billImportSchema } from "@/lib/schemas/bill";
 import {
   sanitizeErrorMessage,
@@ -170,7 +175,7 @@ export const POST = withAdminAuth(async (request: NextRequest, context) => {
       try {
         const formattedPhone = formatPhoneNumber(item.phoneNumber.trim());
 
-        const { customer } = await findOrCreateCustomer({
+        const { user, customer } = await findOrCreateCustomer({
           phoneNumber: formattedPhone,
           name: item.name ?? undefined,
           email: item.email ?? undefined,
@@ -243,17 +248,56 @@ export const POST = withAdminAuth(async (request: NextRequest, context) => {
             },
           });
 
-          // One feedback link per bill; attach business's feedback config if set
           const feedbackConfig = await tx.feedbackConfig.findUnique({
             where: { businessId },
-            select: { id: true },
+            select: { id: true, collectionChannel: true },
           });
-          await tx.feedbackLink.create({
+          const feedbackLink = await tx.feedbackLink.create({
             data: {
               billId: bill.id,
               configId: feedbackConfig?.id ?? undefined,
             },
           });
+
+          if (feedbackConfig?.collectionChannel) {
+            const business = await tx.business.findUnique({
+              where: { id: businessId },
+              select: { slug: true },
+            });
+            const baseUrl = process.env.NEXT_PUBLIC_URL || "https://dy.com";
+            const feedbackUrl = `${baseUrl}/feedback/${business?.slug ?? ""}/${feedbackLink.token}`;
+            const recipient =
+              feedbackConfig.collectionChannel === "EMAIL"
+                ? (user.email ??
+                  `${formattedPhone}@${APP_CONSTANTS.CUSTOMER_EMAIL_DOMAIN}`)
+                : formattedPhone;
+
+            if (feedbackConfig.collectionChannel === "WHATSAPP") {
+              await logFeedbackLinkWhatsApp(tx, {
+                businessId,
+                recipient,
+                feedbackUrl,
+                billNumber: item.billNumber,
+                sourceId: feedbackLink.id,
+              });
+            } else if (feedbackConfig.collectionChannel === "SMS") {
+              await logFeedbackLinkSms(tx, {
+                businessId,
+                recipient,
+                feedbackUrl,
+                billNumber: item.billNumber,
+                sourceId: feedbackLink.id,
+              });
+            } else if (feedbackConfig.collectionChannel === "EMAIL") {
+              await logFeedbackLinkEmail(tx, {
+                businessId,
+                recipient,
+                feedbackUrl,
+                billNumber: item.billNumber,
+                sourceId: feedbackLink.id,
+              });
+            }
+          }
 
           const loyalty = await applyLoyaltyForBill(tx, {
             businessId,

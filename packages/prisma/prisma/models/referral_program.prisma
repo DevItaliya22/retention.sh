@@ -25,8 +25,13 @@ model ReferralProgram {
   // Reminder Settings
   sendReminderToCustomer Boolean @default(false)
 
+  // Messaging channels (for referral claim & reminder notifications)
+  whatsappEnabled Boolean @default(false)
+  emailEnabled    Boolean @default(false)
+  smsEnabled      Boolean @default(false)
+
   // Lock referrer's cashback until referred customer's first bill in this business
-  lockReferralPointsUntilFirstPurchase Boolean @default(false)
+  lockReferralPointsUntilFirstPurchase Boolean @default(true)
 
   // Information Sections (Array of JSON)
   informationSections Json // [{ title: string, content: string }]
