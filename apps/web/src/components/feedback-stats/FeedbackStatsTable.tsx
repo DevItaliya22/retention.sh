@@ -120,8 +120,16 @@ export function FeedbackStatsTable() {
           if (isLoading && item.id.startsWith("skeleton-")) {
             return <Skeleton className="h-4 w-8" />;
           }
+          const isLowRating = item.rating != null && item.rating <= 2;
           return (
-            <span className="font-medium tabular-nums">
+            <span
+              className={cn(
+                "font-medium tabular-nums",
+                isLowRating
+                  ? "text-red-600 dark:text-red-400"
+                  : "text-green-600 dark:text-green-400",
+              )}
+            >
               {item.rating != null ? `${item.rating}/5` : "—"}
             </span>
           );

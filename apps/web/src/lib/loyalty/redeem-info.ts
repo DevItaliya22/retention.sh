@@ -106,6 +106,10 @@ export interface RedeemableInfoResult {
   rewardStages: RewardStageRedeemInfo[];
   /** VISIT_MADE: visitCount. */
   visitCount?: number | null;
+  /** Locked cashback (Shopify return window). Not redeemable. */
+  lockedCashback?: number;
+  /** Locked referral cashback (until referred's first bill). Not redeemable. */
+  lockedReferralCashback?: number;
 }
 
 export async function getRedeemableInfo(
@@ -335,6 +339,8 @@ export async function getRedeemableInfo(
         : null,
     rewardStages,
     visitCount: wallet?.visitCount ?? null,
+    lockedCashback: isCashbackType ? lockedCashback : undefined,
+    lockedReferralCashback: isCashbackType ? lockedReferralCashback : undefined,
   };
 }
 
@@ -347,12 +353,16 @@ export interface PartnerRedeemableItem {
   partnerBusinessName: string;
   /** Partner's loyalty type (determines whether to send points or cashback). */
   loyaltyType: string;
-  /** Balance at partner: points for AMOUNT_SPENT/VISIT_MADE, ₹ for CASHBACK/TIER. */
+  /** Balance at partner: points for AMOUNT_SPENT/VISIT_MADE, ₹ for CASHBACK/TIER. Unlocked only. */
   balance: number;
   /** Value at current store (₹) after partner's exchange rate (them → you). */
   valueAtCurrentStore: number;
   /** Max redeemable on this bill (min of valueAtCurrentStore and billAmount). */
   maxRedeemableOnBill: number;
+  /** CASHBACK/TIER only: locked cashback at partner (₹). Not redeemable. */
+  lockedCashback?: number;
+  /** CASHBACK/TIER only: locked referral cashback at partner (₹). Not redeemable. */
+  lockedReferralCashback?: number;
 }
 
 /**
@@ -452,15 +462,29 @@ export async function getPartnerRedeemableInfo(
     let balance = 0;
     let valueAtCurrentStore = 0;
 
+    let lockedCashbackPartner = 0;
+    let lockedReferralPartner = 0;
     if (
       partnerLoyalty.loyaltyType === "CASHBACK" ||
       partnerLoyalty.loyaltyType === "TIER"
     ) {
-      const lockedReferral = await getLockedReferralBalance(tx, {
-        businessId: partnerMember.businessId,
-        customerId,
-      });
-      balance = Math.max(0, (wallet.cashbackBalance ?? 0) - lockedReferral);
+      const [lockedShopifyP, lockedReferralP] = await Promise.all([
+        getLockedShopifyBalance(tx, {
+          businessId: partnerMember.businessId,
+          customerId,
+          valueKind: TransactionValueKind.CASHBACK,
+        }),
+        getLockedReferralBalance(tx, {
+          businessId: partnerMember.businessId,
+          customerId,
+        }),
+      ]);
+      lockedCashbackPartner = lockedShopifyP;
+      lockedReferralPartner = lockedReferralP;
+      balance = Math.max(
+        0,
+        (wallet.cashbackBalance ?? 0) - lockedShopifyP - lockedReferralP,
+      );
       valueAtCurrentStore = balance * exchangeRate;
     } else if (partnerLoyalty.loyaltyType === "AMOUNT_SPENT") {
       balance = Math.max(0, Math.floor(wallet.amountSpentBalance ?? 0));
@@ -549,6 +573,15 @@ export async function getPartnerRedeemableInfo(
       balance,
       valueAtCurrentStore,
       maxRedeemableOnBill,
+      ...(partnerLoyalty.loyaltyType === "CASHBACK" ||
+      partnerLoyalty.loyaltyType === "TIER"
+        ? {
+            lockedCashback:
+              lockedCashbackPartner > 0 ? lockedCashbackPartner : undefined,
+            lockedReferralCashback:
+              lockedReferralPartner > 0 ? lockedReferralPartner : undefined,
+          }
+        : {}),
     });
   }
 

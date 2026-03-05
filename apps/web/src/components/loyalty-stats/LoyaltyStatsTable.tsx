@@ -66,6 +66,168 @@ export function LoyaltyStatsTable() {
   const columns = useMemo<ColumnDef<LoyaltyStatRow>[]>(
     () => [
       {
+        id: "valueKind",
+        accessorKey: "valueKind",
+        size: 100,
+        minSize: 80,
+        maxSize: 140,
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} label="Kind" />
+        ),
+        cell: ({ row }) => {
+          const item = row.original;
+          if (item.id === "empty-state") return null;
+          if (isLoading && item.id.startsWith("skeleton-")) {
+            return <Skeleton className="h-4 w-16" />;
+          }
+          return (
+            <span className="text-muted-foreground font-mono text-xs">
+              {item.valueKind ?? "—"}
+            </span>
+          );
+        },
+        enableColumnFilter: true,
+        meta: {
+          label: "Kind",
+          variant: "select" as const,
+          placeholder: "All kinds",
+          options: [
+            { value: "CASHBACK", label: "Cashback" },
+            { value: "AMOUNT_SPENT_POINTS", label: "Amount Spent Pts" },
+            { value: "VISIT_POINTS", label: "Visit Pts" },
+          ],
+        },
+      },
+      {
+        id: "source",
+        accessorKey: "source",
+        size: 120,
+        minSize: 80,
+        maxSize: 160,
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} label="Source" />
+        ),
+        cell: ({ row }) => {
+          const item = row.original;
+          if (item.id === "empty-state") return null;
+          if (isLoading && item.id.startsWith("skeleton-")) {
+            return <Skeleton className="h-4 w-12" />;
+          }
+          return (
+            <span className="text-muted-foreground">{item.source ?? "—"}</span>
+          );
+        },
+        enableColumnFilter: true,
+        meta: {
+          label: "Source",
+          variant: "text" as const,
+          placeholder: "Filter source...",
+          maxLength: 50,
+        },
+      },
+      {
+        id: "type",
+        accessorKey: "type",
+        size: 120,
+        minSize: 100,
+        maxSize: 160,
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} label="Type" />
+        ),
+        cell: ({ row }) => {
+          const item = row.original;
+          if (item.id === "empty-state") return null;
+          if (isLoading && item.id.startsWith("skeleton-")) {
+            return <Skeleton className="h-4 w-16" />;
+          }
+          return <span className="font-medium">{formatType(item.type)}</span>;
+        },
+        enableColumnFilter: true,
+        meta: {
+          label: "Type",
+          variant: "select" as const,
+          placeholder: "All types",
+          options: [
+            { value: "EARNED", label: "Earned" },
+            { value: "REDEEMED", label: "Redeemed" },
+            { value: "EXPIRED", label: "Expired" },
+            { value: "ADJUSTMENT", label: "Adjustment" },
+          ],
+        },
+      },
+      {
+        id: "amount",
+        accessorKey: "amount",
+        size: 100,
+        minSize: 80,
+        maxSize: 140,
+        header: ({ column }) => (
+          <div className="flex w-full justify-end">
+            <DataTableColumnHeader column={column} label="Points" />
+          </div>
+        ),
+        cell: ({ row }) => {
+          const item = row.original;
+          if (item.id === "empty-state") return null;
+          if (isLoading && item.id.startsWith("skeleton-")) {
+            return (
+              <div className="flex justify-end">
+                <Skeleton className="h-4 w-10" />
+              </div>
+            );
+          }
+          const isNegative =
+            item.type === "REDEEMED" || item.type === "EXPIRED";
+          const sign = isNegative ? "−" : "+";
+          const absAmount = Math.abs(item.amount);
+          const isCashback = item.valueKind === "CASHBACK";
+          const amountText = isCashback
+            ? `₹${absAmount.toFixed(2)}`
+            : String(absAmount);
+          return (
+            <div
+              className={cn(
+                "flex justify-end font-medium tabular-nums",
+                isNegative
+                  ? "text-blue-600 dark:text-blue-400"
+                  : "text-emerald-600 dark:text-emerald-400",
+              )}
+            >
+              {sign}
+              {amountText}
+            </div>
+          );
+        },
+        enableSorting: true,
+      },
+      {
+        id: "createdAt",
+        accessorKey: "createdAt",
+        size: 160,
+        minSize: 140,
+        maxSize: 200,
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} label="Date" />
+        ),
+        cell: ({ row }) => {
+          const item = row.original;
+          if (item.id === "empty-state") {
+            return <div className="sr-only">Empty state</div>;
+          }
+          if (isLoading && item.id.startsWith("skeleton-")) {
+            return <Skeleton className="h-4 w-28" />;
+          }
+          const dateStr = item.createdAt
+            ? new Date(item.createdAt).toLocaleString("en-IN", {
+                dateStyle: "short",
+                timeStyle: "short",
+              })
+            : "—";
+          return <span className="tabular-nums">{dateStr}</span>;
+        },
+        enableSorting: true,
+      },
+      {
         id: "customerName",
         accessorKey: "customerName",
         size: 220,
@@ -105,157 +267,6 @@ export function LoyaltyStatsTable() {
           placeholder: "Filter by name...",
           maxLength: 255,
         },
-      },
-      {
-        id: "amount",
-        accessorKey: "amount",
-        size: 100,
-        minSize: 80,
-        maxSize: 140,
-        header: ({ column }) => (
-          <div className="flex w-full justify-end">
-            <DataTableColumnHeader column={column} label="Points" />
-          </div>
-        ),
-        cell: ({ row }) => {
-          const item = row.original;
-          if (item.id === "empty-state") return null;
-          if (isLoading && item.id.startsWith("skeleton-")) {
-            return (
-              <div className="flex justify-end">
-                <Skeleton className="h-4 w-10" />
-              </div>
-            );
-          }
-          const sign =
-            item.type === "REDEEMED" || item.type === "EXPIRED" ? "-" : "+";
-          const absAmount = Math.abs(item.amount);
-          const isCashback = item.valueKind === "CASHBACK";
-          return (
-            <div className="flex justify-end font-medium tabular-nums">
-              {sign}
-              {isCashback ? `₹${absAmount.toFixed(2)}` : absAmount}
-            </div>
-          );
-        },
-        enableSorting: true,
-      },
-      {
-        id: "valueKind",
-        accessorKey: "valueKind",
-        size: 100,
-        minSize: 80,
-        maxSize: 140,
-        header: ({ column }) => (
-          <DataTableColumnHeader column={column} label="Kind" />
-        ),
-        cell: ({ row }) => {
-          const item = row.original;
-          if (item.id === "empty-state") return null;
-          if (isLoading && item.id.startsWith("skeleton-")) {
-            return <Skeleton className="h-4 w-16" />;
-          }
-          return (
-            <span className="text-muted-foreground font-mono text-xs">
-              {item.valueKind ?? "—"}
-            </span>
-          );
-        },
-        enableColumnFilter: true,
-        meta: {
-          label: "Kind",
-          variant: "select" as const,
-          placeholder: "All kinds",
-          options: [
-            { value: "CASHBACK", label: "Cashback" },
-            { value: "AMOUNT_SPENT_POINTS", label: "Amount Spent Pts" },
-            { value: "VISIT_POINTS", label: "Visit Pts" },
-          ],
-        },
-      },
-      {
-        id: "type",
-        accessorKey: "type",
-        size: 120,
-        minSize: 100,
-        maxSize: 160,
-        header: ({ column }) => (
-          <DataTableColumnHeader column={column} label="Type" />
-        ),
-        cell: ({ row }) => {
-          const item = row.original;
-          if (item.id === "empty-state") return null;
-          if (isLoading && item.id.startsWith("skeleton-")) {
-            return <Skeleton className="h-4 w-16" />;
-          }
-          return <span className="font-medium">{formatType(item.type)}</span>;
-        },
-        enableColumnFilter: true,
-        meta: {
-          label: "Type",
-          variant: "select" as const,
-          placeholder: "All types",
-          options: [
-            { value: "EARNED", label: "Earned" },
-            { value: "REDEEMED", label: "Redeemed" },
-            { value: "EXPIRED", label: "Expired" },
-            { value: "ADJUSTMENT", label: "Adjustment" },
-          ],
-        },
-      },
-      {
-        id: "source",
-        accessorKey: "source",
-        size: 120,
-        minSize: 80,
-        maxSize: 160,
-        header: ({ column }) => (
-          <DataTableColumnHeader column={column} label="Source" />
-        ),
-        cell: ({ row }) => {
-          const item = row.original;
-          if (item.id === "empty-state") return null;
-          if (isLoading && item.id.startsWith("skeleton-")) {
-            return <Skeleton className="h-4 w-12" />;
-          }
-          return (
-            <span className="text-muted-foreground">{item.source ?? "—"}</span>
-          );
-        },
-        enableColumnFilter: true,
-        meta: {
-          label: "Source",
-          variant: "text" as const,
-          placeholder: "Filter source...",
-          maxLength: 50,
-        },
-      },
-      {
-        id: "createdAt",
-        accessorKey: "createdAt",
-        size: 160,
-        minSize: 140,
-        maxSize: 200,
-        header: ({ column }) => (
-          <DataTableColumnHeader column={column} label="Date" />
-        ),
-        cell: ({ row }) => {
-          const item = row.original;
-          if (item.id === "empty-state") {
-            return <div className="sr-only">Empty state</div>;
-          }
-          if (isLoading && item.id.startsWith("skeleton-")) {
-            return <Skeleton className="h-4 w-28" />;
-          }
-          const dateStr = item.createdAt
-            ? new Date(item.createdAt).toLocaleString("en-IN", {
-                dateStyle: "short",
-                timeStyle: "short",
-              })
-            : "—";
-          return <span className="tabular-nums">{dateStr}</span>;
-        },
-        enableSorting: true,
       },
       {
         id: "billNumber",
@@ -308,7 +319,7 @@ export function LoyaltyStatsTable() {
     initialState: {
       pagination: { pageIndex: 0, pageSize: perPage },
       sorting: [{ id: "createdAt", desc: true }],
-      columnPinning: { right: [] },
+      columnPinning: { right: ["customerName", "billNumber"] },
     },
     prefix: getDataTableConfig("loyaltyStats").prefix,
   });

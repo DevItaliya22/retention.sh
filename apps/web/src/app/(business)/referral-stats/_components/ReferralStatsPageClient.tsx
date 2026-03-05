@@ -78,6 +78,8 @@ export function ReferralStatsPageClient() {
     <DashboardPageShell
       title="Referral stats"
       subtitle="Who referred and how many people they referred"
+      contentPadding="none"
+      contentClassName="px-2 pt-2 @lg:px-4"
       primaryActions={
         referralEnabled ? (
           <Button

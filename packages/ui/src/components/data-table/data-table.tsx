@@ -38,6 +38,10 @@ interface DataTableProps<TData> extends React.ComponentProps<"div"> {
   /** When table has no rows, render this instead of the default "No results." row */
   renderEmpty?: () => React.ReactNode;
   getRowId?: (row: TData) => string;
+  /** ClassName for the expanded row content wrapper. Default: "p-6" */
+  expandedRowContentClassName?: string;
+  /** Optional className for each data row. Receives the row. */
+  getRowClassName?: (row: Row<TData>) => string;
 }
 
 export function DataTable<TData>({
@@ -59,6 +63,8 @@ export function DataTable<TData>({
   renderRowFooter,
   renderEmpty,
   getRowId,
+  expandedRowContentClassName = "p-6",
+  getRowClassName,
   ...props
 }: DataTableProps<TData>) {
   const [internalExpandedRows] = React.useState<Set<string>>(new Set());
@@ -178,7 +184,7 @@ export function DataTable<TData>({
                                   style={{ overflow: "hidden" }}
                                   className="bg-sidebar-accent/20"
                                 >
-                                  <div className="p-6">
+                                  <div className={expandedRowContentClassName}>
                                     {renderExpandedRow(row)}
                                   </div>
                                 </motion.div>
@@ -194,9 +200,10 @@ export function DataTable<TData>({
                     <Fragment key={row.id}>
                       <TableRow
                         data-state={row.getIsSelected() && "selected"}
-                        className={
-                          isExpanded ? "border-foreground/20 border-b-2" : ""
-                        }
+                        className={cn(
+                          isExpanded && "border-foreground/20 border-b-2",
+                          getRowClassName?.(row),
+                        )}
                       >
                         {cells}
                       </TableRow>
@@ -228,7 +235,7 @@ export function DataTable<TData>({
                                 style={{ overflow: "hidden" }}
                                 className="bg-sidebar-accent/20"
                               >
-                                <div className="p-6">
+                                <div className={expandedRowContentClassName}>
                                   {renderExpandedRow(row)}
                                 </div>
                               </motion.div>

@@ -46,17 +46,11 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
         emailEnabled: true,
       },
     });
-
+    // all the counts are the actual counts like whn we send the messages not the count of campaigns where this are enabled
     const totalSent = campaigns.length;
     let whatsappCount = 0;
     let smsCount = 0;
     let emailCount = 0;
-
-    for (const c of campaigns) {
-      if (c.whatsappEnabled) whatsappCount++;
-      if (c.emailEnabled) emailCount++;
-      if (!c.whatsappEnabled && !c.emailEnabled) smsCount++;
-    }
 
     const response: CampaignAnalyticsResponse = {
       totalSent,

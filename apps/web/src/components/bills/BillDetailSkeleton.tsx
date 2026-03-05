@@ -1,90 +1,76 @@
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  Skeleton,
-} from "@reelo/ui/components";
+import { Skeleton } from "@reelo/ui/components";
 
-/**
- * Skeleton for bill detail page. Mirrors BillDetailPageClient layout.
- */
 export function BillDetailSkeleton() {
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Hero */}
-      <div className="bg-muted/20 flex flex-col gap-4 rounded-xl border px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
-        <div className="space-y-2">
-          <Skeleton className="h-3 w-20" />
-          <Skeleton className="h-7 w-36" />
-        </div>
-        <div className="flex items-center gap-4">
-          <Skeleton className="h-8 w-24" />
-          <Skeleton className="h-8 w-28 rounded-md" />
+      <div className="from-muted/30 via-muted/10 relative overflow-hidden rounded-2xl border bg-gradient-to-br to-transparent px-6 py-6 sm:px-8 sm:py-8">
+        <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-3 w-24" />
+            <Skeleton className="h-9 w-40 sm:w-48" />
+          </div>
+          <div className="flex items-end gap-6 sm:gap-8">
+            <div className="space-y-2 text-right">
+              <Skeleton className="ml-auto h-3 w-28" />
+              <Skeleton className="ml-auto h-10 w-32" />
+            </div>
+            <Skeleton className="h-9 w-28 rounded-lg" />
+          </div>
         </div>
       </div>
 
-      {/* Bill & customer card */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">Bill & customer</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-6 sm:grid-cols-2">
-          <div>
-            <Skeleton className="h-3.5 w-12" />
-            <div className="mt-3 space-y-0">
-              {[1, 2, 3].map((i) => (
-                <div
-                  key={i}
-                  className="flex items-start gap-3 py-2.5 first:pt-0 last:pb-0"
-                >
-                  <Skeleton className="size-8 shrink-0 rounded-md" />
-                  <div className="min-w-0 flex-1 space-y-2">
-                    <Skeleton className="h-3 w-16" />
-                    <Skeleton className="h-5 w-32" />
-                  </div>
-                </div>
-              ))}
-            </div>
+      {/* Two-column: Breakdown + Customer */}
+      <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
+        <div className="bg-card rounded-2xl border p-6 shadow-sm">
+          <Skeleton className="mb-5 h-4 w-36" />
+          <div className="space-y-3">
+            <Skeleton className="h-5 w-full" />
+            <Skeleton className="h-5 w-3/4" />
+            <Skeleton className="h-6 w-1/2" />
           </div>
-          <div>
-            <Skeleton className="h-3.5 w-16" />
-            <div className="mt-3 space-y-0">
-              {[1, 2, 3].map((i) => (
-                <div
-                  key={i}
-                  className="flex items-start gap-3 py-2.5 first:pt-0 last:pb-0"
-                >
-                  <Skeleton className="size-8 shrink-0 rounded-md" />
-                  <div className="min-w-0 flex-1 space-y-2">
-                    <Skeleton className="h-3 w-12" />
-                    <Skeleton className="h-5 w-36" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Line items */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">Line items</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2 rounded-lg border p-4">
+        </div>
+        <div className="bg-card rounded-2xl border p-6 shadow-sm lg:max-w-[340px]">
+          <Skeleton className="mb-5 h-4 w-24" />
+          <div className="space-y-0">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="flex items-center gap-4">
-                <Skeleton className="h-8 w-24" />
-                <Skeleton className="h-8 w-32" />
-                <Skeleton className="h-8 w-16" />
-                <Skeleton className="h-8 w-20" />
+              <div
+                key={i}
+                className="flex items-start gap-3 py-2.5 first:pt-0 last:pb-0"
+              >
+                <Skeleton className="size-8 shrink-0 rounded-lg" />
+                <div className="min-w-0 flex-1 space-y-2">
+                  <Skeleton className="h-3 w-16" />
+                  <Skeleton className="h-5 w-32" />
+                </div>
               </div>
             ))}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
+
+      {/* Line items */}
+      <div className="bg-card overflow-hidden rounded-2xl border shadow-sm">
+        <div className="bg-muted/20 border-b px-6 py-4">
+          <Skeleton className="h-4 w-28" />
+        </div>
+        <div className="space-y-0 p-6">
+          {[1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="flex items-center gap-4 border-b py-4 last:border-b-0"
+            >
+              <div className="space-y-3">
+                <Skeleton className="h-3 w-16" />
+                <Skeleton className="h-5 w-32" />
+              </div>
+              <Skeleton className="ml-auto h-5 w-8" />
+              <Skeleton className="h-5 w-16" />
+              <Skeleton className="h-5 w-20" />
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

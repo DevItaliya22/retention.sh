@@ -1682,6 +1682,59 @@ export async function applyLoyaltyForBill(
       ? (updatedWallet?.amountSpentBalance ?? 0)
       : (updatedWallet?.visitPointsBalance ?? 0);
 
+  const hasEarned =
+    earnedPoints > 0 || (cashbackAmount != null && cashbackAmount > 0);
+  if (
+    hasEarned &&
+    loyalty &&
+    (loyalty.whatsappEnabled || loyalty.emailEnabled || loyalty.smsEnabled)
+  ) {
+    const customer = await tx.customer.findUnique({
+      where: { id: customerId },
+      include: { user: { select: { phoneNumber: true } } },
+    });
+    const phone = customer?.user?.phoneNumber;
+    const email = customer?.email;
+    const pointsName =
+      (
+        await tx.business.findUnique({
+          where: { id: businessId },
+          select: { defaultPointsName: true },
+        })
+      )?.defaultPointsName ?? "Points";
+    const body = isCashbackType
+      ? `You earned ₹${(cashbackAmount ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })} cashback on your purchase.`
+      : `You earned ${earnedPoints} ${pointsName} on your purchase.`;
+
+    const { logLoyaltyEarnEmail, logLoyaltyEarnSms, logLoyaltyEarnWhatsApp } =
+      await import("@/lib/messaging");
+
+    if (loyalty.whatsappEnabled && phone) {
+      await logLoyaltyEarnWhatsApp(tx, {
+        businessId,
+        recipient: phone,
+        body,
+        sourceId: billId,
+      });
+    }
+    if (loyalty.emailEnabled && email) {
+      await logLoyaltyEarnEmail(tx, {
+        businessId,
+        recipient: email,
+        body,
+        sourceId: billId,
+      });
+    }
+    if (loyalty.smsEnabled && phone) {
+      await logLoyaltyEarnSms(tx, {
+        businessId,
+        recipient: phone,
+        body,
+        sourceId: billId,
+      });
+    }
+  }
+
   return {
     loyaltyType: context.type,
     earnedPoints,

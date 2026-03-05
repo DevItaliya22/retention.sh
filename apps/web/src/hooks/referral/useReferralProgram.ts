@@ -48,6 +48,9 @@ export interface ReferralProgram {
     sku: string;
   } | null;
   lockReferralPointsUntilFirstPurchase?: boolean;
+  whatsappEnabled?: boolean;
+  emailEnabled?: boolean;
+  smsEnabled?: boolean;
   sendReminderToCustomer: boolean;
   informationSections: Array<{ title: string; content: string }>;
   branding: {
