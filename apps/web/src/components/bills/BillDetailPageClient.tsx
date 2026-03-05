@@ -239,7 +239,7 @@ export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
                 <Skeleton className="h-5 w-3/4" />
                 <Skeleton className="h-6 w-1/2" />
               </div>
-            ) : (
+            ) : bill ? (
               <>
                 <div className="space-y-1">
                   {bill.subtotal != null && (
@@ -361,7 +361,7 @@ export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
                   </div>
                 )}
               </>
-            )}
+            ) : null}
           </motion.section>
         ) : null}
 

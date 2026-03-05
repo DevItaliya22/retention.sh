@@ -183,10 +183,6 @@ export async function POST(request: Request) {
     }
 
     const loyalty = business.loyalty;
-    const loyaltyEnabled = isServiceEnabled(
-      business.isServiceEnabled as IsServiceEnabled | null | undefined,
-      "loyalty",
-    );
     if (loyaltyEnabled && loyalty) {
       const customerEmail =
         user.email ??
