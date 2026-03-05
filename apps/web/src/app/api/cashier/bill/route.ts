@@ -6,6 +6,11 @@ import {
 import { withCashierAuth } from "@/lib/auth/middleware";
 import { APP_CONSTANTS } from "@/lib/constants/app";
 import { runTransaction } from "@/lib/db/transaction";
+import {
+  logFeedbackLinkEmail,
+  logFeedbackLinkSms,
+  logFeedbackLinkWhatsApp,
+} from "@/lib/messaging";
 import { createBillApiSchema } from "@/lib/schemas/bill";
 import {
   sanitizeErrorMessage,
@@ -156,7 +161,7 @@ export const POST = withCashierAuth(async (request: NextRequest, context) => {
 
     const formattedPhone = formatPhoneNumber(phoneNumber.trim());
 
-    const { customer } = await findOrCreateCustomer({
+    const { user, customer } = await findOrCreateCustomer({
       phoneNumber: formattedPhone,
       name,
     });
@@ -269,17 +274,52 @@ export const POST = withCashierAuth(async (request: NextRequest, context) => {
         data: { nextBillNumber: { increment: 1 } },
       });
 
-      // One feedback link per bill; attach business's feedback config if set
       const feedbackConfig = await tx.feedbackConfig.findUnique({
         where: { businessId },
-        select: { id: true },
+        select: { id: true, collectionChannel: true },
       });
-      await tx.feedbackLink.create({
+      const feedbackLink = await tx.feedbackLink.create({
         data: {
           billId: bill.id,
           configId: feedbackConfig?.id ?? undefined,
         },
       });
+
+      if (feedbackConfig?.collectionChannel) {
+        const baseUrl = process.env.NEXT_PUBLIC_URL || "https://dy.com";
+        const feedbackUrl = `${baseUrl}/feedback/${context.business.slug}/${feedbackLink.token}`;
+        const recipient =
+          feedbackConfig.collectionChannel === "EMAIL"
+            ? (user.email ??
+              `${formattedPhone}@${APP_CONSTANTS.CUSTOMER_EMAIL_DOMAIN}`)
+            : formattedPhone;
+
+        if (feedbackConfig.collectionChannel === "WHATSAPP") {
+          await logFeedbackLinkWhatsApp(tx, {
+            businessId,
+            recipient,
+            feedbackUrl,
+            billNumber,
+            sourceId: feedbackLink.id,
+          });
+        } else if (feedbackConfig.collectionChannel === "SMS") {
+          await logFeedbackLinkSms(tx, {
+            businessId,
+            recipient,
+            feedbackUrl,
+            billNumber,
+            sourceId: feedbackLink.id,
+          });
+        } else if (feedbackConfig.collectionChannel === "EMAIL") {
+          await logFeedbackLinkEmail(tx, {
+            businessId,
+            recipient,
+            feedbackUrl,
+            billNumber,
+            sourceId: feedbackLink.id,
+          });
+        }
+      }
 
       const campaignResult = await applyCampaignForBill(tx, {
         businessId,

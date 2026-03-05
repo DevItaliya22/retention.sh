@@ -1,48 +1,51 @@
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  Skeleton,
-} from "@reelo/ui/components";
+import { Skeleton } from "@reelo/ui/components";
 
-/**
- * Skeleton for customer detail page. Mirrors CustomerDetailPageClient layout.
- */
 export function CustomerDetailSkeleton() {
   return (
-    <div className="space-y-6">
-      {/* Summary hero */}
-      <div className="bg-muted/20 rounded-xl border px-5 py-4">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6">
-          <Skeleton className="size-14 shrink-0 rounded-full sm:size-16" />
+    <div className="space-y-8">
+      {/* Hero */}
+      <div className="from-muted/30 via-muted/10 relative overflow-hidden rounded-2xl border bg-gradient-to-br to-transparent px-6 py-6 sm:px-8 sm:py-8">
+        <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0 flex-1 space-y-4">
             <div>
-              <Skeleton className="h-7 w-48" />
-              <Skeleton className="mt-2 h-5 w-36" />
+              <Skeleton className="h-3 w-20" />
+              <Skeleton className="mt-2 h-8 w-56" />
             </div>
-            <div className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <Skeleton key={i} className="h-5 w-40" />
-              ))}
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-5 w-40" />
+              <Skeleton className="h-4 w-px" />
+              <Skeleton className="h-5 w-28" />
             </div>
+            <Skeleton className="h-px w-full" />
+            <Skeleton className="h-6 w-72" />
+          </div>
+          <div className="flex gap-2">
+            <Skeleton className="h-9 w-24 rounded-lg" />
+            <Skeleton className="h-9 w-24 rounded-lg" />
           </div>
         </div>
       </div>
 
-      {/* Bills card */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">Bills</CardTitle>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <div className="space-y-2">
-            {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-12 w-full rounded-lg" />
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      {/* Bills */}
+      <div className="bg-card overflow-hidden rounded-2xl border shadow-sm">
+        <div className="bg-muted/20 border-b px-6 py-4">
+          <Skeleton className="h-4 w-20" />
+        </div>
+        <div className="space-y-0 p-6">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div
+              key={i}
+              className="flex items-center gap-4 border-b py-4 last:border-b-0"
+            >
+              <Skeleton className="h-5 w-24" />
+              <Skeleton className="ml-auto h-5 w-16" />
+              <Skeleton className="h-5 w-20" />
+              <Skeleton className="h-5 w-24" />
+              <Skeleton className="h-8 w-8 rounded" />
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

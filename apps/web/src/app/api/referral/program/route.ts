@@ -141,6 +141,9 @@ export const POST = withAdminAuth(async (request, context) => {
           ? (validatedData.existingCustomerFreeItemSkuId ?? null)
           : null,
       sendReminderToCustomer: validatedData.sendReminderToCustomer,
+      whatsappEnabled: validatedData.whatsappEnabled ?? false,
+      emailEnabled: validatedData.emailEnabled ?? false,
+      smsEnabled: validatedData.smsEnabled ?? false,
       lockReferralPointsUntilFirstPurchase:
         validatedData.lockReferralPointsUntilFirstPurchase ?? false,
       informationSections: validatedData.informationSections as any,
@@ -322,6 +325,12 @@ export const PUT = withAdminAuth(async (request, context) => {
         validatedData.existingCustomerBenefitExpiresInDays ?? null;
     if (validatedData.sendReminderToCustomer !== undefined)
       updateData.sendReminderToCustomer = validatedData.sendReminderToCustomer;
+    if (validatedData.whatsappEnabled !== undefined)
+      updateData.whatsappEnabled = validatedData.whatsappEnabled;
+    if (validatedData.emailEnabled !== undefined)
+      updateData.emailEnabled = validatedData.emailEnabled;
+    if (validatedData.smsEnabled !== undefined)
+      updateData.smsEnabled = validatedData.smsEnabled;
     if (validatedData.lockReferralPointsUntilFirstPurchase !== undefined)
       updateData.lockReferralPointsUntilFirstPurchase =
         validatedData.lockReferralPointsUntilFirstPurchase;

@@ -16,9 +16,9 @@ model Membership {
   marketingSlug String @unique @default(uuid())
 
   // Pricing
-  convenienceFee       Float @default(0)
+  platformConvenienceFee       Float @default(0)
   paymentGatewayCharge Float @default(0)
-  userReceives         Float @default(0)
+  businessReceives     Float @default(0)
   totalPrice           Float @default(0) // Calculated: convenienceFee + gateway + receives
 
   // Terms

@@ -28,6 +28,7 @@ model Business {
   scratchCards    ScratchCard[]
   referralProgram ReferralProgram?
   campaigns       Campaign[]
+  messageLogs     MessageLog[]
 
   categories    Category[]
   skus          Sku[]

@@ -1,0 +1,47 @@
+enum MessageChannel {
+  EMAIL
+  WHATSAPP
+  SMS
+}
+
+enum MessageSource {
+  LOYALTY_OTP
+  LOYALTY_REMINDER
+  LOYALTY_EARN
+  LOYALTY_EXPIRE
+  FEEDBACK_LINK
+  NEGATIVE_FEEDBACK_ALERT
+  REFERRAL_REMINDER
+  REFERRAL_CLAIM
+  MEMBERSHIP_ENROLLMENT
+  CAMPAIGN_APPLIED
+  QR_REWARD_EXPIRE
+}
+
+enum MessageStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+model MessageLog {
+  id         String   @id @default(uuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  channel   MessageChannel
+  recipient String
+  subject   String?
+  body      String
+
+  source   MessageSource
+  sourceId String?
+
+  status    MessageStatus @default(PENDING)
+  createdAt DateTime      @default(now())
+
+  @@index([businessId])
+  @@index([status])
+  @@index([source])
+  @@map("message_log")
+}

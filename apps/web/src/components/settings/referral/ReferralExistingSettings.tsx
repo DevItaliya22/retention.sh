@@ -1,5 +1,6 @@
 "use client";
 
+import { ChannelSelector } from "@/components/common/form-sections/ChannelSelector";
 import { BrandingFieldGroup } from "@/components/common/settings/BrandingFieldGroup";
 import { SettingsField } from "@/components/common/settings/SettingsField";
 import type { ReferralProgram } from "@/hooks/referral/useReferralProgram";
@@ -20,6 +21,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormProvider,
   Input,
   SaveButton,
   Select,
@@ -91,7 +93,7 @@ const existingCustomerBenefitSchema = z
     existingCustomerBenefitValue: z.string().default(""),
     existingCustomerFreeItemSkuId: z.string().default(""),
     existingCustomerBenefitExpiresInDays: z.string().default(""),
-    lockReferralPointsUntilFirstPurchase: z.boolean().optional().default(false),
+    lockReferralPointsUntilFirstPurchase: z.boolean().optional().default(true),
   })
   .superRefine((data, ctx) => {
     if (
@@ -559,9 +561,10 @@ function ExistingCustomerBenefitsCard({
                         purchase
                       </FormLabel>
                       <p className="text-muted-foreground text-sm">
-                        Referrer's cashback will be locked until the person they
-                        referred makes their first bill at your business. The
-                        referred customer can use their reward normally.
+                        Referrer&apos;s cashback will be locked until the person
+                        they referred makes their first bill. Locked amount
+                        shows in bill redemption UI. The referred customer can
+                        use their reward normally.
                       </p>
                     </div>
                     <FormControl>
@@ -614,6 +617,93 @@ function ExistingCustomerBenefitsCard({
             </CardFooter>
           </form>
         </Form>
+      </Card>
+    </Card>
+  );
+}
+
+const referralChannelsSchema = z.object({
+  whatsappEnabled: z.boolean().optional().default(false),
+  emailEnabled: z.boolean().optional().default(false),
+  smsEnabled: z.boolean().optional().default(false),
+});
+
+type ReferralChannelsForm = z.infer<typeof referralChannelsSchema>;
+
+function ReferralChannelsCard({
+  referralProgram,
+  onUpdate,
+}: {
+  referralProgram: ReferralProgram;
+  onUpdate: ReturnType<typeof useUpdateReferralProgram>["mutateAsync"];
+}) {
+  const form = useForm<ReferralChannelsForm>({
+    resolver: zodResolver(
+      referralChannelsSchema,
+    ) as Resolver<ReferralChannelsForm>,
+    defaultValues: {
+      whatsappEnabled: referralProgram.whatsappEnabled ?? false,
+      emailEnabled: referralProgram.emailEnabled ?? false,
+      smsEnabled: referralProgram.smsEnabled ?? false,
+    },
+  });
+
+  useEffect(() => {
+    form.reset({
+      whatsappEnabled: referralProgram.whatsappEnabled ?? false,
+      emailEnabled: referralProgram.emailEnabled ?? false,
+      smsEnabled: referralProgram.smsEnabled ?? false,
+    });
+  }, [referralProgram, form]);
+
+  const runSubmit = async () => {
+    const valid = await form.trigger();
+    if (!valid) throw new Error("Validation failed");
+    const values = form.getValues();
+    await onUpdate({
+      whatsappEnabled: values.whatsappEnabled ?? false,
+      emailEnabled: values.emailEnabled ?? false,
+      smsEnabled: values.smsEnabled ?? false,
+    });
+    toast.success("Notification channels updated");
+    form.reset(values, { keepDefaultValues: false });
+  };
+
+  return (
+    <Card className="bg-sidebar-accent/50 flex min-h-0 flex-col gap-0 rounded-lg border-0 p-2">
+      <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
+        <CardTitle className="text-foreground text-base leading-none font-semibold">
+          Notification channels
+        </CardTitle>
+        <CardDescription className="text-muted-foreground mt-0.5 text-sm">
+          How to notify referrer and referred customer when someone joins via
+          referral
+        </CardDescription>
+      </CardHeader>
+      <Card className="border-border/45 bg-background/55 flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border shadow-none">
+        <FormProvider {...form}>
+          <Form {...form}>
+            <form
+              onSubmit={(e) => e.preventDefault()}
+              className="flex min-h-0 flex-1 flex-col"
+            >
+              <CardContent className="flex min-h-0 flex-1 flex-col gap-y-6 overflow-auto px-4 py-4">
+                <ChannelSelector layout="settings" />
+              </CardContent>
+              <CardFooter className="flex shrink-0 justify-end border-0 px-4 py-2">
+                <SaveButton
+                  onSave={runSubmit}
+                  disabled={!form.formState.isDirty}
+                  labels={{
+                    idle: "Save changes",
+                    loading: "Saving",
+                    success: "Saved",
+                  }}
+                />
+              </CardFooter>
+            </form>
+          </Form>
+        </FormProvider>
       </Card>
     </Card>
   );
@@ -740,6 +830,11 @@ export function ReferralExistingSettings({
             };
           }
         }}
+      />
+
+      <ReferralChannelsCard
+        referralProgram={referralProgram}
+        onUpdate={updateReferralProgram}
       />
 
       {/* Information Sections - temporarily disabled

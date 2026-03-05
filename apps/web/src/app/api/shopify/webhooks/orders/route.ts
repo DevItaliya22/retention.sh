@@ -106,6 +106,7 @@ async function createBillFromShopifyOrder(
     storeId: string;
     businessId: string;
     customerId: string;
+    customerEmail?: string | null;
     orderId: string;
     orderNumber: string | number | null;
     totalAmount: number;
@@ -116,6 +117,7 @@ async function createBillFromShopifyOrder(
     storeId,
     businessId,
     customerId,
+    customerEmail,
     orderId,
     orderNumber,
     totalAmount,
@@ -200,14 +202,76 @@ async function createBillFromShopifyOrder(
 
   const feedbackConfig = await tx.feedbackConfig.findUnique({
     where: { businessId },
-    select: { id: true },
+    select: { id: true, collectionChannel: true },
   });
-  await tx.feedbackLink.create({
+  const feedbackLink = await tx.feedbackLink.create({
     data: {
       billId: bill.id,
       configId: feedbackConfig?.id ?? undefined,
     },
   });
+
+  if (feedbackConfig?.collectionChannel) {
+    const {
+      logFeedbackLinkEmail,
+      logFeedbackLinkSms,
+      logFeedbackLinkWhatsApp,
+    } = await import("@/lib/messaging");
+    const businessWithSlug = await tx.business.findUnique({
+      where: { id: businessId },
+      select: { slug: true },
+    });
+    const baseUrl = process.env.NEXT_PUBLIC_URL || "https://dy.com";
+    const feedbackUrl = `${baseUrl}/feedback/${businessWithSlug?.slug ?? ""}/${feedbackLink.token}`;
+
+    if (
+      feedbackConfig.collectionChannel === "WHATSAPP" ||
+      feedbackConfig.collectionChannel === "SMS"
+    ) {
+      const customer = await tx.customer.findUnique({
+        where: { id: customerId },
+        include: { user: { select: { phoneNumber: true } } },
+      });
+      const phone = customer?.user?.phoneNumber;
+      if (phone) {
+        if (feedbackConfig.collectionChannel === "WHATSAPP") {
+          await logFeedbackLinkWhatsApp(tx, {
+            businessId,
+            recipient: phone,
+            feedbackUrl,
+            billNumber,
+            sourceId: feedbackLink.id,
+          });
+        } else {
+          await logFeedbackLinkSms(tx, {
+            businessId,
+            recipient: phone,
+            feedbackUrl,
+            billNumber,
+            sourceId: feedbackLink.id,
+          });
+        }
+      }
+    } else if (feedbackConfig.collectionChannel === "EMAIL") {
+      const emailRecipient =
+        customerEmail ??
+        (
+          await tx.customer.findUnique({
+            where: { id: customerId },
+            select: { email: true },
+          })
+        )?.email;
+      if (emailRecipient) {
+        await logFeedbackLinkEmail(tx, {
+          businessId,
+          recipient: emailRecipient,
+          feedbackUrl,
+          billNumber,
+          sourceId: feedbackLink.id,
+        });
+      }
+    }
+  }
 
   return bill.id;
 }
@@ -388,6 +452,7 @@ export async function POST(request: NextRequest) {
             storeId: store.id,
             businessId: store.businessId,
             customerId,
+            customerEmail: email,
             orderId,
             orderNumber: order.order_number ?? null,
             totalAmount,
