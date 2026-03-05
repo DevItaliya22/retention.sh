@@ -4,7 +4,8 @@ import {
   sanitizeErrorMessage,
   validateSchema,
 } from "@/lib/utils/error-handler";
-import { db } from "@reelo/db";
+import type { Prisma } from "@reelo/db";
+import { type MessageChannel, type MessageSource, db } from "@reelo/db";
 import { NextRequest, NextResponse } from "next/server";
 
 export const GET = withAdminAuth(async (request: NextRequest, context) => {
@@ -39,21 +40,16 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
     const skip = (page - 1) * perPage;
     const take = perPage;
 
-    const where: {
-      businessId: string;
-      channel?: string;
-      source?: string;
-      createdAt?: { gte?: Date; lte?: Date };
-    } = {
+    const where: Prisma.MessageLogWhereInput = {
       businessId: context.business.id,
     };
 
     if (channel) {
-      where.channel = channel;
+      where.channel = channel as MessageChannel;
     }
 
     if (source) {
-      where.source = source;
+      where.source = source as MessageSource;
     }
 
     if (dateFrom || dateTo) {

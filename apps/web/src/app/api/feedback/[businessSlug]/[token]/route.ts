@@ -303,6 +303,7 @@ export async function POST(
       include: {
         bill: {
           select: {
+            billNumber: true,
             businessId: true,
             customerId: true,
             businessCustomer: {
