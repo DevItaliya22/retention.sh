@@ -1,4 +1,6 @@
 import { APP_CONSTANTS } from "@/lib/constants/app";
+import { runTransaction } from "@/lib/db/transaction";
+import { logOtpEmail, logOtpSms, logOtpWhatsApp } from "@/lib/messaging";
 import { registerRequestOtpSchema } from "@/lib/schemas/customer-auth";
 import {
   sanitizeErrorMessage,
@@ -34,7 +36,15 @@ export async function POST(request: Request) {
         id: true,
         registrationBonusPoints: true,
         isServiceEnabled: true,
-        loyalty: { select: { id: true, loyaltyType: true } },
+        loyalty: {
+          select: {
+            id: true,
+            loyaltyType: true,
+            whatsappEnabled: true,
+            emailEnabled: true,
+            smsEnabled: true,
+          },
+        },
       },
     });
     if (!business) {
@@ -169,6 +179,36 @@ export async function POST(request: Request) {
         phoneNumber: formattedPhone,
         otp,
         expiresAt,
+      });
+    }
+
+    const loyalty = business.loyalty;
+    if (loyaltyEnabled && loyalty) {
+      const customerEmail =
+        user.email ??
+        `${formattedPhone}@${APP_CONSTANTS.CUSTOMER_EMAIL_DOMAIN}`;
+      await runTransaction(async (tx) => {
+        if (loyalty.whatsappEnabled) {
+          await logOtpWhatsApp(tx, {
+            businessId: business.id,
+            recipient: formattedPhone,
+            otp,
+          });
+        }
+        if (loyalty.emailEnabled) {
+          await logOtpEmail(tx, {
+            businessId: business.id,
+            recipient: customerEmail,
+            otp,
+          });
+        }
+        if (loyalty.smsEnabled) {
+          await logOtpSms(tx, {
+            businessId: business.id,
+            recipient: formattedPhone,
+            otp,
+          });
+        }
       });
     }
 

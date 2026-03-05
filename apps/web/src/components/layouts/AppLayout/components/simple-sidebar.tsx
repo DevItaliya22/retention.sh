@@ -29,6 +29,7 @@ import {
   LayoutDashboard,
   Megaphone,
   MessageSquare,
+  Send,
   Settings,
   Users,
 } from "lucide-react";
@@ -145,6 +146,21 @@ export function SimpleSidebar({
                     <Link href="/feedback-stats">
                       <MessageSquare className="h-4 w-4" />
                       <span className="sidebar-text">Feedback stats</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={
+                      pathname === "/message-logs" ||
+                      pathname.startsWith("/message-logs")
+                    }
+                    tooltip="Message logs"
+                  >
+                    <Link href="/message-logs">
+                      <Send className="h-4 w-4" />
+                      <span className="sidebar-text">Message logs</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

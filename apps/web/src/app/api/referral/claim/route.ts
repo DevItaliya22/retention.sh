@@ -1,5 +1,10 @@
 import { APP_CONSTANTS } from "@/lib/constants/app";
 import { runTransaction } from "@/lib/db/transaction";
+import {
+  logReferralClaimEmail,
+  logReferralClaimSms,
+  logReferralClaimWhatsApp,
+} from "@/lib/messaging";
 import { claimReferralSchema } from "@/lib/schemas/referral";
 import {
   sanitizeErrorMessage,
@@ -348,6 +353,96 @@ export async function POST(request: NextRequest) {
               metadata: { skuId: sku.id, skuName: sku.name } as any,
               description: `Free ${sku.name} on next visit`,
             },
+          });
+        }
+      }
+
+      const program = business.referralProgram!;
+      const hasChannels =
+        program.whatsappEnabled || program.emailEnabled || program.smsEnabled;
+
+      if (hasChannels) {
+        const referrerCustomer = await tx.customer.findUnique({
+          where: { id: referrer.customerId },
+          include: { user: { select: { phoneNumber: true } } },
+        });
+        const referrerPhone = referrerCustomer?.user?.phoneNumber;
+        const referrerEmail = referrerCustomer?.email;
+        const referredEmail = customer.email;
+
+        const existingType = program.existingCustomerBenefitType;
+        const newType = program.newCustomerBenefitType;
+
+        const referrerRewardDesc =
+          existingType === "AMOUNT_CASHBACK"
+            ? `₹${(program.existingCustomerBenefitValue ?? 0).toLocaleString("en-IN")}`
+            : existingType === "FREE_ITEM_ON_NEXT_PURCHASE" &&
+                program.existingCustomerFreeItemSku
+              ? `Free ${program.existingCustomerFreeItemSku.name} on next visit`
+              : "reward";
+
+        const referredRewardDesc =
+          newType === "AMOUNT_CASHBACK"
+            ? `₹${(program.newCustomerBenefitValue ?? 0).toLocaleString("en-IN")}`
+            : newType === "FREE_ITEM_ON_NEXT_PURCHASE" &&
+                program.newCustomerFreeItemSku
+              ? `Free ${program.newCustomerFreeItemSku.name} on next visit`
+              : "reward";
+
+        const referredName = name?.trim() || "Someone";
+        const referrerBody = `Your referral was successful! ${referredName} joined via your link. You earned ${referrerRewardDesc}.`;
+        const referredBody = `Welcome! You joined via referral. You earned ${referredRewardDesc}.`;
+
+        if (program.whatsappEnabled) {
+          if (referrerPhone) {
+            await logReferralClaimWhatsApp(tx, {
+              businessId: referrer.businessId,
+              recipient: referrerPhone,
+              body: referrerBody,
+              sourceId: referralLog.id,
+            });
+          }
+          await logReferralClaimWhatsApp(tx, {
+            businessId,
+            recipient: formattedPhone,
+            body: referredBody,
+            sourceId: referralLog.id,
+          });
+        }
+        if (program.emailEnabled) {
+          if (referrerEmail) {
+            await logReferralClaimEmail(tx, {
+              businessId: referrer.businessId,
+              recipient: referrerEmail,
+              subject: "Referral successful",
+              body: referrerBody,
+              sourceId: referralLog.id,
+            });
+          }
+          await logReferralClaimEmail(tx, {
+            businessId,
+            recipient:
+              referredEmail ??
+              `${formattedPhone}@${APP_CONSTANTS.CUSTOMER_EMAIL_DOMAIN}`,
+            subject: "Welcome! You joined via referral",
+            body: referredBody,
+            sourceId: referralLog.id,
+          });
+        }
+        if (program.smsEnabled) {
+          if (referrerPhone) {
+            await logReferralClaimSms(tx, {
+              businessId: referrer.businessId,
+              recipient: referrerPhone,
+              body: referrerBody,
+              sourceId: referralLog.id,
+            });
+          }
+          await logReferralClaimSms(tx, {
+            businessId,
+            recipient: formattedPhone,
+            body: referredBody,
+            sourceId: referralLog.id,
           });
         }
       }

@@ -109,6 +109,10 @@ const ROUTE_METADATA_MAP: Record<string, RouteMetadataConfig> = {
     title: "Feedback stats",
     description: "Customer feedback responses by rating and date",
   },
+  "/message-logs": {
+    title: "Message logs",
+    description: "Messages queued for sending via email, WhatsApp, or SMS",
+  },
   "/campaigns": {
     title: "Campaigns",
     description: "Create and manage marketing campaigns",

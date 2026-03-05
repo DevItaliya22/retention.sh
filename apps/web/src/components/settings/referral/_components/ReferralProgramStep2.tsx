@@ -1,5 +1,6 @@
 "use client";
 
+import { ChannelSelector } from "@/components/common/form-sections/ChannelSelector";
 import { useActiveSkusForSelect } from "@/hooks/sku/useSkusQuery";
 import type { ReferralProgramFormValues } from "@/lib/schemas/referral-form";
 import {
@@ -155,9 +156,10 @@ export function ReferralProgramStep2() {
                 Lock referrer's reward until referred customer's first purchase
               </FormLabel>
               <p className="text-muted-foreground text-sm">
-                Referrer's cashback will be locked until the person they
-                referred makes their first bill at your business. The referred
-                customer can use their reward normally.
+                Referrer&apos;s cashback will be locked until the person they
+                referred makes their first bill at your business. Locked amount
+                appears in bill redemption UI. The referred customer can use
+                their reward normally.
               </p>
             </div>
             <FormControl>
@@ -169,6 +171,15 @@ export function ReferralProgramStep2() {
           </FormItem>
         )}
       />
+
+      <div className="space-y-2">
+        <FormLabel className="text-base">Notification channels</FormLabel>
+        <p className="text-muted-foreground text-sm">
+          How to notify referrer and referred customer when someone joins via
+          referral
+        </p>
+        <ChannelSelector />
+      </div>
 
       <FormField
         control={form.control}

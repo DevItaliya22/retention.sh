@@ -1,4 +1,9 @@
 import { FEEDBACK_FORM_DEFAULTS } from "@/lib/constants/forms/feedback";
+import {
+  logNegativeFeedbackAlertEmail,
+  logNegativeFeedbackAlertSms,
+  logNegativeFeedbackAlertWhatsApp,
+} from "@/lib/messaging";
 import { feedbackSubmitSchema } from "@/lib/schemas/feedback";
 import {
   sanitizeErrorMessage,
@@ -298,6 +303,7 @@ export async function POST(
       include: {
         bill: {
           select: {
+            billNumber: true,
             businessId: true,
             customerId: true,
             businessCustomer: {
@@ -424,6 +430,12 @@ export async function POST(
         askForOnlineReviews: true,
         onlineReviewLink: true,
         onlineReviewPlatform: true,
+        negAlertChannelsWp: true,
+        negAlertChannelsSms: true,
+        negAlertChannelsEmail: true,
+        negFeedbackAlertNumber: true,
+        negFeedbackAlertSmsNumber: true,
+        negFeedbackAlertEmailAddress: true,
       },
     });
 
@@ -455,6 +467,51 @@ export async function POST(
         where: { token },
         data: { feedbackResponseId: res.id },
       });
+
+      const ratingVal = rating ?? 0;
+      if (ratingVal < 4 && configFull && businessId) {
+        const billNumber = link.bill?.billNumber ?? undefined;
+        const sourceId = res.id;
+        if (
+          configFull.negAlertChannelsWp &&
+          configFull.negFeedbackAlertNumber
+        ) {
+          await logNegativeFeedbackAlertWhatsApp(tx, {
+            businessId,
+            recipient: configFull.negFeedbackAlertNumber,
+            rating: ratingVal,
+            comment: comment ?? null,
+            billNumber,
+            sourceId,
+          });
+        }
+        if (
+          configFull.negAlertChannelsSms &&
+          configFull.negFeedbackAlertSmsNumber
+        ) {
+          await logNegativeFeedbackAlertSms(tx, {
+            businessId,
+            recipient: configFull.negFeedbackAlertSmsNumber,
+            rating: ratingVal,
+            comment: comment ?? null,
+            billNumber,
+            sourceId,
+          });
+        }
+        if (
+          configFull.negAlertChannelsEmail &&
+          configFull.negFeedbackAlertEmailAddress
+        ) {
+          await logNegativeFeedbackAlertEmail(tx, {
+            businessId,
+            recipient: configFull.negFeedbackAlertEmailAddress,
+            rating: ratingVal,
+            comment: comment ?? null,
+            billNumber,
+            sourceId,
+          });
+        }
+      }
 
       // Credit cashback to wallet and create Transaction when reward is enabled
       if (shouldCreditWallet) {
