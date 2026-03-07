@@ -5,6 +5,10 @@ model Membership {
   businessId String
   business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
 
+  // Basic info
+  name        String  @default("")
+  description String?
+
   // Status
   status MembershipStatus @default(DRAFT)
 
@@ -16,10 +20,10 @@ model Membership {
   marketingSlug String @unique @default(uuid())
 
   // Pricing
-  platformConvenienceFee       Float @default(0)
-  paymentGatewayCharge Float @default(0)
-  businessReceives     Float @default(0)
-  totalPrice           Float @default(0) // Calculated: convenienceFee + gateway + receives
+  platformConvenienceFee Float @default(0)
+  paymentGatewayCharge   Float @default(0)
+  businessReceives       Float @default(0)
+  totalPrice             Float @default(0) // Calculated: convenienceFee + gateway + receives
 
   // Terms
   termsAndConditions TermsAndConditions[]
@@ -40,12 +44,36 @@ model Membership {
   updatedAt DateTime @updatedAt
 
   // Relations
-  qrs               Qr[]
-  membershipActions MembershipAction[]
+  qrs                 Qr[]
+  membershipActions   MembershipAction[]
+  customerMemberships CustomerMembership[]
 
   @@index([businessId])
   @@index([marketingSlug])
   @@map("membership")
+}
+
+// Who bought / is enrolled in a membership. Links a business customer to a membership with validity window.
+model CustomerMembership {
+  id String @id @default(uuid())
+
+  businessId       String
+  customerId       String
+  businessCustomer BusinessCustomer @relation(fields: [businessId, customerId], references: [businessId, customerId], onDelete: Cascade)
+
+  membershipId String
+  membership   Membership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+
+  startDate DateTime
+  endDate   DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([businessId, customerId, membershipId])
+  @@index([membershipId])
+  @@index([businessId, customerId])
+  @@map("customer_membership")
 }
 
 model MembershipBenefit {

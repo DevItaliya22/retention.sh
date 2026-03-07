@@ -1,4 +1,5 @@
 import { APP_CONSTANTS } from "@/lib/constants/app";
+import { checkRateLimit } from "@/lib/ratelimit";
 import { verifyOtpSchema } from "@/lib/schemas/customer-auth";
 import { CUSTOMER_SESSION_COOKIE_NAME } from "@/lib/utils/cookie";
 import {
@@ -23,6 +24,37 @@ export async function POST(request: Request) {
     }
 
     const formattedPhone = formatPhoneNumber(validation.data.phoneNumber);
+    const ip = getIpAddress(request) ?? "unknown";
+
+    const { allowed: ipAllowed, retryAfterSeconds: ipRetrySec } =
+      await checkRateLimit(`auth:otp-verify:ip:${ip}`);
+    if (!ipAllowed) {
+      const sec = ipRetrySec ?? 60;
+      return NextResponse.json(
+        {
+          error: `Too many OTP verification attempts. Please try again in ${sec} seconds.`,
+          retryAfterSeconds: sec,
+          session: null,
+        },
+        { status: 429 },
+      );
+    }
+
+    const { allowed: phoneAllowed, retryAfterSeconds: phoneRetrySec } =
+      await checkRateLimit(`auth:otp-verify:phone:${formattedPhone}`, {
+        windowSeconds: 60,
+      });
+    if (!phoneAllowed) {
+      const sec = phoneRetrySec ?? 60;
+      return NextResponse.json(
+        {
+          error: `Too many OTP verification attempts for this number. Please try again in ${sec} seconds.`,
+          retryAfterSeconds: sec,
+          session: null,
+        },
+        { status: 429 },
+      );
+    }
     const otp = validation.data.otp.trim();
 
     const identifier = `customer-otp:${formattedPhone}`;

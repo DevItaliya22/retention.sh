@@ -1,6 +1,6 @@
 "use client";
 
-import { fetcher } from "@/lib/fetcher";
+import { handleApiError } from "@/lib/utils/error-handler";
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 
@@ -35,10 +35,26 @@ export function useCashierLogin() {
 
   return useMutation<CashierLoginResponse, Error, CashierLoginInput>({
     mutationFn: async (input: CashierLoginInput) => {
-      return fetcher<CashierLoginResponse>("/api/auth/cashier/login", {
+      const res = await fetch("/api/auth/cashier/login", {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(input),
       });
+      const text = await res.text();
+      const data = (text ? JSON.parse(text) : {}) as CashierLoginResponse;
+      if (!res.ok) {
+        const msg =
+          data.error ||
+          (await handleApiError(
+            new Response(text, {
+              status: res.status,
+              statusText: res.statusText,
+            }),
+            "Invalid email or password. Please try again.",
+          ));
+        throw new Error(msg);
+      }
+      return data;
     },
     onSuccess: (data, variables) => {
       if (data.session) {

@@ -16,9 +16,8 @@ export async function fetcher<T = unknown>(
     try {
       await fetch("/api/auth/revoke", { method: "POST" });
     } finally {
-      // Customer on loyalty page → redirect to that business's login (slug in path)
-      const loyaltyMatch =
-        window.location.pathname.match(/^\/loyalty\/([^/]+)/);
+      const pathname = window.location.pathname;
+      const loyaltyMatch = pathname.match(/^\/loyalty\/([^/]+)/);
       if (loyaltyMatch) {
         const businessSlug = loyaltyMatch[1];
         const search = window.location.search || "";

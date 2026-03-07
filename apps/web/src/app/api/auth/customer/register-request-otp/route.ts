@@ -1,12 +1,17 @@
 import { APP_CONSTANTS } from "@/lib/constants/app";
 import { runTransaction } from "@/lib/db/transaction";
 import { logOtpEmail, logOtpSms, logOtpWhatsApp } from "@/lib/messaging";
+import {
+  checkRateLimit,
+  RATELIMIT_OTP_PHONE_WINDOW_SECONDS,
+} from "@/lib/ratelimit";
 import { registerRequestOtpSchema } from "@/lib/schemas/customer-auth";
 import {
   sanitizeErrorMessage,
   validateSchema,
 } from "@/lib/utils/error-handler";
 import { formatPhoneNumber } from "@/lib/utils/phone";
+import { getIpAddress } from "@/lib/utils/request";
 import {
   type IsServiceEnabled,
   isServiceEnabled,
@@ -27,6 +32,37 @@ export async function POST(request: Request) {
     }
 
     const formattedPhone = formatPhoneNumber(validation.data.phoneNumber);
+    const ip = getIpAddress(request) ?? "unknown";
+
+    const { allowed: ipAllowed, retryAfterSeconds: ipRetrySec } =
+      await checkRateLimit(`auth:otp-request:ip:${ip}`);
+    if (!ipAllowed) {
+      const sec = ipRetrySec ?? 60;
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Too many OTP requests. Please try again in ${sec} seconds.`,
+          retryAfterSeconds: sec,
+        },
+        { status: 429 },
+      );
+    }
+
+    const { allowed: phoneAllowed, retryAfterSeconds: phoneRetrySec } =
+      await checkRateLimit(`auth:otp-request:phone:${formattedPhone}`, {
+        windowSeconds: RATELIMIT_OTP_PHONE_WINDOW_SECONDS,
+      });
+    if (!phoneAllowed) {
+      const sec = phoneRetrySec ?? 900;
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Too many OTP requests for this number. Please try again in ${sec} seconds.`,
+          retryAfterSeconds: sec,
+        },
+        { status: 429 },
+      );
+    }
     const businessSlug = validation.data.businessSlug;
     const name = validation.data.name.trim();
 
@@ -161,7 +197,7 @@ export async function POST(request: Request) {
 
     const otp = randomInt(100000, 999999).toString();
     const expiresAt = new Date();
-    expiresAt.setMinutes(expiresAt.getMinutes() + 5);
+    expiresAt.setMinutes(expiresAt.getMinutes() + 15);
     const identifier = `customer-otp:${formattedPhone}`;
 
     await db.verification.deleteMany({ where: { identifier } });

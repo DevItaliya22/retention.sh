@@ -1,6 +1,7 @@
 "use client";
 
 import { fetcher } from "@/lib/fetcher";
+import { handleApiError } from "@/lib/utils/error-handler";
 import {
   Button,
   Card,
@@ -90,15 +91,30 @@ export function LoyaltyLoginPageClient() {
     if (!businessSlug) return;
     setIsLoading(true);
     try {
-      const response = await fetcher<{ session: unknown; error?: string }>(
-        "/api/auth/customer/verify-otp",
-        {
-          method: "POST",
-          body: JSON.stringify({ phoneNumber, otp }),
-        },
-      );
-      if (!response.session) {
-        toast.error(response.error || "Invalid OTP");
+      const res = await fetch("/api/auth/customer/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phoneNumber, otp }),
+      });
+      const text = await res.text();
+      const data = (text ? JSON.parse(text) : {}) as {
+        session: unknown;
+        error?: string;
+      };
+      if (!res.ok) {
+        const message =
+          data.error ||
+          (await handleApiError(
+            new Response(text, {
+              status: res.status,
+              statusText: res.statusText,
+            }),
+            "Invalid or expired OTP. Please try again.",
+          ));
+        throw new Error(message);
+      }
+      if (!data.session) {
+        toast.error(data.error || "Invalid OTP");
         return;
       }
       toast.success("Logged in successfully");
