@@ -1,2 +1,2 @@
 export { createDemoAccounts } from "./generator";
-export type { DemoRunOptions } from "./types";
+export type { DemoRunOptions, DemoScenarioKey } from "./types";

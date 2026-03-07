@@ -22,7 +22,6 @@ import {
   DEFAULT_BILLS_PER_ACCOUNT,
   DEFAULT_CUSTOMERS_PER_ACCOUNT,
   DEMO_CUSTOMER_PROFILES,
-  DEMO_LOYALTY_TYPES,
 } from "./constants";
 import type {
   DemoAccountLog,
@@ -31,6 +30,7 @@ import type {
   DemoCredentialLog,
   DemoReferralLog,
   DemoRunOptions,
+  DemoScenarioKey,
 } from "./types";
 
 interface PreparedCustomer {
@@ -41,6 +41,7 @@ interface PreparedCustomer {
 }
 
 interface DemoAccountContext {
+  accountKey: string;
   loyaltyType: LoyaltyType;
   businessId: string;
   businessName: string;
@@ -55,6 +56,29 @@ interface DemoAccountContext {
   skuIds: string[];
   rewardStageIds: string[];
   customers: PreparedCustomer[];
+}
+
+interface BusinessStackOptions {
+  accountKey: string;
+  categoryCount?: number;
+  skuCount?: number;
+}
+
+interface AccountScenario {
+  accountKey: DemoScenarioKey;
+  loyaltyType: LoyaltyType;
+  bills: number;
+  customers: number;
+  categoryCount: number;
+  skuCount: number;
+  referralPairs: number;
+  largeData?: boolean;
+}
+
+interface CreateBillOverrides {
+  forceCustomerIndex?: number;
+  redeemFromPartnerBusinessId?: string;
+  redeemPartnerCashback?: number;
 }
 
 function logProgress(message: string) {
@@ -125,6 +149,43 @@ function buildBillPlans(
   return plans.slice(0, billsPerAccount);
 }
 
+function buildLargeBillPlans(
+  customersPerAccount: number,
+  billsPerAccount: number,
+): DemoBillPlan[] {
+  const plans: DemoBillPlan[] = [];
+
+  for (let i = 0; i < billsPerAccount; i += 1) {
+    const customerIndex = i % customersPerAccount;
+    const primaryBucket = i % 10;
+    const daysAgo =
+      primaryBucket < 6
+        ? i % 45
+        : primaryBucket < 8
+          ? 46 + (i % 120)
+          : 166 + (i % 200);
+
+    const baseAmount =
+      primaryBucket < 6
+        ? 1800 + (i % 25) * 160
+        : primaryBucket < 8
+          ? 900 + (i % 20) * 120
+          : 300 + (i % 12) * 70;
+
+    plans.push({
+      customerIndex,
+      daysAgo: Math.min(364, daysAgo),
+      targetFinalAmount: baseAmount,
+      storeDiscount: i % 4 === 0 ? 80 : i % 5 === 0 ? 120 : 0,
+      taxes: i % 3 === 0 ? [18] : i % 3 === 1 ? [12, 6] : [],
+      shouldCreateFeedback: i % 9 === 0,
+    });
+  }
+
+  plans.sort((a, b) => b.daysAgo - a.daysAgo);
+  return plans;
+}
+
 function campaignWindow() {
   const startsAt = new Date();
   startsAt.setDate(startsAt.getDate() - 1);
@@ -139,12 +200,13 @@ async function createBusinessStack(
   loyaltyType: LoyaltyType,
   runId: string,
   accountIndex: number,
+  options: BusinessStackOptions,
 ): Promise<DemoAccountContext> {
   const slugBase = generateSlug(
-    `demo-${loyaltyType.toLowerCase()}-${runId}-${accountIndex}`,
+    `demo-${options.accountKey}-${runId}-${accountIndex}`,
   );
   const businessSlug = `${slugBase}-${Math.random().toString(36).slice(2, 7)}`;
-  const businessName = `Demo ${loyaltyType.replace("_", " ")} ${runId}`;
+  const businessName = `Demo ${options.accountKey.replace(/_/g, " ")} ${runId}`;
   const adminPassword = "DemoAdmin@123";
   const cashierPassword = "DemoCashier@123";
 
@@ -164,7 +226,7 @@ async function createBusinessStack(
     },
   });
 
-  const adminEmail = `demo.admin.${loyaltyType.toLowerCase()}.${runId}@dy.com`;
+  const adminEmail = `demo.admin.${options.accountKey}.${runId}@dy.com`;
   const adminUser = await db.user.create({
     data: {
       name: `Demo Admin ${loyaltyType}`,
@@ -195,7 +257,7 @@ async function createBusinessStack(
   const cashierUser = await db.user.create({
     data: {
       name: `Demo Cashier ${loyaltyType}`,
-      email: `cashier.user.${loyaltyType.toLowerCase()}.${runId}@dy.com`,
+      email: `cashier.user.${options.accountKey}.${runId}@dy.com`,
       emailVerified: true,
       role: "CASHIER",
     },
@@ -228,76 +290,35 @@ async function createBusinessStack(
     data: { defaultBranding: { connect: { id: branding.id } } },
   });
 
-  const categories = await Promise.all([
-    db.category.create({
+  const categoryCount = options.categoryCount ?? 3;
+  const skuCount = options.skuCount ?? 6;
+  const categories: Array<{ id: string }> = [];
+  for (let i = 0; i < categoryCount; i += 1) {
+    const category = await db.category.create({
       data: {
         businessId: business.id,
-        name: "Beverages",
-        description: "Drinks",
-        sortOrder: 1,
+        name: `Category ${i + 1}`,
+        description: `Demo category ${i + 1}`,
+        sortOrder: i + 1,
       },
-    }),
-    db.category.create({
-      data: {
-        businessId: business.id,
-        name: "Snacks",
-        description: "Quick bites",
-        sortOrder: 2,
-      },
-    }),
-    db.category.create({
-      data: {
-        businessId: business.id,
-        name: "Daily Essentials",
-        description: "Essentials",
-        sortOrder: 3,
-      },
-    }),
-  ]);
+      select: { id: true },
+    });
+    categories.push(category);
+  }
 
-  const skuSeed = [
-    {
-      sku: "BEV-01",
-      name: "Cold Coffee",
-      price: 180,
-      categoryId: categories[0].id,
-    },
-    {
-      sku: "BEV-02",
-      name: "Fresh Juice",
-      price: 130,
-      categoryId: categories[0].id,
-    },
-    {
-      sku: "SNK-01",
-      name: "Protein Bar",
-      price: 90,
-      categoryId: categories[1].id,
-    },
-    { sku: "SNK-02", name: "Nachos", price: 110, categoryId: categories[1].id },
-    {
-      sku: "ESS-01",
-      name: "Shampoo",
-      price: 240,
-      categoryId: categories[2].id,
-    },
-    {
-      sku: "ESS-02",
-      name: "Body Wash",
-      price: 310,
-      categoryId: categories[2].id,
-    },
-  ];
-
-  const skus = [] as Array<{ id: string }>;
-  for (const [idx, item] of skuSeed.entries()) {
+  const skus: Array<{ id: string }> = [];
+  for (let idx = 0; idx < skuCount; idx += 1) {
+    const category = required(
+      categories[idx % categories.length],
+      `Missing category for SKU ${idx}`,
+    );
     const created = await db.sku.create({
       data: {
         businessId: business.id,
-        categoryId: item.categoryId,
-        sku: `${item.sku}-${accountIndex}`,
-        name: item.name,
-        price: item.price + idx,
+        categoryId: category.id,
+        sku: `SKU-${String(idx + 1).padStart(3, "0")}-${accountIndex}`,
+        name: `Demo Item ${idx + 1}`,
+        price: 80 + ((idx * 17) % 450),
         isActive: true,
       },
       select: { id: true },
@@ -324,6 +345,7 @@ async function createBusinessStack(
   await seedDefaultSegments(business.id);
 
   return {
+    accountKey: options.accountKey,
     loyaltyType,
     businessId: business.id,
     businessName,
@@ -742,7 +764,7 @@ async function createCustomers(
   runId: string,
 ) {
   const names = DEMO_CUSTOMER_PROFILES.map((p) => p.name);
-  const count = Math.min(customersPerAccount, names.length);
+  const count = customersPerAccount;
 
   const created = [] as PreparedCustomer[];
   await db.$transaction(async (tx) => {
@@ -753,7 +775,7 @@ async function createCustomers(
       const phoneNumber = buildCustomerPhone(phoneSeed);
       const customer = await findOrCreateCustomer(tx, {
         businessId: account.businessId,
-        name: required(names[i], `Missing customer name at index ${i}`),
+        name: names[i] ?? `Demo Customer ${i + 1}`,
         phoneNumber,
       });
       created.push(customer);
@@ -765,14 +787,19 @@ async function createCustomers(
 
 async function createReferrals(
   account: DemoAccountContext,
+  pairCount = 2,
 ): Promise<DemoReferralLog[]> {
   const referrals: DemoReferralLog[] = [];
-  if (account.customers.length < 8) return referrals;
+  if (account.customers.length < 4) return referrals;
 
-  const pairs: Array<[number, number]> = [
-    [0, 6],
-    [1, 7],
-  ];
+  const maxPairs = Math.min(
+    pairCount,
+    Math.floor((account.customers.length - 1) / 2),
+  );
+  const pairs: Array<[number, number]> = [];
+  for (let i = 0; i < maxPairs; i += 1) {
+    pairs.push([i, i + maxPairs + 1]);
+  }
 
   await db.$transaction(async (tx) => {
     for (const [referrerIndex, referredIndex] of pairs) {
@@ -987,10 +1014,12 @@ async function createBill(
   account: DemoAccountContext,
   plan: DemoBillPlan,
   billIndex: number,
+  overrides?: CreateBillOverrides,
 ): Promise<DemoBillLog> {
+  const customerIndex = overrides?.forceCustomerIndex ?? plan.customerIndex;
   const customer = required(
-    account.customers[plan.customerIndex],
-    `Missing customer for plan index ${plan.customerIndex}`,
+    account.customers[customerIndex],
+    `Missing customer for plan index ${customerIndex}`,
   );
   const taxSum = plan.taxes.reduce((sum, t) => sum + t, 0);
   const subtotal = Math.max(
@@ -1109,6 +1138,9 @@ async function createBill(
       redeemCashbackRequested,
       redeemPointsRequested,
       rewardStageId,
+      redeemFromPartnerBusinessId:
+        overrides?.redeemFromPartnerBusinessId ?? null,
+      redeemPartnerCashback: overrides?.redeemPartnerCashback ?? null,
       deferEarn: false,
     });
 
@@ -1211,18 +1243,249 @@ async function normalizeWalletLastVisitAt(account: DemoAccountContext) {
   }
 }
 
+function mergeCustomers(
+  account: DemoAccountContext,
+  customers: PreparedCustomer[],
+) {
+  const seen = new Set(account.customers.map((c) => c.customerId));
+  for (const customer of customers) {
+    if (seen.has(customer.customerId)) continue;
+    account.customers.push(customer);
+    seen.add(customer.customerId);
+  }
+}
+
+async function createPartnershipBetween(
+  left: DemoAccountContext,
+  right: DemoAccountContext,
+) {
+  const existing = await db.businessPartnership.findFirst({
+    where: {
+      status: "ACTIVE",
+      AND: [
+        { members: { some: { businessId: left.businessId } } },
+        { members: { some: { businessId: right.businessId } } },
+      ],
+    },
+    select: { id: true },
+  });
+  if (existing) return existing.id;
+
+  await db.business.updateMany({
+    where: { id: { in: [left.businessId, right.businessId] } },
+    data: { receivePartnershipOffers: true },
+  });
+
+  const partnership = await db.businessPartnership.create({
+    data: {
+      status: "ACTIVE",
+      sharedReferrals: true,
+      shareReferralRewards: true,
+      sharedCampaigns: true,
+      members: {
+        create: [
+          {
+            businessId: left.businessId,
+            exchangeRate: 1,
+            pointToCurrencyRate: 1,
+          },
+          {
+            businessId: right.businessId,
+            exchangeRate: 1,
+            pointToCurrencyRate: 1,
+          },
+        ],
+      },
+    },
+    select: { id: true },
+  });
+
+  return partnership.id;
+}
+
+async function createSharedPartnerCustomers(
+  left: DemoAccountContext,
+  right: DemoAccountContext,
+  count: number,
+  runId: string,
+): Promise<PreparedCustomer[]> {
+  const shared: PreparedCustomer[] = [];
+
+  await db.$transaction(async (tx) => {
+    for (let i = 0; i < count; i += 1) {
+      const phoneSeed = Number(
+        `${runId.slice(-6)}${String(81 + i).padStart(3, "0")}`,
+      );
+      const phoneNumber = buildCustomerPhone(phoneSeed);
+      const name = `Partner Shared ${i + 1}`;
+      const leftCustomer = await findOrCreateCustomer(tx, {
+        businessId: left.businessId,
+        name,
+        phoneNumber,
+      });
+      const rightCustomer = await findOrCreateCustomer(tx, {
+        businessId: right.businessId,
+        name,
+        phoneNumber,
+      });
+      shared.push(leftCustomer);
+      mergeCustomers(right, [rightCustomer]);
+    }
+  });
+
+  mergeCustomers(left, shared);
+  return shared;
+}
+
+async function createPartnerInterchangeBills(
+  left: DemoAccountContext,
+  right: DemoAccountContext,
+  leftLog: DemoAccountLog,
+  rightLog: DemoAccountLog,
+  sharedCustomers: PreparedCustomer[],
+) {
+  const createPartnerRedeemBillWithFallback = async (
+    account: DemoAccountContext,
+    plan: DemoBillPlan,
+    billIndex: number,
+    customerIndex: number,
+    partnerBusinessId: string,
+    preferredAmounts: number[],
+  ) => {
+    let lastError: unknown = null;
+    for (const amount of preferredAmounts) {
+      try {
+        return await createBill(account, plan, billIndex, {
+          forceCustomerIndex: customerIndex,
+          redeemFromPartnerBusinessId: partnerBusinessId,
+          redeemPartnerCashback: amount,
+        });
+      } catch (error) {
+        lastError = error;
+        const message =
+          error instanceof Error ? error.message : "unknown partner error";
+        if (
+          !message.includes("exceeds allowed limit") &&
+          !message.includes("Insufficient partner cashback")
+        ) {
+          throw error;
+        }
+      }
+    }
+    throw lastError instanceof Error
+      ? lastError
+      : new Error("Failed to create partner redeem bill");
+  };
+
+  // Build partner wallet balances at both stores first.
+  for (let i = 0; i < sharedCustomers.length; i += 1) {
+    const shared = required(sharedCustomers[i], `Missing shared customer ${i}`);
+    const leftIndex = left.customers.findIndex(
+      (c) => c.customerId === shared.customerId,
+    );
+    const rightIndex = right.customers.findIndex(
+      (c) => c.customerId === shared.customerId,
+    );
+    if (leftIndex < 0 || rightIndex < 0) continue;
+
+    const earnPlan: DemoBillPlan = {
+      customerIndex: leftIndex,
+      daysAgo: 20 + (i % 15),
+      targetFinalAmount: 2600 + (i % 6) * 140,
+      storeDiscount: 0,
+      taxes: [18],
+      shouldCreateFeedback: false,
+    };
+
+    const leftEarnBill = await createBill(left, earnPlan, 5000 + i * 2);
+    leftLog.bills.push(leftEarnBill);
+    leftLog.billsCreated += 1;
+
+    const rightEarnPlan: DemoBillPlan = {
+      ...earnPlan,
+      customerIndex: rightIndex,
+      daysAgo: 18 + (i % 12),
+      targetFinalAmount: 2400 + (i % 5) * 150,
+    };
+    const rightEarnBill = await createBill(right, rightEarnPlan, 6000 + i * 2);
+    rightLog.bills.push(rightEarnBill);
+    rightLog.billsCreated += 1;
+  }
+
+  // Redeem partner balances in both directions.
+  const redemptionLoops = Math.min(12, sharedCustomers.length);
+  for (let i = 0; i < redemptionLoops; i += 1) {
+    const shared = required(
+      sharedCustomers[i],
+      `Missing shared customer for redemption ${i}`,
+    );
+    const leftIndex = left.customers.findIndex(
+      (c) => c.customerId === shared.customerId,
+    );
+    const rightIndex = right.customers.findIndex(
+      (c) => c.customerId === shared.customerId,
+    );
+    if (leftIndex < 0 || rightIndex < 0) continue;
+
+    const leftRedeemPlan: DemoBillPlan = {
+      customerIndex: leftIndex,
+      daysAgo: 8 + (i % 7),
+      targetFinalAmount: 1700 + i * 60,
+      storeDiscount: 0,
+      taxes: [18],
+      shouldCreateFeedback: i % 3 === 0,
+    };
+    const leftRedeemBill = await createPartnerRedeemBillWithFallback(
+      left,
+      leftRedeemPlan,
+      7000 + i * 2,
+      leftIndex,
+      right.businessId,
+      [100, 80, 60, 40, 25, 15, 10],
+    );
+    leftLog.bills.push(leftRedeemBill);
+    leftLog.billsCreated += 1;
+    if (leftRedeemBill.hadFeedback) leftLog.feedbackResponsesCreated += 1;
+
+    const rightRedeemPlan: DemoBillPlan = {
+      customerIndex: rightIndex,
+      daysAgo: 7 + (i % 6),
+      targetFinalAmount: 1650 + i * 55,
+      storeDiscount: 0,
+      taxes: [18],
+      shouldCreateFeedback: i % 4 === 0,
+    };
+    const rightRedeemBill = await createPartnerRedeemBillWithFallback(
+      right,
+      rightRedeemPlan,
+      8000 + i * 2,
+      rightIndex,
+      left.businessId,
+      [90, 70, 50, 35, 20, 12, 8],
+    );
+    rightLog.bills.push(rightRedeemBill);
+    rightLog.billsCreated += 1;
+    if (rightRedeemBill.hadFeedback) rightLog.feedbackResponsesCreated += 1;
+
+    logProgress(
+      `partner redeem done: ${left.businessSlug} <- ${right.businessSlug} and ${right.businessSlug} <- ${left.businessSlug}`,
+    );
+  }
+}
+
 async function writeLogs(logs: DemoAccountLog[]) {
   const logsDir = path.join(process.cwd(), "demo", "logs");
   await fs.mkdir(logsDir, { recursive: true });
 
   for (const log of logs) {
-    const fileName = `${log.loyaltyType.toLowerCase()}.json`;
+    const fileName = `${log.accountKey}.json`;
     const filePath = path.join(logsDir, fileName);
     await fs.writeFile(filePath, JSON.stringify(log, null, 2), "utf8");
   }
 
   const credentials: DemoCredentialLog[] = logs.map((log) => ({
     runId: log.runId,
+    accountKey: log.accountKey,
     loyaltyType: log.loyaltyType,
     businessName: log.businessName,
     businessSlug: log.businessSlug,
@@ -1251,20 +1514,122 @@ export async function createDemoAccounts(
   const customersPerAccount =
     options.customersPerAccount ?? DEFAULT_CUSTOMERS_PER_ACCOUNT;
 
+  const allScenarios: AccountScenario[] = [
+    {
+      accountKey: "cashback",
+      loyaltyType: "CASHBACK",
+      bills: billsPerAccount,
+      customers: customersPerAccount,
+      categoryCount: 3,
+      skuCount: 6,
+      referralPairs: 2,
+    },
+    {
+      accountKey: "tier",
+      loyaltyType: "TIER",
+      bills: billsPerAccount,
+      customers: customersPerAccount,
+      categoryCount: 3,
+      skuCount: 6,
+      referralPairs: 2,
+    },
+    {
+      accountKey: "amount_spent",
+      loyaltyType: "AMOUNT_SPENT",
+      bills: billsPerAccount,
+      customers: customersPerAccount,
+      categoryCount: 3,
+      skuCount: 6,
+      referralPairs: 2,
+    },
+    {
+      accountKey: "visit_made",
+      loyaltyType: "VISIT_MADE",
+      bills: billsPerAccount,
+      customers: customersPerAccount,
+      categoryCount: 3,
+      skuCount: 6,
+      referralPairs: 2,
+    },
+    {
+      accountKey: "cashback_large",
+      loyaltyType: "CASHBACK",
+      bills: 1100,
+      customers: 120,
+      categoryCount: 12,
+      skuCount: 100,
+      referralPairs: 20,
+      largeData: true,
+    },
+    {
+      accountKey: "partner_left",
+      loyaltyType: "CASHBACK",
+      bills: 30,
+      customers: 20,
+      categoryCount: 4,
+      skuCount: 12,
+      referralPairs: 4,
+    },
+    {
+      accountKey: "partner_right",
+      loyaltyType: "CASHBACK",
+      bills: 30,
+      customers: 20,
+      categoryCount: 4,
+      skuCount: 12,
+      referralPairs: 4,
+    },
+  ];
+
+  const selectedScenarioKeys =
+    options.scenarioKeys && options.scenarioKeys.length > 0
+      ? new Set(options.scenarioKeys)
+      : null;
+  const scenarios = selectedScenarioKeys
+    ? allScenarios.filter((s) => selectedScenarioKeys.has(s.accountKey))
+    : allScenarios;
+
   const allLogs: DemoAccountLog[] = [];
+  const accountByKey = new Map<string, DemoAccountContext>();
+  const logByKey = new Map<string, DemoAccountLog>();
 
-  for (let i = 0; i < DEMO_LOYALTY_TYPES.length; i += 1) {
-    const loyaltyType = required(
-      DEMO_LOYALTY_TYPES[i],
-      `Missing loyalty type at index ${i}`,
+  for (
+    let scenarioIndex = 0;
+    scenarioIndex < scenarios.length;
+    scenarioIndex += 1
+  ) {
+    const scenario = required(
+      scenarios[scenarioIndex],
+      `Missing scenario at index ${scenarioIndex}`,
     );
-    logProgress(`starting account ${i + 1}/4 for loyalty type: ${loyaltyType}`);
+    const loyaltyType = scenario.loyaltyType;
+    logProgress(
+      `starting account ${scenarioIndex + 1}/${scenarios.length} for loyalty type: ${loyaltyType} (${scenario.accountKey})`,
+    );
 
-    const account = await createBusinessStack(loyaltyType, runId, i + 1);
-    await createCustomers(account, customersPerAccount, `${runId}${i}`);
-    const referralsDone = await createReferrals(account);
+    const account = await createBusinessStack(
+      loyaltyType,
+      runId,
+      allLogs.length + 1,
+      {
+        accountKey: scenario.accountKey,
+        categoryCount: scenario.categoryCount,
+        skuCount: scenario.skuCount,
+      },
+    );
+    await createCustomers(
+      account,
+      scenario.customers,
+      `${runId}${allLogs.length}`,
+    );
+    const referralsDone = await createReferrals(
+      account,
+      scenario.referralPairs,
+    );
 
-    const plans = buildBillPlans(customersPerAccount, billsPerAccount);
+    const plans = scenario.largeData
+      ? buildLargeBillPlans(scenario.customers, scenario.bills)
+      : buildBillPlans(scenario.customers, scenario.bills);
     const billLogs: DemoBillLog[] = [];
 
     for (let billIndex = 0; billIndex < plans.length; billIndex += 1) {
@@ -1275,7 +1640,7 @@ export async function createDemoAccounts(
       const log = await createBill(account, plan, billIndex);
       billLogs.push(log);
       logProgress(
-        `${billIndex + 1}/${plans.length} bill created for ${account.businessSlug} (${loyaltyType})`,
+        `${billIndex + 1}/${plans.length} bill created for ${account.businessSlug} (${scenario.accountKey})`,
       );
     }
 
@@ -1287,6 +1652,7 @@ export async function createDemoAccounts(
 
     allLogs.push({
       runId,
+      accountKey: scenario.accountKey,
       loyaltyType,
       businessId: account.businessId,
       businessName: account.businessName,
@@ -1305,8 +1671,39 @@ export async function createDemoAccounts(
       referralsDone,
       bills: billLogs,
     });
+    accountByKey.set(scenario.accountKey, account);
+    logByKey.set(
+      scenario.accountKey,
+      required(allLogs[allLogs.length - 1], "Missing just-pushed log"),
+    );
 
-    logProgress(`completed account ${i + 1}/4 for ${loyaltyType}`);
+    logProgress(
+      `completed account ${scenarioIndex + 1}/${scenarios.length} for ${scenario.accountKey}`,
+    );
+  }
+
+  const partnerLeft = accountByKey.get("partner_left");
+  const partnerRight = accountByKey.get("partner_right");
+  const partnerLeftLog = logByKey.get("partner_left");
+  const partnerRightLog = logByKey.get("partner_right");
+  if (partnerLeft && partnerRight && partnerLeftLog && partnerRightLog) {
+    await createPartnershipBetween(partnerLeft, partnerRight);
+    const shared = await createSharedPartnerCustomers(
+      partnerLeft,
+      partnerRight,
+      16,
+      runId,
+    );
+    await createPartnerInterchangeBills(
+      partnerLeft,
+      partnerRight,
+      partnerLeftLog,
+      partnerRightLog,
+      shared,
+    );
+    await normalizeWalletLastVisitAt(partnerLeft);
+    await normalizeWalletLastVisitAt(partnerRight);
+    logProgress("partner accounts configured with cross-business redemptions");
   }
 
   await writeLogs(allLogs);

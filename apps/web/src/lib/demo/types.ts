@@ -1,9 +1,19 @@
 import type { LoyaltyType } from "@reelo/db";
 
+export type DemoScenarioKey =
+  | "cashback"
+  | "tier"
+  | "amount_spent"
+  | "visit_made"
+  | "cashback_large"
+  | "partner_left"
+  | "partner_right";
+
 export interface DemoRunOptions {
   billsPerAccount?: number;
   customersPerAccount?: number;
   dryRun?: boolean;
+  scenarioKeys?: DemoScenarioKey[];
 }
 
 export interface DemoBillPlan {
@@ -43,6 +53,7 @@ export interface DemoReferralLog {
 
 export interface DemoAccountLog {
   runId: string;
+  accountKey: string;
   loyaltyType: LoyaltyType;
   businessId: string;
   businessName: string;
@@ -64,6 +75,7 @@ export interface DemoAccountLog {
 
 export interface DemoCredentialLog {
   runId: string;
+  accountKey: string;
   loyaltyType: LoyaltyType;
   businessName: string;
   businessSlug: string;
