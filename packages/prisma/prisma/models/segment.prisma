@@ -1,0 +1,45 @@
+// ========================================================================
+// SEGMENT (Customer Segmentation - RFM-style)
+// ========================================================================
+// Configurable customer segments per business. Admins can customize
+// recency, frequency, monetary thresholds in Settings.
+// Frequency uses Wallet.visitCount.
+// ========================================================================
+
+model Segment {
+  id         String   @id @default(uuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  name        String // Display name, unique per business
+  slug        String // URL-safe: "vip", "cant-loose", unique per business
+  description String?
+  proTip      String?
+
+  // Recency: days since last visit (lastVisitAt ?? lastBillDate ?? createdAt)
+  recencyOperator SegmentOperator?
+  recencyValue    Float?
+  recencyValue2   Float? // For IN_RANGE / NOT_IN_RANGE
+  recencyUnit     RecencyUnit?     @default(DAYS)
+
+  // Frequency: Wallet.visitCount (number of visits)
+  frequencyOperator SegmentOperator?
+  frequencyValue    Int?
+  frequencyValue2   Int?
+
+  // Monetary: ratio = lifetimeSpend / avgSpend (e.g. 3 = 3x avg)
+  monetaryOperator SegmentOperator?
+  monetaryValue    Float?
+  monetaryValue2   Float?
+
+  sortOrder Int     @default(0) // Evaluation order (first match wins)
+  isSystem  Boolean @default(false) // Predefined; can edit, cannot delete
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([businessId, name])
+  @@unique([businessId, slug])
+  @@index([businessId])
+  @@map("segment")
+}

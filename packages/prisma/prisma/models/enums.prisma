@@ -156,3 +156,17 @@ enum Role {
   ADMIN
   CASHIER
 }
+
+enum SegmentOperator {
+  LESS_THAN
+  GREATER_THAN
+  LESS_THAN_OR_EQUAL
+  GREATER_THAN_OR_EQUAL
+  IN_RANGE
+  NOT_IN_RANGE
+}
+
+enum RecencyUnit {
+  DAYS
+  MONTHS
+}

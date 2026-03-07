@@ -71,6 +71,21 @@ CREATE TYPE "WalletType" AS ENUM ('POINTS', 'STORE_CREDIT');
 CREATE TYPE "Role" AS ENUM ('CUSTOMER', 'ADMIN', 'CASHIER');
 
 -- CreateEnum
+CREATE TYPE "SegmentOperator" AS ENUM ('LESS_THAN', 'GREATER_THAN', 'LESS_THAN_OR_EQUAL', 'GREATER_THAN_OR_EQUAL', 'IN_RANGE', 'NOT_IN_RANGE');
+
+-- CreateEnum
+CREATE TYPE "RecencyUnit" AS ENUM ('DAYS', 'MONTHS');
+
+-- CreateEnum
+CREATE TYPE "MessageChannel" AS ENUM ('EMAIL', 'WHATSAPP', 'SMS');
+
+-- CreateEnum
+CREATE TYPE "MessageSource" AS ENUM ('LOYALTY_OTP', 'LOYALTY_REMINDER', 'LOYALTY_EARN', 'LOYALTY_EXPIRE', 'FEEDBACK_LINK', 'NEGATIVE_FEEDBACK_ALERT', 'REFERRAL_REMINDER', 'REFERRAL_CLAIM', 'MEMBERSHIP_ENROLLMENT', 'CAMPAIGN_APPLIED', 'QR_REWARD_EXPIRE');
+
+-- CreateEnum
+CREATE TYPE "MessageStatus" AS ENUM ('PENDING', 'SENT', 'FAILED');
+
+-- CreateEnum
 CREATE TYPE "PartnerRequestStatus" AS ENUM ('PENDING', 'ACCEPTED', 'REJECTED', 'PERMANENTLY_REJECTED');
 
 -- CreateEnum
@@ -492,12 +507,14 @@ CREATE TABLE "loyalty_reward_stage" (
 CREATE TABLE "membership" (
     "id" TEXT NOT NULL,
     "businessId" TEXT NOT NULL,
+    "name" TEXT NOT NULL DEFAULT '',
+    "description" TEXT,
     "status" "MembershipStatus" NOT NULL DEFAULT 'DRAFT',
     "brandingId" TEXT,
     "marketingSlug" TEXT NOT NULL,
-    "convenienceFee" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "platformConvenienceFee" DOUBLE PRECISION NOT NULL DEFAULT 0,
     "paymentGatewayCharge" DOUBLE PRECISION NOT NULL DEFAULT 0,
-    "userReceives" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "businessReceives" DOUBLE PRECISION NOT NULL DEFAULT 0,
     "totalPrice" DOUBLE PRECISION NOT NULL DEFAULT 0,
     "qrImage" TEXT,
     "qrData" TEXT,
@@ -508,6 +525,20 @@ CREATE TABLE "membership" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "membership_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "customer_membership" (
+    "id" TEXT NOT NULL,
+    "businessId" TEXT NOT NULL,
+    "customerId" TEXT NOT NULL,
+    "membershipId" TEXT NOT NULL,
+    "startDate" TIMESTAMP(3) NOT NULL,
+    "endDate" TIMESTAMP(3) NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "customer_membership_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -540,6 +571,22 @@ CREATE TABLE "membership_action" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "membership_action_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "message_log" (
+    "id" TEXT NOT NULL,
+    "businessId" TEXT NOT NULL,
+    "channel" "MessageChannel" NOT NULL,
+    "recipient" TEXT NOT NULL,
+    "subject" TEXT,
+    "body" TEXT NOT NULL,
+    "source" "MessageSource" NOT NULL,
+    "sourceId" TEXT,
+    "status" "MessageStatus" NOT NULL DEFAULT 'PENDING',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "message_log_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -676,6 +723,18 @@ CREATE TABLE "qr_action" (
 );
 
 -- CreateTable
+CREATE TABLE "rate_limit" (
+    "id" TEXT NOT NULL,
+    "key" TEXT NOT NULL,
+    "maxTries" INTEGER NOT NULL,
+    "tries" INTEGER NOT NULL DEFAULT 0,
+    "windowExpiresAt" TIMESTAMP(3) NOT NULL,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "rate_limit_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "referral_program" (
     "id" TEXT NOT NULL,
     "businessId" TEXT NOT NULL,
@@ -689,7 +748,10 @@ CREATE TABLE "referral_program" (
     "existingCustomerBenefitExpiresInDays" INTEGER,
     "existingCustomerFreeItemSkuId" TEXT,
     "sendReminderToCustomer" BOOLEAN NOT NULL DEFAULT false,
-    "lockReferralPointsUntilFirstPurchase" BOOLEAN NOT NULL DEFAULT false,
+    "whatsappEnabled" BOOLEAN NOT NULL DEFAULT false,
+    "emailEnabled" BOOLEAN NOT NULL DEFAULT false,
+    "smsEnabled" BOOLEAN NOT NULL DEFAULT false,
+    "lockReferralPointsUntilFirstPurchase" BOOLEAN NOT NULL DEFAULT true,
     "informationSections" JSONB NOT NULL,
     "branding" JSONB,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -773,6 +835,32 @@ CREATE TABLE "scratch_card_action" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "scratch_card_action_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "segment" (
+    "id" TEXT NOT NULL,
+    "businessId" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "slug" TEXT NOT NULL,
+    "description" TEXT,
+    "proTip" TEXT,
+    "recencyOperator" "SegmentOperator",
+    "recencyValue" DOUBLE PRECISION,
+    "recencyValue2" DOUBLE PRECISION,
+    "recencyUnit" "RecencyUnit" DEFAULT 'DAYS',
+    "frequencyOperator" "SegmentOperator",
+    "frequencyValue" INTEGER,
+    "frequencyValue2" INTEGER,
+    "monetaryOperator" "SegmentOperator",
+    "monetaryValue" DOUBLE PRECISION,
+    "monetaryValue2" DOUBLE PRECISION,
+    "sortOrder" INTEGER NOT NULL DEFAULT 0,
+    "isSystem" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "segment_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -1152,10 +1240,28 @@ CREATE INDEX "membership_businessId_idx" ON "membership"("businessId");
 CREATE INDEX "membership_marketingSlug_idx" ON "membership"("marketingSlug");
 
 -- CreateIndex
+CREATE INDEX "customer_membership_membershipId_idx" ON "customer_membership"("membershipId");
+
+-- CreateIndex
+CREATE INDEX "customer_membership_businessId_customerId_idx" ON "customer_membership"("businessId", "customerId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "customer_membership_businessId_customerId_membershipId_key" ON "customer_membership"("businessId", "customerId", "membershipId");
+
+-- CreateIndex
 CREATE INDEX "membership_benefit_membershipId_idx" ON "membership_benefit"("membershipId");
 
 -- CreateIndex
 CREATE INDEX "membership_action_membershipId_idx" ON "membership_action"("membershipId");
+
+-- CreateIndex
+CREATE INDEX "message_log_businessId_idx" ON "message_log"("businessId");
+
+-- CreateIndex
+CREATE INDEX "message_log_status_idx" ON "message_log"("status");
+
+-- CreateIndex
+CREATE INDEX "message_log_source_idx" ON "message_log"("source");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "partner_request_partnershipId_key" ON "partner_request"("partnershipId");
@@ -1198,6 +1304,12 @@ CREATE INDEX "qr_benefit_qrId_idx" ON "qr_benefit"("qrId");
 
 -- CreateIndex
 CREATE INDEX "qr_action_qrId_idx" ON "qr_action"("qrId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "rate_limit_key_key" ON "rate_limit"("key");
+
+-- CreateIndex
+CREATE INDEX "rate_limit_key_idx" ON "rate_limit"("key");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "referral_program_businessId_key" ON "referral_program"("businessId");
@@ -1246,6 +1358,15 @@ CREATE UNIQUE INDEX "scratch_card_response_scratchCardId_businessId_customerId_b
 
 -- CreateIndex
 CREATE INDEX "scratch_card_action_scratchCardId_idx" ON "scratch_card_action"("scratchCardId");
+
+-- CreateIndex
+CREATE INDEX "segment_businessId_idx" ON "segment"("businessId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "segment_businessId_name_key" ON "segment"("businessId", "name");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "segment_businessId_slug_key" ON "segment"("businessId", "slug");
 
 -- CreateIndex
 CREATE INDEX "shopify_store_businessId_idx" ON "shopify_store"("businessId");
@@ -1521,10 +1642,19 @@ ALTER TABLE "membership" ADD CONSTRAINT "membership_businessId_fkey" FOREIGN KEY
 ALTER TABLE "membership" ADD CONSTRAINT "membership_branding_fkey" FOREIGN KEY ("brandingId") REFERENCES "branding"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "customer_membership" ADD CONSTRAINT "customer_membership_businessId_customerId_fkey" FOREIGN KEY ("businessId", "customerId") REFERENCES "business_customer"("businessId", "customerId") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "customer_membership" ADD CONSTRAINT "customer_membership_membershipId_fkey" FOREIGN KEY ("membershipId") REFERENCES "membership"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "membership_benefit" ADD CONSTRAINT "membership_benefit_membershipId_fkey" FOREIGN KEY ("membershipId") REFERENCES "membership"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "membership_action" ADD CONSTRAINT "membership_action_membershipId_fkey" FOREIGN KEY ("membershipId") REFERENCES "membership"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "message_log" ADD CONSTRAINT "message_log_businessId_fkey" FOREIGN KEY ("businessId") REFERENCES "business"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "partner_request" ADD CONSTRAINT "partner_request_senderBusinessId_fkey" FOREIGN KEY ("senderBusinessId") REFERENCES "business"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -1600,6 +1730,9 @@ ALTER TABLE "scratch_card_response" ADD CONSTRAINT "scratch_card_response_billId
 
 -- AddForeignKey
 ALTER TABLE "scratch_card_action" ADD CONSTRAINT "scratch_card_action_scratchCardId_fkey" FOREIGN KEY ("scratchCardId") REFERENCES "scratch_card"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "segment" ADD CONSTRAINT "segment_businessId_fkey" FOREIGN KEY ("businessId") REFERENCES "business"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "shopify_store" ADD CONSTRAINT "shopify_store_businessId_fkey" FOREIGN KEY ("businessId") REFERENCES "business"("id") ON DELETE CASCADE ON UPDATE CASCADE;
