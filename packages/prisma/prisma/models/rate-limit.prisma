@@ -1,0 +1,11 @@
+model RateLimit {
+  id              String   @id @default(uuid())
+  key             String   @unique
+  maxTries        Int
+  tries           Int      @default(0)
+  windowExpiresAt DateTime
+  updatedAt       DateTime @updatedAt
+
+  @@index([key])
+  @@map("rate_limit")
+}

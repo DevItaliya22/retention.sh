@@ -1,4 +1,5 @@
 import { validateCashierLogin } from "@/lib/auth/cashier";
+import { checkRateLimit } from "@/lib/ratelimit";
 import { cashierLoginSchema } from "@/lib/schemas/auth";
 import { CASHIER_SESSION_COOKIE_NAME } from "@/lib/utils/cookie";
 import {
@@ -13,7 +14,6 @@ import { NextResponse } from "next/server";
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-
     const schemaValidation = validateSchema(cashierLoginSchema, body);
     if (!schemaValidation.success) {
       return NextResponse.json(
@@ -24,6 +24,21 @@ export async function POST(request: Request) {
 
     const { businessSlug, cashierSlug, email, password } =
       schemaValidation.data;
+
+    const { allowed, retryAfterSeconds } = await checkRateLimit(
+      `auth:cashier-login:email:${email.toLowerCase().trim()}`,
+    );
+    if (!allowed) {
+      const sec = retryAfterSeconds ?? 60;
+      return NextResponse.json(
+        {
+          error: `Too many login attempts. Please try again in ${sec} seconds.`,
+          retryAfterSeconds: sec,
+          session: null,
+        },
+        { status: 429 },
+      );
+    }
 
     const loginValidation = await validateCashierLogin({
       businessSlug,

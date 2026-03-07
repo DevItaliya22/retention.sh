@@ -1,6 +1,8 @@
 Ratelimiting
-whatasp manual
+whatsapp manual
 Analytics
+
+csutmoer tags
 
 there are so many issye in /campaign/id page such as the reward type selector is not populating even though i tried multple time ,then there should be proper offer statment snd all fields in backend stored properly
 

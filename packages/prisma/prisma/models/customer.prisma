@@ -82,6 +82,7 @@ model BusinessCustomer {
   feedbackResponses    FeedbackResponse[]
   scratchCardResponses ScratchCardResponse[]
   bills                Bill[]
+  customerMemberships  CustomerMembership[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
