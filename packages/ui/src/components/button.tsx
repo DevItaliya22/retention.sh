@@ -72,7 +72,28 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     },
     forwardedRef,
   ) => {
-    const Comp = asChild ? Slot : "button";
+    // When asChild, Slot expects exactly one child – pass only props.children
+    if (asChild) {
+      return (
+        <Slot
+          ref={forwardedRef}
+          data-slot="button"
+          className={cn(
+            buttonVariants({ variant, size }),
+            rounded ? "rounded-full" : "",
+            props.disabled || loading
+              ? "border-input bg-muted text-muted-foreground cursor-not-allowed outline-none"
+              : "",
+            className,
+          )}
+          {...props}
+        >
+          {props.children}
+        </Slot>
+      );
+    }
+
+    const Comp = "button";
 
     // If disabled with tooltip, show disabled state with tooltip
     if (disabledTooltip && props.disabled) {

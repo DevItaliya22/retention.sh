@@ -35,7 +35,7 @@ export function InfoIcon({ content, className, size = 14 }: InfoIconProps) {
         </button>
       </TooltipTrigger>
       <TooltipContent>
-        <p className="text-center text-xs">{content}</p>
+        <p className="text-center text-xs whitespace-pre-line">{content}</p>
       </TooltipContent>
     </Tooltip>
   );
