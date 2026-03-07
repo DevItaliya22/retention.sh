@@ -5,6 +5,7 @@ import type { AnalyticsPeriod } from "@/lib/schemas/analytics";
 import type {
   CampaignAnalyticsResponse,
   CustomerFrequencyResponse,
+  CustomerSegmentsResponse,
   CustomerSnapshotResponse,
   FeedbackAnalyticsResponse,
   HighlightsResponse,
@@ -14,7 +15,6 @@ import type {
   NewVsRepeatResponse,
   ReferralAnalyticsResponse,
   RevenueResponse,
-  RfmResponse,
 } from "@/lib/types/analytics";
 import { useQuery } from "@tanstack/react-query";
 
@@ -125,12 +125,13 @@ export function useLoyaltyChartQuery(period: AnalyticsPeriod = "30d") {
 //   });
 // }
 
-// --- Section 5: RFM ---
+// --- Section 5: Customer Segments ---
 
-export function useRfmQuery() {
-  return useQuery<RfmResponse, Error>({
-    queryKey: ["analytics", "rfm"],
-    queryFn: () => fetcher<RfmResponse>("/api/analytics/rfm"),
+export function useCustomerSegmentsQuery() {
+  return useQuery<CustomerSegmentsResponse, Error>({
+    queryKey: ["analytics", "segments"],
+    queryFn: () => fetcher<CustomerSegmentsResponse>("/api/analytics/segments"),
+    placeholderData: (prev) => prev,
     staleTime: 60_000,
   });
 }

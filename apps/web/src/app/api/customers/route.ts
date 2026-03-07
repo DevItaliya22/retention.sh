@@ -5,6 +5,7 @@ import {
 import { withAdminAuth } from "@/lib/auth/middleware";
 import { runTransaction } from "@/lib/db/transaction";
 import { customersQuerySchema } from "@/lib/schemas/customer";
+import { getSegmentCustomerIdsForSlugs } from "@/lib/segmentation";
 import {
   sanitizeErrorMessage,
   validateSchema,
@@ -34,6 +35,7 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
       phone,
       dateFrom,
       dateTo,
+      segment,
     } = validation.data;
 
     const skip = (page - 1) * perPage;
@@ -42,6 +44,28 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
     const where: any = {
       businessId: context.business.id,
     };
+
+    if (segment) {
+      const slugs = segment
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      if (slugs.length > 0) {
+        const customerIds = await getSegmentCustomerIdsForSlugs(
+          context.business.id,
+          slugs,
+        );
+        if (customerIds.length === 0) {
+          return NextResponse.json({
+            items: [],
+            total: 0,
+            page,
+            perPage,
+          });
+        }
+        where.customerId = { in: customerIds };
+      }
+    }
 
     if (name || email || phone) {
       const customerFilters: any = {};
@@ -183,6 +207,8 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
           (bc.wallet?.amountSpentBalance ?? 0) +
           (bc.wallet?.visitPointsBalance ?? 0),
         cashbackBalance,
+        visitCount: bc.wallet?.visitCount ?? 0,
+        totalSpent: bc.wallet?.lifetimeSpend ?? 0,
         createdAt: bc.createdAt.toISOString(),
         updatedAt: bc.updatedAt.toISOString(),
       };
