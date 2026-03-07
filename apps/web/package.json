@@ -16,7 +16,8 @@
     "test:cashback-e2e": "npx tsx scripts/cashback-scenarios.e2e.ts",
     "test:tier-e2e": "npx tsx scripts/tier-scenarios.e2e.ts",
     "test:amount-spent-e2e": "npx tsx scripts/amount-spent-scenarios.e2e.ts",
-    "demo:create": "npx tsx src/lib/demo/cli.ts"
+    "demo:seed": "npx tsx src/lib/demo/cli.ts",
+    "demo:test": "npx tsx src/lib/demo/test/cli.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

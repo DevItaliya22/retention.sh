@@ -24,6 +24,19 @@ const menu: Array<{ id: string; label: string; keys: DemoScenarioKey[] }> = [
     label: "Partner accounts (both sides)",
     keys: ["partner_left", "partner_right"],
   },
+  {
+    id: "7",
+    label: "All accounts",
+    keys: [
+      "cashback",
+      "tier",
+      "amount_spent",
+      "visit_made",
+      "cashback_large",
+      "partner_left",
+      "partner_right",
+    ],
+  },
 ];
 
 const modeToKeys: Record<string, DemoScenarioKey[]> = {
