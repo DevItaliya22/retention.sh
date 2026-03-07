@@ -105,6 +105,11 @@ const ROUTE_METADATA_MAP: Record<string, RouteMetadataConfig> = {
     title: "Shopify",
     description: "Connect your Shopify store and sync products",
   },
+  "/settings/segments": {
+    title: "Customer Segments",
+    description:
+      "Configure recency, frequency, and monetary thresholds for customer segmentation",
+  },
   "/feedback-stats": {
     title: "Feedback stats",
     description: "Customer feedback responses by rating and date",

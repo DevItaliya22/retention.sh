@@ -18,6 +18,8 @@ export interface Customer {
   phone: string | null;
   pointsBalance: number;
   cashbackBalance: number;
+  visitCount: number;
+  totalSpent: number;
   createdAt: string;
   updatedAt: string;
 }

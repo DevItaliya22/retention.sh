@@ -1,12 +1,22 @@
 "use client";
 
+import { useCustomerSegmentsQuery } from "@/hooks/analytics/useAnalyticsQuery";
 import {
   useCustomersQuery,
   type Customer,
 } from "@/hooks/customers/useCustomersQuery";
 import { getDataTableConfig } from "@/lib/utils/data-table-params";
 import {
+  Badge,
+  Button,
   buttonVariants,
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
   DataTable,
   DataTableColumnHeader,
   DataTableToolbar,
@@ -15,14 +25,189 @@ import {
   EmptyDescription,
   EmptyHeader,
   EmptyTitle,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+  Separator,
   Skeleton,
 } from "@reelo/ui/components";
 import { useDataTable } from "@reelo/ui/hooks";
 import { cn } from "@reelo/ui/lib/utils";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Eye } from "lucide-react";
+import { Check, Eye, PlusCircle, XCircle } from "lucide-react";
 import Link from "next/link";
-import { useMemo } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useMemo, useState } from "react";
+
+function CustomersSegmentFilter() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [open, setOpen] = useState(false);
+  const { data } = useCustomerSegmentsQuery();
+
+  const segmentParam = searchParams.get("segment") ?? "";
+  const selectedSlugs = useMemo(
+    () =>
+      segmentParam
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean),
+    [segmentParam],
+  );
+  const selectedSet = useMemo(() => new Set(selectedSlugs), [selectedSlugs]);
+
+  const options = useMemo(
+    () =>
+      (data?.segments ?? [])
+        .filter((s) => s.slug !== "other")
+        .sort((a, b) => b.percentage - a.percentage)
+        .map((s) => ({ label: s.name, value: s.slug })),
+    [data?.segments],
+  );
+
+  const updateSegment = useCallback(
+    (slugs: string[]) => {
+      const params = new URLSearchParams(searchParams);
+      if (slugs.length === 0) {
+        params.delete("segment");
+      } else {
+        params.set("segment", slugs.join(","));
+      }
+      params.set("customersPage", "1");
+      router.push(`/customers?${params.toString()}`);
+    },
+    [router, searchParams],
+  );
+
+  const onItemSelect = useCallback(
+    (value: string, isSelected: boolean) => {
+      const newSet = new Set(selectedSlugs);
+      if (isSelected) {
+        newSet.delete(value);
+      } else {
+        newSet.add(value);
+      }
+      updateSegment(Array.from(newSet));
+    },
+    [selectedSlugs, updateSegment],
+  );
+
+  const onReset = useCallback(
+    (e?: React.MouseEvent) => {
+      e?.stopPropagation();
+      updateSegment([]);
+    },
+    [updateSegment],
+  );
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          className="border-border/60 bg-background/50 h-10 rounded-lg font-normal"
+          icon={
+            selectedSet.size > 0 ? (
+              <div
+                role="button"
+                aria-label="Clear segment filter"
+                tabIndex={0}
+                className="focus-visible:ring-ring rounded-sm opacity-70 transition-opacity hover:opacity-100 focus-visible:ring-1 focus-visible:outline-none"
+                onClick={onReset}
+              >
+                <XCircle />
+              </div>
+            ) : (
+              <PlusCircle />
+            )
+          }
+        >
+          Segment
+          {selectedSet.size > 0 && (
+            <>
+              <Separator
+                orientation="vertical"
+                className="mx-0.5 data-[orientation=vertical]:h-4"
+              />
+              <Badge
+                variant="secondary"
+                className="rounded-sm px-1 font-normal lg:hidden"
+              >
+                {selectedSet.size}
+              </Badge>
+              <div className="hidden items-center gap-1 lg:flex">
+                {selectedSet.size > 2 ? (
+                  <Badge
+                    variant="secondary"
+                    className="rounded-sm px-1 font-normal"
+                  >
+                    {selectedSet.size} selected
+                  </Badge>
+                ) : (
+                  options
+                    .filter((o) => selectedSet.has(o.value))
+                    .map((o) => (
+                      <Badge
+                        variant="secondary"
+                        key={o.value}
+                        className="rounded-sm px-1 font-normal"
+                      >
+                        {o.label}
+                      </Badge>
+                    ))
+                )}
+              </div>
+            </>
+          )}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-50 p-0" align="start">
+        <Command>
+          <CommandInput placeholder="Filter by segment..." />
+          <CommandList className="max-h-full">
+            <CommandEmpty>No segments found.</CommandEmpty>
+            <CommandGroup className="max-h-[300px] scroll-py-1 overflow-x-hidden overflow-y-auto">
+              {options.map((option) => {
+                const isSelected = selectedSet.has(option.value);
+                return (
+                  <CommandItem
+                    key={option.value}
+                    onSelect={() => onItemSelect(option.value, isSelected)}
+                  >
+                    <div
+                      className={cn(
+                        "border-primary flex size-4 items-center justify-center rounded-sm border",
+                        isSelected
+                          ? "bg-primary"
+                          : "opacity-50 [&_svg]:invisible",
+                      )}
+                    >
+                      <Check />
+                    </div>
+                    <span className="truncate">{option.label}</span>
+                  </CommandItem>
+                );
+              })}
+            </CommandGroup>
+            {selectedSet.size > 0 && (
+              <>
+                <CommandSeparator />
+                <CommandGroup>
+                  <CommandItem
+                    onSelect={() => onReset()}
+                    className="justify-center text-center"
+                  >
+                    Clear filters
+                  </CommandItem>
+                </CommandGroup>
+              </>
+            )}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 export function CustomersTable() {
   const { data, isLoading, isError, error } = useCustomersQuery();
@@ -44,6 +229,8 @@ export function CustomersTable() {
         phone: null,
         pointsBalance: 0,
         cashbackBalance: 0,
+        visitCount: 0,
+        totalSpent: 0,
         createdAt: "",
         updatedAt: "",
       })) as Customer[];
@@ -83,38 +270,6 @@ export function CustomersTable() {
         },
       },
       {
-        id: "email",
-        accessorKey: "email",
-        size: 250,
-        minSize: 200,
-        maxSize: 350,
-        header: ({ column }) => (
-          <DataTableColumnHeader column={column} label="Email" />
-        ),
-        cell: ({ row }) => {
-          const customer = row.original;
-          if (customer.id === "empty-state") {
-            return null;
-          }
-          if (isLoading && customer.id.startsWith("skeleton-")) {
-            return <Skeleton className="h-4 w-40" />;
-          }
-          return (
-            <div className="text-muted-foreground text-sm">
-              {customer.email}
-            </div>
-          );
-        },
-        enableColumnFilter: true,
-        enableSorting: true,
-        meta: {
-          label: "Email",
-          variant: "text" as const,
-          placeholder: "Filter by email...",
-          maxLength: 254,
-        },
-      },
-      {
         id: "phone",
         accessorKey: "phone",
         size: 180,
@@ -144,6 +299,68 @@ export function CustomersTable() {
           placeholder: "Filter by phone...",
           maxLength: 20,
         },
+      },
+      {
+        id: "visitCount",
+        accessorKey: "visitCount",
+        size: 120,
+        minSize: 100,
+        maxSize: 140,
+        header: ({ column }) => (
+          <div className="flex w-full justify-center">
+            <DataTableColumnHeader column={column} label="Visits" />
+          </div>
+        ),
+        cell: ({ row }) => {
+          const customer = row.original;
+          if (customer.id === "empty-state") return null;
+          if (isLoading && customer.id.startsWith("skeleton-")) {
+            return (
+              <div className="flex justify-center">
+                <Skeleton className="h-4 w-8" />
+              </div>
+            );
+          }
+          return (
+            <div className="flex justify-center font-medium tabular-nums">
+              {customer.visitCount}
+            </div>
+          );
+        },
+        enableSorting: true,
+      },
+      {
+        id: "totalSpent",
+        accessorKey: "totalSpent",
+        size: 120,
+        minSize: 100,
+        maxSize: 160,
+        header: ({ column }) => (
+          <div className="flex w-full justify-end">
+            <DataTableColumnHeader column={column} label="Total Spent" />
+          </div>
+        ),
+        cell: ({ row }) => {
+          const customer = row.original;
+          if (customer.id === "empty-state") return null;
+          if (isLoading && customer.id.startsWith("skeleton-")) {
+            return (
+              <div className="flex justify-end">
+                <Skeleton className="h-4 w-16" />
+              </div>
+            );
+          }
+          return (
+            <div className="flex justify-end font-medium tabular-nums">
+              ₹
+              {(customer.totalSpent ?? 0).toLocaleString("en-IN", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
+            </div>
+          );
+        },
+        enableSorting: true,
       },
       {
         id: "cashbackBalance",
@@ -329,7 +546,12 @@ export function CustomersTable() {
         </Empty>
       )}
     >
-      <DataTableToolbar table={table} maxTextFilters={1} />
+      <div className="flex w-full flex-nowrap items-center gap-2">
+        <CustomersSegmentFilter />
+        <div className="min-w-0 flex-1">
+          <DataTableToolbar table={table} maxTextFilters={1} />
+        </div>
+      </div>
     </DataTable>
   );
 }

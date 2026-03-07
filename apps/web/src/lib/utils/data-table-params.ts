@@ -35,7 +35,7 @@ export const DATA_TABLE_CONFIG: Record<
   },
   customers: {
     prefix: "customers",
-    filterKeys: ["name", "email", "phone", "dateFrom", "dateTo"],
+    filterKeys: ["name", "email", "phone", "dateFrom", "dateTo", "segment"],
   },
   campaigns: {
     prefix: "campaigns",

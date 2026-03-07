@@ -98,7 +98,7 @@ export interface TopRewardsResponse {
   error?: string;
 }
 
-// --- Section 5: RFM ---
+// --- Section 5: RFM (legacy, deprecated) ---
 
 export interface RfmSegment {
   name: string;
@@ -110,6 +110,42 @@ export interface RfmSegment {
 export interface RfmResponse {
   totalCustomers: number;
   segments: RfmSegment[];
+  error?: string;
+}
+
+// --- Section 5b: Customer Segments ---
+
+export interface CustomerSegment {
+  name: string;
+  slug: string;
+  count: number;
+  percentage: number;
+  description?: string | null;
+  proTip?: string | null;
+}
+
+export interface CustomerSegmentsResponse {
+  totalCustomers: number;
+  segments: CustomerSegment[];
+  error?: string;
+}
+
+export interface SegmentCustomersResponse {
+  items: Array<{
+    id: string;
+    slugId: string;
+    customerId: string;
+    name: string;
+    email: string;
+    phone: string | null;
+    pointsBalance: number;
+    cashbackBalance: number;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+  total: number;
+  page: number;
+  perPage: number;
   error?: string;
 }
 

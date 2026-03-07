@@ -9,6 +9,7 @@ export const customersQuerySchema = z.object({
   phone: z.string().max(20, "Phone filter is too long").trim().optional(),
   dateFrom: z.string().datetime().optional(),
   dateTo: z.string().datetime().optional(),
+  segment: z.string().max(500).trim().optional(),
 });
 
 export type CustomersQueryInput = z.infer<typeof customersQuerySchema>;

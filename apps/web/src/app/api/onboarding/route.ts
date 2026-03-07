@@ -31,9 +31,14 @@ export const POST = withAdminAuthOptionalBusiness(
 
       const existingBusiness = await db.business.findUnique({
         where: { slug: validatedData.businessSlug },
+        include: { admins: { where: { userId: userId }, take: 1 } },
       });
 
       if (existingBusiness) {
+        const userOwnsBusiness = existingBusiness.admins.length > 0;
+        if (userOwnsBusiness) {
+          return NextResponse.json({ success: true });
+        }
         return NextResponse.json(
           {
             error: "Business slug already exists. Please choose another one.",
