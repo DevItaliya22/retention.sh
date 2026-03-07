@@ -1499,9 +1499,26 @@ async function writeLogs(logs: DemoAccountLog[]) {
   }));
 
   const credentialsPath = path.join(logsDir, "credentials.json");
+  let existingCredentials: DemoCredentialLog[] = [];
+  try {
+    const raw = await fs.readFile(credentialsPath, "utf8");
+    const parsed = JSON.parse(raw) as DemoCredentialLog[];
+    if (Array.isArray(parsed)) {
+      existingCredentials = parsed;
+    }
+  } catch {
+    existingCredentials = [];
+  }
+
+  const merged = [...existingCredentials, ...credentials];
+  const deduped = new Map<string, DemoCredentialLog>();
+  for (const item of merged) {
+    deduped.set(`${item.runId}:${item.accountKey}`, item);
+  }
+
   await fs.writeFile(
     credentialsPath,
-    JSON.stringify(credentials, null, 2),
+    JSON.stringify([...deduped.values()], null, 2),
     "utf8",
   );
 }
