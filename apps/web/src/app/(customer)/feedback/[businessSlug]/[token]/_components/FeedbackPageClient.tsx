@@ -111,6 +111,8 @@ const pageWrapperClass =
 
 const cardClass =
   "w-full max-w-[420px] rounded-[32px] border border-gray-200/70 bg-white shadow-sm overflow-hidden flex flex-col !p-0";
+const DEFAULT_THEME_COLOR = "#0f766e";
+const DEFAULT_TEXT_COLOR = "#f8fafc";
 
 function OnlineReviewCTA({
   review,
@@ -409,8 +411,9 @@ export function FeedbackPageClient({
   );
 
   const brandingFromConfig = config?.branding ?? data?.branding ?? null;
-  const themeColorFallback = brandingFromConfig?.themeColor || "#7c3aed";
-  const textColorFallback = brandingFromConfig?.textColor || "#ffffff";
+  const themeColorFallback =
+    brandingFromConfig?.themeColor || DEFAULT_THEME_COLOR;
+  const textColorFallback = brandingFromConfig?.textColor || DEFAULT_TEXT_COLOR;
   const logoFallback = brandingFromConfig?.logo || null;
   const bannerFallback = brandingFromConfig?.bannerImage || null;
 
@@ -471,13 +474,23 @@ export function FeedbackPageClient({
   if (!config) {
     return (
       <div className={pageWrapperClass}>
-        <Card className={cardClass}>
-          <CardHeader className="px-4 pt-6 pb-6 text-center sm:px-6">
-            <div className="bg-muted text-muted-foreground mx-auto mb-2 flex size-12 items-center justify-center rounded-full">
-              <MessageSquare className="size-6" />
+        <Card className={`${cardClass} border-gray-300/70 bg-white shadow-md`}>
+          <div className="relative rounded-t-[32px] bg-gradient-to-br from-slate-900 via-slate-800 to-teal-900 px-6 pt-8 pb-7 text-center">
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(255,255,255,0.18),transparent_55%)]" />
+            <div className="relative z-10">
+              <div className="mx-auto mb-3 flex size-14 items-center justify-center rounded-full border border-white/30 bg-white/15 backdrop-blur-sm">
+                <MessageSquare className="size-7 text-white" />
+              </div>
+              <h1 className="text-2xl font-semibold tracking-tight text-white">
+                Feedback
+              </h1>
+              <p className="mt-1.5 text-sm text-white/85">
+                We are preparing this feedback page for you
+              </p>
             </div>
-            <h1 className="text-lg font-semibold sm:text-xl">Feedback</h1>
-            <p className="text-muted-foreground mt-2 text-sm">
+          </div>
+          <CardHeader className="bg-slate-50 px-5 pt-5 pb-7 text-center sm:px-7">
+            <p className="text-sm leading-relaxed text-slate-800 sm:text-[15px]">
               Feedback is not configured for this link yet. Please check back
               later.
             </p>
@@ -488,8 +501,8 @@ export function FeedbackPageClient({
   }
 
   const branding = config.branding;
-  const themeColor = branding?.themeColor || "#000000";
-  const textColor = branding?.textColor || "#ffffff";
+  const themeColor = branding?.themeColor || DEFAULT_THEME_COLOR;
+  const textColor = branding?.textColor || DEFAULT_TEXT_COLOR;
   const bannerImage = branding?.bannerImage || null;
   const logo = branding?.logo || null;
   const headerText = branding?.header || "We'd love your feedback";
@@ -620,10 +633,13 @@ export function FeedbackPageClient({
           </div>
         </div>
 
-        <CardContent className="space-y-6 px-4 pt-4 pb-6 sm:px-6">
+        <CardContent
+          className="space-y-6 px-4 pt-4 pb-6 sm:px-6"
+          style={{ color: "#111827" }}
+        >
           {/* Rating 1–5: touch-friendly stars */}
           <div className="space-y-2">
-            <Label className="text-sm">
+            <Label className="text-sm" style={{ color: "#111827", opacity: 1 }}>
               {FEEDBACK_FORM_DEFAULTS.labels.howWasExperience}
             </Label>
             <div className="flex justify-center gap-1 sm:gap-2">
@@ -654,7 +670,10 @@ export function FeedbackPageClient({
               {config.selectionOptions &&
                 config.selectionOptions.length > 0 && (
                   <div className="space-y-2">
-                    <Label className="text-sm">
+                    <Label
+                      className="text-sm"
+                      style={{ color: "#111827", opacity: 1 }}
+                    >
                       What did you like or not like? (optional)
                     </Label>
                     <div
@@ -701,7 +720,11 @@ export function FeedbackPageClient({
 
               {/* Comment – shown after selection options */}
               <div className="space-y-2">
-                <Label htmlFor="feedback-comment" className="text-sm">
+                <Label
+                  htmlFor="feedback-comment"
+                  className="text-sm text-slate-900"
+                  style={{ color: "#111827", opacity: 1 }}
+                >
                   {FEEDBACK_FORM_DEFAULTS.labels.commentOptional}
                 </Label>
                 <Textarea
@@ -710,7 +733,7 @@ export function FeedbackPageClient({
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
                   rows={3}
-                  className="min-h-[88px] resize-none text-base"
+                  className="min-h-[88px] resize-none border-slate-400 bg-[#e5e5e5] text-base text-slate-900 placeholder:text-slate-700 placeholder:opacity-100 [&::placeholder]:text-slate-700 [&::placeholder]:opacity-100"
                 />
               </div>
             </>
@@ -719,7 +742,10 @@ export function FeedbackPageClient({
           {/* Categories */}
           {config.categories.length > 0 && (
             <div className="space-y-2">
-              <Label className="text-sm">
+              <Label
+                className="text-sm"
+                style={{ color: "#111827", opacity: 1 }}
+              >
                 {FEEDBACK_FORM_DEFAULTS.labels.whatCouldWeImprove}
               </Label>
               <div className="flex flex-wrap gap-3">
@@ -736,7 +762,7 @@ export function FeedbackPageClient({
                     />
                     <Label
                       htmlFor={`cat-${cat.id}`}
-                      className="cursor-pointer touch-manipulation text-sm font-normal"
+                      className="cursor-pointer touch-manipulation text-sm font-normal text-slate-800"
                     >
                       {cat.name}
                     </Label>
@@ -750,14 +776,18 @@ export function FeedbackPageClient({
           {config.isHowDidYouHearEnabled &&
             config.howDidYouHearOptions.length > 0 && (
               <div className="space-y-2">
-                <Label htmlFor="feedback-how" className="text-sm">
+                <Label
+                  htmlFor="feedback-how"
+                  className="text-sm"
+                  style={{ color: "#111827", opacity: 1 }}
+                >
                   {FEEDBACK_FORM_DEFAULTS.labels.howDidYouHear}
                 </Label>
                 <select
                   id="feedback-how"
                   value={howDidYouHear}
                   onChange={(e) => setHowDidYouHear(e.target.value)}
-                  className="border-input bg-background focus-visible:ring-ring min-h-[44px] w-full rounded-lg border px-3 py-3 text-base focus-visible:ring-2 focus-visible:outline-none"
+                  className="focus-visible:ring-ring min-h-[44px] w-full rounded-lg border border-slate-300 bg-white px-3 py-3 text-base text-slate-900 focus-visible:ring-2 focus-visible:outline-none"
                 >
                   <option value="">
                     {FEEDBACK_FORM_DEFAULTS.labels.selectOption}

@@ -1,12 +1,15 @@
 "use client";
 
 import { useBreadcrumbOverride } from "@/components/layouts/context/breadcrumb-override";
+import { useBillInvoiceQuery } from "@/hooks/bills/useBillInvoiceQuery";
 import type {
   BillLineItemResponse,
   BillLoyaltyLog,
 } from "@/hooks/bills/useBillQuery";
 import { useBillQuery } from "@/hooks/bills/useBillQuery";
+import { downloadBillInvoicePdf } from "@/lib/invoice/pdf";
 import {
+  Button,
   buttonVariants,
   DateDisplay,
   Skeleton,
@@ -19,19 +22,10 @@ import {
 } from "@reelo/ui/components";
 import { cn } from "@reelo/ui/lib/utils";
 import { motion, useReducedMotion } from "framer-motion";
-import {
-  CalendarDays,
-  ExternalLink,
-  Gift,
-  Mail,
-  MessageSquare,
-  Package,
-  Phone,
-  Receipt,
-  User,
-} from "lucide-react";
+import { Receipt } from "lucide-react";
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 interface BillDetailPageClientProps {
   billId: string;
@@ -52,42 +46,37 @@ const stagger = (prefersReduced = false) => ({
 function DetailRow({
   label,
   value,
-  icon: Icon,
   isLoading,
   skeletonWidth = "w-32",
 }: {
   label: string;
   value: React.ReactNode;
-  icon?: React.ComponentType<{ className?: string }>;
   isLoading?: boolean;
   skeletonWidth?: string;
 }) {
   return (
-    <div className="flex items-start gap-3 py-2.5 first:pt-0 last:pb-0">
-      {Icon && (
-        <div className="text-muted-foreground/80 bg-muted/40 flex size-8 shrink-0 items-center justify-center rounded-lg">
-          <Icon className="size-4" />
-        </div>
+    <div className="grid grid-cols-[110px_1fr] gap-3 py-2.5 first:pt-0 last:pb-0">
+      <p className="text-muted-foreground text-[11px] font-medium tracking-wider uppercase">
+        {label}
+      </p>
+      {isLoading ? (
+        <Skeleton className={cn("h-5", skeletonWidth)} />
+      ) : (
+        <div className="text-sm leading-snug font-medium">{value}</div>
       )}
-      <div className="min-w-0 flex-1 space-y-0.5">
-        <p className="text-muted-foreground text-[11px] font-medium tracking-wider uppercase">
-          {label}
-        </p>
-        {isLoading ? (
-          <Skeleton className={cn("h-5", skeletonWidth)} />
-        ) : (
-          <div className="text-sm leading-snug font-medium">{value}</div>
-        )}
-      </div>
     </div>
   );
 }
 
 export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
   const prefersReducedMotion = useReducedMotion();
+  const [isDownloadingInvoice, setIsDownloadingInvoice] = useState(false);
   const { data, isLoading, isError, error } = useBillQuery(billId);
+  const { data: invoiceData, isLoading: isInvoiceLoading } =
+    useBillInvoiceQuery(billId);
   const setSegmentLabel = useBreadcrumbOverride()?.setSegmentLabel;
   const bill = data?.bill ?? null;
+  const invoice = invoiceData?.invoice ?? null;
   const businessSlug = data?.businessSlug ?? "";
   const feedbackPath =
     bill?.feedbackLink && businessSlug
@@ -102,6 +91,26 @@ export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
       setSegmentLabel?.(null);
     };
   }, [bill?.billNumber, setSegmentLabel]);
+
+  const handleDownloadInvoice = async () => {
+    if (!invoice) {
+      toast.error("Invoice is not ready yet");
+      return;
+    }
+
+    try {
+      setIsDownloadingInvoice(true);
+      await downloadBillInvoicePdf(invoice);
+    } catch (downloadError) {
+      toast.error(
+        downloadError instanceof Error
+          ? downloadError.message
+          : "Failed to download invoice",
+      );
+    } finally {
+      setIsDownloadingInvoice(false);
+    }
+  };
 
   if (isError) {
     return (
@@ -131,25 +140,18 @@ export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
       : "—";
   const formatRs = (n: number | null | undefined) =>
     n != null
-      ? `₹${n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+      ? `₹${n.toLocaleString("en-IN", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })}`
       : "—";
 
-  const isCashbackBill =
-    (bill?.cashbackAmount ?? 0) > 0 ||
-    (bill?.cashbackRedeemedAmount ?? 0) > 0 ||
-    (bill?.loyaltyLogs?.some((l) => l.valueKind === "CASHBACK") ?? false);
-  const hasLoyalty =
-    (bill?.loyaltyPointsEarned ?? 0) > 0 ||
-    (bill?.loyaltyPointsRedeemed ?? 0) > 0 ||
-    (bill?.cashbackAmount ?? 0) > 0 ||
-    (bill?.cashbackRedeemedAmount ?? 0) > 0;
+  const taxTotal = (bill?.tax ?? []).reduce((sum, amount) => sum + amount, 0);
+  const cashbackRedeemed = bill?.cashbackRedeemedAmount ?? 0;
+  const cashbackEarned = bill?.cashbackAmount ?? 0;
+
   const loyaltyLogs = bill?.loyaltyLogs ?? [];
   const showLoyaltyLogsTable = loyaltyLogs.length > 0;
-  const hasBreakdown =
-    bill &&
-    (bill.subtotal != null ||
-      (bill.storeDiscount ?? 0) > 0 ||
-      bill.finalAmount != null);
 
   function formatLoyaltyType(type: string) {
     const t = type as BillLoyaltyLog["type"];
@@ -167,7 +169,6 @@ export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
       animate="animate"
       variants={s.container}
     >
-      {/* Hero: receipt-style header */}
       <motion.section
         variants={s.item}
         className="from-muted/30 via-muted/10 relative overflow-hidden rounded-2xl border bg-gradient-to-br to-transparent px-6 py-6 sm:px-8 sm:py-8"
@@ -179,15 +180,28 @@ export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
               Bill number
             </p>
             {isLoading && !bill ? (
-              <Skeleton className="h-9 w-40" />
+              <div className="flex items-end gap-3">
+                <Skeleton className="h-9 w-40" />
+                <Skeleton className="h-4 w-28" />
+              </div>
             ) : (
-              <p className="font-mono text-2xl font-semibold tracking-tight sm:text-3xl">
-                {bill?.billNumber ?? "—"}
-              </p>
+              <div className="flex flex-wrap items-end gap-3">
+                <p className="font-mono text-2xl font-semibold tracking-tight sm:text-3xl">
+                  {bill?.billNumber ?? "—"}
+                </p>
+                {bill?.createdAt && (
+                  <>
+                    <span className="bg-border mb-1 h-4 w-px" />
+                    <div className="text-muted-foreground pb-1 text-xs">
+                      <DateDisplay date={bill.createdAt} />
+                    </div>
+                  </>
+                )}
+              </div>
             )}
           </div>
-          <div className="flex flex-wrap items-end gap-6 sm:gap-8">
-            <div className="text-right">
+          <div className="flex items-end gap-5">
+            <div className="text-right sm:pb-0.5">
               <p className="text-muted-foreground mb-0.5 text-[11px] font-medium tracking-widest uppercase">
                 Amount to pay
               </p>
@@ -199,186 +213,98 @@ export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
                 </span>
               )}
             </div>
-            {!isLoading && bill?.createdAt && (
-              <div className="text-muted-foreground flex items-center gap-2 text-sm">
-                <CalendarDays className="size-4 shrink-0" />
-                <DateDisplay date={bill.createdAt} />
-              </div>
-            )}
-            {!isLoading && bill?.businessCustomerId && (
-              <Link
-                href={`/customers/${bill.businessCustomerId}`}
-                className={cn(
-                  buttonVariants({ variant: "outline", size: "sm" }),
-                  "shrink-0 gap-2",
-                )}
+            <div className="bg-border h-14 w-px" />
+            <div className="flex flex-col gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={isDownloadingInvoice || isInvoiceLoading || !invoice}
+                onClick={handleDownloadInvoice}
               >
-                <User className="size-4" />
-                View customer
-              </Link>
-            )}
+                {isDownloadingInvoice ? "Preparing..." : "Download invoice"}
+              </Button>
+              {bill?.businessCustomerId && (
+                <Link
+                  href={`/customers/${bill.businessCustomerId}`}
+                  className={buttonVariants({ variant: "outline", size: "sm" })}
+                >
+                  View customer
+                </Link>
+              )}
+            </div>
           </div>
         </div>
       </motion.section>
 
-      {/* Two-column: Amount breakdown + Customer */}
       <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
-        {/* Amount breakdown */}
-        {((hasBreakdown || hasLoyalty) && bill) || isLoading ? (
-          <motion.section
-            variants={s.item}
-            className="bg-card rounded-2xl border p-6 shadow-sm"
-          >
-            <h3 className="text-foreground/90 mb-5 flex items-center gap-2 text-sm font-semibold tracking-wider uppercase">
-              <Receipt className="text-muted-foreground size-4" />
-              Amount breakdown
-            </h3>
-            {isLoading && !bill ? (
-              <div className="space-y-3">
-                <Skeleton className="h-5 w-full" />
-                <Skeleton className="h-5 w-3/4" />
-                <Skeleton className="h-6 w-1/2" />
+        <motion.section
+          variants={s.item}
+          className="bg-card rounded-2xl border p-6 shadow-sm"
+        >
+          <h3 className="text-foreground/90 mb-5 text-sm font-semibold tracking-wider uppercase">
+            Totals
+          </h3>
+          {isLoading && !bill ? (
+            <div className="space-y-3">
+              <Skeleton className="h-5 w-full" />
+              <Skeleton className="h-5 w-3/4" />
+              <Skeleton className="h-6 w-1/2" />
+            </div>
+          ) : (
+            <div className="space-y-1">
+              <div className="flex justify-between py-2 text-sm">
+                <span className="text-muted-foreground">Subtotal</span>
+                <span className="font-mono tabular-nums">
+                  {formatRs(bill?.subtotal ?? billTotal)}
+                </span>
               </div>
-            ) : bill ? (
-              <>
-                <div className="space-y-1">
-                  {bill.subtotal != null && (
-                    <div className="flex justify-between py-2 text-sm">
-                      <span className="text-muted-foreground">Subtotal</span>
-                      <span className="font-mono tabular-nums">
-                        {formatRs(bill.subtotal)}
-                      </span>
-                    </div>
+              <div className="flex justify-between py-2 text-sm">
+                <span className="text-muted-foreground">Store discount</span>
+                <span className="font-mono tabular-nums">
+                  -{formatRs(bill?.storeDiscount ?? 0)}
+                </span>
+              </div>
+              <div className="flex justify-between py-2 text-sm">
+                <span className="text-muted-foreground">Tax</span>
+                <span className="font-mono tabular-nums">
+                  {formatRs(taxTotal)}
+                </span>
+              </div>
+              <div className="flex justify-between py-2 text-sm">
+                <span className="text-muted-foreground">Cashback redeemed</span>
+                <span className="font-mono tabular-nums">
+                  -{formatRs(cashbackRedeemed)}
+                </span>
+              </div>
+              <div className="flex justify-between py-2 text-sm">
+                <span className="text-muted-foreground">Cashback earned</span>
+                <span className="font-mono tabular-nums">
+                  {formatRs(cashbackEarned)}
+                </span>
+              </div>
+              <div className="bg-muted/30 -mx-6 mt-2 flex justify-between border-t px-6 py-3 text-sm">
+                <span className="font-semibold">Amount paid</span>
+                <span className="font-mono font-bold tabular-nums">
+                  {formatRs(
+                    bill?.userPaidAmount ?? bill?.finalAmount ?? billTotal,
                   )}
-                  {(bill.storeDiscount ?? 0) > 0 && (
-                    <div className="flex justify-between py-2 text-sm">
-                      <span className="text-muted-foreground">
-                        Store discount
-                      </span>
-                      <span className="font-mono text-emerald-600 tabular-nums dark:text-emerald-400">
-                        -{formatRs(bill.storeDiscount ?? 0)}
-                      </span>
-                    </div>
-                  )}
-                  {bill.finalAmount != null && (
-                    <div className="flex justify-between border-t py-3 text-sm">
-                      <span className="font-medium">Bill total</span>
-                      <span className="font-mono font-medium tabular-nums">
-                        {formatRs(bill.finalAmount)}
-                      </span>
-                    </div>
-                  )}
-                  {(bill.cashbackRedeemedAmount ?? 0) > 0 && (
-                    <div className="flex justify-between py-2 text-sm">
-                      <span className="text-muted-foreground">
-                        Cashback used
-                      </span>
-                      <span className="font-mono text-blue-600 tabular-nums dark:text-blue-400">
-                        -{formatRs(bill.cashbackRedeemedAmount)}
-                      </span>
-                    </div>
-                  )}
-                  {(bill.loyaltyPointsRedeemed ?? 0) > 0 &&
-                    !(bill.cashbackRedeemedAmount ?? 0) && (
-                      <div className="flex justify-between py-2 text-sm">
-                        <span className="text-muted-foreground">
-                          Points used
-                        </span>
-                        <span className="font-mono text-blue-600 tabular-nums dark:text-blue-400">
-                          -{bill.loyaltyPointsRedeemed} pts
-                        </span>
-                      </div>
-                    )}
-                  <div className="bg-muted/30 -mx-6 mt-2 flex justify-between border-t px-6 py-3 text-sm">
-                    <span className="font-semibold">Amount to pay</span>
-                    <span className="font-mono font-bold tabular-nums">
-                      {formatRs(bill.userPaidAmount ?? bill.finalAmount)}
-                    </span>
-                  </div>
-                </div>
-                {hasLoyalty && (
-                  <div className="mt-6 border-t pt-5">
-                    <h4 className="text-muted-foreground mb-3 flex items-center gap-2 text-xs font-semibold tracking-wider uppercase">
-                      <Gift className="size-3.5" />
-                      Loyalty on this bill
-                    </h4>
-                    <div className="space-y-1">
-                      {isCashbackBill ? (
-                        <>
-                          {(bill.cashbackRedeemedAmount ?? 0) > 0 && (
-                            <div className="flex justify-between py-1.5 text-sm">
-                              <span className="text-muted-foreground">
-                                Cashback used
-                              </span>
-                              <span className="font-mono text-blue-600 tabular-nums dark:text-blue-400">
-                                -{formatRs(bill.cashbackRedeemedAmount)}
-                              </span>
-                            </div>
-                          )}
-                          {(bill.cashbackAmount ??
-                            bill.loyaltyPointsEarned ??
-                            0) > 0 && (
-                            <div className="flex justify-between py-1.5 text-sm">
-                              <span className="text-muted-foreground">
-                                Cashback earned
-                              </span>
-                              <span className="font-mono text-emerald-600 tabular-nums dark:text-emerald-400">
-                                +
-                                {formatRs(
-                                  bill.cashbackAmount ??
-                                    bill.loyaltyPointsEarned ??
-                                    0,
-                                )}
-                              </span>
-                            </div>
-                          )}
-                        </>
-                      ) : (
-                        <>
-                          {(bill.loyaltyPointsRedeemed ?? 0) > 0 && (
-                            <div className="flex justify-between py-1.5 text-sm">
-                              <span className="text-muted-foreground">
-                                Points used
-                              </span>
-                              <span className="font-mono tabular-nums">
-                                {bill.loyaltyPointsRedeemed} pts
-                              </span>
-                            </div>
-                          )}
-                          {(bill.loyaltyPointsEarned ?? 0) > 0 && (
-                            <div className="flex justify-between py-1.5 text-sm">
-                              <span className="text-muted-foreground">
-                                Points earned
-                              </span>
-                              <span className="font-mono text-emerald-600 tabular-nums dark:text-emerald-400">
-                                +{bill.loyaltyPointsEarned} pts
-                              </span>
-                            </div>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </>
-            ) : null}
-          </motion.section>
-        ) : null}
+                </span>
+              </div>
+            </div>
+          )}
+        </motion.section>
 
-        {/* Customer card */}
         <motion.section
           variants={s.item}
           className="bg-card rounded-2xl border p-6 shadow-sm lg:max-w-[340px]"
         >
-          <h3 className="text-foreground/90 mb-5 flex items-center gap-2 text-sm font-semibold tracking-wider uppercase">
-            <User className="text-muted-foreground size-4" />
+          <h3 className="text-foreground/90 mb-5 text-sm font-semibold tracking-wider uppercase">
             Customer
           </h3>
           <div className="space-y-0">
             <DetailRow
               label="Name"
               value={bill?.customerName ?? "—"}
-              icon={User}
               isLoading={isLoading && !bill}
               skeletonWidth="w-40"
             />
@@ -386,7 +312,6 @@ export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
               <DetailRow
                 label="Phone"
                 value={bill?.customerPhone ?? "—"}
-                icon={Phone}
                 isLoading={isLoading && !bill}
                 skeletonWidth="w-28"
               />
@@ -395,7 +320,6 @@ export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
               <DetailRow
                 label="Email"
                 value={bill?.customerEmail ?? "—"}
-                icon={Mail}
                 isLoading={isLoading && !bill}
                 skeletonWidth="w-48"
               />
@@ -416,14 +340,12 @@ export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
                       rel="noopener noreferrer"
                       className={cn(
                         buttonVariants({ variant: "link", size: "sm" }),
-                        "inline-flex h-auto items-center gap-1.5 p-0 font-normal",
+                        "inline-flex h-auto items-center p-0 font-normal",
                       )}
                     >
                       Open form
-                      <ExternalLink className="size-3.5 shrink-0" />
                     </Link>
                   }
-                  icon={MessageSquare}
                 />
               </div>
             )}
@@ -431,13 +353,11 @@ export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
         </motion.section>
       </div>
 
-      {/* Line items */}
       {(bill?.lineItems?.length ?? 0) > 0 && (
         <motion.section variants={s.item}>
           <div className="bg-card overflow-hidden rounded-2xl border shadow-sm">
             <div className="bg-muted/20 border-b px-6 py-4">
-              <h3 className="text-foreground/90 flex items-center gap-2 text-sm font-semibold tracking-wider uppercase">
-                <Package className="text-muted-foreground size-4" />
+              <h3 className="text-foreground/90 text-sm font-semibold tracking-wider uppercase">
                 Line items
               </h3>
             </div>
@@ -496,13 +416,11 @@ export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
         </motion.section>
       )}
 
-      {/* Loyalty logs */}
       {showLoyaltyLogsTable && (
         <motion.section variants={s.item}>
           <div className="bg-card overflow-hidden rounded-2xl border shadow-sm">
             <div className="bg-muted/20 border-b px-6 py-4">
-              <h3 className="text-foreground/90 flex items-center gap-2 text-sm font-semibold tracking-wider uppercase">
-                <Gift className="text-muted-foreground size-4" />
+              <h3 className="text-foreground/90 text-sm font-semibold tracking-wider uppercase">
                 Loyalty logs
               </h3>
             </div>
@@ -580,85 +498,6 @@ export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
                 })}
               </TableBody>
             </Table>
-          </div>
-        </motion.section>
-      )}
-
-      {/* Fallback: when no breakdown but we have bill - show minimal Bill & Customer */}
-      {!hasBreakdown && !hasLoyalty && !isLoading && bill && (
-        <motion.section
-          variants={s.item}
-          className="bg-card rounded-2xl border p-6 shadow-sm"
-        >
-          <h3 className="text-foreground/90 mb-5 flex items-center gap-2 text-sm font-semibold tracking-wider uppercase">
-            <Receipt className="text-muted-foreground size-4" />
-            Bill details
-          </h3>
-          <div className="grid gap-6 sm:grid-cols-2">
-            <div>
-              <DetailRow
-                label="Bill number"
-                value={bill?.billNumber ?? "—"}
-                icon={Receipt}
-              />
-              <DetailRow
-                label="Amount to pay"
-                value={amountFormatted}
-                icon={Receipt}
-              />
-              <DetailRow
-                label="Date"
-                value={
-                  bill?.createdAt ? <DateDisplay date={bill.createdAt} /> : "—"
-                }
-                icon={CalendarDays}
-              />
-              {feedbackPath && (
-                <DetailRow
-                  label="Feedback"
-                  value={
-                    <Link
-                      href={feedbackPath}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={cn(
-                        buttonVariants({ variant: "link", size: "sm" }),
-                        "inline-flex h-auto items-center gap-1.5 p-0 font-normal",
-                      )}
-                    >
-                      Open form
-                      <ExternalLink className="size-3.5 shrink-0" />
-                    </Link>
-                  }
-                  icon={MessageSquare}
-                />
-              )}
-            </div>
-            <div>
-              <DetailRow
-                label="Name"
-                value={bill?.customerName ?? "—"}
-                icon={User}
-              />
-              {(bill?.customerPhone ?? bill?.customerEmail) && (
-                <>
-                  {bill.customerPhone && (
-                    <DetailRow
-                      label="Phone"
-                      value={bill.customerPhone}
-                      icon={Phone}
-                    />
-                  )}
-                  {bill.customerEmail && (
-                    <DetailRow
-                      label="Email"
-                      value={bill.customerEmail}
-                      icon={Mail}
-                    />
-                  )}
-                </>
-              )}
-            </div>
           </div>
         </motion.section>
       )}
