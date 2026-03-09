@@ -1,4 +1,5 @@
 import { withAdminAuth } from "@/lib/auth/middleware";
+import { CAMPAIGN_DEFAULT_TERMS } from "@/lib/constants/forms/campaign";
 import { campaignsQuerySchema } from "@/lib/schemas/campaign";
 import {
   sanitizeErrorMessage,
@@ -171,6 +172,7 @@ export const POST = withAdminAuth(async (request: NextRequest, context) => {
         rewardValue: "Dessert",
         offerStatement:
           "Get a **Dessert** absolutely FREE on a **minimum purchase of ₹1000**. Don't miss out!",
+        termsAndConditions: [...CAMPAIGN_DEFAULT_TERMS],
         themeColor: defaultBranding?.themeColor ?? null,
         textColor: defaultBranding?.textColor ?? null,
         logo: defaultBranding?.logo ?? null,

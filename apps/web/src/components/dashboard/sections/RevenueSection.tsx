@@ -115,10 +115,8 @@ export function RevenueSection() {
           </div>
         </CardHeader>
         <CardContent className="px-2 pb-2">
-          {isLoading ? (
-            <Skeleton className="h-[280px] w-full rounded-lg" />
-          ) : (
-            <ChartContainer config={chartConfig} className="h-[280px] w-full">
+          <div className="relative h-[280px] w-full">
+            <ChartContainer config={chartConfig} className="h-full w-full">
               <AreaChart
                 data={data?.data ?? []}
                 margin={{ top: 8, right: 12, left: 0, bottom: 0 }}
@@ -190,7 +188,10 @@ export function RevenueSection() {
                 />
               </AreaChart>
             </ChartContainer>
-          )}
+            {isLoading && (
+              <Skeleton className="absolute inset-0 h-full w-full rounded-lg" />
+            )}
+          </div>
         </CardContent>
       </Card>
     </section>

@@ -102,15 +102,19 @@ export function RfmSection() {
         description="Customer segments based on visit patterns and spending. Click a segment to view customers."
       />
       {isLoading ? (
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid auto-rows-[minmax(100px,1fr)] grid-cols-4 gap-3">
           {Array.from({ length: 9 }).map((_, i) => (
-            <Skeleton
+            <div
               key={i}
               className={cn(
-                "rounded-lg",
-                i < 3 ? "col-span-2 row-span-2 h-36" : "h-28",
+                "bg-muted/20 flex flex-col justify-end rounded-lg border p-3",
+                i < 3 ? "col-span-2 row-span-2" : "col-span-1 row-span-1",
               )}
-            />
+            >
+              <Skeleton className="mb-2 h-3 w-24" />
+              <Skeleton className="mb-2 h-7 w-16" />
+              <Skeleton className="h-3 w-28" />
+            </div>
           ))}
         </div>
       ) : data?.segments && data.segments.length > 0 ? (

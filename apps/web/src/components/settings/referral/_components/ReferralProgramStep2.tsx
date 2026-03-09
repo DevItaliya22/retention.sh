@@ -1,10 +1,10 @@
 "use client";
 
 import { ChannelSelector } from "@/components/common/form-sections/ChannelSelector";
+import { TermsConditionsEditor } from "@/components/common/form-sections/TermsConditionsEditor";
 import { useActiveSkusForSelect } from "@/hooks/sku/useSkusQuery";
 import type { ReferralProgramFormValues } from "@/lib/schemas/referral-form";
 import {
-  Button,
   FormControl,
   FormField,
   FormItem,
@@ -17,10 +17,8 @@ import {
   SelectTrigger,
   SelectValue,
   Switch,
-  Textarea,
   useFormContext,
 } from "@reelo/ui/components";
-import { Plus, Trash2 } from "lucide-react";
 
 const BENEFIT_TYPE_OPTIONS = [
   { value: "AMOUNT_CASHBACK", label: "Amount Cashback" },
@@ -33,29 +31,12 @@ export function ReferralProgramStep2() {
   const { data: skusData } = useActiveSkusForSelect();
   const skus = skusData?.items ?? [];
 
-  const termsNew = form.watch("termsAndConditionsNewCustomer") ?? [];
-  const termsExisting = form.watch("termsAndConditionsExistingCustomer") ?? [];
-
-  const addTerm = (
-    field:
-      | "termsAndConditionsNewCustomer"
-      | "termsAndConditionsExistingCustomer",
-  ) => {
-    const current = form.getValues(field) ?? [];
-    form.setValue(field, [...current, ""]);
-  };
-  const removeTerm = (
-    field:
-      | "termsAndConditionsNewCustomer"
-      | "termsAndConditionsExistingCustomer",
-    index: number,
-  ) => {
-    const current = form.getValues(field) ?? [];
-    form.setValue(
-      field,
-      current.filter((_: string, i: number) => i !== index),
-    );
-  };
+  const REFERRAL_PRESET_LABELS = [
+    "Multiple offers cannot be combined in a single bill.",
+    "Referral rewards cannot be combined with ongoing campaigns.",
+    "Rewards are not redeemable on public holidays.",
+    "Reward is redeemable in-store only.",
+  ];
 
   return (
     <div className="grid gap-6">
@@ -206,99 +187,17 @@ export function ReferralProgramStep2() {
         )}
       />
 
-      <div className="space-y-4">
-        <FormLabel>Terms for New Customers</FormLabel>
-        {(termsNew.length === 0 ? [] : termsNew).map(
-          (_: string, index: number) => (
-            <div key={index} className="flex items-start gap-2">
-              <FormField
-                control={form.control}
-                name={`termsAndConditionsNewCustomer.${index}`}
-                render={({ field }) => (
-                  <FormItem className="flex-1">
-                    <FormControl>
-                      <Textarea
-                        variant="underline"
-                        placeholder={`Point ${index + 1}`}
-                        {...field}
-                        value={field.value ?? ""}
-                      />
-                    </FormControl>
-                    <FormMessage variant="banner" />
-                  </FormItem>
-                )}
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={() =>
-                  removeTerm("termsAndConditionsNewCustomer", index)
-                }
-                className="mt-2 shrink-0"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-          ),
-        )}
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => addTerm("termsAndConditionsNewCustomer")}
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Add point
-        </Button>
-      </div>
+      <TermsConditionsEditor
+        name="termsAndConditionsNewCustomer"
+        label="Terms for New Customers"
+        presetLabels={REFERRAL_PRESET_LABELS}
+      />
 
-      <div className="space-y-4">
-        <FormLabel>Terms for Existing Customers</FormLabel>
-        {(termsExisting.length === 0 ? [] : termsExisting).map(
-          (_: string, index: number) => (
-            <div key={index} className="flex items-start gap-2">
-              <FormField
-                control={form.control}
-                name={`termsAndConditionsExistingCustomer.${index}`}
-                render={({ field }) => (
-                  <FormItem className="flex-1">
-                    <FormControl>
-                      <Textarea
-                        variant="underline"
-                        placeholder={`Point ${index + 1}`}
-                        {...field}
-                        value={field.value ?? ""}
-                      />
-                    </FormControl>
-                    <FormMessage variant="banner" />
-                  </FormItem>
-                )}
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={() =>
-                  removeTerm("termsAndConditionsExistingCustomer", index)
-                }
-                className="mt-2 shrink-0"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-          ),
-        )}
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => addTerm("termsAndConditionsExistingCustomer")}
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Add point
-        </Button>
-      </div>
+      <TermsConditionsEditor
+        name="termsAndConditionsExistingCustomer"
+        label="Terms for Existing Customers"
+        presetLabels={REFERRAL_PRESET_LABELS}
+      />
     </div>
   );
 }

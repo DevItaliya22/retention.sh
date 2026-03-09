@@ -36,6 +36,41 @@ interface ReferralClaimPageClientProps {
   referralSlug: string;
 }
 
+const DEFAULT_THEME_COLOR = "#0f766e";
+const DEFAULT_TEXT_COLOR = "#f8fafc";
+const pageWrapClass =
+  "flex min-h-screen w-full items-center justify-center bg-white p-4 font-sans sm:p-6";
+
+function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
+  const value = hex.trim().replace("#", "");
+  if (!/^[0-9a-fA-F]{3,8}$/.test(value)) return null;
+  const normalized =
+    value.length === 3
+      ? value
+          .split("")
+          .map((c) => c + c)
+          .join("")
+      : value.slice(0, 6);
+  const num = Number.parseInt(normalized, 16);
+  if (!Number.isFinite(num)) return null;
+  return {
+    r: (num >> 16) & 255,
+    g: (num >> 8) & 255,
+    b: num & 255,
+  };
+}
+
+function isLightColor(hex: string): boolean {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return false;
+  const luminance = (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
+  return luminance >= 0.62;
+}
+
+function getContrastTextColor(bgColor: string): string {
+  return isLightColor(bgColor) ? "#0f172a" : "#f8fafc";
+}
+
 export function ReferralClaimPageClient({
   referralSlug,
 }: ReferralClaimPageClientProps) {
@@ -84,7 +119,7 @@ export function ReferralClaimPageClient({
   };
 
   const newCustomerBenefitText = useMemo(() => {
-    if (!data?.referralProgram || !data?.business) return "";
+    if (!data?.referralProgram || !data?.business) return null;
     const { referralProgram, business } = data;
     if (referralProgram.newCustomerBenefitType === "AMOUNT_CASHBACK") {
       return `${business.defaultCurrencySymbol}${referralProgram.newCustomerBenefitValue} Cashback`;
@@ -97,46 +132,24 @@ export function ReferralClaimPageClient({
     return "Exclusive Reward";
   }, [data]);
 
-  const cardWrap =
-    "flex min-h-screen w-full items-center justify-center bg-[#F4F4F5] p-4 font-sans sm:p-6";
+  const cardWrap = pageWrapClass;
   const cardInner =
     "flex w-full min-w-0 max-w-[420px] flex-col overflow-hidden rounded-2xl bg-white shadow-xl sm:rounded-[32px]";
+  const loading = isLoading && !data;
 
-  // ─── Loading state ─────────────────────────────────────────────────────
-  if (isLoading && !data) {
-    return (
-      <div className={cardWrap}>
-        <div className={cardInner}>
-          <div className="flex h-[240px] w-full flex-col items-center bg-gray-200 pt-10 sm:h-[280px] sm:pt-12">
-            <Skeleton className="mb-5 h-16 w-16 rounded-full sm:mb-6 sm:h-20 sm:w-20" />
-            <Skeleton className="mb-2 h-6 w-3/4 sm:mb-3 sm:h-8" />
-            <Skeleton className="h-3 w-2/3 sm:h-4" />
-          </div>
-          <div className="rounded-b-2xl bg-white px-4 py-6 sm:rounded-b-[32px] sm:px-6 sm:pb-8">
-            <Skeleton className="mb-4 h-4 w-1/2" />
-            <Skeleton className="mb-4 h-10 w-full rounded-xl" />
-            <Skeleton className="mb-4 h-10 w-full rounded-xl" />
-            <Skeleton className="h-12 w-full rounded-xl" />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ─── Invalid / not found ──────────────────────────────────────────────
-  if (isError || !data?.referralProgram || !data?.business) {
+  if (isError || (!loading && (!data?.referralProgram || !data?.business))) {
     return (
       <div className={cardWrap}>
         <div
-          className={`flex ${cardInner} border border-gray-200/50 p-6 text-center sm:p-10`}
+          className={`flex ${cardInner} border border-white/10 p-6 text-center sm:p-10`}
         >
-          <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-gray-100 sm:mb-6 sm:h-16 sm:w-16">
+          <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-slate-100 sm:mb-6 sm:h-16 sm:w-16">
             <span className="text-xl sm:text-2xl">😕</span>
           </div>
-          <h1 className="text-lg font-bold text-gray-900 sm:text-xl">
+          <h1 className="text-lg font-bold text-slate-900 sm:text-xl">
             Invalid referral link
           </h1>
-          <p className="mt-2 text-sm text-gray-500 sm:text-[15px]">
+          <p className="mt-2 text-sm text-slate-600 sm:text-[15px]">
             This referral link is invalid or the program is no longer available.
           </p>
         </div>
@@ -144,17 +157,21 @@ export function ReferralClaimPageClient({
     );
   }
 
-  const { referralProgram, business } = data;
-  const branding = referralProgram.branding;
-
-  const themeColor = branding?.themeColor || "#000000";
-  const textColor = branding?.textColor || "#ffffff";
+  const referralProgram = data?.referralProgram;
+  const business = data?.business;
+  const branding = referralProgram?.branding;
+  const themeColor =
+    (branding?.themeColor as string | undefined) || DEFAULT_THEME_COLOR;
+  const textColor =
+    (branding?.textColor as string | undefined) ||
+    getContrastTextColor(themeColor);
   const bannerImage = branding?.bannerImage;
   const logo = branding?.logo;
   const claimHeader = "Claim your reward";
-  const claimSubtitle = `Enter your details to join ${business.name} and get your referral benefit.`;
+  const claimSubtitle = loading
+    ? "Enter your details to join and get your referral benefit."
+    : `Enter your details to join ${business?.name ?? "us"} and get your referral benefit.`;
 
-  // ─── Success state (branded, same card layout) ───────────────────────────
   if (isSuccess) {
     return (
       <div className={cardWrap}>
@@ -189,7 +206,7 @@ export function ReferralClaimPageClient({
                     />
                   ) : (
                     <span className="text-xl font-bold text-gray-300 sm:text-2xl">
-                      {(business.name || "B").charAt(0).toUpperCase()}
+                      {(business?.name || "B").charAt(0).toUpperCase()}
                     </span>
                   )}
                 </div>
@@ -211,7 +228,7 @@ export function ReferralClaimPageClient({
                 className="max-w-[280px] text-[14px] leading-relaxed sm:max-w-[300px] sm:text-[15px]"
                 style={{ color: textColor, opacity: 0.9 }}
               >
-                You&apos;ve joined {business.name} and received your referral
+                You&apos;ve joined {business?.name} and received your referral
                 reward.
               </p>
             </div>
@@ -280,7 +297,7 @@ export function ReferralClaimPageClient({
                     />
                   ) : (
                     <span className="text-xl font-bold text-gray-300 sm:text-2xl">
-                      {(business.name || "B").charAt(0).toUpperCase()}
+                      {(business?.name || "B").charAt(0).toUpperCase()}
                     </span>
                   )}
                 </div>
@@ -338,7 +355,7 @@ export function ReferralClaimPageClient({
             </div>
             <p className="mt-5 text-center text-[13px] leading-relaxed text-gray-500 sm:mt-6 sm:text-[14px]">
               Use a different phone number to try again, or contact{" "}
-              {business.name} if you need help.
+              {business?.name} if you need help.
             </p>
             <Button
               type="button"
@@ -358,15 +375,24 @@ export function ReferralClaimPageClient({
     );
   }
 
-  // ─── Claim form (no overlap; responsive) ──────────────────────────────────
   return (
     <div className={cardWrap}>
+      <style>{`
+        .referral-claim-form input:-webkit-autofill,
+        .referral-claim-form input:-webkit-autofill:hover,
+        .referral-claim-form input:-webkit-autofill:focus,
+        .referral-claim-form input:-webkit-autofill:active {
+          -webkit-box-shadow: 0 0 0 30px white inset !important;
+          box-shadow: 0 0 0 30px white inset !important;
+          -webkit-text-fill-color: #000 !important;
+        }
+      `}</style>
       <div className={cardInner}>
         <div
           className="relative px-4 pt-8 pb-8 text-center sm:px-8 sm:pt-12 sm:pb-10"
           style={{ backgroundColor: themeColor }}
         >
-          {bannerImage && (
+          {!loading && bannerImage && (
             <>
               <div className="absolute inset-0 z-0">
                 <img
@@ -384,7 +410,9 @@ export function ReferralClaimPageClient({
           <div className="relative z-10 flex flex-col items-center">
             <div className="mb-4 h-16 w-16 rounded-full border border-white/20 bg-white p-0.5 shadow-lg sm:mb-5 sm:h-20 sm:w-20">
               <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-white">
-                {logo ? (
+                {loading ? (
+                  <Skeleton className="h-full w-full rounded-full" />
+                ) : logo ? (
                   <img
                     src={logo}
                     alt=""
@@ -392,7 +420,7 @@ export function ReferralClaimPageClient({
                   />
                 ) : (
                   <span className="text-xl font-bold text-gray-300 sm:text-2xl">
-                    {(business.name || "B").charAt(0).toUpperCase()}
+                    {(business?.name || "B").charAt(0).toUpperCase()}
                   </span>
                 )}
               </div>
@@ -412,7 +440,7 @@ export function ReferralClaimPageClient({
           </div>
         </div>
 
-        <div className="rounded-b-2xl bg-white px-4 pt-6 pb-6 sm:rounded-b-[32px] sm:px-6 sm:pt-8 sm:pb-8">
+        <div className="referral-claim-form rounded-b-2xl bg-white px-4 pt-6 pb-6 sm:rounded-b-[32px] sm:px-6 sm:pt-8 sm:pb-8">
           <div className="mb-6 overflow-hidden rounded-2xl border border-gray-100/80 bg-white p-4 shadow-sm sm:mb-8 sm:rounded-[24px] sm:p-5 sm:shadow-[0_8px_30px_rgba(0,0,0,0.06)]">
             <div className="flex items-center gap-3 sm:gap-4">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-gray-100 bg-white shadow-sm sm:h-12 sm:w-12">
@@ -426,60 +454,106 @@ export function ReferralClaimPageClient({
                 <p className="mb-0.5 text-[11px] font-semibold tracking-wider text-gray-400 uppercase sm:text-[12px]">
                   You get
                 </p>
-                <p className="text-base leading-tight font-bold text-gray-900 sm:text-[17px]">
-                  {newCustomerBenefitText}
-                </p>
+                <div
+                  className="inline-flex max-w-full items-center rounded-full px-3 py-1 text-[14px] font-semibold"
+                  style={{
+                    backgroundColor: `${themeColor}12`,
+                    color: themeColor,
+                  }}
+                >
+                  {newCustomerBenefitText == null ? (
+                    <Skeleton className="h-5 w-28 rounded-full bg-gray-200" />
+                  ) : (
+                    newCustomerBenefitText
+                  )}
+                </div>
               </div>
             </div>
           </div>
 
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Name</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Enter your name"
-                        className="min-h-[44px] rounded-[12px] sm:h-11"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="phoneNumber"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Phone number</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="tel"
-                        placeholder="Enter your phone number"
-                        className="min-h-[44px] rounded-[12px] sm:h-11"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+          {loading ? (
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm leading-none font-medium text-black">
+                  Name
+                </label>
+                <Input
+                  disabled
+                  placeholder="Enter your name"
+                  className="mt-2 min-h-[44px] rounded-[12px] border border-neutral-300 !bg-white text-black placeholder:text-black focus-visible:border-neutral-300 focus-visible:ring-0 focus-visible:ring-offset-0 sm:h-11"
+                />
+              </div>
+              <div>
+                <label className="text-sm leading-none font-medium text-black">
+                  Phone number
+                </label>
+                <Input
+                  disabled
+                  placeholder="Enter your phone number"
+                  className="mt-2 min-h-[44px] rounded-[12px] border border-neutral-300 !bg-white text-black placeholder:text-black focus-visible:border-neutral-300 focus-visible:ring-0 focus-visible:ring-offset-0 sm:h-11"
+                />
+              </div>
               <Button
-                type="submit"
-                disabled={isPending}
+                type="button"
+                disabled
                 className="min-h-[44px] w-full rounded-[12px] text-[14px] font-medium sm:h-11"
                 style={{ backgroundColor: themeColor, color: textColor }}
               >
-                {isPending ? "Processing…" : "Claim reward"}
+                Claim reward
               </Button>
-            </form>
-          </Form>
+            </div>
+          ) : (
+            <Form {...form}>
+              <form
+                onSubmit={form.handleSubmit(onSubmit)}
+                className="space-y-4"
+              >
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-black">Name</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Enter your name"
+                          className="min-h-[44px] rounded-[12px] border border-neutral-300 !bg-white text-black placeholder:text-black focus-visible:border-neutral-300 focus-visible:ring-0 focus-visible:ring-offset-0 sm:h-11"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="phoneNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-black">Phone number</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="tel"
+                          placeholder="Enter your phone number"
+                          className="min-h-[44px] rounded-[12px] border border-neutral-300 !bg-white text-black placeholder:text-black focus-visible:border-neutral-300 focus-visible:ring-0 focus-visible:ring-offset-0 sm:h-11"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button
+                  type="submit"
+                  disabled={isPending}
+                  className="min-h-[44px] w-full rounded-[12px] text-[14px] font-medium sm:h-11"
+                  style={{ backgroundColor: themeColor, color: textColor }}
+                >
+                  {isPending ? "Processing…" : "Claim reward"}
+                </Button>
+              </form>
+            </Form>
+          )}
         </div>
       </div>
     </div>

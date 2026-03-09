@@ -2,7 +2,7 @@ import { withAdminAuth } from "@/lib/auth/middleware";
 import {
   analyticsQuerySchema,
   getPeriodDateRange,
-  getStartOfToday,
+  getStartOfTodayInOffset,
   type AnalyticsPeriod,
 } from "@/lib/schemas/analytics";
 import type { HighlightsResponse, HighlightStat } from "@/lib/types/analytics";
@@ -33,11 +33,14 @@ function emptyResponse(): HighlightsResponse {
   };
 }
 
-function getPreviousPeriodRange(period: AnalyticsPeriod): {
+function getPreviousPeriodRange(
+  period: AnalyticsPeriod,
+  tzOffsetMinutes: number,
+): {
   from: Date;
   to: Date;
 } {
-  const { from, to } = getPeriodDateRange(period);
+  const { from, to } = getPeriodDateRange(period, tzOffsetMinutes);
   const diff = to.getTime() - from.getTime();
   return {
     from: new Date(from.getTime() - diff),
@@ -82,9 +85,10 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
     }
 
     const period = (validation.data.period ?? "30d") as AnalyticsPeriod;
-    const { from, to } = getPeriodDateRange(period);
-    const prev = getPreviousPeriodRange(period);
-    const todayStart = getStartOfToday();
+    const tzOffsetMinutes = validation.data.tzOffsetMinutes ?? 0;
+    const { from, to } = getPeriodDateRange(period, tzOffsetMinutes);
+    const prev = getPreviousPeriodRange(period, tzOffsetMinutes);
+    const todayStart = getStartOfTodayInOffset(tzOffsetMinutes);
     const now = new Date();
 
     const [

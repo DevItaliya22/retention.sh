@@ -27,7 +27,8 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
     }
 
     const period = (validation.data.period ?? "30d") as AnalyticsPeriod;
-    const { from, to } = getPeriodDateRange(period);
+    const tzOffsetMinutes = validation.data.tzOffsetMinutes ?? 0;
+    const { from, to } = getPeriodDateRange(period, tzOffsetMinutes);
 
     const transactions = await db.transaction.findMany({
       where: {

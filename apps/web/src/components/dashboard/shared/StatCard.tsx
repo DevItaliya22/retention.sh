@@ -10,6 +10,8 @@ interface StatCardProps {
   stat?: HighlightStat;
   isLoading?: boolean;
   currencySymbol?: string;
+  label?: string;
+  format?: HighlightStat["format"];
 }
 
 function formatValue(
@@ -42,14 +44,31 @@ export function StatCard({
   stat,
   isLoading,
   currencySymbol = "$",
+  label,
+  format,
 }: StatCardProps) {
+  const displayLabel = stat?.label ?? label ?? "";
+  const displayFormat = stat?.format ?? format ?? "number";
+
   if (isLoading || !stat) {
     return (
       <Card className="gap-2 py-4">
         <CardContent className="px-4">
-          <Skeleton className="mb-2 h-3 w-20" />
-          <Skeleton className="mb-1 h-7 w-24" />
-          <Skeleton className="h-3 w-16" />
+          <p className="text-muted-foreground text-xs font-medium">
+            {displayLabel}
+          </p>
+          <div className="text-foreground mt-1 text-2xl font-semibold tracking-tight tabular-nums">
+            <Skeleton className="inline-block h-7 w-24" />
+          </div>
+          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+            <Skeleton className="h-3 w-28" />
+            <p className="text-muted-foreground text-[11px] tabular-nums">
+              Today:{" "}
+              <span className="inline-block align-middle">
+                <Skeleton className="inline-block h-3 w-14" />
+              </span>
+            </p>
+          </div>
         </CardContent>
       </Card>
     );
@@ -61,10 +80,10 @@ export function StatCard({
     <Card className="gap-2 py-4">
       <CardContent className="px-4">
         <p className="text-muted-foreground text-xs font-medium">
-          {stat.label}
+          {displayLabel}
         </p>
         <p className="text-foreground mt-1 text-2xl font-semibold tracking-tight tabular-nums">
-          {formatValue(stat.value, stat.format, currencySymbol)}
+          {formatValue(stat.value, displayFormat, currencySymbol)}
         </p>
         <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5">
           {delta !== null && (
@@ -88,7 +107,7 @@ export function StatCard({
             </div>
           )}
           <p className="text-muted-foreground text-[11px] tabular-nums">
-            Today: {formatValue(stat.todayValue, stat.format, currencySymbol)}
+            Today: {formatValue(stat.todayValue, displayFormat, currencySymbol)}
           </p>
         </div>
       </CardContent>

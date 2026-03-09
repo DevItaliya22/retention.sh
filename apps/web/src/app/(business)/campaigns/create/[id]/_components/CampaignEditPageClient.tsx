@@ -1,6 +1,7 @@
 "use client";
 
 import { CampaignPreview } from "@/components/campaigns/CampaignPreview";
+import { TermsConditionsEditor } from "@/components/common/form-sections";
 import { ScaffoldContainer } from "@/components/layouts";
 import { useCurrentBusiness } from "@/hooks/business/useCurrentBusiness";
 import {
@@ -13,6 +14,7 @@ import {
 } from "@/hooks/campaigns/useCampaignsQuery";
 import {
   CAMPAIGN_APPLIES_TO_LABELS,
+  CAMPAIGN_DEFAULT_TERMS,
   CAMPAIGN_REDEMPTION_LABELS,
   CAMPAIGN_REWARD_PLACEHOLDERS,
   CAMPAIGN_REWARD_TEMPLATES,
@@ -30,7 +32,6 @@ import { downloadCampaignCardAsImage } from "@/lib/utils/campaign-card-image";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Button,
-  Checkbox,
   Form,
   FormControl,
   FormDescription,
@@ -101,10 +102,6 @@ type FormValues = z.infer<typeof formSchema>;
 
 const DEFAULT_THEME_COLOR = "#7F4899";
 const DEFAULT_TEXT_COLOR = "#ffffff";
-const DEFAULT_TERMS = [
-  "2 offers cannot be clubbed.",
-  "Reward cannot be exchanged for cash.",
-];
 const DEFAULT_REWARD_TYPE: CampaignRewardType = "FREE_ITEM";
 const DEFAULT_REWARD_VALUE_BY_TYPE: Record<CampaignRewardType, string> = {
   FREE_ITEM: "Dessert",
@@ -224,7 +221,7 @@ export function CampaignEditPageClient({
       startsAt: "",
       expiresAt: "",
       redemptionLimit: "ONCE",
-      termsAndConditions: DEFAULT_TERMS,
+      termsAndConditions: [...CAMPAIGN_DEFAULT_TERMS],
       themeColor: DEFAULT_THEME_COLOR,
       textColor: DEFAULT_TEXT_COLOR,
       logo: "",
@@ -296,7 +293,10 @@ export function CampaignEditPageClient({
         : "",
       redemptionLimit:
         (campaign.redemptionLimit as CampaignRedemptionLimit) ?? "ONCE",
-      termsAndConditions: campaign.termsAndConditions ?? [],
+      termsAndConditions:
+        (campaign.termsAndConditions?.length ?? 0) > 0
+          ? campaign.termsAndConditions
+          : [...CAMPAIGN_DEFAULT_TERMS],
       themeColor: campaign.themeColor || DEFAULT_THEME_COLOR,
       textColor: campaign.textColor || DEFAULT_TEXT_COLOR,
       logo: campaign.logo ?? "",
@@ -1042,56 +1042,8 @@ export function CampaignEditPageClient({
                   )}
                 />
 
-                <FormField
-                  control={form.control}
-                  name="termsAndConditions"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Terms & conditions</FormLabel>
-                      <Textarea
-                        readOnly
-                        className="bg-muted/40 min-h-[70px] resize-none border-dashed text-sm"
-                        value={
-                          field.value.length > 0
-                            ? field.value.join("\n")
-                            : "No terms selected."
-                        }
-                      />
-                      <div className="mt-2 space-y-1.5">
-                        {CAMPAIGN_TERMS_OPTIONS.map((term) => {
-                          const checked = field.value.includes(term);
-                          return (
-                            <label
-                              key={term}
-                              className={cn(
-                                "flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 text-sm transition-all",
-                                checked
-                                  ? "border-primary bg-primary/5 font-medium"
-                                  : "hover:bg-muted/50",
-                              )}
-                            >
-                              <Checkbox
-                                checked={checked}
-                                onCheckedChange={(v) => {
-                                  if (v) {
-                                    field.onChange([...field.value, term]);
-                                  } else {
-                                    field.onChange(
-                                      field.value.filter(
-                                        (t: string) => t !== term,
-                                      ),
-                                    );
-                                  }
-                                }}
-                              />
-                              {term}
-                            </label>
-                          );
-                        })}
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                <TermsConditionsEditor
+                  presetLabels={[...CAMPAIGN_TERMS_OPTIONS]}
                 />
               </Section>
 

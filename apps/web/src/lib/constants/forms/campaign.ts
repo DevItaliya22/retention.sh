@@ -1,14 +1,24 @@
 /**
+ * Default terms pre-filled when creating a new campaign.
+ * Uses loyalty defaults for consistency.
+ */
+export const CAMPAIGN_DEFAULT_TERMS = [
+  "Points/cashback are non-transferable and have no cash value except as stated.",
+  "We reserve the right to modify or discontinue this program with reasonable notice.",
+] as const;
+
+/**
  * Pre-defined terms & conditions options for campaign creation.
  * Users can toggle these on/off; selected items appear on the campaign card.
+ * Matches loyalty defaults for consistency.
  */
 export const CAMPAIGN_TERMS_OPTIONS = [
-  "Min purchase required.",
-  "2 offers cannot be clubbed.",
-  "Reward cannot be exchanged for cash.",
-  "Reward redeemable in-store only.",
-  "Merchant reserves the right to the final say in case of any disputes.",
-  "Additional T&C apply.",
+  "Points/cashback are non-transferable and have no cash value except as stated.",
+  "We reserve the right to modify or discontinue this program with reasonable notice.",
+  "Multiple offers cannot be combined in a single bill.",
+  "Minimum purchase may be required for some rewards.",
+  "Rewards are not redeemable on public holidays.",
+  "Reward is redeemable in-store only.",
 ] as const;
 
 export const CAMPAIGN_REWARD_TYPE_LABELS: Record<string, string> = {

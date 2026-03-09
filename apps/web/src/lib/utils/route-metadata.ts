@@ -101,6 +101,16 @@ const ROUTE_METADATA_MAP: Record<string, RouteMetadataConfig> = {
     title: "Feedback Settings",
     description: "Configure when and how to collect customer feedback",
   },
+  "/referral/[businessSlug]/[referralSlug]": {
+    title: "Referral page",
+    description: "Share your referral link and earn rewards",
+    noIndex: true,
+  },
+  "/referral/claim/[referralSlug]": {
+    title: "Claim referral",
+    description: "Claim your referral reward",
+    noIndex: true,
+  },
   "/settings/shopify": {
     title: "Shopify",
     description: "Connect your Shopify store and sync products",
@@ -198,6 +208,16 @@ function getRoutePattern(
     filteredSegments.length === 3
   ) {
     return "/campaigns/create/[id]";
+  }
+
+  // Handle public referral pages
+  if (filteredSegments[0] === "referral") {
+    if (filteredSegments[1] === "claim" && filteredSegments.length === 3) {
+      return "/referral/claim/[referralSlug]";
+    }
+    if (filteredSegments.length === 3) {
+      return "/referral/[businessSlug]/[referralSlug]";
+    }
   }
 
   // Handle cashier portal routes
