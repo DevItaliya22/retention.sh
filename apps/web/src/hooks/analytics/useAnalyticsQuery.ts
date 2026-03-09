@@ -18,9 +18,14 @@ import type {
 } from "@/lib/types/analytics";
 import { useQuery } from "@tanstack/react-query";
 
+function getBrowserTzOffsetMinutes(): number {
+  return new Date().getTimezoneOffset();
+}
+
 function buildUrl(path: string, period?: AnalyticsPeriod): string {
   const params = new URLSearchParams();
   if (period) params.set("period", period);
+  params.set("tzOffsetMinutes", String(getBrowserTzOffsetMinutes()));
   const qs = params.toString();
   return qs ? `${path}?${qs}` : path;
 }
@@ -28,8 +33,9 @@ function buildUrl(path: string, period?: AnalyticsPeriod): string {
 // --- Section 1: Highlights ---
 
 export function useHighlightsQuery(period: AnalyticsPeriod = "30d") {
+  const tzOffsetMinutes = getBrowserTzOffsetMinutes();
   return useQuery<HighlightsResponse, Error>({
-    queryKey: ["analytics", "highlights", period],
+    queryKey: ["analytics", "highlights", period, tzOffsetMinutes],
     queryFn: () =>
       fetcher<HighlightsResponse>(
         buildUrl("/api/analytics/highlights", period),
@@ -43,8 +49,9 @@ export function useHighlightsQuery(period: AnalyticsPeriod = "30d") {
 // --- Section 2: Revenue ---
 
 export function useRevenueChartQuery(period: AnalyticsPeriod = "30d") {
+  const tzOffsetMinutes = getBrowserTzOffsetMinutes();
   return useQuery<RevenueResponse, Error>({
-    queryKey: ["analytics", "revenue", period],
+    queryKey: ["analytics", "revenue", period, tzOffsetMinutes],
     queryFn: () =>
       fetcher<RevenueResponse>(buildUrl("/api/analytics/revenue", period)),
     placeholderData: (prev) => prev,
@@ -55,8 +62,9 @@ export function useRevenueChartQuery(period: AnalyticsPeriod = "30d") {
 // --- Section 3: Customers (4 hooks) ---
 
 export function useCustomerSnapshotQuery(period: AnalyticsPeriod = "30d") {
+  const tzOffsetMinutes = getBrowserTzOffsetMinutes();
   return useQuery<CustomerSnapshotResponse, Error>({
-    queryKey: ["analytics", "customers", "snapshot", period],
+    queryKey: ["analytics", "customers", "snapshot", period, tzOffsetMinutes],
     queryFn: () =>
       fetcher<CustomerSnapshotResponse>(
         buildUrl("/api/analytics/customers/snapshot", period),
@@ -67,8 +75,15 @@ export function useCustomerSnapshotQuery(period: AnalyticsPeriod = "30d") {
 }
 
 export function useNewVsRepeatQuery(period: AnalyticsPeriod = "30d") {
+  const tzOffsetMinutes = getBrowserTzOffsetMinutes();
   return useQuery<NewVsRepeatResponse, Error>({
-    queryKey: ["analytics", "customers", "new-vs-repeat", period],
+    queryKey: [
+      "analytics",
+      "customers",
+      "new-vs-repeat",
+      period,
+      tzOffsetMinutes,
+    ],
     queryFn: () =>
       fetcher<NewVsRepeatResponse>(
         buildUrl("/api/analytics/customers/new-vs-repeat", period),
@@ -90,8 +105,9 @@ export function useCustomerFrequencyQuery() {
 // --- Section 4: Loyalty (3 hooks) ---
 
 export function useLoyaltyOverviewQuery(period: AnalyticsPeriod = "30d") {
+  const tzOffsetMinutes = getBrowserTzOffsetMinutes();
   return useQuery<LoyaltyOverviewResponse, Error>({
-    queryKey: ["analytics", "loyalty", "overview", period],
+    queryKey: ["analytics", "loyalty", "overview", period, tzOffsetMinutes],
     queryFn: () =>
       fetcher<LoyaltyOverviewResponse>(
         buildUrl("/api/analytics/loyalty/overview", period),
@@ -102,8 +118,9 @@ export function useLoyaltyOverviewQuery(period: AnalyticsPeriod = "30d") {
 }
 
 export function useLoyaltyChartQuery(period: AnalyticsPeriod = "30d") {
+  const tzOffsetMinutes = getBrowserTzOffsetMinutes();
   return useQuery<LoyaltyChartResponse, Error>({
-    queryKey: ["analytics", "loyalty", "chart", period],
+    queryKey: ["analytics", "loyalty", "chart", period, tzOffsetMinutes],
     queryFn: () =>
       fetcher<LoyaltyChartResponse>(
         buildUrl("/api/analytics/loyalty/chart", period),
@@ -139,8 +156,9 @@ export function useCustomerSegmentsQuery() {
 // --- Section 6: Engagement (3 hooks) ---
 
 export function useFeedbackAnalyticsQuery(period: AnalyticsPeriod = "30d") {
+  const tzOffsetMinutes = getBrowserTzOffsetMinutes();
   return useQuery<FeedbackAnalyticsResponse, Error>({
-    queryKey: ["analytics", "feedback", period],
+    queryKey: ["analytics", "feedback", period, tzOffsetMinutes],
     queryFn: () =>
       fetcher<FeedbackAnalyticsResponse>(
         buildUrl("/api/analytics/feedback", period),
@@ -151,8 +169,9 @@ export function useFeedbackAnalyticsQuery(period: AnalyticsPeriod = "30d") {
 }
 
 export function useCampaignAnalyticsQuery(period: AnalyticsPeriod = "30d") {
+  const tzOffsetMinutes = getBrowserTzOffsetMinutes();
   return useQuery<CampaignAnalyticsResponse, Error>({
-    queryKey: ["analytics", "campaigns", period],
+    queryKey: ["analytics", "campaigns", period, tzOffsetMinutes],
     queryFn: () =>
       fetcher<CampaignAnalyticsResponse>(
         buildUrl("/api/analytics/campaigns", period),
@@ -163,8 +182,9 @@ export function useCampaignAnalyticsQuery(period: AnalyticsPeriod = "30d") {
 }
 
 export function useReferralAnalyticsQuery(period: AnalyticsPeriod = "30d") {
+  const tzOffsetMinutes = getBrowserTzOffsetMinutes();
   return useQuery<ReferralAnalyticsResponse, Error>({
-    queryKey: ["analytics", "referrals", period],
+    queryKey: ["analytics", "referrals", period, tzOffsetMinutes],
     queryFn: () =>
       fetcher<ReferralAnalyticsResponse>(
         buildUrl("/api/analytics/referrals", period),

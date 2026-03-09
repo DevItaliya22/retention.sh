@@ -1,6 +1,8 @@
 import { withAdminAuth } from "@/lib/auth/middleware";
 import {
   analyticsQuerySchema,
+  formatDateKeyInOffset,
+  generateDateKeysInOffset,
   getPeriodDateRange,
   type AnalyticsPeriod,
 } from "@/lib/schemas/analytics";
@@ -11,20 +13,6 @@ import {
 } from "@/lib/utils/error-handler";
 import { db } from "@reelo/db";
 import { NextRequest, NextResponse } from "next/server";
-
-function formatDateKey(date: Date): string {
-  return date.toISOString().slice(0, 10);
-}
-
-function generateDateKeys(from: Date, to: Date): string[] {
-  const keys: string[] = [];
-  const d = new Date(from);
-  while (d <= to) {
-    keys.push(formatDateKey(d));
-    d.setDate(d.getDate() + 1);
-  }
-  return keys;
-}
 
 export const GET = withAdminAuth(async (request: NextRequest, context) => {
   try {
@@ -50,7 +38,8 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
     }
 
     const period = (validation.data.period ?? "30d") as AnalyticsPeriod;
-    const { from, to } = getPeriodDateRange(period);
+    const tzOffsetMinutes = validation.data.tzOffsetMinutes ?? 0;
+    const { from, to } = getPeriodDateRange(period, tzOffsetMinutes);
 
     const responses = await db.feedbackResponse.findMany({
       where: {
@@ -68,7 +57,7 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
     let negativeCount = 0;
     let neutralCount = 0;
 
-    const dateKeys = generateDateKeys(from, to);
+    const dateKeys = generateDateKeysInOffset(from, to, tzOffsetMinutes);
     const grouped = new Map<string, { totalRating: number; count: number }>();
     for (const key of dateKeys) {
       grouped.set(key, { totalRating: 0, count: 0 });
@@ -82,7 +71,7 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
         else if (r.rating <= 2) negativeCount++;
         else neutralCount++;
 
-        const key = formatDateKey(r.createdAt);
+        const key = formatDateKeyInOffset(r.createdAt, tzOffsetMinutes);
         const entry = grouped.get(key);
         if (entry) {
           entry.totalRating += r.rating;

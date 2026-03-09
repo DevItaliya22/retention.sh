@@ -107,12 +107,42 @@ function formatBillTime(isoString: string | null | undefined): string {
 }
 
 const pageWrapperClass =
-  "bg-[#F4F4F5] flex min-h-screen min-h-[100dvh] w-full items-center justify-center px-4 pb-4 pt-2 sm:px-6 sm:pb-6 sm:pt-4";
+  "flex min-h-screen min-h-[100dvh] w-full items-center justify-center bg-white px-4 pb-4 pt-2 font-sans sm:px-6 sm:pb-6 sm:pt-4";
 
 const cardClass =
-  "w-full max-w-[420px] rounded-[32px] border border-gray-200/70 bg-white shadow-sm overflow-hidden flex flex-col !p-0";
+  "w-full max-w-[420px] rounded-[32px] border border-white/10 overflow-hidden flex flex-col bg-white shadow-xl !p-0";
 const DEFAULT_THEME_COLOR = "#0f766e";
 const DEFAULT_TEXT_COLOR = "#f8fafc";
+
+function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
+  const value = hex.trim().replace("#", "");
+  if (!/^[0-9a-fA-F]{3,8}$/.test(value)) return null;
+  const normalized =
+    value.length === 3
+      ? value
+          .split("")
+          .map((c) => c + c)
+          .join("")
+      : value.slice(0, 6);
+  const num = Number.parseInt(normalized, 16);
+  if (!Number.isFinite(num)) return null;
+  return {
+    r: (num >> 16) & 255,
+    g: (num >> 8) & 255,
+    b: num & 255,
+  };
+}
+
+function isLightColor(hex: string): boolean {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return false;
+  const luminance = (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
+  return luminance >= 0.62;
+}
+
+function getContrastTextColor(bgColor: string): string {
+  return isLightColor(bgColor) ? "#0f172a" : "#f8fafc";
+}
 
 function OnlineReviewCTA({
   review,
@@ -139,9 +169,9 @@ function OnlineReviewCTA({
       style={
         themeColor
           ? {
-              borderColor: `${themeColor}40`,
-              backgroundColor: `${themeColor}12`,
-              color: themeColor,
+              borderColor: `${themeColor}B3`,
+              backgroundColor: themeColor,
+              color: getContrastTextColor(themeColor),
             }
           : undefined
       }
@@ -212,9 +242,10 @@ export function FeedbackPageClient({
     if (submitStatus === "success") return;
     const b = config?.branding;
     if (!b) return;
+    const resolvedTheme = b.themeColor ?? DEFAULT_THEME_COLOR;
     setFormBranding({
-      themeColor: b.themeColor ?? "#000000",
-      textColor: b.textColor ?? "#ffffff",
+      themeColor: resolvedTheme,
+      textColor: b.textColor ?? getContrastTextColor(resolvedTheme),
       logo: b.logo ?? null,
       bannerImage: b.bannerImage ?? null,
     });
@@ -280,25 +311,9 @@ export function FeedbackPageClient({
     );
   };
 
-  if (isLoading || (!data && !isError)) {
-    return (
-      <div className={pageWrapperClass}>
-        <Card className={cardClass}>
-          <CardHeader className="px-4 pt-6 pb-4 text-center sm:px-6">
-            <Skeleton className="bg-primary/10 mx-auto mb-2 size-12 rounded-full" />
-            <Skeleton className="mx-auto h-6 w-24" />
-            <Skeleton className="mx-auto mt-2 h-4 w-64" />
-          </CardHeader>
-          <CardContent className="space-y-4 px-4 pb-6 sm:px-6">
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-24 w-full" />
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  const loading = isLoading || (!data && !isError);
 
-  if (isError || !data) {
+  if (isError || (!loading && !data)) {
     return (
       <div className={pageWrapperClass}>
         <Card className={cardClass}>
@@ -413,7 +428,8 @@ export function FeedbackPageClient({
   const brandingFromConfig = config?.branding ?? data?.branding ?? null;
   const themeColorFallback =
     brandingFromConfig?.themeColor || DEFAULT_THEME_COLOR;
-  const textColorFallback = brandingFromConfig?.textColor || DEFAULT_TEXT_COLOR;
+  const textColorFallback =
+    brandingFromConfig?.textColor || getContrastTextColor(themeColorFallback);
   const logoFallback = brandingFromConfig?.logo || null;
   const bannerFallback = brandingFromConfig?.bannerImage || null;
 
@@ -471,7 +487,7 @@ export function FeedbackPageClient({
     );
   }
 
-  if (!config) {
+  if (!loading && !config) {
     return (
       <div className={pageWrapperClass}>
         <Card className={`${cardClass} border-gray-300/70 bg-white shadow-md`}>
@@ -500,27 +516,49 @@ export function FeedbackPageClient({
     );
   }
 
-  const branding = config.branding;
+  const branding = config?.branding;
   const themeColor = branding?.themeColor || DEFAULT_THEME_COLOR;
-  const textColor = branding?.textColor || DEFAULT_TEXT_COLOR;
+  const textColor = branding?.textColor || getContrastTextColor(themeColor);
   const bannerImage = branding?.bannerImage || null;
   const logo = branding?.logo || null;
-  const headerText = branding?.header || "We'd love your feedback";
+  const headerText = branding?.header || FEEDBACK_FORM_DEFAULTS.title;
   const subtitleText =
     branding?.subtitle || FEEDBACK_FORM_DEFAULTS.labels.howWasExperience;
+  const infoStripBackground = isLightColor(themeColor)
+    ? "rgba(15,23,42,0.10)"
+    : "rgba(255,255,255,0.16)";
+
+  const showBillStrip = loading || billAmount != null || billCreatedAt != null;
+  const headerTitle = loading ? FEEDBACK_FORM_DEFAULTS.title : headerText;
+  const headerSubtitle = loading
+    ? FEEDBACK_FORM_DEFAULTS.labels.howWasExperience
+    : subtitleText;
 
   return (
     <div className={pageWrapperClass}>
+      <style>{`
+        .feedback-form textarea:-webkit-autofill,
+        .feedback-form textarea:-webkit-autofill:hover,
+        .feedback-form textarea:-webkit-autofill:focus,
+        .feedback-form textarea:-webkit-autofill:active,
+        .feedback-form input:-webkit-autofill,
+        .feedback-form input:-webkit-autofill:hover,
+        .feedback-form input:-webkit-autofill:focus,
+        .feedback-form input:-webkit-autofill:active {
+          -webkit-box-shadow: 0 0 0 30px white inset !important;
+          box-shadow: 0 0 0 30px white inset !important;
+          -webkit-text-fill-color: #000 !important;
+        }
+      `}</style>
       <Card
-        className={cardClass}
+        className={`${cardClass} feedback-form`}
         style={{ ["--feedback-theme" as string]: themeColor }}
       >
-        {/* Merged header: logo left, text right, bill row inside same block */}
         <div
           className="relative rounded-t-[32px] px-4 py-5 sm:px-5 sm:py-6"
           style={{ backgroundColor: themeColor }}
         >
-          {bannerImage && (
+          {!loading && bannerImage && (
             <>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
@@ -536,11 +574,12 @@ export function FeedbackPageClient({
           )}
 
           <div className="relative z-10 flex flex-col gap-4">
-            {/* Row 1: Logo left, title + subtitle right */}
             <div className="flex items-center gap-4">
               <div className="h-14 w-14 shrink-0 rounded-full border border-white/20 bg-white p-[2px] sm:h-16 sm:w-16">
                 <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-full">
-                  {logo ? (
+                  {loading ? (
+                    <Skeleton className="h-full w-full rounded-full" />
+                  ) : logo ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={logo}
@@ -556,75 +595,94 @@ export function FeedbackPageClient({
               </div>
               <div className="min-w-0 flex-1 text-left">
                 <h1
-                  className="text-[18px] leading-tight font-semibold sm:text-[20px]"
-                  style={{ color: textColor }}
+                  className={`text-[18px] leading-tight font-semibold sm:text-[20px] ${
+                    isLightColor(themeColor) ? "text-gray-900" : "text-white"
+                  }`}
                 >
-                  {headerText}
+                  {headerTitle}
                 </h1>
                 <p
-                  className="mt-0.5 text-xs opacity-90 sm:text-sm"
-                  style={{ color: textColor }}
+                  className={`mt-0.5 text-xs sm:text-sm ${
+                    isLightColor(themeColor) ? "text-gray-800" : "text-white/95"
+                  }`}
                 >
-                  {subtitleText}
+                  {headerSubtitle}
                 </p>
               </div>
             </div>
 
-            {/* Row 2: Spent | Date | Time merged in header */}
-            {(billAmount != null || billCreatedAt) && (
+            {showBillStrip && (
               <div
-                className="grid grid-cols-2 gap-2 rounded-lg px-3 py-3 sm:grid-cols-3 sm:gap-3 sm:px-4"
-                style={{ backgroundColor: "rgba(255,255,255,0.15)" }}
+                className="grid min-h-[52px] grid-cols-2 gap-2 rounded-lg px-3 py-3 sm:min-h-[56px] sm:grid-cols-3 sm:gap-3 sm:px-4"
+                style={{ backgroundColor: infoStripBackground }}
               >
-                {billAmount != null && (
-                  <div className="min-w-0 text-center">
+                {(loading || billAmount != null) && (
+                  <div className="flex min-w-0 flex-col items-center justify-center text-center">
                     <p
                       className="text-[10px] font-medium opacity-90 sm:text-xs"
                       style={{ color: textColor }}
                     >
                       Spent
                     </p>
-                    <p
-                      className="mt-0.5 truncate text-xs font-bold sm:text-sm"
-                      style={{ color: textColor }}
-                    >
-                      {currencySymbol}{" "}
-                      {Number(billAmount).toLocaleString("en-IN", {
-                        minimumFractionDigits: 0,
-                        maximumFractionDigits: 2,
-                      })}
-                    </p>
+                    <div className="mt-0.5 flex min-h-[18px] items-center justify-center sm:min-h-5">
+                      {loading ? (
+                        <Skeleton className="block h-4 w-14 rounded bg-gray-300/90 sm:h-[18px] sm:w-16" />
+                      ) : (
+                        <p
+                          className="truncate text-xs font-bold sm:text-sm"
+                          style={{ color: textColor }}
+                        >
+                          {currencySymbol}{" "}
+                          {Number(billAmount).toLocaleString("en-IN", {
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 2,
+                          })}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 )}
-                {billCreatedAt && (
+                {(loading || billCreatedAt) && (
                   <>
-                    <div className="min-w-0 text-center">
+                    <div className="flex min-w-0 flex-col items-center justify-center text-center">
                       <p
                         className="text-[10px] font-medium opacity-90 sm:text-xs"
                         style={{ color: textColor }}
                       >
                         Date
                       </p>
-                      <p
-                        className="mt-0.5 truncate text-xs font-bold sm:text-sm"
-                        style={{ color: textColor }}
-                      >
-                        {formatBillDate(billCreatedAt)}
-                      </p>
+                      <div className="mt-0.5 flex min-h-[18px] items-center justify-center sm:min-h-5">
+                        {loading ? (
+                          <Skeleton className="block h-4 w-20 rounded bg-gray-300/90 sm:h-[18px] sm:w-24" />
+                        ) : (
+                          <p
+                            className="truncate text-xs font-bold sm:text-sm"
+                            style={{ color: textColor }}
+                          >
+                            {formatBillDate(billCreatedAt)}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                    <div className="min-w-0 text-center">
+                    <div className="flex min-w-0 flex-col items-center justify-center text-center">
                       <p
                         className="text-[10px] font-medium opacity-90 sm:text-xs"
                         style={{ color: textColor }}
                       >
                         Time
                       </p>
-                      <p
-                        className="mt-0.5 truncate text-xs font-bold sm:text-sm"
-                        style={{ color: textColor }}
-                      >
-                        {formatBillTime(billCreatedAt)}
-                      </p>
+                      <div className="mt-0.5 flex min-h-[18px] items-center justify-center sm:min-h-5">
+                        {loading ? (
+                          <Skeleton className="block h-4 w-16 rounded bg-gray-300/90 sm:h-[18px] sm:w-20" />
+                        ) : (
+                          <p
+                            className="truncate text-xs font-bold sm:text-sm"
+                            style={{ color: textColor }}
+                          >
+                            {formatBillTime(billCreatedAt)}
+                          </p>
+                        )}
+                      </div>
                     </div>
                   </>
                 )}
@@ -633,38 +691,56 @@ export function FeedbackPageClient({
           </div>
         </div>
 
-        <CardContent
-          className="space-y-6 px-4 pt-4 pb-6 sm:px-6"
-          style={{ color: "#111827" }}
-        >
-          {/* Rating 1–5: touch-friendly stars */}
+        <CardContent className="space-y-6 px-4 pt-4 pb-6 sm:px-6">
           <div className="space-y-2">
-            <Label className="text-sm" style={{ color: "#111827", opacity: 1 }}>
+            <label
+              className="block text-sm leading-none font-semibold text-black"
+              htmlFor="feedback-rating"
+            >
               {FEEDBACK_FORM_DEFAULTS.labels.howWasExperience}
-            </Label>
-            <div className="flex justify-center gap-1 sm:gap-2">
-              {[1, 2, 3, 4, 5].map((value) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => setRating(value)}
-                  className="focus-visible:ring-ring flex min-h-[44px] min-w-[44px] touch-manipulation items-center justify-center rounded-lg p-2 focus-visible:ring-2 focus-visible:outline-none"
-                  aria-label={`${value} star${value > 1 ? "s" : ""}`}
-                >
-                  <Star
-                    className={`size-9 sm:size-10 ${
-                      rating !== null && value <= rating
-                        ? "fill-amber-400 text-amber-400"
-                        : "text-muted-foreground"
-                    }`}
-                  />
-                </button>
-              ))}
-            </div>
+            </label>
+            {loading ? (
+              <div
+                className="flex justify-center gap-1 sm:gap-2"
+                id="feedback-rating"
+              >
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <span
+                    key={i}
+                    className="flex min-h-[44px] min-w-[44px] items-center justify-center p-2"
+                  >
+                    <Star className="size-9 text-neutral-400 sm:size-10" />
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <div
+                className="flex justify-center gap-1 sm:gap-2"
+                id="feedback-rating"
+                role="group"
+              >
+                {[1, 2, 3, 4, 5].map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setRating(value)}
+                    className="focus-visible:ring-ring flex min-h-[44px] min-w-[44px] touch-manipulation items-center justify-center rounded-lg p-2 focus-visible:ring-2 focus-visible:outline-none"
+                    aria-label={`${value} star${value > 1 ? "s" : ""}`}
+                  >
+                    <Star
+                      className={`size-9 sm:size-10 ${
+                        rating !== null && value <= rating
+                          ? "fill-amber-400 text-amber-400"
+                          : "text-neutral-400"
+                      }`}
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* After star selection: selection options first, then comment */}
-          {rating !== null && (
+          {!loading && config && rating !== null && (
             <>
               {/* Selection options – shown first after rating */}
               {config.selectionOptions &&
@@ -717,30 +793,25 @@ export function FeedbackPageClient({
                     </div>
                   </div>
                 )}
-
-              {/* Comment – shown after selection options */}
-              <div className="space-y-2">
-                <Label
-                  htmlFor="feedback-comment"
-                  className="text-sm text-slate-900"
-                  style={{ color: "#111827", opacity: 1 }}
-                >
-                  {FEEDBACK_FORM_DEFAULTS.labels.commentOptional}
-                </Label>
-                <Textarea
-                  id="feedback-comment"
-                  placeholder={FEEDBACK_FORM_DEFAULTS.labels.commentPlaceholder}
-                  value={comment}
-                  onChange={(e) => setComment(e.target.value)}
-                  rows={3}
-                  className="min-h-[88px] resize-none border-slate-400 bg-[#e5e5e5] text-base text-slate-900 placeholder:text-slate-700 placeholder:opacity-100 [&::placeholder]:text-slate-700 [&::placeholder]:opacity-100"
-                />
-              </div>
             </>
           )}
 
-          {/* Categories */}
-          {config.categories.length > 0 && (
+          <div className="space-y-2">
+            <Label htmlFor="feedback-comment" className="text-sm text-black">
+              {FEEDBACK_FORM_DEFAULTS.labels.commentOptional}
+            </Label>
+            <Textarea
+              id="feedback-comment"
+              placeholder={FEEDBACK_FORM_DEFAULTS.labels.commentPlaceholder}
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              rows={3}
+              disabled={loading}
+              className="min-h-[88px] resize-none rounded-[12px] border border-neutral-300 !bg-white text-base text-black placeholder:text-black focus-visible:border-neutral-300 focus-visible:ring-0 focus-visible:ring-offset-0 disabled:opacity-70"
+            />
+          </div>
+
+          {!loading && config && config.categories.length > 0 && (
             <div className="space-y-2">
               <Label
                 className="text-sm"
@@ -772,9 +843,9 @@ export function FeedbackPageClient({
             </div>
           )}
 
-          {/* How did you hear about us */}
-          {config.isHowDidYouHearEnabled &&
-            config.howDidYouHearOptions.length > 0 && (
+          {!loading &&
+            config?.isHowDidYouHearEnabled &&
+            (config?.howDidYouHearOptions?.length ?? 0) > 0 && (
               <div className="space-y-2">
                 <Label
                   htmlFor="feedback-how"
@@ -808,8 +879,8 @@ export function FeedbackPageClient({
           <button
             type="button"
             onClick={submitFeedback}
-            disabled={submitStatus === "submitting"}
-            className="flex h-11 w-full items-center justify-center gap-2 rounded-[12px] text-[14px] font-medium transition-colors active:opacity-90"
+            disabled={loading || submitStatus === "submitting"}
+            className="flex h-11 w-full items-center justify-center gap-2 rounded-[12px] text-[14px] font-medium transition-colors active:opacity-90 disabled:opacity-70"
             style={{ backgroundColor: themeColor, color: textColor }}
           >
             {submitStatus === "submitting"

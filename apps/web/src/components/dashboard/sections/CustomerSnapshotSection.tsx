@@ -77,10 +77,8 @@ function NewVsRepeatChart({ period }: { period: AnalyticsPeriod }) {
         </CardTitle>
       </CardHeader>
       <CardContent className="px-2 pb-2">
-        {isLoading ? (
-          <Skeleton className="h-[240px] w-full rounded-lg" />
-        ) : (
-          <ChartContainer config={barChartConfig} className="h-[240px] w-full">
+        <div className="relative h-[240px] w-full">
+          <ChartContainer config={barChartConfig} className="h-full w-full">
             <BarChart
               data={data?.data ?? []}
               margin={{ top: 8, right: 12, left: 0, bottom: 0 }}
@@ -126,7 +124,10 @@ function NewVsRepeatChart({ period }: { period: AnalyticsPeriod }) {
               />
             </BarChart>
           </ChartContainer>
-        )}
+          {isLoading && (
+            <Skeleton className="absolute inset-0 h-full w-full rounded-lg" />
+          )}
+        </div>
       </CardContent>
     </Card>
   );
@@ -141,10 +142,8 @@ function FrequencyChart() {
         <CardTitle className="text-sm font-medium">Visit Frequency</CardTitle>
       </CardHeader>
       <CardContent className="px-2 pb-2">
-        {isLoading ? (
-          <Skeleton className="h-[200px] w-full rounded-lg" />
-        ) : (
-          <ChartContainer config={frequencyConfig} className="h-[200px] w-full">
+        <div className="relative h-[200px] w-full">
+          <ChartContainer config={frequencyConfig} className="h-full w-full">
             <BarChart
               data={data?.data ?? []}
               layout="vertical"
@@ -176,7 +175,10 @@ function FrequencyChart() {
               />
             </BarChart>
           </ChartContainer>
-        )}
+          {isLoading && (
+            <Skeleton className="absolute inset-0 h-full w-full rounded-lg" />
+          )}
+        </div>
         {!isLoading && data && (
           <p className="text-muted-foreground px-4 pb-2 text-xs">
             {data.totalVisitors.toLocaleString()} total visitors

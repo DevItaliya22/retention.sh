@@ -62,54 +62,57 @@ function FeedbackWidget({ period }: { period: AnalyticsPeriod }) {
             </div>
           ))}
         </div>
-        {isLoading ? (
-          <Skeleton className="h-[160px] w-full rounded-lg" />
-        ) : data?.trend && data.trend.length > 1 ? (
-          <ChartContainer
-            config={feedbackChartConfig}
-            className="h-[160px] w-full"
-          >
-            <LineChart
-              data={data.trend}
-              margin={{ top: 8, right: 12, left: 0, bottom: 0 }}
+        {isLoading || (data?.trend && data.trend.length > 1) ? (
+          <div className="relative h-[160px] w-full">
+            <ChartContainer
+              config={feedbackChartConfig}
+              className="h-full w-full"
             >
-              <CartesianGrid vertical={false} strokeDasharray="3 3" />
-              <XAxis
-                dataKey="date"
-                tickLine={false}
-                axisLine={false}
-                tickMargin={8}
-                tickFormatter={formatDateLabel}
-                interval="preserveStartEnd"
-                minTickGap={40}
-              />
-              <YAxis
-                tickLine={false}
-                axisLine={false}
-                tickMargin={4}
-                width={30}
-                domain={[0, 5]}
-              />
-              <ChartTooltip
-                content={
-                  <ChartTooltipContent
-                    labelFormatter={(label) =>
-                      typeof label === "string"
-                        ? formatDateLabel(label)
-                        : String(label)
-                    }
-                  />
-                }
-              />
-              <Line
-                type="monotone"
-                dataKey="avgRating"
-                stroke="var(--color-avgRating)"
-                strokeWidth={2}
-                dot={false}
-              />
-            </LineChart>
-          </ChartContainer>
+              <LineChart
+                data={data?.trend ?? []}
+                margin={{ top: 8, right: 12, left: 0, bottom: 0 }}
+              >
+                <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="date"
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                  tickFormatter={formatDateLabel}
+                  interval="preserveStartEnd"
+                  minTickGap={40}
+                />
+                <YAxis
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={4}
+                  width={30}
+                  domain={[0, 5]}
+                />
+                <ChartTooltip
+                  content={
+                    <ChartTooltipContent
+                      labelFormatter={(label) =>
+                        typeof label === "string"
+                          ? formatDateLabel(label)
+                          : String(label)
+                      }
+                    />
+                  }
+                />
+                <Line
+                  type="monotone"
+                  dataKey="avgRating"
+                  stroke="var(--color-avgRating)"
+                  strokeWidth={2}
+                  dot={false}
+                />
+              </LineChart>
+            </ChartContainer>
+            {isLoading && (
+              <Skeleton className="absolute inset-0 h-full w-full rounded-lg" />
+            )}
+          </div>
         ) : (
           <div className="flex h-[160px] items-center justify-center">
             <p className="text-muted-foreground text-sm">

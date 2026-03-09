@@ -1,6 +1,7 @@
 "use client";
 
-import { ChannelSelector } from "@/components/common/form-sections/ChannelSelector";
+import { ChannelSelector } from "@/components/common/form-sections";
+import { TermCard } from "@/components/common/form-sections/TermCard";
 import { BrandingFieldGroup } from "@/components/common/settings/BrandingFieldGroup";
 import { SettingsField } from "@/components/common/settings/SettingsField";
 import type { ReferralProgram } from "@/hooks/referral/useReferralProgram";
@@ -32,7 +33,7 @@ import {
   Switch,
   Textarea,
 } from "@reelo/ui/components";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, X } from "lucide-react";
 import { useEffect } from "react";
 import type { Resolver } from "react-hook-form";
 import { useForm } from "react-hook-form";
@@ -1043,15 +1044,22 @@ function TermsCard({
     | "termsAndConditionsExistingCustomer";
   onUpdate: ReturnType<typeof useUpdateReferralProgram>["mutateAsync"];
 }) {
+  const presetLabels = [
+    "Multiple offers cannot be combined in a single bill.",
+    "Referral rewards cannot be combined with ongoing campaigns.",
+    "Rewards are not redeemable on public holidays.",
+    "Reward is redeemable in-store only.",
+  ];
+  const presetSet = new Set(presetLabels);
   const items = value.map((t) => t.content);
   const form = useForm<{ items: string[] }>({
     defaultValues: {
-      items: items.length > 0 ? items : [""],
+      items,
     },
   });
   useEffect(() => {
     form.reset({
-      items: items.length > 0 ? items : [""],
+      items,
     });
   }, [value]);
 
@@ -1062,7 +1070,7 @@ function TermsCard({
   };
   const removePoint = (index: number) => {
     const next = watchItems.filter((_, i) => i !== index);
-    form.setValue("items", next.length > 0 ? next : [""], {
+    form.setValue("items", next, {
       shouldDirty: true,
     });
   };
@@ -1097,35 +1105,70 @@ function TermsCard({
             className="flex min-h-0 flex-1 flex-col"
           >
             <CardContent className="flex min-h-0 flex-1 flex-col gap-y-3 overflow-auto px-4 py-4">
-              {watchItems.map((_, index) => (
-                <div key={index} className="flex items-start gap-2">
-                  <FormField
-                    control={form.control}
-                    name={`items.${index}`}
-                    render={({ field }) => (
-                      <FormItem className="flex-1">
-                        <FormControl>
-                          <Textarea
-                            variant="underline"
-                            placeholder={`Point ${index + 1}`}
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => removePoint(index)}
-                    className="mt-2 shrink-0"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+              <div className="mb-1 space-y-1">
+                <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+                  Suggested defaults
+                </p>
+                <div className="mt-1 grid gap-2 md:grid-cols-2">
+                  {presetLabels.map((label) => {
+                    const current = (form.getValues("items") as string[]) ?? [];
+                    const isSelected = current.includes(label);
+                    return (
+                      <TermCard
+                        key={label}
+                        label={label}
+                        checked={isSelected}
+                        onCheckedChange={(next) => {
+                          const itemsNow =
+                            (form.getValues("items") as string[]) ?? [];
+                          const exists = itemsNow.includes(label);
+                          const nextItems = next
+                            ? exists
+                              ? itemsNow
+                              : [...itemsNow, label]
+                            : itemsNow.filter((t) => t !== label);
+                          form.setValue("items", nextItems, {
+                            shouldDirty: true,
+                          });
+                        }}
+                      />
+                    );
+                  })}
                 </div>
-              ))}
+              </div>
+              {watchItems.map((_, index) => {
+                const valueAtIndex = watchItems[index] ?? "";
+                if (presetSet.has(valueAtIndex)) {
+                  return null;
+                }
+                return (
+                  <div
+                    key={index}
+                    className="flex min-w-0 flex-1 items-center gap-2 px-3 py-2"
+                  >
+                    <Input
+                      variant="underline"
+                      className="min-w-0 flex-1"
+                      value={valueAtIndex}
+                      placeholder={`Point ${index + 1}`}
+                      onChange={(e) => {
+                        const next = [...watchItems];
+                        next[index] = e.target.value;
+                        form.setValue("items", next, { shouldDirty: true });
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="shrink-0"
+                      onClick={() => removePoint(index)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                );
+              })}
               <Button
                 type="button"
                 variant="outline"

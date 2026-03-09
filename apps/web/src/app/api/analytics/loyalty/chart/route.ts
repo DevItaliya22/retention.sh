@@ -1,6 +1,8 @@
 import { withAdminAuth } from "@/lib/auth/middleware";
 import {
   analyticsQuerySchema,
+  formatDateKeyInOffset,
+  generateDateKeysInOffset,
   getPeriodDateRange,
   type AnalyticsPeriod,
 } from "@/lib/schemas/analytics";
@@ -11,20 +13,6 @@ import {
 } from "@/lib/utils/error-handler";
 import { db } from "@reelo/db";
 import { NextRequest, NextResponse } from "next/server";
-
-function formatDateKey(date: Date): string {
-  return date.toISOString().slice(0, 10);
-}
-
-function generateDateKeys(from: Date, to: Date): string[] {
-  const keys: string[] = [];
-  const d = new Date(from);
-  while (d <= to) {
-    keys.push(formatDateKey(d));
-    d.setDate(d.getDate() + 1);
-  }
-  return keys;
-}
 
 export const GET = withAdminAuth(async (request: NextRequest, context) => {
   try {
@@ -41,7 +29,8 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
     }
 
     const period = (validation.data.period ?? "30d") as AnalyticsPeriod;
-    const { from, to } = getPeriodDateRange(period);
+    const tzOffsetMinutes = validation.data.tzOffsetMinutes ?? 0;
+    const { from, to } = getPeriodDateRange(period, tzOffsetMinutes);
 
     const transactions = await db.transaction.findMany({
       where: {
@@ -53,14 +42,14 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
       orderBy: { createdAt: "asc" },
     });
 
-    const dateKeys = generateDateKeys(from, to);
+    const dateKeys = generateDateKeysInOffset(from, to, tzOffsetMinutes);
     const grouped = new Map<string, { issued: number; redeemed: number }>();
     for (const key of dateKeys) {
       grouped.set(key, { issued: 0, redeemed: 0 });
     }
 
     for (const tx of transactions) {
-      const key = formatDateKey(tx.createdAt);
+      const key = formatDateKeyInOffset(tx.createdAt, tzOffsetMinutes);
       const entry = grouped.get(key);
       if (!entry) continue;
       if (tx.type === "EARNED") {

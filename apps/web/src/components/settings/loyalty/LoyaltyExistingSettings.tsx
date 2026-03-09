@@ -192,7 +192,6 @@ function CommonSettingsCard({
   updateMutation,
 }: CommonSettingsCardProps) {
   const terms = loyalty.termsAndConditions?.map((t) => t.content) ?? [];
-  const termsInitial = terms.length > 0 ? terms : [""];
 
   const form = useForm({
     defaultValues: {
@@ -201,7 +200,7 @@ function CommonSettingsCard({
       whatsappEnabled: loyalty.whatsappEnabled ?? false,
       emailEnabled: loyalty.emailEnabled ?? false,
       smsEnabled: loyalty.smsEnabled ?? false,
-      termsAndConditions: termsInitial,
+      termsAndConditions: terms,
     },
   });
 
