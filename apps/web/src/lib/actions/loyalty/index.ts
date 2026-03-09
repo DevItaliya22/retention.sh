@@ -1531,22 +1531,32 @@ export async function applyLoyaltyForBill(
     partnerRedeemedAmount = partnerDiscount;
   }
 
-  const amountForEarning = getAmountForEarning(
-    context,
-    billAmount,
-    billSubtotal,
-    finalAmount,
-  );
+  const campaignRewardGiven = await tx.transaction.count({
+    where: {
+      billId,
+      type: TransactionType.EARNED,
+      source: TransactionSource.CAMPAIGN,
+      valueKind: {
+        in: [TransactionValueKind.CASHBACK, TransactionValueKind.FREE_ITEM],
+      },
+    },
+  });
+  const campaignTakesPrecedence = campaignRewardGiven > 0;
+
+  const amountForEarning = campaignTakesPrecedence
+    ? 0
+    : getAmountForEarning(context, billAmount, billSubtotal, finalAmount);
 
   const visitQualifies =
     context.type !== "VISIT_MADE" ||
     isVisitQualifying(context.config, wallet?.lastVisitAt ?? null);
 
-  const rawEarned = visitQualifies
-    ? calculatePointsEarnedForBill(amountForEarning, context, {
-        resolvedTier,
-      })
-    : 0;
+  const rawEarned =
+    campaignTakesPrecedence || !visitQualifies
+      ? 0
+      : calculatePointsEarnedForBill(amountForEarning, context, {
+          resolvedTier,
+        });
   const earnedPoints = Math.max(0, rawEarned);
 
   const deferEarn = params.deferEarn === true;
@@ -1779,6 +1789,20 @@ export async function finalizeBillEarn(
   } = params;
   const amountToPay = userPaidAmount ?? finalAmount ?? 0;
   if (amountToPay <= 0) {
+    return { applied: false, cashbackAmount: null, earnedPoints: 0 };
+  }
+
+  const campaignRewardGiven = await tx.transaction.count({
+    where: {
+      billId,
+      type: TransactionType.EARNED,
+      source: TransactionSource.CAMPAIGN,
+      valueKind: {
+        in: [TransactionValueKind.CASHBACK, TransactionValueKind.FREE_ITEM],
+      },
+    },
+  });
+  if (campaignRewardGiven > 0) {
     return { applied: false, cashbackAmount: null, earnedPoints: 0 };
   }
 

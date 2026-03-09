@@ -63,6 +63,15 @@ export const GET = withCashierAuth<{ id: string }>(
       });
       const freeItems = parseFreeItems(wallet?.freeItems);
 
+      const campaignRewardGiven = await db.transaction.count({
+        where: {
+          billId: bill.id,
+          type: "EARNED",
+          source: "CAMPAIGN",
+          valueKind: { in: ["CASHBACK", "FREE_ITEM"] },
+        },
+      });
+
       const [
         txResult,
         earnedFromTransactions,
@@ -222,12 +231,13 @@ export const GET = withCashierAuth<{ id: string }>(
       const isCashbackType =
         redeemInfoRaw?.loyaltyType === "CASHBACK" ||
         redeemInfoRaw?.loyaltyType === "TIER";
+      const loyaltyEarnBlockedByCampaign = campaignRewardGiven > 0;
       const pendingCashbackEarn =
-        earnNotYetApplied && isCashbackType
+        !loyaltyEarnBlockedByCampaign && earnNotYetApplied && isCashbackType
           ? (redeemInfoRaw?.earnablePoints ?? bill.cashbackAmount ?? 0)
           : 0;
       const pendingPointsEarn =
-        earnNotYetApplied && !isCashbackType
+        !loyaltyEarnBlockedByCampaign && earnNotYetApplied && !isCashbackType
           ? Math.max(0, redeemInfoRaw?.earnablePoints ?? 0)
           : 0;
 

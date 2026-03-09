@@ -198,7 +198,6 @@ export function CustomerDetailPageClient({
   const billsTotal = customer?.billsTotal ?? 0;
   const activityTotal = customer?.activityTotal ?? 0;
   const activityItems = customer?.activityItems ?? [];
-  const hasActivity = activityTotal > 0;
 
   const loyaltyUrl =
     typeof window !== "undefined" && customer?.phone && customer?.businessSlug
@@ -340,7 +339,7 @@ export function CustomerDetailPageClient({
       </motion.section>
 
       {/* Activity */}
-      {hasActivity && !isLoading && customer && (
+      {!isLoading && customer && (
         <motion.section variants={s.item}>
           <div className="bg-card overflow-hidden rounded-2xl border shadow-sm">
             <div className="bg-muted/20 border-b px-6 py-4">
@@ -350,7 +349,7 @@ export function CustomerDetailPageClient({
               </h3>
             </div>
             <div className="space-y-5 p-6">
-              {activityItems.length > 0 || activityTotal > 0 ? (
+              {activityTotal > 0 ? (
                 <>
                   {activityItems.length > 0 && (
                     <Table>
@@ -479,9 +478,9 @@ export function CustomerDetailPageClient({
                     onNext={() => setActivityPage(activityPage + 1)}
                   />
                 </>
-              ) : activityTotal === 0 ? null : (
-                <p className="text-muted-foreground text-sm">
-                  No activity on this page.
+              ) : (
+                <p className="text-muted-foreground py-4 text-center text-sm">
+                  No activity yet
                 </p>
               )}
             </div>
