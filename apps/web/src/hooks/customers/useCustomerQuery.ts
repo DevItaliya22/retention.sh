@@ -5,6 +5,26 @@ import type { FreeItemEntry } from "@/lib/utils/free-items";
 import type { IsServiceEnabled } from "@/lib/utils/service-enabled";
 import { useQuery } from "@tanstack/react-query";
 
+export interface CustomerProfile {
+  id: string;
+  slugId: string;
+  customerId: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  pointsBalance: number;
+  cashbackBalance?: number;
+  /** Unclaimed free items (e.g. from referral) to claim on next visit. */
+  freeItems?: FreeItemEntry[];
+  createdAt: string;
+  updatedAt: string;
+  businessSlug?: string;
+  referralSlug?: string;
+  isServiceEnabled?: IsServiceEnabled | null;
+  referredBy?: { name: string; slugId: string } | null;
+  referrals?: { name: string; slugId: string }[];
+}
+
 export interface CustomerBillLineItemSku {
   id: string;
   sku: string;
@@ -29,7 +49,6 @@ export interface CustomerBillSummary {
   userPaidAmount?: number | null;
   cashbackAmount?: number | null;
   cashbackRedeemedAmount?: number | null;
-  lineItems?: CustomerBillLineItem[];
   createdAt: string;
 }
 
@@ -67,33 +86,8 @@ export type CustomerActivityItem =
   | (ReferralLogSummary & { type: "referral" })
   | (WalletTxSummary & { type: "walletTx" });
 
-export interface CustomerDetail {
-  id: string;
-  slugId: string;
-  customerId: string;
-  name: string;
-  email: string;
-  phone: string | null;
-  pointsBalance: number;
-  cashbackBalance?: number;
-  /** Unclaimed free items (e.g. from referral) to claim on next visit. */
-  freeItems?: FreeItemEntry[];
-  createdAt: string;
-  updatedAt: string;
-  businessSlug?: string;
-  referralSlug?: string;
-  isServiceEnabled?: IsServiceEnabled | null;
-  referredBy?: { name: string; slugId: string } | null;
-  referrals?: { name: string; slugId: string }[];
-  referralLogs?: ReferralLogSummary[];
-  bills: CustomerBillSummary[];
-  billsTotal: number;
-  activityItems: CustomerActivityItem[];
-  activityTotal: number;
-}
-
-export interface CustomerDetailResponse {
-  customer: CustomerDetail | null;
+export interface CustomerProfileResponse {
+  customer: CustomerProfile | null;
   error?: string;
 }
 
@@ -104,28 +98,66 @@ export interface CustomerDetailQueryParams {
   activityPerPage?: number;
 }
 
-export function useCustomerQuery(
-  slugId: string | null,
-  params?: CustomerDetailQueryParams,
-) {
-  const search = new URLSearchParams();
-  if (params?.billsPage != null)
-    search.set("billsPage", String(params.billsPage));
-  if (params?.billsPerPage != null)
-    search.set("billsPerPage", String(params.billsPerPage));
-  if (params?.activityPage != null)
-    search.set("activityPage", String(params.activityPage));
-  if (params?.activityPerPage != null)
-    search.set("activityPerPage", String(params.activityPerPage));
-  const queryString = search.toString();
-  const url = queryString
-    ? `/api/customers/${slugId}?${queryString}`
-    : `/api/customers/${slugId}`;
-
-  return useQuery<CustomerDetailResponse, Error>({
-    queryKey: ["customer", slugId, queryString],
-    queryFn: () => fetcher<CustomerDetailResponse>(url),
+export function useCustomerProfileQuery(slugId: string | null) {
+  return useQuery<CustomerProfileResponse, Error>({
+    queryKey: ["customerProfile", slugId],
+    queryFn: () =>
+      fetcher<CustomerProfileResponse>(`/api/customers/${slugId}/profile`),
     enabled: !!slugId,
     staleTime: 5000,
+  });
+}
+
+export interface CustomerBillsResponse {
+  items: CustomerBillSummary[];
+  total: number;
+  page: number;
+  perPage: number;
+  error?: string;
+}
+
+export function useCustomerBillsQuery(
+  slugId: string | null,
+  params: { page: number; perPage: number },
+) {
+  const search = new URLSearchParams();
+  search.set("billsPage", String(params.page));
+  search.set("billsPerPage", String(params.perPage));
+  const qs = search.toString();
+  return useQuery<CustomerBillsResponse, Error>({
+    queryKey: ["customerBills", slugId, qs],
+    queryFn: () =>
+      fetcher<CustomerBillsResponse>(`/api/customers/${slugId}/bills?${qs}`),
+    enabled: !!slugId,
+    staleTime: 5000,
+    placeholderData: (prev) => prev,
+  });
+}
+
+export interface CustomerActivityResponse {
+  items: CustomerActivityItem[];
+  total: number;
+  page: number;
+  perPage: number;
+  error?: string;
+}
+
+export function useCustomerActivityQuery(
+  slugId: string | null,
+  params: { page: number; perPage: number },
+) {
+  const search = new URLSearchParams();
+  search.set("activityPage", String(params.page));
+  search.set("activityPerPage", String(params.perPage));
+  const qs = search.toString();
+  return useQuery<CustomerActivityResponse, Error>({
+    queryKey: ["customerActivity", slugId, qs],
+    queryFn: () =>
+      fetcher<CustomerActivityResponse>(
+        `/api/customers/${slugId}/activity?${qs}`,
+      ),
+    enabled: !!slugId,
+    staleTime: 5000,
+    placeholderData: (prev) => prev,
   });
 }

@@ -322,6 +322,34 @@ strong {
   }
 }
 
+/* Prevent browser autofill from changing input background/text color */
+input:-webkit-autofill,
+textarea:-webkit-autofill,
+select:-webkit-autofill,
+input:-webkit-autofill:hover,
+textarea:-webkit-autofill:hover,
+select:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill:focus,
+select:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--foreground) !important;
+  caret-color: var(--foreground) !important;
+  background-color: transparent !important;
+  -webkit-box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0) inset !important;
+  box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0) inset !important;
+  filter: none !important;
+  transition: background-color 999999s ease-out 0s;
+}
+
+/* Firefox */
+input:autofill,
+textarea:autofill,
+select:autofill {
+  background-color: transparent !important;
+  box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0) inset !important;
+  caret-color: var(--foreground) !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

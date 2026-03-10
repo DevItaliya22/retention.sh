@@ -32,7 +32,7 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
           page: 1,
           perPage: 10,
         },
-        { status: 403 },
+        { status: 200 },
       );
     }
 

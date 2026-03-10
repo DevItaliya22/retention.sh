@@ -8,11 +8,13 @@ import {
 import { getDataTableConfig } from "@/lib/utils/data-table-params";
 import {
   Badge,
+  Button,
   buttonVariants,
   DataTable,
   DataTableColumnHeader,
   DataTableToolbar,
   Empty,
+  EmptyContent,
   EmptyDescription,
   EmptyHeader,
   EmptyTitle,
@@ -136,6 +138,7 @@ export function ReferralStatsTable() {
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
   const perPage = data?.perPage ?? 10;
+  const apiMessage = data?.error;
   const pageCount = Math.max(1, Math.ceil(total / perPage));
   const isEmpty = !isLoading && items.length === 0;
 
@@ -317,7 +320,6 @@ export function ReferralStatsTable() {
   return (
     <DataTable
       table={table}
-      className="[&>div:last-child]:p-0"
       expandedRowContentClassName="p-0"
       enableExpanding
       expandedRows={expandedRows}
@@ -341,11 +343,20 @@ export function ReferralStatsTable() {
       renderEmpty={() => (
         <Empty className="py-12">
           <EmptyHeader>
-            <EmptyTitle>No referrers yet</EmptyTitle>
+            <EmptyTitle>
+              {apiMessage ? "Referral is not enabled" : "No referrers yet"}
+            </EmptyTitle>
             <EmptyDescription>
-              Referral stats will appear when customers refer others
+              {apiMessage
+                ? apiMessage
+                : "Referral stats will appear once customers start sharing and referrals come in."}
             </EmptyDescription>
           </EmptyHeader>
+          <EmptyContent className="mt-2">
+            <Button asChild variant="outline">
+              <Link href="/settings#referral">Open referral settings</Link>
+            </Button>
+          </EmptyContent>
         </Empty>
       )}
     >

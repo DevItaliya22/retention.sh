@@ -12,6 +12,15 @@ export default function CustomersLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const activeTab = pathname === "/customers/rfm" ? "rfm" : "all";
+  const isCustomerDetailRoute =
+    pathname.startsWith("/customers/") &&
+    pathname !== "/customers" &&
+    pathname !== "/customers/rfm";
+
+  // Customer detail has its own page shell; avoid double headers/tabs.
+  if (isCustomerDetailRoute) {
+    return children;
+  }
 
   return (
     <DashboardPageShell

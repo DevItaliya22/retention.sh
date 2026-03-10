@@ -60,10 +60,10 @@ export function IndustryStep() {
                           type="button"
                           variant="outline"
                           className={cn(
-                            "h-auto min-h-10 shrink-0 rounded-full px-4 py-2 text-left font-normal transition-[border-color,background-color]",
+                            "focus-visible:ring-primary/30 h-auto min-h-10 shrink-0 rounded-full px-4 py-2 text-left font-normal transition-[border-color,background-color,color,box-shadow] focus-visible:ring-2 focus-visible:ring-offset-2",
                             isSelected
-                              ? "border-primary bg-primary text-primary-foreground"
-                              : "hover:border-muted-foreground/40",
+                              ? "border-primary bg-primary text-primary-foreground hover:border-primary hover:bg-primary hover:text-primary-foreground"
+                              : "hover:border-primary/50 hover:bg-primary/5",
                           )}
                           onClick={() => toggle(id)}
                         >
