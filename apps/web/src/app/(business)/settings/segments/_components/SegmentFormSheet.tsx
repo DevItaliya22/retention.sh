@@ -5,6 +5,7 @@ import {
   createSegmentSchema,
   FREQUENCY_MAX,
   FREQUENCY_MIN,
+  MONETARY_ABSOLUTE_MAX,
   MONETARY_MAX,
   MONETARY_MIN,
   RECENCY_DAYS_MAX,
@@ -56,12 +57,21 @@ function validateFrequency(val: string): string | null {
   return null;
 }
 
-function validateMonetary(val: string): string | null {
+function getMonetaryLimits(unit: string) {
+  return unit === "ABSOLUTE"
+    ? { min: MONETARY_MIN, max: MONETARY_ABSOLUTE_MAX }
+    : { min: MONETARY_MIN, max: MONETARY_MAX };
+}
+
+function validateMonetary(val: string, unit: string): string | null {
   if (!val.trim()) return null;
   const n = parseFloat(val);
   if (Number.isNaN(n)) return "Enter a number";
-  if (n < MONETARY_MIN || n > MONETARY_MAX)
-    return `Must be ${MONETARY_MIN}–${MONETARY_MAX}`;
+  const { min, max } = getMonetaryLimits(unit);
+  if (n < min || n > max)
+    return unit === "ABSOLUTE"
+      ? `Must be ₹${min}–${max}`
+      : `Must be ${min}–${max}x`;
   return null;
 }
 
@@ -78,11 +88,16 @@ function clampFrequency(val: string): string {
   return String(Math.min(FREQUENCY_MAX, Math.max(FREQUENCY_MIN, n)));
 }
 
-function clampMonetary(val: string): string {
+function clampMonetary(val: string, unit: string): string {
   const n = parseFloat(val);
   if (Number.isNaN(n)) return val;
-  const clamped = Math.min(MONETARY_MAX, Math.max(MONETARY_MIN, n));
-  return clamped % 1 === 0 ? String(clamped) : clamped.toFixed(2);
+  const { min, max } = getMonetaryLimits(unit);
+  const clamped = Math.min(max, Math.max(min, n));
+  return unit === "ABSOLUTE"
+    ? String(Math.round(clamped))
+    : clamped % 1 === 0
+      ? String(clamped)
+      : clamped.toFixed(2);
 }
 
 const OPERATORS = [
@@ -97,6 +112,11 @@ const OPERATORS = [
 const UNITS = [
   { value: "DAYS", label: "Days" },
   { value: "MONTHS", label: "Months" },
+] as const;
+
+const MONETARY_UNITS = [
+  { value: "RATIO", label: "Ratio (× avg spend)" },
+  { value: "ABSOLUTE", label: "Absolute (₹)" },
 ] as const;
 
 interface SegmentFormSheetProps {
@@ -126,7 +146,6 @@ export function SegmentFormSheet({
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [description, setDescription] = useState("");
-  const [proTip, setProTip] = useState("");
   const [recencyOp, setRecencyOp] = useState<string | null>(null);
   const [recencyVal, setRecencyVal] = useState<string>("");
   const [recencyVal2, setRecencyVal2] = useState<string>("");
@@ -134,6 +153,7 @@ export function SegmentFormSheet({
   const [freqOp, setFreqOp] = useState<string | null>(null);
   const [freqVal, setFreqVal] = useState<string>("");
   const [freqVal2, setFreqVal2] = useState<string>("");
+  const [monUnit, setMonUnit] = useState<string>("RATIO");
   const [monOp, setMonOp] = useState<string | null>(null);
   const [monVal, setMonVal] = useState<string>("");
   const [monVal2, setMonVal2] = useState<string>("");
@@ -143,7 +163,6 @@ export function SegmentFormSheet({
       setName(segment.name);
       setSlug(segment.slug);
       setDescription(segment.description ?? "");
-      setProTip(segment.proTip ?? "");
       setRecencyOp(segment.recencyOperator);
       setRecencyVal(segment.recencyValue?.toString() ?? "");
       setRecencyVal2(segment.recencyValue2?.toString() ?? "");
@@ -151,6 +170,7 @@ export function SegmentFormSheet({
       setFreqOp(segment.frequencyOperator);
       setFreqVal(segment.frequencyValue?.toString() ?? "");
       setFreqVal2(segment.frequencyValue2?.toString() ?? "");
+      setMonUnit(segment.monetaryUnit ?? "RATIO");
       setMonOp(segment.monetaryOperator);
       setMonVal(segment.monetaryValue?.toString() ?? "");
       setMonVal2(segment.monetaryValue2?.toString() ?? "");
@@ -158,7 +178,6 @@ export function SegmentFormSheet({
       setName("");
       setSlug("");
       setDescription("");
-      setProTip("");
       setRecencyOp(null);
       setRecencyVal("");
       setRecencyVal2("");
@@ -166,6 +185,7 @@ export function SegmentFormSheet({
       setFreqOp(null);
       setFreqVal("");
       setFreqVal2("");
+      setMonUnit("RATIO");
       setMonOp(null);
       setMonVal("");
       setMonVal2("");
@@ -188,7 +208,7 @@ export function SegmentFormSheet({
       name: name.trim(),
       slug: slug.trim().toLowerCase().replace(/\s+/g, "-"),
       description: description.trim() || null,
-      proTip: proTip.trim() || null,
+      ...(segment ? {} : { proTip: null }),
       sortOrder: 0,
       recencyOperator: recencyOp || null,
       recencyValue: recencyVal ? parseFloat(recencyVal) : null,
@@ -199,15 +219,16 @@ export function SegmentFormSheet({
       frequencyValue: freqVal ? parseInt(freqVal, 10) : null,
       frequencyValue2:
         needsRange(freqOp) && freqVal2 ? parseInt(freqVal2, 10) : null,
+      monetaryUnit: monOp ? monUnit : null,
       monetaryOperator: monOp || null,
       monetaryValue: monVal ? parseFloat(monVal) : null,
       monetaryValue2: needsRange(monOp) && monVal2 ? parseFloat(monVal2) : null,
     };
   }, [
+    segment,
     name,
     slug,
     description,
-    proTip,
     recencyOp,
     recencyVal,
     recencyVal2,
@@ -215,6 +236,7 @@ export function SegmentFormSheet({
     freqOp,
     freqVal,
     freqVal2,
+    monUnit,
     monOp,
     monVal,
     monVal2,
@@ -250,8 +272,14 @@ export function SegmentFormSheet({
   );
   const freqErr1 = useMemo(() => validateFrequency(freqVal), [freqVal]);
   const freqErr2 = useMemo(() => validateFrequency(freqVal2), [freqVal2]);
-  const monErr1 = useMemo(() => validateMonetary(monVal), [monVal]);
-  const monErr2 = useMemo(() => validateMonetary(monVal2), [monVal2]);
+  const monErr1 = useMemo(
+    () => validateMonetary(monVal, monUnit),
+    [monVal, monUnit],
+  );
+  const monErr2 = useMemo(
+    () => validateMonetary(monVal2, monUnit),
+    [monVal2, monUnit],
+  );
 
   const handleRecencyBlur = useCallback(
     (which: 1 | 2) => {
@@ -271,10 +299,10 @@ export function SegmentFormSheet({
   );
   const handleMonBlur = useCallback(
     (which: 1 | 2) => {
-      if (which === 1 && monVal) setMonVal(clampMonetary(monVal));
-      if (which === 2 && monVal2) setMonVal2(clampMonetary(monVal2));
+      if (which === 1 && monVal) setMonVal(clampMonetary(monVal, monUnit));
+      if (which === 2 && monVal2) setMonVal2(clampMonetary(monVal2, monUnit));
     },
-    [monVal, monVal2],
+    [monVal, monVal2, monUnit],
   );
 
   const hasErrors =
@@ -314,15 +342,6 @@ export function SegmentFormSheet({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Describe this segment..."
-              rows={2}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Pro tip</Label>
-            <Textarea
-              value={proTip}
-              onChange={(e) => setProTip(e.target.value)}
-              placeholder="Actionable tip for this segment..."
               rows={2}
             />
           </div>
@@ -472,9 +491,7 @@ export function SegmentFormSheet({
           </div>
 
           <div className="border-t pt-4">
-            <h4 className="mb-3 text-sm font-medium">
-              Frequency (Wallet.visitCount)
-            </h4>
+            <h4 className="mb-3 text-sm font-medium">Frequency (visits)</h4>
             <p className="text-muted-foreground mb-2 text-xs">
               Visits: {FREQUENCY_MIN}–{FREQUENCY_MAX}
             </p>
@@ -584,13 +601,42 @@ export function SegmentFormSheet({
           </div>
 
           <div className="border-t pt-4">
-            <h4 className="mb-3 text-sm font-medium">
-              Monetary (multiple of avg spend, e.g. 3 = 3x)
-            </h4>
+            <h4 className="mb-3 text-sm font-medium">Monetary</h4>
             <p className="text-muted-foreground mb-2 text-xs">
-              Multiple: {MONETARY_MIN}–{MONETARY_MAX}x
+              {monUnit === "ABSOLUTE"
+                ? `Lifetime spend (₹): ${MONETARY_MIN}–${MONETARY_ABSOLUTE_MAX.toLocaleString()}`
+                : `Ratio (× avg spend): ${MONETARY_MIN}–${MONETARY_MAX}x`}
             </p>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <Select
+                value={monUnit}
+                onValueChange={(v) => {
+                  setMonUnit(v);
+                  if (
+                    monVal &&
+                    v === "ABSOLUTE" &&
+                    parseFloat(monVal) > MONETARY_ABSOLUTE_MAX
+                  )
+                    setMonVal(String(MONETARY_ABSOLUTE_MAX));
+                  if (
+                    monVal &&
+                    v === "RATIO" &&
+                    parseFloat(monVal) > MONETARY_MAX
+                  )
+                    setMonVal(String(MONETARY_MAX));
+                }}
+              >
+                <SelectTrigger className="w-[160px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {MONETARY_UNITS.map((u) => (
+                    <SelectItem key={u.value} value={u.value}>
+                      {u.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Select
                 value={monOp ?? "none"}
                 onValueChange={(v) => {
@@ -623,10 +669,16 @@ export function SegmentFormSheet({
                   <div className="flex flex-col gap-0.5">
                     <Input
                       type="number"
-                      step="0.1"
+                      step={monUnit === "ABSOLUTE" ? "1" : "0.1"}
                       min={MONETARY_MIN}
-                      max={MONETARY_MAX}
-                      placeholder="Value"
+                      max={
+                        monUnit === "ABSOLUTE"
+                          ? MONETARY_ABSOLUTE_MAX
+                          : MONETARY_MAX
+                      }
+                      placeholder={
+                        monUnit === "ABSOLUTE" ? "e.g. 50000" : "e.g. 3"
+                      }
                       value={monVal}
                       onChange={(e) => {
                         const v = e.target.value;
@@ -635,8 +687,11 @@ export function SegmentFormSheet({
                           const n = parseFloat(v);
                           if (Number.isNaN(n)) setMonVal(v);
                           else {
-                            if (n > MONETARY_MAX)
-                              setMonVal(String(MONETARY_MAX));
+                            const max =
+                              monUnit === "ABSOLUTE"
+                                ? MONETARY_ABSOLUTE_MAX
+                                : MONETARY_MAX;
+                            if (n > max) setMonVal(String(max));
                             else if (n < MONETARY_MIN)
                               setMonVal(String(MONETARY_MIN));
                             else setMonVal(v);
@@ -659,9 +714,13 @@ export function SegmentFormSheet({
                     <div className="flex flex-col gap-0.5">
                       <Input
                         type="number"
-                        step="0.1"
+                        step={monUnit === "ABSOLUTE" ? "1" : "0.1"}
                         min={MONETARY_MIN}
-                        max={MONETARY_MAX}
+                        max={
+                          monUnit === "ABSOLUTE"
+                            ? MONETARY_ABSOLUTE_MAX
+                            : MONETARY_MAX
+                        }
                         placeholder="To"
                         value={monVal2}
                         onChange={(e) => {
@@ -671,8 +730,11 @@ export function SegmentFormSheet({
                             const n = parseFloat(v);
                             if (Number.isNaN(n)) setMonVal2(v);
                             else {
-                              if (n > MONETARY_MAX)
-                                setMonVal2(String(MONETARY_MAX));
+                              const max =
+                                monUnit === "ABSOLUTE"
+                                  ? MONETARY_ABSOLUTE_MAX
+                                  : MONETARY_MAX;
+                              if (n > max) setMonVal2(String(max));
                               else if (n < MONETARY_MIN)
                                 setMonVal2(String(MONETARY_MIN));
                               else setMonVal2(v);

@@ -51,7 +51,7 @@ export const campaignUpdateSchema = z.object({
   contactNumber: z.string().max(20).trim().optional().nullable(),
   startsAt: z.string().optional(),
   expiresAt: z.string().optional(),
-  targetCustomerTags: z.array(z.string().max(100)).optional(),
+  segmentIds: z.array(z.string().uuid()).optional(),
   status: campaignStatusSchema.optional(),
   emailSubject: z.string().max(500).trim().optional().nullable(),
 

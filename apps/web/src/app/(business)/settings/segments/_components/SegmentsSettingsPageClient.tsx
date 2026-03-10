@@ -15,6 +15,9 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
 } from "@reelo/ui/components";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
@@ -38,11 +41,130 @@ function formatFilter(
 ): string {
   if (!op || v1 == null) return "—";
   const label = OPERATOR_LABELS[op] ?? op;
-  const suffix = unit ? (unit === "MONTHS" ? " mo" : " d") : "";
+  const suffix =
+    unit === "MONTHS"
+      ? " mo"
+      : unit === "DAYS"
+        ? " d"
+        : unit === "ABSOLUTE"
+          ? " ₹"
+          : unit === "RATIO"
+            ? "x"
+            : "";
+  const fmt =
+    unit === "ABSOLUTE"
+      ? (n: number) => n.toLocaleString("en-IN")
+      : (n: number) => String(n);
   if (op === "IN_RANGE" || op === "NOT_IN_RANGE") {
-    return v2 != null ? `${v1}-${v2}${suffix}` : "—";
+    return v2 != null ? `${fmt(v1)}–${fmt(v2)}${suffix}` : "—";
   }
-  return `${label} ${v1}${suffix}`;
+  return `${label} ${fmt(v1)}${suffix}`;
+}
+
+function getRecencyTooltip(
+  op: string | null,
+  v1: number | null,
+  v2: number | null,
+  unit?: string | null,
+): string | null {
+  if (!op || v1 == null) return null;
+  const u = unit === "MONTHS" ? "months" : "days";
+  const fmt = (n: number) => (unit === "MONTHS" ? Math.round(n) : n);
+  if (op === "LESS_THAN" || op === "LESS_THAN_OR_EQUAL") {
+    return `Customer visited within the last ${fmt(v1)} ${u}`;
+  }
+  if (op === "GREATER_THAN" || op === "GREATER_THAN_OR_EQUAL") {
+    return `Customer has not visited in the last ${fmt(v1)} ${u}`;
+  }
+  if (op === "IN_RANGE" && v2 != null) {
+    return `Customer last visited between ${fmt(v1)} and ${fmt(v2)} ${u} ago`;
+  }
+  if (op === "NOT_IN_RANGE" && v2 != null) {
+    return `Customer last visited either less than ${fmt(v1)} or more than ${fmt(v2)} ${u} ago`;
+  }
+  return null;
+}
+
+function getFrequencyTooltip(
+  op: string | null,
+  v1: number | null,
+  v2: number | null,
+): string | null {
+  if (!op || v1 == null) return null;
+  const times = (n: number) => (n === 1 ? "1 time" : `${n} times`);
+  if (op === "LESS_THAN") return `Customer has visited less than ${times(v1)}`;
+  if (op === "LESS_THAN_OR_EQUAL")
+    return `Customer has visited at most ${times(v1)}`;
+  if (op === "GREATER_THAN")
+    return `Customer has visited more than ${times(v1)}`;
+  if (op === "GREATER_THAN_OR_EQUAL")
+    return `Customer has visited at least ${times(v1)}`;
+  if (op === "IN_RANGE" && v2 != null)
+    return `Customer has visited between ${v1} and ${v2} times`;
+  if (op === "NOT_IN_RANGE" && v2 != null)
+    return `Customer has visited either less than ${v1} or more than ${v2} times`;
+  return null;
+}
+
+function getMonetaryTooltip(
+  op: string | null,
+  v1: number | null,
+  v2: number | null,
+  unit?: string | null,
+): string | null {
+  if (!op || v1 == null) return null;
+  if (unit === "ABSOLUTE") {
+    const fmt = (n: number) => `₹${n.toLocaleString("en-IN")}`;
+    if (op === "LESS_THAN") return `Customer has spent less than ${fmt(v1)}`;
+    if (op === "LESS_THAN_OR_EQUAL")
+      return `Customer has spent at most ${fmt(v1)}`;
+    if (op === "GREATER_THAN") return `Customer has spent more than ${fmt(v1)}`;
+    if (op === "GREATER_THAN_OR_EQUAL")
+      return `Customer has spent at least ${fmt(v1)}`;
+    if (op === "IN_RANGE" && v2 != null)
+      return `Customer has spent between ${fmt(v1)} and ${fmt(v2)}`;
+    if (op === "NOT_IN_RANGE" && v2 != null)
+      return `Customer has spent either less than ${fmt(v1)} or more than ${fmt(v2)}`;
+  } else {
+    const fmt = (n: number) => `${n}×`;
+    if (op === "LESS_THAN")
+      return `Customer spends less than ${fmt(v1)} the average`;
+    if (op === "LESS_THAN_OR_EQUAL")
+      return `Customer spends at most ${fmt(v1)} the average`;
+    if (op === "GREATER_THAN")
+      return `Customer spends more than ${fmt(v1)} the average`;
+    if (op === "GREATER_THAN_OR_EQUAL")
+      return `Customer spends at least ${fmt(v1)} the average`;
+    if (op === "IN_RANGE" && v2 != null)
+      return `Customer spends between ${fmt(v1)} and ${fmt(v2)} the average`;
+    if (op === "NOT_IN_RANGE" && v2 != null)
+      return `Customer spends either less than ${fmt(v1)} or more than ${fmt(v2)} the average`;
+  }
+  return null;
+}
+
+function FilterCell({
+  display,
+  tooltip,
+}: {
+  display: string;
+  tooltip: string | null;
+}) {
+  if (!tooltip) {
+    return <span>{display}</span>;
+  }
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className="cursor-help underline decoration-dotted underline-offset-2">
+          {display}
+        </span>
+      </TooltipTrigger>
+      <TooltipContent side="top" className="max-w-max">
+        <p className="text-sm">{tooltip}</p>
+      </TooltipContent>
+    </Tooltip>
+  );
 }
 
 export function SegmentsSettingsPageClient() {
@@ -93,7 +215,7 @@ export function SegmentsSettingsPageClient() {
   return (
     <DashboardPageShell
       title="Customer Segments"
-      subtitle="Configure recency, frequency, and monetary thresholds. Recency = days since last visit. Frequency = Wallet.visitCount. Monetary = multiple of average spend (e.g. 3 = 3x)."
+      subtitle="Configure recency, frequency, and monetary thresholds. Recency = days since last visit. Frequency = number of visits. Monetary = ratio (× avg spend) or absolute (₹ lifetime spend)."
       contentVariant="contained"
     >
       <div className="mb-4 flex items-center justify-end">
@@ -124,28 +246,51 @@ export function SegmentsSettingsPageClient() {
                   <span className="font-medium">{seg.name}</span>
                 </TableCell>
                 <TableCell className="text-muted-foreground text-sm">
-                  {formatFilter(
-                    seg.recencyOperator,
-                    seg.recencyValue,
-                    seg.recencyValue2,
-                    seg.recencyUnit,
-                  )}
+                  <FilterCell
+                    display={formatFilter(
+                      seg.recencyOperator,
+                      seg.recencyValue,
+                      seg.recencyValue2,
+                      seg.recencyUnit,
+                    )}
+                    tooltip={getRecencyTooltip(
+                      seg.recencyOperator,
+                      seg.recencyValue,
+                      seg.recencyValue2,
+                      seg.recencyUnit,
+                    )}
+                  />
                 </TableCell>
                 <TableCell className="text-muted-foreground text-sm">
-                  {formatFilter(
-                    seg.frequencyOperator,
-                    seg.frequencyValue,
-                    seg.frequencyValue2,
-                    null,
-                  )}
+                  <FilterCell
+                    display={formatFilter(
+                      seg.frequencyOperator,
+                      seg.frequencyValue,
+                      seg.frequencyValue2,
+                      null,
+                    )}
+                    tooltip={getFrequencyTooltip(
+                      seg.frequencyOperator,
+                      seg.frequencyValue,
+                      seg.frequencyValue2,
+                    )}
+                  />
                 </TableCell>
                 <TableCell className="text-muted-foreground text-sm">
-                  {formatFilter(
-                    seg.monetaryOperator,
-                    seg.monetaryValue,
-                    seg.monetaryValue2,
-                    null,
-                  )}
+                  <FilterCell
+                    display={formatFilter(
+                      seg.monetaryOperator,
+                      seg.monetaryValue,
+                      seg.monetaryValue2,
+                      seg.monetaryUnit ?? "RATIO",
+                    )}
+                    tooltip={getMonetaryTooltip(
+                      seg.monetaryOperator,
+                      seg.monetaryValue,
+                      seg.monetaryValue2,
+                      seg.monetaryUnit ?? "RATIO",
+                    )}
+                  />
                 </TableCell>
                 <TableCell>
                   <div className="flex gap-2">

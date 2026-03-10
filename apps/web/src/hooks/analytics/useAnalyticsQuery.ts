@@ -203,3 +203,39 @@ export function useInsightsQuery() {
     staleTime: 60_000,
   });
 }
+
+// --- Section 8: RFM Stats ---
+
+export interface RfmStatsResponse {
+  totalCustomers: number;
+  repeatCustomers: number;
+  filteredCount: number;
+}
+
+export function useRfmStatsQuery(params?: {
+  period?: AnalyticsPeriod;
+  segment?: string;
+}) {
+  const period = params?.period ?? "30d";
+  const segment = params?.segment;
+  const tzOffsetMinutes = new Date().getTimezoneOffset();
+  return useQuery<RfmStatsResponse, Error>({
+    queryKey: [
+      "analytics",
+      "rfm-stats",
+      period,
+      segment ?? "",
+      tzOffsetMinutes,
+    ],
+    queryFn: () => {
+      const qs = new URLSearchParams({
+        period,
+        tzOffsetMinutes: String(tzOffsetMinutes),
+      });
+      if (segment) qs.set("segment", segment);
+      return fetcher<RfmStatsResponse>(`/api/analytics/rfm-stats?${qs}`);
+    },
+    placeholderData: (prev) => prev,
+    staleTime: 60_000,
+  });
+}

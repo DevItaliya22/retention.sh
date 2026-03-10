@@ -104,7 +104,10 @@ export function SimpleSidebar({
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     asChild
-                    isActive={pathname === "/customers"}
+                    isActive={
+                      pathname === "/customers" ||
+                      pathname.startsWith("/customers/")
+                    }
                     tooltip="Customers"
                   >
                     <Link href="/customers">

@@ -340,7 +340,7 @@ export function CustomerDetailPageClient({
 
       {/* Activity */}
       {!isLoading && customer && (
-        <motion.section variants={s.item}>
+        <motion.section variants={s.item} initial={false}>
           <div className="bg-card overflow-hidden rounded-2xl border shadow-sm">
             <div className="bg-muted/20 border-b px-6 py-4">
               <h3 className="text-foreground/90 flex items-center gap-2 text-sm font-semibold tracking-wider uppercase">
