@@ -17,6 +17,7 @@ export interface SegmentItem {
   frequencyOperator: string | null;
   frequencyValue: number | null;
   frequencyValue2: number | null;
+  monetaryUnit: string | null;
   monetaryOperator: string | null;
   monetaryValue: number | null;
   monetaryValue2: number | null;

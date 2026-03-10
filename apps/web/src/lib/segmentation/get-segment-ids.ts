@@ -33,6 +33,7 @@ export async function getSegmentCustomerIds(
     frequencyOperator: s.frequencyOperator,
     frequencyValue: s.frequencyValue,
     frequencyValue2: s.frequencyValue2,
+    monetaryUnit: s.monetaryUnit ?? "RATIO",
     monetaryOperator: s.monetaryOperator,
     monetaryValue: s.monetaryValue,
     monetaryValue2: s.monetaryValue2,
@@ -54,16 +55,34 @@ export async function getSegmentCustomerIds(
   if (wallets.length === 0) return [];
 
   const customerIds = wallets.map((w) => w.customerId);
-  const latestBills = await db.bill.groupBy({
-    by: ["customerId"],
-    where: { businessId, customerId: { in: customerIds } },
-    _max: { createdAt: true },
-  });
+  const [latestBills, billsSpend] = await Promise.all([
+    db.bill.groupBy({
+      by: ["customerId"],
+      where: { businessId, customerId: { in: customerIds } },
+      _max: { createdAt: true },
+    }),
+    db.bill.groupBy({
+      by: ["customerId"],
+      where: { businessId, customerId: { in: customerIds } },
+      _sum: { finalAmount: true },
+    }),
+  ]);
   const lastBillMap = new Map(
     latestBills.map((b) => [b.customerId, b._max.createdAt]),
   );
+  const billSpendMap = new Map(
+    billsSpend.map((b) => [b.customerId, b._sum.finalAmount ?? 0]),
+  );
 
-  const totalSpend = wallets.reduce((sum, w) => sum + w.lifetimeSpend, 0);
+  const effectiveLifetimeSpend = (w: (typeof wallets)[number]) =>
+    w.lifetimeSpend > 0
+      ? w.lifetimeSpend
+      : (billSpendMap.get(w.customerId) ?? 0);
+
+  const totalSpend = wallets.reduce(
+    (sum, w) => sum + effectiveLifetimeSpend(w),
+    0,
+  );
   const avgSpend = totalSpend / wallets.length;
   const now = new Date();
 
@@ -74,7 +93,7 @@ export async function getSegmentCustomerIds(
       {
         customerId: wallet.customerId,
         visitCount: wallet.visitCount,
-        lifetimeSpend: wallet.lifetimeSpend,
+        lifetimeSpend: effectiveLifetimeSpend(wallet),
         lastVisitAt: wallet.lastVisitAt,
         createdAt: wallet.createdAt,
       },

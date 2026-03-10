@@ -140,6 +140,9 @@ export const PUT = withAdminAuth<{ id: string }>(
           ...(data.frequencyValue2 !== undefined && {
             frequencyValue2: data.frequencyValue2,
           }),
+          ...(data.monetaryUnit !== undefined && {
+            monetaryUnit: data.monetaryUnit,
+          }),
           ...(data.monetaryOperator !== undefined && {
             monetaryOperator: data.monetaryOperator,
           }),

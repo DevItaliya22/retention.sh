@@ -59,6 +59,10 @@ const ROUTE_METADATA_MAP: Record<string, RouteMetadataConfig> = {
     title: "Customers",
     description: "View and manage all customers for your business",
   },
+  "/customers/rfm": {
+    title: "Customers · RFM",
+    description: "Customer segments based on visit patterns and spending",
+  },
   "/customers/[slugId]": {
     title: "Customer details",
     description: "View customer details and loyalty information",

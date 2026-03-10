@@ -18,7 +18,8 @@ export const RECENCY_MONTHS_MAX = 12;
 export const FREQUENCY_MIN = 0;
 export const FREQUENCY_MAX = 1000;
 export const MONETARY_MIN = 0;
-export const MONETARY_MAX = 100;
+export const MONETARY_MAX = 100; // for RATIO (multiple of avg)
+export const MONETARY_ABSOLUTE_MAX = 999_999_999; // for ABSOLUTE (₹)
 
 export const segmentParamSchema = z.object({
   segment: z.string().min(1).max(100),
@@ -126,28 +127,50 @@ const frequencyConfigSchema = z
     { message: "Frequency value(s) required for operator" },
   );
 
+const MONETARY_UNITS = ["RATIO", "ABSOLUTE"] as const;
+
 const monetaryConfigSchema = z
   .object({
+    monetaryUnit: z.enum(MONETARY_UNITS).optional().nullable(),
     monetaryOperator: z.enum(SEGMENT_OPERATORS).optional().nullable(),
-    monetaryValue: z
-      .number()
-      .min(
-        MONETARY_MIN,
-        `Monetary multiple must be ${MONETARY_MIN}-${MONETARY_MAX}x`,
-      )
-      .max(
-        MONETARY_MAX,
-        `Monetary multiple must be ${MONETARY_MIN}-${MONETARY_MAX}x`,
-      )
-      .optional()
-      .nullable(),
-    monetaryValue2: z
-      .number()
-      .min(MONETARY_MIN)
-      .max(MONETARY_MAX)
-      .optional()
-      .nullable(),
+    monetaryValue: z.number().optional().nullable(),
+    monetaryValue2: z.number().optional().nullable(),
   })
+  .refine(
+    (data) => {
+      if (!data.monetaryOperator || data.monetaryValue == null) return true;
+      const unit = data.monetaryUnit ?? "RATIO";
+      if (unit === "ABSOLUTE") {
+        if (
+          data.monetaryValue < MONETARY_MIN ||
+          data.monetaryValue > MONETARY_ABSOLUTE_MAX
+        )
+          return false;
+        if (
+          data.monetaryValue2 != null &&
+          (data.monetaryValue2 < MONETARY_MIN ||
+            data.monetaryValue2 > MONETARY_ABSOLUTE_MAX)
+        )
+          return false;
+      } else {
+        if (
+          data.monetaryValue < MONETARY_MIN ||
+          data.monetaryValue > MONETARY_MAX
+        )
+          return false;
+        if (
+          data.monetaryValue2 != null &&
+          (data.monetaryValue2 < MONETARY_MIN ||
+            data.monetaryValue2 > MONETARY_MAX)
+        )
+          return false;
+      }
+      return true;
+    },
+    {
+      message: `Monetary: RATIO ${MONETARY_MIN}-${MONETARY_MAX}x, ABSOLUTE ₹${MONETARY_MIN}-${MONETARY_ABSOLUTE_MAX}`,
+    },
+  )
   .refine(
     (data) => {
       if (!data.monetaryOperator) return true;

@@ -27,13 +27,16 @@ model Segment {
   frequencyValue    Int?
   frequencyValue2   Int?
 
-  // Monetary: ratio = lifetimeSpend / avgSpend (e.g. 3 = 3x avg)
+  // Monetary: RATIO = lifetimeSpend/avgSpend (e.g. 3 = 3x), ABSOLUTE = ₹ (e.g. 50000)
+  monetaryUnit     MonetaryUnit?    @default(RATIO)
   monetaryOperator SegmentOperator?
   monetaryValue    Float?
   monetaryValue2   Float?
 
   sortOrder Int     @default(0) // Evaluation order (first match wins)
   isSystem  Boolean @default(false) // Predefined; can edit, cannot delete
+
+  campaignSegments CampaignSegment[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

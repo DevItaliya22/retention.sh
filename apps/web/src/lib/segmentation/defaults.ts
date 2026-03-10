@@ -1,4 +1,4 @@
-import type { SegmentOperator } from "@reelo/db";
+import type { MonetaryUnit, SegmentOperator } from "@reelo/db";
 
 export interface DefaultSegmentDef {
   name: string;
@@ -12,6 +12,7 @@ export interface DefaultSegmentDef {
   frequencyOperator: SegmentOperator | null;
   frequencyValue: number | null;
   frequencyValue2: number | null;
+  monetaryUnit: MonetaryUnit | null;
   monetaryOperator: SegmentOperator | null;
   monetaryValue: number | null;
   monetaryValue2: number | null;
@@ -31,6 +32,7 @@ export const DEFAULT_SEGMENTS: DefaultSegmentDef[] = [
     frequencyOperator: null,
     frequencyValue: null,
     frequencyValue2: null,
+    monetaryUnit: "RATIO",
     monetaryOperator: "LESS_THAN",
     monetaryValue: 0.5,
     monetaryValue2: null,
@@ -49,6 +51,7 @@ export const DEFAULT_SEGMENTS: DefaultSegmentDef[] = [
     frequencyOperator: "GREATER_THAN_OR_EQUAL",
     frequencyValue: 5,
     frequencyValue2: null,
+    monetaryUnit: "RATIO",
     monetaryOperator: "GREATER_THAN_OR_EQUAL",
     monetaryValue: 3,
     monetaryValue2: null,
@@ -67,6 +70,7 @@ export const DEFAULT_SEGMENTS: DefaultSegmentDef[] = [
     frequencyOperator: "GREATER_THAN_OR_EQUAL",
     frequencyValue: 4,
     frequencyValue2: null,
+    monetaryUnit: "RATIO",
     monetaryOperator: "GREATER_THAN",
     monetaryValue: 1.5,
     monetaryValue2: null,
@@ -85,6 +89,7 @@ export const DEFAULT_SEGMENTS: DefaultSegmentDef[] = [
     frequencyOperator: "GREATER_THAN_OR_EQUAL",
     frequencyValue: 10,
     frequencyValue2: null,
+    monetaryUnit: "RATIO",
     monetaryOperator: "GREATER_THAN",
     monetaryValue: 1.5,
     monetaryValue2: null,
@@ -103,6 +108,7 @@ export const DEFAULT_SEGMENTS: DefaultSegmentDef[] = [
     frequencyOperator: "IN_RANGE",
     frequencyValue: 1,
     frequencyValue2: 3,
+    monetaryUnit: "RATIO",
     monetaryOperator: "LESS_THAN",
     monetaryValue: 0.5,
     monetaryValue2: null,
@@ -121,6 +127,7 @@ export const DEFAULT_SEGMENTS: DefaultSegmentDef[] = [
     frequencyOperator: null,
     frequencyValue: null,
     frequencyValue2: null,
+    monetaryUnit: "RATIO",
     monetaryOperator: "IN_RANGE",
     monetaryValue: 0.5,
     monetaryValue2: 1.5,
@@ -139,6 +146,7 @@ export const DEFAULT_SEGMENTS: DefaultSegmentDef[] = [
     frequencyOperator: "IN_RANGE",
     frequencyValue: 1,
     frequencyValue2: 3,
+    monetaryUnit: "RATIO",
     monetaryOperator: "IN_RANGE",
     monetaryValue: 0.5,
     monetaryValue2: 1.5,
@@ -157,6 +165,7 @@ export const DEFAULT_SEGMENTS: DefaultSegmentDef[] = [
     frequencyOperator: null,
     frequencyValue: null,
     frequencyValue2: null,
+    monetaryUnit: "RATIO",
     monetaryOperator: "LESS_THAN",
     monetaryValue: 0.5,
     monetaryValue2: null,
@@ -174,6 +183,7 @@ export const DEFAULT_SEGMENTS: DefaultSegmentDef[] = [
     frequencyOperator: "IN_RANGE",
     frequencyValue: 2,
     frequencyValue2: 3,
+    monetaryUnit: "RATIO",
     monetaryOperator: "IN_RANGE",
     monetaryValue: 0.5,
     monetaryValue2: 1.5,
@@ -191,6 +201,7 @@ export const DEFAULT_SEGMENTS: DefaultSegmentDef[] = [
     frequencyOperator: null,
     frequencyValue: null,
     frequencyValue2: null,
+    monetaryUnit: null,
     monetaryOperator: null,
     monetaryValue: null,
     monetaryValue2: null,

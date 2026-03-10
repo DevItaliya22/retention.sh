@@ -12,6 +12,7 @@ import {
   type CampaignRedemptionLimit,
   type CampaignRewardType,
 } from "@/hooks/campaigns/useCampaignsQuery";
+import { useSegmentsQuery } from "@/hooks/segments/useSegmentsQuery";
 import {
   CAMPAIGN_APPLIES_TO_LABELS,
   CAMPAIGN_DEFAULT_TERMS,
@@ -31,7 +32,15 @@ import {
 import { downloadCampaignCardAsImage } from "@/lib/utils/campaign-card-image";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
+  Badge,
   Button,
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
   Form,
   FormControl,
   FormDescription,
@@ -40,6 +49,9 @@ import {
   FormLabel,
   FormMessage,
   Input,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
   Select,
   SelectContent,
   SelectItem,
@@ -50,10 +62,19 @@ import {
   Textarea,
 } from "@reelo/ui/components";
 import { cn } from "@reelo/ui/lib/utils";
-import { ArrowLeft, Download, ImagePlus, Upload, X } from "lucide-react";
-import { useRouter } from "next/navigation";
+import {
+  ArrowLeft,
+  Check,
+  Download,
+  ImagePlus,
+  PlusCircle,
+  Upload,
+  X,
+  XCircle,
+} from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Resolver } from "react-hook-form";
+import type { Control, Resolver } from "react-hook-form";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -91,7 +112,7 @@ const formSchema = z.object({
   emailSubject: z.string().max(500).trim().optional().nullable(),
   whatsappEnabled: z.boolean(),
   emailEnabled: z.boolean(),
-  targetCustomerTags: z.string().optional(),
+  targetSegmentIds: z.array(z.string().uuid()).optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -186,6 +207,8 @@ export function CampaignEditPageClient({
   initialCampaign,
 }: CampaignEditPageClientProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const segmentsParam = searchParams.get("segments");
   const previewRef = useRef<HTMLDivElement>(null);
   const [sentenceEdited, setSentenceEdited] = useState(false);
   const [isFormHydrated, setIsFormHydrated] = useState(false);
@@ -196,6 +219,7 @@ export function CampaignEditPageClient({
     error,
   } = useCampaignQuery(campaignId, initialCampaign);
   const { data: businessData } = useCurrentBusiness();
+  const { data: segmentsData } = useSegmentsQuery();
   const updateCampaign = useUpdateCampaign(campaignId);
 
   const form = useForm<FormValues>({
@@ -230,7 +254,7 @@ export function CampaignEditPageClient({
       emailSubject: "",
       whatsappEnabled: false,
       emailEnabled: false,
-      targetCustomerTags: "",
+      targetSegmentIds: [],
     },
   });
 
@@ -305,7 +329,7 @@ export function CampaignEditPageClient({
       emailSubject: campaign.emailSubject ?? "",
       whatsappEnabled: campaign.whatsappEnabled ?? false,
       emailEnabled: campaign.emailEnabled ?? false,
-      targetCustomerTags: (campaign.targetCustomerTags ?? []).join(", "),
+      targetSegmentIds: campaign.segmentIds ?? [],
     });
 
     // If server sentence differs from auto-generated, treat as edited.
@@ -315,15 +339,36 @@ export function CampaignEditPageClient({
     setIsFormHydrated(true);
   }, [campaign, form]);
 
+  useEffect(() => {
+    if (isFormHydrated && segmentsParam && segmentsData?.items) {
+      const slugs = segmentsParam
+        .split(",")
+        .map((s) => s.trim().toLowerCase())
+        .filter(Boolean);
+      const matchedIds = segmentsData.items
+        .filter(
+          (s) =>
+            slugs.includes(s.slug.toLowerCase()) ||
+            slugs.includes(s.name.toLowerCase()),
+        )
+        .map((s) => s.id);
+
+      if (matchedIds.length > 0) {
+        const currentIds = form.getValues("targetSegmentIds") || [];
+        const combined = Array.from(new Set([...currentIds, ...matchedIds]));
+
+        if (
+          JSON.stringify([...combined].sort()) !==
+          JSON.stringify([...currentIds].sort())
+        ) {
+          form.setValue("targetSegmentIds", combined);
+        }
+      }
+    }
+  }, [isFormHydrated, segmentsParam, segmentsData, form]);
+
   const onSubmit = form.handleSubmit(async (values) => {
     try {
-      const tags = values.targetCustomerTags
-        ? values.targetCustomerTags
-            .split(",")
-            .map((t: string) => t.trim())
-            .filter(Boolean)
-        : undefined;
-
       await updateCampaign.mutateAsync({
         title: values.title || null,
         description: values.description || null,
@@ -357,7 +402,9 @@ export function CampaignEditPageClient({
         emailSubject: values.emailSubject || null,
         whatsappEnabled: values.whatsappEnabled,
         emailEnabled: values.emailEnabled,
-        targetCustomerTags: tags,
+        segmentIds: values.targetSegmentIds?.length
+          ? values.targetSegmentIds
+          : undefined,
       });
       toast.success("Campaign saved");
     } catch (e) {
@@ -1281,26 +1328,7 @@ export function CampaignEditPageClient({
                   />
                 )}
 
-                <FormField
-                  control={form.control}
-                  name="targetCustomerTags"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Target customer tags</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="tag1, tag2, tag3"
-                          {...field}
-                          value={field.value ?? ""}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        Comma-separated. Leave empty to target all customers.
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <SegmentsField control={form.control} />
               </Section>
             </div>
 
@@ -1318,6 +1346,161 @@ export function CampaignEditPageClient({
         </Form>
       </ScaffoldContainer>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Segments multi-select field
+// ---------------------------------------------------------------------------
+
+function SegmentsField({ control }: { control: Control<FormValues> }) {
+  const [open, setOpen] = useState(false);
+  const { data } = useSegmentsQuery();
+  const options = (data?.items ?? []).map((s) => ({
+    value: s.id,
+    label: s.name,
+  }));
+
+  return (
+    <FormField
+      control={control}
+      name="targetSegmentIds"
+      render={({ field }) => {
+        const selectedIds = field.value ?? [];
+        const selectedSet = new Set(selectedIds);
+        const onToggle = (id: string) => {
+          const next = selectedSet.has(id)
+            ? selectedIds.filter((x: string) => x !== id)
+            : [...selectedIds, id];
+          field.onChange(next);
+        };
+        const onClear = () => field.onChange([]);
+
+        return (
+          <FormItem>
+            <FormLabel>Target segments</FormLabel>
+            <Popover open={open} onOpenChange={setOpen}>
+              <FormControl>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full justify-start font-normal"
+                    icon={
+                      selectedSet.size > 0 ? (
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          className="rounded-sm opacity-70 transition-opacity hover:opacity-100"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            onClear();
+                          }}
+                        >
+                          <XCircle className="h-4 w-4" />
+                        </div>
+                      ) : (
+                        <PlusCircle className="h-4 w-4" />
+                      )
+                    }
+                  >
+                    {selectedSet.size > 0 ? (
+                      <>
+                        <span className="truncate">
+                          {selectedSet.size} segment
+                          {selectedSet.size !== 1 ? "s" : ""} selected
+                        </span>
+                        <div className="ml-auto flex items-center gap-1">
+                          {selectedSet.size <= 2 ? (
+                            options
+                              .filter((o) => selectedSet.has(o.value))
+                              .map((o) => (
+                                <Badge
+                                  key={o.value}
+                                  variant="secondary"
+                                  className="rounded-sm px-1 font-normal"
+                                >
+                                  {o.label}
+                                </Badge>
+                              ))
+                          ) : (
+                            <Badge
+                              variant="secondary"
+                              className="rounded-sm px-1 font-normal"
+                            >
+                              {selectedSet.size} selected
+                            </Badge>
+                          )}
+                        </div>
+                      </>
+                    ) : (
+                      "Select segments..."
+                    )}
+                  </Button>
+                </PopoverTrigger>
+              </FormControl>
+              <PopoverContent
+                className="w-[var(--radix-popover-trigger-width)] p-0"
+                align="start"
+              >
+                <Command>
+                  <CommandInput placeholder="Search segments..." />
+                  <CommandList className="max-h-[300px]">
+                    <CommandEmpty>No segments found.</CommandEmpty>
+                    <CommandGroup className="overflow-y-auto">
+                      {options.map((opt) => {
+                        const isSelected = selectedSet.has(opt.value);
+                        return (
+                          <CommandItem
+                            key={opt.value}
+                            onSelect={() => onToggle(opt.value)}
+                          >
+                            <div
+                              className={cn(
+                                "mr-2 flex size-4 shrink-0 items-center justify-center rounded-[4px]",
+                                isSelected
+                                  ? "bg-primary"
+                                  : "bg-muted [&_svg]:invisible",
+                              )}
+                            >
+                              <Check
+                                className={cn(
+                                  "h-3 w-3 stroke-[2.5]",
+                                  isSelected && "text-white",
+                                )}
+                              />
+                            </div>
+                            {opt.label}
+                          </CommandItem>
+                        );
+                      })}
+                    </CommandGroup>
+                    {selectedSet.size > 0 && (
+                      <>
+                        <CommandSeparator />
+                        <CommandGroup>
+                          <CommandItem
+                            onSelect={onClear}
+                            className="justify-center"
+                          >
+                            Clear selection
+                          </CommandItem>
+                        </CommandGroup>
+                      </>
+                    )}
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+            <FormDescription>
+              Target customers in these segments. Leave empty to target all.
+            </FormDescription>
+            <FormMessage />
+          </FormItem>
+        );
+      }}
+    />
   );
 }
 

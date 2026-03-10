@@ -99,7 +99,7 @@ export function useCreateCampaignDraft() {
 
 /** Full campaign as returned by GET /api/campaigns/[id] */
 export interface CampaignFull extends CampaignListItem {
-  targetCustomerTags: string[];
+  segmentIds: string[];
   emailSubject: string | null;
 
   // Branding
@@ -139,7 +139,7 @@ export interface UpdateCampaignInput {
   contactNumber?: string | null;
   startsAt?: string;
   expiresAt?: string;
-  targetCustomerTags?: string[];
+  segmentIds?: string[];
   status?: string;
   emailSubject?: string | null;
 

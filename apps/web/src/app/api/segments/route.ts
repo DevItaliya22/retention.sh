@@ -76,6 +76,7 @@ export const POST = withAdminAuth(async (request: NextRequest, context) => {
         frequencyOperator: data.frequencyOperator ?? null,
         frequencyValue: data.frequencyValue ?? null,
         frequencyValue2: data.frequencyValue2 ?? null,
+        monetaryUnit: data.monetaryUnit ?? "RATIO",
         monetaryOperator: data.monetaryOperator ?? null,
         monetaryValue: data.monetaryValue ?? null,
         monetaryValue2: data.monetaryValue2 ?? null,

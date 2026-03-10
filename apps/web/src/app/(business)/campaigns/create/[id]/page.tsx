@@ -4,6 +4,7 @@ import { db } from "@reelo/db";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
+import { Suspense } from "react";
 import { CampaignEditPageClient } from "./_components/CampaignEditPageClient";
 
 export const metadata: Metadata = generateRouteMetadata(
@@ -42,14 +43,21 @@ export default async function CampaignCreatePage({ params }: Props) {
       id,
       businessId: admin.businessId,
     },
+    include: {
+      campaignSegments: { select: { segmentId: true } },
+    },
   });
 
   if (!campaign) {
     notFound();
   }
 
+  const { campaignSegments, ...campaignRest } = campaign;
+  const segmentIds = campaignSegments.map((cs) => cs.segmentId);
+
   const initialCampaign = {
-    ...campaign,
+    ...campaignRest,
+    segmentIds,
     startsAt: campaign.startsAt?.toISOString() ?? null,
     expiresAt: campaign.expiresAt.toISOString(),
     createdAt: campaign.createdAt.toISOString(),
@@ -57,6 +65,11 @@ export default async function CampaignCreatePage({ params }: Props) {
   };
 
   return (
-    <CampaignEditPageClient campaignId={id} initialCampaign={initialCampaign} />
+    <Suspense fallback={<div className="h-96" />}>
+      <CampaignEditPageClient
+        campaignId={id}
+        initialCampaign={initialCampaign}
+      />
+    </Suspense>
   );
 }

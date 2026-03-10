@@ -1,6 +1,6 @@
-import type { RecencyUnit, SegmentOperator } from "@reelo/db";
+import type { MonetaryUnit, RecencyUnit, SegmentOperator } from "@reelo/db";
 
-export type { RecencyUnit, SegmentOperator };
+export type { MonetaryUnit, RecencyUnit, SegmentOperator };
 
 export interface SegmentConfig {
   id: string;
@@ -15,6 +15,7 @@ export interface SegmentConfig {
   frequencyOperator: SegmentOperator | null;
   frequencyValue: number | null;
   frequencyValue2: number | null;
+  monetaryUnit: MonetaryUnit | null;
   monetaryOperator: SegmentOperator | null;
   monetaryValue: number | null;
   monetaryValue2: number | null;

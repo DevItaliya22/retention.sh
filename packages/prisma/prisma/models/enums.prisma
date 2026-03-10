@@ -170,3 +170,8 @@ enum RecencyUnit {
   DAYS
   MONTHS
 }
+
+enum MonetaryUnit {
+  RATIO // multiple of avg spend (e.g. 3 = 3x)
+  ABSOLUTE // actual ₹ (e.g. 50000)
+}

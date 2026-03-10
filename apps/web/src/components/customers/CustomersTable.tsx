@@ -1,10 +1,16 @@
 "use client";
 
-import { useCustomerSegmentsQuery } from "@/hooks/analytics/useAnalyticsQuery";
+import { PeriodSelector } from "@/components/dashboard/shared";
+import {
+  useCustomerSegmentsQuery,
+  useRfmStatsQuery,
+} from "@/hooks/analytics/useAnalyticsQuery";
+import { useCreateCampaignDraft } from "@/hooks/campaigns/useCampaignsQuery";
 import {
   useCustomersQuery,
   type Customer,
 } from "@/hooks/customers/useCustomersQuery";
+import type { AnalyticsPeriod } from "@/lib/schemas/analytics";
 import { getDataTableConfig } from "@/lib/utils/data-table-params";
 import {
   Badge,
@@ -34,10 +40,11 @@ import {
 import { useDataTable } from "@reelo/ui/hooks";
 import { cn } from "@reelo/ui/lib/utils";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Check, Eye, PlusCircle, XCircle } from "lucide-react";
+import { Check, Eye, Plus, PlusCircle, XCircle } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
+import { toast } from "sonner";
 
 function CustomersSegmentFilter() {
   const router = useRouter();
@@ -176,13 +183,13 @@ function CustomersSegmentFilter() {
                   >
                     <div
                       className={cn(
-                        "border-primary flex size-4 items-center justify-center rounded-sm border",
+                        "flex size-4 shrink-0 items-center justify-center rounded-sm border transition-colors",
                         isSelected
-                          ? "bg-primary"
-                          : "opacity-50 [&_svg]:invisible",
+                          ? "border-primary bg-primary [&_svg]:block"
+                          : "border-muted-foreground/40 bg-transparent [&_svg]:hidden",
                       )}
                     >
-                      <Check />
+                      <Check className="h-3 w-3 stroke-[3] text-white" />
                     </div>
                     <span className="truncate">{option.label}</span>
                   </CommandItem>
@@ -210,6 +217,7 @@ function CustomersSegmentFilter() {
 }
 
 export function CustomersTable() {
+  const router = useRouter();
   const { data, isLoading, isError, error } = useCustomersQuery();
 
   const customers = data?.items ?? [];
@@ -534,24 +542,135 @@ export function CustomersTable() {
     );
   }
 
+  const createDraft = useCreateCampaignDraft();
+  const searchParams = useSearchParams();
+  const segmentParam = searchParams.get("segment") ?? "";
+  const [period, setPeriod] = useState<AnalyticsPeriod>("30d");
+  const { data: rfmStats, isLoading: isStatsLoading } = useRfmStatsQuery({
+    period,
+    segment: segmentParam || undefined,
+  });
+
+  const handleCreateCampaign = async () => {
+    try {
+      const result = await createDraft.mutateAsync();
+      const segments = segmentParam
+        ? `?segments=${encodeURIComponent(segmentParam)}`
+        : "";
+      router.push(`/campaigns/create/${result.id}${segments}`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to create campaign");
+    }
+  };
+
   return (
-    <DataTable
-      table={table}
-      renderEmpty={() => (
-        <Empty className="py-12">
-          <EmptyHeader>
-            <EmptyTitle>No customers found</EmptyTitle>
-            <EmptyDescription>Try adjusting your filters</EmptyDescription>
-          </EmptyHeader>
-        </Empty>
-      )}
-    >
-      <div className="flex w-full flex-nowrap items-center gap-2">
-        <CustomersSegmentFilter />
-        <div className="min-w-0 flex-1">
-          <DataTableToolbar table={table} maxTextFilters={1} />
+    <div className="space-y-4">
+      {/* Stat Cards */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+            Customer Overview
+          </p>
+          <PeriodSelector value={period} onChange={setPeriod} />
+        </div>
+        <div className="grid grid-cols-3 gap-3">
+          {/* Card 1 — All-time total, never changes */}
+          <div className="bg-card rounded-xl border px-5 py-4">
+            <p className="text-muted-foreground mb-1 text-xs font-medium">
+              Total Customers
+            </p>
+            <div className="flex h-9 items-center">
+              {isStatsLoading ? (
+                <Skeleton className="h-8 w-8" />
+              ) : (
+                <p className="text-foreground text-2xl font-bold tabular-nums">
+                  {(rfmStats?.totalCustomers ?? 0).toLocaleString("en-IN")}
+                </p>
+              )}
+            </div>
+            <p className="text-muted-foreground mt-0.5 text-xs">all time</p>
+          </div>
+
+          {/* Card 2 — All-time repeat, never changes */}
+          <div className="bg-card rounded-xl border px-5 py-4">
+            <p className="text-muted-foreground mb-1 text-xs font-medium">
+              Repeat Customers
+            </p>
+            <div className="flex h-9 items-center">
+              {isStatsLoading ? (
+                <Skeleton className="h-8 w-8" />
+              ) : (
+                <p className="text-foreground text-2xl font-bold tabular-nums">
+                  {(rfmStats?.repeatCustomers ?? 0).toLocaleString("en-IN")}
+                </p>
+              )}
+            </div>
+            <p className="text-muted-foreground mt-0.5 text-xs">
+              ≥ 2 bills · all time
+            </p>
+          </div>
+
+          {/* Card 3 — New in period, reacts to period picker + segment filter */}
+          <div className="bg-card rounded-xl border px-5 py-4">
+            <p className="text-muted-foreground mb-1 text-xs font-medium">
+              New{segmentParam ? " in Segment" : ""} ·{" "}
+              {period === "7d"
+                ? "7d"
+                : period === "30d"
+                  ? "30d"
+                  : period === "90d"
+                    ? "90d"
+                    : "12mo"}
+            </p>
+            <div className="flex h-9 items-center">
+              {isStatsLoading ? (
+                <Skeleton className="h-8 w-8" />
+              ) : (
+                <p className="text-foreground text-2xl font-bold tabular-nums">
+                  {(rfmStats?.filteredCount ?? 0).toLocaleString("en-IN")}
+                </p>
+              )}
+            </div>
+            <p className="text-muted-foreground mt-0.5 text-xs">
+              joined in selected period
+            </p>
+          </div>
         </div>
       </div>
-    </DataTable>
+
+      <DataTable
+        table={table}
+        renderEmpty={() => (
+          <Empty className="py-12">
+            <EmptyHeader>
+              <EmptyTitle>No customers found</EmptyTitle>
+              <EmptyDescription>Try adjusting your filters</EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        )}
+      >
+        <div className="flex w-full flex-nowrap items-center gap-2">
+          <CustomersSegmentFilter />
+          <div className="min-w-0 flex-1">
+            <DataTableToolbar table={table} maxTextFilters={1} />
+          </div>
+        </div>
+      </DataTable>
+
+      {segmentParam && total > 0 && (
+        <div className="flex justify-center border-t py-4">
+          <Button
+            size="lg"
+            className="rounded-full px-8 shadow-lg transition-all hover:scale-105"
+            icon={<Plus className="h-5 w-5" />}
+            onClick={handleCreateCampaign}
+            loading={createDraft.isPending}
+          >
+            Create campaign for {segmentParam.split(",").length} segment
+            {segmentParam.split(",").length !== 1 ? "s" : ""}
+          </Button>
+        </div>
+      )}
+    </div>
   );
 }

@@ -31,6 +31,9 @@ export const GET = withAdminAuth(
           id,
           businessId: context.business.id,
         },
+        include: {
+          campaignSegments: { select: { segmentId: true } },
+        },
       });
 
       if (!campaign) {
@@ -40,13 +43,18 @@ export const GET = withAdminAuth(
         );
       }
 
-      return NextResponse.json(campaign, {
-        headers: {
-          "Cache-Control": "no-store, no-cache, must-revalidate",
-          Pragma: "no-cache",
-          Expires: "0",
+      const { campaignSegments, ...campaignRest } = campaign;
+      const segmentIds = campaignSegments.map((cs) => cs.segmentId);
+      return NextResponse.json(
+        { ...campaignRest, segmentIds },
+        {
+          headers: {
+            "Cache-Control": "no-store, no-cache, must-revalidate",
+            Pragma: "no-cache",
+            Expires: "0",
+          },
         },
-      });
+      );
     } catch (error) {
       console.error("Campaign get error:", error);
       return NextResponse.json(
@@ -93,7 +101,7 @@ export const PATCH = withAdminAuth(
         contactNumber,
         startsAt,
         expiresAt,
-        targetCustomerTags,
+        segmentIds,
         status,
         emailSubject,
         themeColor,
@@ -124,8 +132,24 @@ export const PATCH = withAdminAuth(
       if (startsAt !== undefined)
         updateData.startsAt = startsAt ? new Date(startsAt) : null;
       if (expiresAt !== undefined) updateData.expiresAt = new Date(expiresAt);
-      if (targetCustomerTags !== undefined)
-        updateData.targetCustomerTags = targetCustomerTags;
+      if (segmentIds !== undefined) {
+        await db.campaignSegment.deleteMany({ where: { campaignId: id } });
+        if (segmentIds.length > 0) {
+          const businessSegments = await db.segment.findMany({
+            where: {
+              businessId: context.business.id,
+              id: { in: segmentIds },
+            },
+            select: { id: true },
+          });
+          const validIds = new Set(businessSegments.map((s) => s.id));
+          await db.campaignSegment.createMany({
+            data: segmentIds
+              .filter((sid) => validIds.has(sid))
+              .map((segmentId) => ({ campaignId: id, segmentId })),
+          });
+        }
+      }
       if (status !== undefined) updateData.status = status;
       if (emailSubject !== undefined) updateData.emailSubject = emailSubject;
 

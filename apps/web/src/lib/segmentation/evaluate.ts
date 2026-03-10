@@ -78,11 +78,16 @@ export function evaluateSegment(
     return false;
   }
 
-  const monetaryRatio = avgSpend > 0 ? customer.lifetimeSpend / avgSpend : 0;
+  const monetaryValueToCompare =
+    segment.monetaryUnit === "ABSOLUTE"
+      ? customer.lifetimeSpend
+      : avgSpend > 0
+        ? customer.lifetimeSpend / avgSpend
+        : 0;
   if (
     segment.monetaryOperator != null &&
     !matchesOperator(
-      monetaryRatio,
+      monetaryValueToCompare,
       segment.monetaryOperator,
       segment.monetaryValue ?? 0,
       segment.monetaryValue2 ?? null,

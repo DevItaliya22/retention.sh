@@ -8,7 +8,6 @@ import {
   InsightsSection,
   LoyaltyPerformanceSection,
   RevenueSection,
-  RfmSection,
 } from "./sections";
 
 export function DashboardPageClient() {
@@ -25,9 +24,6 @@ export function DashboardPageClient() {
       </Suspense>
       <Suspense>
         <LoyaltyPerformanceSection />
-      </Suspense>
-      <Suspense>
-        <RfmSection />
       </Suspense>
       <Suspense>
         <EngagementSection />
