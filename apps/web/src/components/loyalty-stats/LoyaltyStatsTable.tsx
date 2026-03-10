@@ -6,11 +6,13 @@ import {
 } from "@/hooks/loyalty/useLoyaltyStatsQuery";
 import { getDataTableConfig } from "@/lib/utils/data-table-params";
 import {
+  Button,
   buttonVariants,
   DataTable,
   DataTableColumnHeader,
   DataTableToolbar,
   Empty,
+  EmptyContent,
   EmptyDescription,
   EmptyHeader,
   EmptyTitle,
@@ -40,6 +42,7 @@ export function LoyaltyStatsTable() {
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
   const perPage = data?.perPage ?? 10;
+  const apiMessage = data?.error;
   const pageCount = Math.max(1, Math.ceil(total / perPage));
   const isEmpty = !isLoading && items.length === 0;
 
@@ -343,11 +346,22 @@ export function LoyaltyStatsTable() {
       renderEmpty={() => (
         <Empty className="py-12">
           <EmptyHeader>
-            <EmptyTitle>No loyalty transactions yet</EmptyTitle>
+            <EmptyTitle>
+              {apiMessage
+                ? "Loyalty is not enabled"
+                : "No loyalty transactions yet"}
+            </EmptyTitle>
             <EmptyDescription>
-              Transactions will appear when customers earn or redeem points
+              {apiMessage
+                ? apiMessage
+                : "Once customers start earning or redeeming points, the latest activity will show up here."}
             </EmptyDescription>
           </EmptyHeader>
+          <EmptyContent className="mt-2">
+            <Button asChild variant="outline">
+              <Link href="/settings#loyalty">Open loyalty settings</Link>
+            </Button>
+          </EmptyContent>
         </Empty>
       )}
     >

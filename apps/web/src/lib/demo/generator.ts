@@ -160,10 +160,10 @@ function buildLargeBillPlans(
     const primaryBucket = i % 10;
     const daysAgo =
       primaryBucket < 6
-        ? i % 45
+        ? i % 45 // recent: 0–44 days
         : primaryBucket < 8
-          ? 46 + (i % 120)
-          : 166 + (i % 200);
+          ? 46 + (i % 120) // mid: 46–165 days
+          : 366 + (i % 183); // old (lost): 366–548 days — must exceed 365 for Lost segment
 
     const baseAmount =
       primaryBucket < 6
@@ -174,7 +174,7 @@ function buildLargeBillPlans(
 
     plans.push({
       customerIndex,
-      daysAgo: Math.min(364, daysAgo),
+      daysAgo: primaryBucket < 8 ? Math.min(364, daysAgo) : daysAgo,
       targetFinalAmount: baseAmount,
       storeDiscount: i % 4 === 0 ? 80 : i % 5 === 0 ? 120 : 0,
       taxes: i % 3 === 0 ? [18] : i % 3 === 1 ? [12, 6] : [],
@@ -1218,14 +1218,22 @@ async function createBill(
 
 async function normalizeWalletLastVisitAt(account: DemoAccountContext) {
   for (const customer of account.customers) {
-    const latestBill = await db.bill.findFirst({
-      where: {
-        businessId: account.businessId,
-        customerId: customer.customerId,
-      },
-      orderBy: { createdAt: "desc" },
-      select: { createdAt: true },
-    });
+    const [latestBill, billCount] = await Promise.all([
+      db.bill.findFirst({
+        where: {
+          businessId: account.businessId,
+          customerId: customer.customerId,
+        },
+        orderBy: { createdAt: "desc" },
+        select: { createdAt: true },
+      }),
+      db.bill.count({
+        where: {
+          businessId: account.businessId,
+          customerId: customer.customerId,
+        },
+      }),
+    ]);
 
     if (!latestBill) continue;
 
@@ -1238,6 +1246,10 @@ async function normalizeWalletLastVisitAt(account: DemoAccountContext) {
       },
       data: {
         lastVisitAt: latestBill.createdAt,
+        // For CASHBACK loyalty, visitCount is never incremented during bill
+        // processing (only TIER/VISIT_MADE update it). Sync it from actual
+        // bill count so frequency-based RFM segments (VIP, Loyal, etc.) work.
+        visitCount: billCount,
       },
     });
   }
@@ -1352,13 +1364,23 @@ async function createPartnerInterchangeBills(
     partnerBusinessId: string,
     preferredAmounts: number[],
   ) => {
+    // Always append 0 as final fallback: when campaign cashback takes precedence
+    // over loyalty earning, the partner wallet may be empty (₹0). In that case
+    // we still create the bill — just without partner redemption — so the demo
+    // seed does not crash.
+    const amounts = preferredAmounts.includes(0)
+      ? preferredAmounts
+      : [...preferredAmounts, 0];
     let lastError: unknown = null;
-    for (const amount of preferredAmounts) {
+    for (const amount of amounts) {
       try {
+        // amount === 0 means skip partner redemption entirely (pass null so
+        // applyLoyaltyForBill skips the partner block).
         return await createBill(account, plan, billIndex, {
           forceCustomerIndex: customerIndex,
-          redeemFromPartnerBusinessId: partnerBusinessId,
-          redeemPartnerCashback: amount,
+          redeemFromPartnerBusinessId:
+            amount > 0 ? partnerBusinessId : undefined,
+          redeemPartnerCashback: amount > 0 ? amount : undefined,
         });
       } catch (error) {
         lastError = error;

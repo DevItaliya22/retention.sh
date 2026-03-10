@@ -1,9 +1,7 @@
 import { CustomerDetailPageClient } from "@/components/customers/CustomerDetailPageClient";
-import { CustomerDetailSkeleton } from "@/components/customers/CustomerDetailSkeleton";
 import { DashboardPageShell } from "@/components/layouts";
 import { generateRouteMetadata } from "@/lib/utils/route-metadata";
 import type { Metadata } from "next";
-import { Suspense } from "react";
 
 /**
  * Route segment is [slugId] (not [id]) to avoid confusion with Customer.id or
@@ -31,9 +29,7 @@ export default async function CustomerDetailPage({
       title="Customer"
       subtitle="View customer details and loyalty info"
     >
-      <Suspense fallback={<CustomerDetailSkeleton />}>
-        <CustomerDetailPageClient slugId={slugId} />
-      </Suspense>
+      <CustomerDetailPageClient slugId={slugId} />
     </DashboardPageShell>
   );
 }

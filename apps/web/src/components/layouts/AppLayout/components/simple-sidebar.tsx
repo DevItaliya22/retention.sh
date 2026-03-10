@@ -222,22 +222,14 @@ export function SimpleSidebar({
                         <SidebarMenuSubItem>
                           <SidebarMenuSubButton
                             asChild
-                            isActive={pathname === "/settings/sku"}
+                            isActive={
+                              pathname === "/settings/sku" ||
+                              pathname.startsWith("/settings/sku/")
+                            }
                           >
                             <Link href="/settings/sku">
                               {/* <Package className="h-4 w-4" /> */}
-                              SKU
-                            </Link>
-                          </SidebarMenuSubButton>
-                        </SidebarMenuSubItem>
-                        <SidebarMenuSubItem>
-                          <SidebarMenuSubButton
-                            asChild
-                            isActive={pathname === "/settings/sku/categories"}
-                          >
-                            <Link href="/settings/sku/categories">
-                              {/* <Layers className="h-4 w-4" /> */}
-                              Categories
+                              SKU & Categories
                             </Link>
                           </SidebarMenuSubButton>
                         </SidebarMenuSubItem>

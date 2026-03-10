@@ -14,7 +14,6 @@ import {
   CardTitle,
   Switch,
 } from "@reelo/ui/components";
-import Link from "next/link";
 import { useTransition } from "react";
 import { toast } from "sonner";
 
@@ -277,7 +276,10 @@ export function BusinessExistingSettings({
           </CardHeader>
           <Card className="border-border/45 bg-background/55 flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border shadow-none">
             <CardContent className="flex flex-col divide-y px-4 py-0">
-              <div className="flex flex-col gap-1 py-4">
+              <div
+                id="loyalty"
+                className="flex scroll-mt-24 flex-col gap-1 py-4"
+              >
                 <div className="flex flex-row items-center justify-between">
                   <div className="flex flex-col gap-0.5">
                     <span className="text-sm font-medium">Loyalty</span>
@@ -294,21 +296,12 @@ export function BusinessExistingSettings({
                     disabled={loyaltyPending}
                   />
                 </div>
-                {!isServiceEnabled(business.isServiceEnabled, "loyalty") &&
-                  !business.loyalty && (
-                    <p className="text-muted-foreground text-xs">
-                      Not set up yet.{" "}
-                      <Link
-                        href="/settings/loyalty"
-                        className="text-primary underline underline-offset-2 hover:no-underline"
-                      >
-                        Set up loyalty
-                      </Link>
-                    </p>
-                  )}
               </div>
 
-              <div className="flex flex-col gap-1 py-4">
+              <div
+                id="referral"
+                className="flex scroll-mt-24 flex-col gap-1 py-4"
+              >
                 <div className="flex flex-row items-center justify-between">
                   <div className="flex flex-col gap-0.5">
                     <span className="text-sm font-medium">Referral</span>
@@ -325,18 +318,6 @@ export function BusinessExistingSettings({
                     disabled={referralPending}
                   />
                 </div>
-                {!isServiceEnabled(business.isServiceEnabled, "referral") &&
-                  !business.referralProgram && (
-                    <p className="text-muted-foreground text-xs">
-                      Not set up yet.{" "}
-                      <Link
-                        href="/settings/referral"
-                        className="text-primary underline underline-offset-2 hover:no-underline"
-                      >
-                        Set up referral
-                      </Link>
-                    </p>
-                  )}
               </div>
 
               <div className="flex flex-col gap-1 py-4">
@@ -356,18 +337,6 @@ export function BusinessExistingSettings({
                     disabled={feedbackPending}
                   />
                 </div>
-                {!isServiceEnabled(business.isServiceEnabled, "feedback") &&
-                  !business.feedbackConfig && (
-                    <p className="text-muted-foreground text-xs">
-                      Not set up yet.{" "}
-                      <Link
-                        href="/settings/feedback"
-                        className="text-primary underline underline-offset-2 hover:no-underline"
-                      >
-                        Set up feedback
-                      </Link>
-                    </p>
-                  )}
               </div>
             </CardContent>
           </Card>
