@@ -33,6 +33,10 @@ export async function GET(
           include: {
             newCustomerFreeItemSku: { select: { id: true, name: true } },
             existingCustomerFreeItemSku: { select: { id: true, name: true } },
+            termsAndConditionsNewCustomer: { orderBy: { createdAt: "asc" } },
+            termsAndConditionsExistingCustomer: {
+              orderBy: { createdAt: "asc" },
+            },
           },
         },
         loyalty: true,
@@ -68,8 +72,25 @@ export async function GET(
       );
     }
 
+    const referralProgram = business.referralProgram;
+    const mapped = referralProgram
+      ? {
+          ...referralProgram,
+          termsAndConditionsNewCustomer:
+            referralProgram.termsAndConditionsNewCustomer.map((t) => ({
+              id: t.id,
+              content: t.content,
+            })),
+          termsAndConditionsExistingCustomer:
+            referralProgram.termsAndConditionsExistingCustomer.map((t) => ({
+              id: t.id,
+              content: t.content,
+            })),
+        }
+      : null;
+
     return NextResponse.json({
-      referralProgram: business.referralProgram,
+      referralProgram: mapped,
       business: {
         name: business.name,
         slug: business.slug,

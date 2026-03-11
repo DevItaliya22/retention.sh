@@ -29,4 +29,7 @@ export const FEEDBACK_FORM_DEFAULTS = {
     submittingButton: "Submitting…",
     leaveReview: "Leave us a review",
   },
+
+  /** Default selection options shown on the feedback form */
+  selectionOptions: ["Service", "Ambience", "Cleanliness", "Value for money"],
 } as const;

@@ -28,15 +28,17 @@ const BENEFIT_TYPE_OPTIONS = [
 export function ReferralProgramStep2() {
   const form = useFormContext<ReferralProgramFormValues>();
   const existingCustomerBenefitType = form.watch("existingCustomerBenefitType");
+  const lockEnabled =
+    form.watch("lockReferralPointsUntilFirstPurchase") ?? false;
   const { data: skusData } = useActiveSkusForSelect();
   const skus = skusData?.items ?? [];
 
-  const REFERRAL_PRESET_LABELS = [
-    "Multiple offers cannot be combined in a single bill.",
-    "Referral rewards cannot be combined with ongoing campaigns.",
-    "Rewards are not redeemable on public holidays.",
-    "Reward is redeemable in-store only.",
-  ];
+  const REFERRAL_PAUSE_TERM =
+    "The business may pause or end the referral program at any time. Existing earned rewards remain valid as per the configured expiry (if any).";
+  const REFERRAL_LOCK_TERM =
+    "Referrer's cashback will be locked until the person they referred makes their first bill. Locked amount shows in bill redemption UI. The referred customer can use their reward normally.";
+
+  const REFERRAL_PRESET_LABELS = [REFERRAL_PAUSE_TERM];
 
   return (
     <div className="grid gap-6">
@@ -131,16 +133,15 @@ export function ReferralProgramStep2() {
         control={form.control}
         name="lockReferralPointsUntilFirstPurchase"
         render={({ field }) => (
-          <FormItem className="flex flex-row items-center justify-between gap-4 rounded-lg border p-4">
+          <FormItem className="flex items-center justify-between gap-6">
             <div className="space-y-0.5">
-              <FormLabel className="text-base">
+              <FormLabel className="text-sm">
                 Lock referrer's reward until referred customer's first purchase
               </FormLabel>
-              <p className="text-muted-foreground text-sm">
+              <p className="text-muted-foreground text-xs">
                 Referrer&apos;s cashback will be locked until the person they
-                referred makes their first bill at your business. Locked amount
-                appears in bill redemption UI. The referred customer can use
-                their reward normally.
+                referred makes their first bill. Locked amount shows in bill
+                redemption UI.
               </p>
             </div>
             <FormControl>
@@ -197,6 +198,12 @@ export function ReferralProgramStep2() {
         name="termsAndConditionsExistingCustomer"
         label="Terms for Existing Customers"
         presetLabels={REFERRAL_PRESET_LABELS}
+        requiredLabels={lockEnabled ? [REFERRAL_LOCK_TERM] : []}
+        requiredHelperText={
+          lockEnabled
+            ? "This term is required because “Lock referrer's reward…” is enabled."
+            : undefined
+        }
       />
     </div>
   );

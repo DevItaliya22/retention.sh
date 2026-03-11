@@ -176,6 +176,14 @@ export const PUT = withAdminAuth(async (request: NextRequest, context) => {
               (updatePayload.negativeFollowUp?.trim()?.length
                 ? updatePayload.negativeFollowUp
                 : null) ?? defaultFollowUp,
+            selectionOptions: {
+              create: FEEDBACK_FORM_DEFAULTS.selectionOptions.map(
+                (label, idx) => ({
+                  label,
+                  seq: idx,
+                }),
+              ),
+            },
           },
           include: {
             questions: { orderBy: { createdAt: "asc" } },

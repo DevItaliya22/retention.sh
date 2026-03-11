@@ -21,6 +21,9 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
+const REFERRAL_LOCK_TERM =
+  "Referrer's cashback will be locked until the person they referred makes their first bill. Locked amount shows in bill redemption UI. The referred customer can use their reward normally.";
+
 const claimFormSchema = z.object({
   name: nameSchema,
   phoneNumber: z
@@ -130,6 +133,16 @@ export function ReferralClaimPageClient({
       return `Free ${referralProgram.newCustomerFreeItemSku?.name ?? "Item"}`;
     }
     return "Exclusive Reward";
+  }, [data]);
+
+  const newCustomerTerms = useMemo(() => {
+    const raw =
+      data?.referralProgram?.termsAndConditionsNewCustomer?.map(
+        (t) => t.content,
+      ) ?? [];
+    const cleaned = raw.map((s) => s.trim()).filter(Boolean);
+    // lock term does NOT apply to new customer terms; ensure it never leaks here
+    return cleaned.filter((t) => t !== REFERRAL_LOCK_TERM);
   }, [data]);
 
   const cardWrap = pageWrapClass;
@@ -553,6 +566,19 @@ export function ReferralClaimPageClient({
                 </Button>
               </form>
             </Form>
+          )}
+
+          {newCustomerTerms.length > 0 && (
+            <details className="mt-5 overflow-hidden rounded-[16px] border border-gray-100/80 bg-gray-50/50 px-4 py-3">
+              <summary className="cursor-pointer text-[13px] font-semibold text-gray-700 select-none">
+                Terms & Conditions
+              </summary>
+              <ol className="mt-3 list-decimal space-y-2 pl-5 text-[13px] leading-relaxed text-gray-600">
+                {newCustomerTerms.map((t, idx) => (
+                  <li key={`${idx}-${t}`}>{t}</li>
+                ))}
+              </ol>
+            </details>
           )}
         </div>
       </div>

@@ -12,9 +12,9 @@ export type ServiceKey = (typeof SERVICE_KEYS)[number];
  * Edit defaults here; onboarding will use this full object.
  */
 export const DEFAULT_SERVICE_VALUES: Record<ServiceKey, boolean> = {
-  referral: false,
-  loyalty: false,
-  feedback: false,
+  referral: true,
+  loyalty: true,
+  feedback: true,
 };
 
 /**

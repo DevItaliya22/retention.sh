@@ -64,7 +64,7 @@ export function ReferralProgramForm({
               ? values.existingCustomerFreeItemSkuId || null
               : null,
           sendReminderToCustomer: values.sendReminderToCustomer,
-          whatsappEnabled: values.whatsappEnabled ?? false,
+          whatsappEnabled: values.whatsappEnabled ?? true,
           emailEnabled: values.emailEnabled ?? false,
           smsEnabled: values.smsEnabled ?? false,
           lockReferralPointsUntilFirstPurchase:
@@ -194,7 +194,7 @@ export function ReferralProgramForm({
           initialData.existingCustomerBenefitExpiresInDays,
         lockReferralPointsUntilFirstPurchase:
           initialData.lockReferralPointsUntilFirstPurchase ?? false,
-        whatsappEnabled: initialData.whatsappEnabled ?? false,
+        whatsappEnabled: initialData.whatsappEnabled ?? true,
         emailEnabled: initialData.emailEnabled ?? false,
         smsEnabled: initialData.smsEnabled ?? false,
         sendReminderToCustomer: initialData.sendReminderToCustomer,
@@ -225,7 +225,7 @@ export function ReferralProgramForm({
         existingCustomerBenefitValue: 50,
         existingCustomerFreeItemSkuId: null,
         lockReferralPointsUntilFirstPurchase: true,
-        whatsappEnabled: false,
+        whatsappEnabled: true,
         emailEnabled: false,
         smsEnabled: false,
         sendReminderToCustomer: false,

@@ -2,6 +2,7 @@ import {
   withAdminAuth,
   withAdminAuthOptionalBusiness,
 } from "@/lib/auth/middleware";
+import { FEEDBACK_FORM_DEFAULTS } from "@/lib/constants/forms/feedback";
 import { updateBusinessSchema } from "@/lib/schemas/business";
 import {
   sanitizeErrorMessage,
@@ -71,7 +72,10 @@ export const PUT = withAdminAuth(async (request, context) => {
 
     const business = await db.business.findUnique({
       where: { id: businessId },
-      select: { isServiceEnabled: true },
+      select: {
+        isServiceEnabled: true,
+        feedbackConfig: { select: { id: true } },
+      },
     });
 
     const mergedServiceEnabled =
@@ -83,54 +87,80 @@ export const PUT = withAdminAuth(async (request, context) => {
           )
         : undefined;
 
-    const updated = await db.business.update({
-      where: { id: businessId },
-      data: {
-        name: validatedData.name ?? undefined,
-        website:
-          validatedData.website !== undefined
-            ? validatedData.website
+    const shouldSeedFeedback =
+      mergedServiceEnabled?.feedback === true && !business?.feedbackConfig?.id;
+
+    const updated = await db.$transaction(async (tx) => {
+      if (shouldSeedFeedback) {
+        await tx.feedbackConfig.create({
+          data: {
+            businessId,
+            positiveFollowUp: FEEDBACK_FORM_DEFAULTS.followUpMessage,
+            negativeFollowUp: FEEDBACK_FORM_DEFAULTS.followUpMessage,
+            selectionOptions: {
+              create: FEEDBACK_FORM_DEFAULTS.selectionOptions.map(
+                (label, idx) => ({
+                  label,
+                  seq: idx,
+                }),
+              ),
+            },
+          },
+        });
+      }
+
+      return tx.business.update({
+        where: { id: businessId },
+        data: {
+          name: validatedData.name ?? undefined,
+          website:
+            validatedData.website !== undefined
+              ? validatedData.website
+              : undefined,
+          defaultPointsName: validatedData.defaultPointsName ?? undefined,
+          defaultCurrencySymbol:
+            validatedData.defaultCurrencySymbol ?? undefined,
+          defaultCurrencyCode: validatedData.defaultCurrencyCode ?? undefined,
+          registrationBonusPoints:
+            validatedData.registrationBonusPoints ?? undefined,
+          nextBillNumber: validatedData.nextBillNumber ?? undefined,
+          ...(mergedServiceEnabled !== undefined && {
+            isServiceEnabled: mergedServiceEnabled,
+          }),
+          defaultBranding: validatedData.defaultBranding
+            ? {
+                upsert: {
+                  create: {
+                    logo: validatedData.defaultBranding.logo ?? null,
+                    themeColor:
+                      validatedData.defaultBranding.themeColor ?? null,
+                    textColor: validatedData.defaultBranding.textColor ?? null,
+                    bannerImage:
+                      validatedData.defaultBranding.bannerImage ?? null,
+                    header: validatedData.defaultBranding.header ?? null,
+                    subtitle: validatedData.defaultBranding.subtitle ?? null,
+                  },
+                  update: {
+                    logo: validatedData.defaultBranding.logo ?? null,
+                    themeColor:
+                      validatedData.defaultBranding.themeColor ?? null,
+                    textColor: validatedData.defaultBranding.textColor ?? null,
+                    bannerImage:
+                      validatedData.defaultBranding.bannerImage ?? null,
+                    header: validatedData.defaultBranding.header ?? null,
+                    subtitle: validatedData.defaultBranding.subtitle ?? null,
+                  },
+                },
+              }
             : undefined,
-        defaultPointsName: validatedData.defaultPointsName ?? undefined,
-        defaultCurrencySymbol: validatedData.defaultCurrencySymbol ?? undefined,
-        defaultCurrencyCode: validatedData.defaultCurrencyCode ?? undefined,
-        registrationBonusPoints:
-          validatedData.registrationBonusPoints ?? undefined,
-        nextBillNumber: validatedData.nextBillNumber ?? undefined,
-        ...(mergedServiceEnabled !== undefined && {
-          isServiceEnabled: mergedServiceEnabled,
-        }),
-        defaultBranding: validatedData.defaultBranding
-          ? {
-              upsert: {
-                create: {
-                  logo: validatedData.defaultBranding.logo ?? null,
-                  themeColor: validatedData.defaultBranding.themeColor ?? null,
-                  textColor: validatedData.defaultBranding.textColor ?? null,
-                  bannerImage:
-                    validatedData.defaultBranding.bannerImage ?? null,
-                  header: validatedData.defaultBranding.header ?? null,
-                  subtitle: validatedData.defaultBranding.subtitle ?? null,
-                },
-                update: {
-                  logo: validatedData.defaultBranding.logo ?? null,
-                  themeColor: validatedData.defaultBranding.themeColor ?? null,
-                  textColor: validatedData.defaultBranding.textColor ?? null,
-                  bannerImage:
-                    validatedData.defaultBranding.bannerImage ?? null,
-                  header: validatedData.defaultBranding.header ?? null,
-                  subtitle: validatedData.defaultBranding.subtitle ?? null,
-                },
-              },
-            }
-          : undefined,
-      },
-      include: {
-        defaultBranding: true,
-        referralProgram: { select: { id: true } },
-        loyalty: { select: { id: true } },
-        feedbackConfig: { select: { id: true } },
-      },
+        },
+        include: {
+          defaultBranding: true,
+          referralProgram: { select: { id: true } },
+          loyalty: { select: { id: true } },
+          feedbackConfig: { select: { id: true } },
+        },
+      });
     });
 
     const updatedWithComputed = {

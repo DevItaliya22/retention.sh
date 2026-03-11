@@ -25,6 +25,10 @@ interface TermsConditionsEditorProps<T extends FieldValues> {
   presetLabels?: string[];
   /** Custom label when layout is default */
   label?: string;
+  /** Terms that must always stay enabled (cannot be unchecked/removed). */
+  requiredLabels?: string[];
+  /** Optional helper text shown when some terms are required. */
+  requiredHelperText?: string;
 }
 
 /** Reusable dynamic terms & conditions array editor. */
@@ -32,6 +36,8 @@ export function TermsConditionsEditor<T extends FieldValues>({
   name = "termsAndConditions" as FieldPath<T>,
   layout = "default",
   label: customLabel,
+  requiredLabels = [],
+  requiredHelperText,
   presetLabels = [
     "Multiple offers cannot be combined in a single bill.",
     "Minimum purchase may be required for some rewards.",
@@ -41,7 +47,12 @@ export function TermsConditionsEditor<T extends FieldValues>({
 }: TermsConditionsEditorProps<T>) {
   const form = useFormContext<T>();
   const isSettings = layout === "settings";
-  const presetSet = new Set(presetLabels);
+  const requiredSet = new Set(requiredLabels);
+  const presetDisplayLabels = [
+    ...requiredLabels.filter((l) => !presetLabels.includes(l)),
+    ...presetLabels,
+  ];
+  const presetSet = new Set(presetDisplayLabels);
   const terms = (form.watch(name) as string[] | undefined) ?? [];
 
   const content = (
@@ -52,15 +63,18 @@ export function TermsConditionsEditor<T extends FieldValues>({
             Suggested defaults
           </p>
           <div className="mt-1 grid gap-2 md:grid-cols-2">
-            {presetLabels.map((label) => {
+            {presetDisplayLabels.map((label) => {
               const current = (form.getValues(name) as string[]) ?? [];
               const isSelected = current.includes(label);
+              const isRequired = requiredSet.has(label);
               return (
                 <TermCard
                   key={label}
                   label={label}
-                  checked={isSelected}
+                  checked={isRequired ? true : isSelected}
+                  disabled={isRequired}
                   onCheckedChange={(next) => {
+                    if (isRequired) return;
                     const items = (form.getValues(name) as string[]) ?? [];
                     const exists = items.includes(label);
                     const nextItems = next
@@ -76,6 +90,12 @@ export function TermsConditionsEditor<T extends FieldValues>({
               );
             })}
           </div>
+          {requiredLabels.length > 0 && (
+            <p className="text-muted-foreground mt-2 text-xs">
+              {requiredHelperText ??
+                "Some terms are required by your referral program settings."}
+            </p>
+          )}
         </div>
       )}
       {!isSettings && (
@@ -91,6 +111,7 @@ export function TermsConditionsEditor<T extends FieldValues>({
         if (presetSet.has(value)) {
           return null;
         }
+        const isRequired = requiredSet.has(value);
         return (
           <div
             key={index}
@@ -101,7 +122,9 @@ export function TermsConditionsEditor<T extends FieldValues>({
               className="min-w-0 flex-1"
               value={value}
               placeholder={`Term ${index + 1}`}
+              disabled={isRequired}
               onChange={(e) => {
+                if (isRequired) return;
                 const items = (form.getValues(name) as string[]) ?? [];
                 const next = [...items];
                 next[index] = e.target.value;
@@ -116,12 +139,14 @@ export function TermsConditionsEditor<T extends FieldValues>({
               size="icon"
               className="shrink-0"
               onClick={() => {
+                if (isRequired) return;
                 const items = (form.getValues(name) as string[]) ?? [];
                 const next = items.filter((_, i) => i !== index);
                 form.setValue(name, next as T[FieldPath<T>], {
                   shouldDirty: true,
                 });
               }}
+              disabled={isRequired}
             >
               <X className="h-4 w-4" />
             </Button>

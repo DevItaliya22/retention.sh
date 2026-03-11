@@ -12,6 +12,7 @@ interface TermCardProps {
   onValueChange?: (next: string) => void;
   onRemove?: () => void;
   placeholder?: string;
+  disabled?: boolean;
 }
 
 export function TermCard({
@@ -23,14 +24,25 @@ export function TermCard({
   onValueChange,
   onRemove,
   placeholder,
+  disabled = false,
 }: TermCardProps) {
   return (
     <div
       role="button"
-      tabIndex={0}
-      className="border-input bg-card hover:bg-accent/50 flex w-full cursor-pointer items-center gap-3 rounded-lg border px-3 py-2 transition-colors"
-      onClick={() => onCheckedChange(!checked)}
+      tabIndex={disabled ? -1 : 0}
+      aria-disabled={disabled}
+      className={[
+        "border-input bg-card flex w-full items-center gap-3 rounded-lg border px-3 py-2 transition-colors",
+        disabled
+          ? "cursor-not-allowed opacity-70"
+          : "hover:bg-accent/50 cursor-pointer",
+      ].join(" ")}
+      onClick={() => {
+        if (disabled) return;
+        onCheckedChange(!checked);
+      }}
       onKeyDown={(e) => {
+        if (disabled) return;
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
           onCheckedChange(!checked);
@@ -42,11 +54,15 @@ export function TermCard({
           checked={checked}
           onCheckedChange={(v) => onCheckedChange(Boolean(v))}
           className="mt-0.5 shrink-0"
+          disabled={disabled}
         />
       </div>
       <div
         className="flex min-w-0 flex-1 items-center gap-2"
-        onClick={(e) => editable && e.stopPropagation()}
+        onClick={(e) => {
+          if (disabled) return;
+          if (editable) e.stopPropagation();
+        }}
       >
         {editable ? (
           <Input
@@ -54,10 +70,11 @@ export function TermCard({
             className="min-w-0 flex-1"
             value={value ?? ""}
             placeholder={placeholder}
+            disabled={disabled}
             onChange={(e) => onValueChange?.(e.target.value)}
           />
         ) : (
-          <span className="truncate text-xs leading-snug font-medium">
+          <span className="max-h-[2.6em] overflow-hidden text-xs leading-snug font-medium break-words whitespace-normal">
             {label}
           </span>
         )}

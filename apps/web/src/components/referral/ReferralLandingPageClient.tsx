@@ -15,6 +15,9 @@ const DEFAULT_TEXT_COLOR = "#f8fafc";
 const pageWrapClass =
   "flex min-h-screen items-center justify-center bg-white p-4 font-sans sm:p-6";
 
+const REFERRAL_LOCK_TERM =
+  "Referrer's cashback will be locked until the person they referred makes their first bill. Locked amount shows in bill redemption UI. The referred customer can use their reward normally.";
+
 function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
   const value = hex.trim().replace("#", "");
   if (!/^[0-9a-fA-F]{3,8}$/.test(value)) return null;
@@ -109,6 +112,19 @@ export function ReferralLandingPageClient({
     "Share with friends and earn exclusive rewards.";
   const business = data?.business;
   const referralProgram = data?.referralProgram;
+
+  const existingTerms = useMemo(() => {
+    const raw =
+      referralProgram?.termsAndConditionsExistingCustomer?.map(
+        (t) => t.content,
+      ) ?? [];
+    const withLock =
+      referralProgram?.lockReferralPointsUntilFirstPurchase &&
+      !raw.includes(REFERRAL_LOCK_TERM)
+        ? [...raw, REFERRAL_LOCK_TERM]
+        : raw;
+    return withLock.map((s) => s.trim()).filter(Boolean);
+  }, [referralProgram]);
 
   const youGetText =
     referralProgram && business
@@ -289,6 +305,19 @@ export function ReferralLandingPageClient({
               <MoveRight size={18} />
             </button>
           </div>
+
+          {existingTerms.length > 0 && (
+            <details className="mt-5 overflow-hidden rounded-[16px] border border-gray-100/80 bg-gray-50/50 px-4 py-3">
+              <summary className="cursor-pointer text-[13px] font-semibold text-gray-700 select-none">
+                Terms & Conditions
+              </summary>
+              <ol className="mt-3 list-decimal space-y-2 pl-5 text-[13px] leading-relaxed text-gray-600">
+                {existingTerms.map((t, idx) => (
+                  <li key={`${idx}-${t}`}>{t}</li>
+                ))}
+              </ol>
+            </details>
+          )}
         </div>
       </div>
     </div>

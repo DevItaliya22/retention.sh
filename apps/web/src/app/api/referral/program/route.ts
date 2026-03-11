@@ -14,6 +14,22 @@ import {
 import { db } from "@reelo/db";
 import { NextResponse } from "next/server";
 
+const REFERRAL_LOCK_TERM =
+  "Referrer's cashback will be locked until the person they referred makes their first bill. Locked amount shows in bill redemption UI. The referred customer can use their reward normally.";
+
+function withRequiredExistingTerms(args: {
+  terms: string[];
+  lockEnabled: boolean;
+}) {
+  const base = args.terms.map((s) => s.trim()).filter(Boolean);
+  if (!args.lockEnabled) {
+    return base.filter((t) => t !== REFERRAL_LOCK_TERM);
+  }
+  return base.includes(REFERRAL_LOCK_TERM)
+    ? base
+    : [...base, REFERRAL_LOCK_TERM];
+}
+
 export const GET = withAdminAuth(async (request, context) => {
   try {
     const referralProgram = await db.referralProgram.findUnique({
@@ -141,7 +157,7 @@ export const POST = withAdminAuth(async (request, context) => {
           ? (validatedData.existingCustomerFreeItemSkuId ?? null)
           : null,
       sendReminderToCustomer: validatedData.sendReminderToCustomer,
-      whatsappEnabled: validatedData.whatsappEnabled ?? false,
+      whatsappEnabled: validatedData.whatsappEnabled ?? true,
       emailEnabled: validatedData.emailEnabled ?? false,
       smsEnabled: validatedData.smsEnabled ?? false,
       lockReferralPointsUntilFirstPurchase:
@@ -158,8 +174,13 @@ export const POST = withAdminAuth(async (request, context) => {
 
     // Sync terms: replace all TermsAndConditions for this program
     const newTerms = validatedData.termsAndConditionsNewCustomer ?? [];
-    const existingTerms =
-      validatedData.termsAndConditionsExistingCustomer ?? [];
+    const lockEnabled = Boolean(
+      validatedData.lockReferralPointsUntilFirstPurchase ?? false,
+    );
+    const existingTerms = withRequiredExistingTerms({
+      terms: validatedData.termsAndConditionsExistingCustomer ?? [],
+      lockEnabled,
+    });
 
     await db.$transaction([
       db.termsAndConditions.deleteMany({
@@ -363,9 +384,46 @@ export const PUT = withAdminAuth(async (request, context) => {
       await db.termsAndConditions.deleteMany({
         where: { referralProgramExistingCustomerId: referralProgram.id },
       });
-      const existingTerms =
-        validatedData.termsAndConditionsExistingCustomer ?? [];
+      const lockEnabled = Boolean(
+        validatedData.lockReferralPointsUntilFirstPurchase ??
+        existing.lockReferralPointsUntilFirstPurchase ??
+        false,
+      );
+      const existingTerms = withRequiredExistingTerms({
+        terms: validatedData.termsAndConditionsExistingCustomer ?? [],
+        lockEnabled,
+      });
       for (const content of existingTerms) {
+        await db.termsAndConditions.create({
+          data: {
+            content,
+            referralProgramExistingCustomerId: referralProgram.id,
+          },
+        });
+      }
+    }
+
+    // If lock toggle changed but terms were not explicitly updated,
+    // keep the lock-required term in sync automatically.
+    if (
+      validatedData.lockReferralPointsUntilFirstPurchase !== undefined &&
+      validatedData.termsAndConditionsExistingCustomer === undefined
+    ) {
+      const lockEnabled = Boolean(
+        validatedData.lockReferralPointsUntilFirstPurchase,
+      );
+      const current = await db.termsAndConditions.findMany({
+        where: { referralProgramExistingCustomerId: referralProgram.id },
+        orderBy: { createdAt: "asc" },
+      });
+      const nextTerms = withRequiredExistingTerms({
+        terms: current.map((t) => t.content),
+        lockEnabled,
+      });
+      await db.termsAndConditions.deleteMany({
+        where: { referralProgramExistingCustomerId: referralProgram.id },
+      });
+      for (const content of nextTerms) {
         await db.termsAndConditions.create({
           data: {
             content,
