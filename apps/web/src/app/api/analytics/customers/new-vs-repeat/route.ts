@@ -38,49 +38,52 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
       grouped.set(key, { new: 0, repeat: 0 });
     }
 
-    const [newBusinessCustomers, bills] = await Promise.all([
-      db.businessCustomer.findMany({
-        where: { businessId, createdAt: { gte: from, lte: to } },
-        select: { customerId: true, createdAt: true },
-        orderBy: { createdAt: "asc" },
-      }),
-      db.bill.findMany({
-        where: { businessId, createdAt: { gte: from, lte: to } },
-        select: {
-          customerId: true,
-          createdAt: true,
-        },
-        orderBy: { createdAt: "asc" },
-      }),
-    ]);
+    const bills = await db.bill.findMany({
+      where: {
+        businessId,
+        createdAt: { gte: from, lte: to },
+      },
+      select: { customerId: true, createdAt: true },
+      orderBy: { createdAt: "asc" },
+    });
 
-    const newCustomerIdsByDateKey = new Map<string, Set<string>>();
-    for (const bc of newBusinessCustomers) {
-      const key = formatDateKeyInOffset(bc.createdAt, tzOffsetMinutes);
-      const entry = grouped.get(key);
-      if (!entry) continue;
-      entry.new += 1;
-
-      if (!newCustomerIdsByDateKey.has(key))
-        newCustomerIdsByDateKey.set(key, new Set());
-      newCustomerIdsByDateKey.get(key)!.add(bc.customerId);
+    // Per customer: date key of their *first* bill in this period
+    const firstBillDateKeyByCustomer = new Map<string, string>();
+    for (const bill of bills) {
+      if (!bill.customerId) continue;
+      if (!firstBillDateKeyByCustomer.has(bill.customerId)) {
+        firstBillDateKeyByCustomer.set(
+          bill.customerId,
+          formatDateKeyInOffset(bill.createdAt, tzOffsetMinutes),
+        );
+      }
     }
 
-    const billedSeenPerDay = new Map<string, Set<string>>();
+    // Per day: unique customers whose first bill in period is that day = new; others = repeat
+    const newCustomersPerDay = new Map<string, Set<string>>();
+    const repeatCustomersPerDay = new Map<string, Set<string>>();
+    for (const key of dateKeys) {
+      newCustomersPerDay.set(key, new Set());
+      repeatCustomersPerDay.set(key, new Set());
+    }
+
     for (const bill of bills) {
       if (!bill.customerId) continue;
       const key = formatDateKeyInOffset(bill.createdAt, tzOffsetMinutes);
+      const firstKey = firstBillDateKeyByCustomer.get(bill.customerId);
+      if (!firstKey) continue;
 
-      if (!billedSeenPerDay.has(key)) billedSeenPerDay.set(key, new Set());
-      const seen = billedSeenPerDay.get(key)!;
-      if (seen.has(bill.customerId)) continue;
-      seen.add(bill.customerId);
+      if (key === firstKey) {
+        newCustomersPerDay.get(key)!.add(bill.customerId);
+      } else {
+        repeatCustomersPerDay.get(key)!.add(bill.customerId);
+      }
+    }
 
-      if (newCustomerIdsByDateKey.get(key)?.has(bill.customerId)) continue;
-
-      const entry = grouped.get(key);
-      if (!entry) continue;
-      entry.repeat += 1;
+    for (const date of dateKeys) {
+      const entry = grouped.get(date)!;
+      entry.new = newCustomersPerDay.get(date)!.size;
+      entry.repeat = repeatCustomersPerDay.get(date)!.size;
     }
 
     const data = dateKeys.map((date) => ({

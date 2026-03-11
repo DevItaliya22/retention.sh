@@ -58,7 +58,7 @@ const referralProgramBaseSchema = z.object({
     .optional()
     .default([]),
   sendReminderToCustomer: z.boolean().default(false),
-  whatsappEnabled: z.boolean().optional().default(false),
+  whatsappEnabled: z.boolean().optional().default(true),
   emailEnabled: z.boolean().optional().default(false),
   smsEnabled: z.boolean().optional().default(false),
   lockReferralPointsUntilFirstPurchase: z.boolean().optional().default(false),

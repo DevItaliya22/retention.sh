@@ -86,6 +86,14 @@ export const POST = withAdminAuthOptionalBusiness(
             businessId: business.id,
             positiveFollowUp: FEEDBACK_FORM_DEFAULTS.followUpMessage,
             negativeFollowUp: FEEDBACK_FORM_DEFAULTS.followUpMessage,
+            selectionOptions: {
+              create: FEEDBACK_FORM_DEFAULTS.selectionOptions.map(
+                (label, idx) => ({
+                  label,
+                  seq: idx,
+                }),
+              ),
+            },
           },
         });
 

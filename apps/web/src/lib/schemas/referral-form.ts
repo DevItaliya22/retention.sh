@@ -59,7 +59,7 @@ export const referralProgramStep2Schema = z
       .nullable(),
     existingCustomerFreeItemSkuId: z.string().uuid().optional().nullable(),
     lockReferralPointsUntilFirstPurchase: z.boolean().optional().default(true),
-    whatsappEnabled: z.boolean().optional().default(false),
+    whatsappEnabled: z.boolean().optional().default(true),
     emailEnabled: z.boolean().optional().default(false),
     smsEnabled: z.boolean().optional().default(false),
     termsAndConditionsNewCustomer: z
