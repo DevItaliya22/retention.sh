@@ -48,7 +48,7 @@ function FeedbackWidget({ period }: { period: AnalyticsPeriod }) {
         <CardTitle className="text-sm font-medium">Feedback</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3 px-4 pb-4">
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-3">
           {stats.map((s) => (
             <div key={s.label}>
               <p className="text-muted-foreground text-xs">{s.label}</p>
@@ -113,13 +113,7 @@ function FeedbackWidget({ period }: { period: AnalyticsPeriod }) {
               <Skeleton className="absolute inset-0 h-full w-full rounded-lg" />
             )}
           </div>
-        ) : (
-          <div className="flex h-[160px] items-center justify-center">
-            <p className="text-muted-foreground text-sm">
-              Not enough feedback data
-            </p>
-          </div>
-        )}
+        ) : null}
       </CardContent>
     </Card>
   );
@@ -207,7 +201,7 @@ export function EngagementSection() {
         title="Engagement"
         actions={<PeriodSelector value={period} onChange={setPeriod} />}
       />
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+      <div className="grid grid-cols-1 items-stretch gap-3 lg:grid-cols-3">
         <FeedbackWidget period={period} />
         <CampaignWidget period={period} />
         <ReferralWidget period={period} />

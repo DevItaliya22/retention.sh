@@ -93,11 +93,14 @@ export function useNewVsRepeatQuery(period: AnalyticsPeriod = "30d") {
   });
 }
 
-export function useCustomerFrequencyQuery() {
+export function useCustomerFrequencyQuery(period: AnalyticsPeriod = "30d") {
+  const tzOffsetMinutes = getBrowserTzOffsetMinutes();
   return useQuery<CustomerFrequencyResponse, Error>({
-    queryKey: ["analytics", "customers", "frequency"],
+    queryKey: ["analytics", "customers", "frequency", period, tzOffsetMinutes],
     queryFn: () =>
-      fetcher<CustomerFrequencyResponse>("/api/analytics/customers/frequency"),
+      fetcher<CustomerFrequencyResponse>(
+        buildUrl("/api/analytics/customers/frequency", period),
+      ),
     staleTime: 60_000,
   });
 }

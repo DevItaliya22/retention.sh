@@ -53,6 +53,7 @@ export interface NewVsRepeatDataPoint {
 
 export interface NewVsRepeatResponse {
   data: NewVsRepeatDataPoint[];
+  totalVisitors: number;
   error?: string;
 }
 
