@@ -7,7 +7,7 @@ import {
   HighlightsSection,
   InsightsSection,
   LoyaltyPerformanceSection,
-  RevenueSection,
+  RevenueSalesInteractiveBarSection,
 } from "./sections";
 
 export function DashboardPageClient() {
@@ -15,9 +15,9 @@ export function DashboardPageClient() {
     <div className="space-y-8 pb-8">
       <Suspense>
         <HighlightsSection />
-      </Suspense>
+      </Suspense>{" "}
       <Suspense>
-        <RevenueSection />
+        <RevenueSalesInteractiveBarSection />
       </Suspense>
       <Suspense>
         <CustomerSnapshotSection />

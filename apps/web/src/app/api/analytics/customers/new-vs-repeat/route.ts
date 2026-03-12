@@ -91,7 +91,10 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
       ...grouped.get(date)!,
     }));
 
-    const response: NewVsRepeatResponse = { data };
+    const response: NewVsRepeatResponse = {
+      data,
+      totalVisitors: firstBillDateKeyByCustomer.size,
+    };
     return NextResponse.json(response);
   } catch (error: unknown) {
     console.error("Failed to fetch new vs repeat:", error);
@@ -99,6 +102,7 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
       {
         error: sanitizeErrorMessage(error) || "Failed to fetch customer data.",
         data: [],
+        totalVisitors: 0,
       } satisfies NewVsRepeatResponse,
       { status: 500 },
     );

@@ -18,7 +18,17 @@ import {
 } from "@reelo/ui/components";
 import { Skeleton } from "@reelo/ui/components/skeleton";
 import { useState } from "react";
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  LabelList,
+  Pie,
+  PieChart,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { PeriodSelector, SectionHeader } from "../shared";
 
 function formatDateLabel(dateStr: string): string {
@@ -32,7 +42,10 @@ const barChartConfig = {
 } satisfies ChartConfig;
 
 const frequencyConfig = {
-  count: { label: "Customers", color: "var(--chart-1)" },
+  visit1: { label: "1 visit", color: "var(--chart-1)" },
+  visit2: { label: "2 visits", color: "var(--chart-2)" },
+  visit3to5: { label: "3-5 visits", color: "var(--chart-3)" },
+  visit6plus: { label: "6+ visits", color: "var(--chart-4)" },
 } satisfies ChartConfig;
 
 function SnapshotCards({ period }: { period: AnalyticsPeriod }) {
@@ -68,124 +81,261 @@ function SnapshotCards({ period }: { period: AnalyticsPeriod }) {
 
 function NewVsRepeatChart({ period }: { period: AnalyticsPeriod }) {
   const { data, isLoading } = useNewVsRepeatQuery(period);
+  const chartData = data?.data ?? [];
+  const barLabelByKey: Record<string, string> = {
+    new: barChartConfig.new.label,
+    repeat: barChartConfig.repeat.label,
+  };
 
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium">
-          New vs Repeat Customers
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="px-2 pb-2">
-        <div className="relative h-[240px] w-full">
-          <ChartContainer config={barChartConfig} className="h-full w-full">
-            <BarChart
-              data={data?.data ?? []}
-              margin={{ top: 8, right: 12, left: 0, bottom: 0 }}
-            >
-              <CartesianGrid vertical={false} strokeDasharray="3 3" />
-              <XAxis
-                dataKey="date"
-                tickLine={false}
-                axisLine={false}
-                tickMargin={8}
-                tickFormatter={formatDateLabel}
-                interval="preserveStartEnd"
-                minTickGap={40}
-              />
-              <YAxis
-                tickLine={false}
-                axisLine={false}
-                tickMargin={4}
-                width={40}
-              />
-              <ChartTooltip
-                content={
-                  <ChartTooltipContent
-                    labelFormatter={(label) =>
-                      typeof label === "string"
-                        ? formatDateLabel(label)
-                        : String(label)
-                    }
-                  />
+    <div className="relative h-[260px] w-full">
+      <ChartContainer config={barChartConfig} className="h-full w-full">
+        <BarChart
+          accessibilityLayer
+          data={chartData}
+          margin={{ top: 18, right: 12, left: 0, bottom: 0 }}
+        >
+          <CartesianGrid vertical={false} strokeDasharray="3 3" />
+          <XAxis
+            dataKey="date"
+            tickLine={false}
+            axisLine={false}
+            tickMargin={8}
+            tickFormatter={formatDateLabel}
+            interval="preserveStartEnd"
+            minTickGap={40}
+          />
+          <YAxis
+            tickLine={false}
+            axisLine={false}
+            tickMargin={4}
+            width={40}
+            allowDecimals={false}
+            tickFormatter={(value) => Math.round(value as number).toString()}
+          />
+          <Bar dataKey="new" stackId="a" fill="var(--color-new)">
+            {chartData.map((d, i) => {
+              const hasNew = (d.new ?? 0) > 0;
+              const hasRepeat = (d.repeat ?? 0) > 0;
+              const radius: [number, number, number, number] = !hasNew
+                ? [0, 0, 0, 0]
+                : hasRepeat
+                  ? [0, 0, 4, 4] // bottom segment
+                  : [4, 4, 4, 4]; // only segment
+
+              return (
+                <Cell
+                  key={`new-${d.date}-${i}`}
+                  radius={radius as unknown as number}
+                />
+              );
+            })}
+          </Bar>
+          <Bar dataKey="repeat" stackId="a" fill="var(--color-repeat)">
+            {chartData.map((d, i) => {
+              const hasNew = (d.new ?? 0) > 0;
+              const hasRepeat = (d.repeat ?? 0) > 0;
+              const radius: [number, number, number, number] = !hasRepeat
+                ? [0, 0, 0, 0]
+                : hasNew
+                  ? [4, 4, 0, 0] // top segment
+                  : [4, 4, 4, 4]; // only segment
+
+              return (
+                <Cell
+                  key={`repeat-${d.date}-${i}`}
+                  radius={radius as unknown as number}
+                />
+              );
+            })}
+            <LabelList
+              dataKey="repeat"
+              position="top"
+              content={(props) => {
+                const { x, y, width, index } = props;
+                const p = typeof index === "number" ? chartData[index] : null;
+                if (!p) return null;
+                const total = (p.new ?? 0) + (p.repeat ?? 0);
+                if (total <= 0) return null;
+                const cx = Number(x ?? 0) + Number(width ?? 0) / 2;
+                const cy = Number(y ?? 0) - 6;
+                return (
+                  <text
+                    x={cx}
+                    y={cy}
+                    textAnchor="middle"
+                    fill="hsl(var(--foreground))"
+                    fontSize={12}
+                  >
+                    {total.toLocaleString()}
+                  </text>
+                );
+              }}
+            />
+          </Bar>
+          <ChartTooltip
+            content={
+              <ChartTooltipContent
+                indicator="line"
+                labelFormatter={(label) =>
+                  typeof label === "string"
+                    ? formatDateLabel(label)
+                    : String(label)
                 }
+                formatter={(value, name, item) => {
+                  const formatted =
+                    typeof value === "number"
+                      ? Math.round(value).toLocaleString()
+                      : String(value);
+                  const label =
+                    typeof name === "string"
+                      ? (barLabelByKey[name] ?? name)
+                      : String(name);
+                  const indicatorColor =
+                    (item as any)?.payload?.fill || (item as any)?.color;
+
+                  return (
+                    <>
+                      <div
+                        className="h-2.5 w-2.5 shrink-0 rounded-[2px]"
+                        style={{ backgroundColor: indicatorColor }}
+                      />
+                      <div className="flex flex-1 items-center justify-between leading-none">
+                        <span className="text-muted-foreground">{label}</span>
+                        <span className="text-foreground font-mono font-medium tabular-nums">
+                          {formatted}
+                        </span>
+                      </div>
+                    </>
+                  );
+                }}
               />
-              <Bar
-                dataKey="new"
-                stackId="a"
-                fill={barChartConfig.new.color}
-                radius={[0, 0, 0, 0]}
-              />
-              <Bar
-                dataKey="repeat"
-                stackId="a"
-                fill={barChartConfig.repeat.color}
-                radius={[4, 4, 0, 0]}
-              />
-            </BarChart>
-          </ChartContainer>
-          {isLoading && (
-            <Skeleton className="absolute inset-0 h-full w-full rounded-lg" />
-          )}
-        </div>
-      </CardContent>
-    </Card>
+            }
+            cursor={false}
+            defaultIndex={1}
+          />
+        </BarChart>
+      </ChartContainer>
+      {isLoading && (
+        <Skeleton className="absolute inset-0 h-full w-full rounded-lg" />
+      )}
+      {!isLoading && data && (
+        <p className="text-muted-foreground px-4 pt-2 text-xs">
+          {data.totalVisitors.toLocaleString()} total customers
+        </p>
+      )}
+    </div>
   );
 }
 
-function FrequencyChart() {
-  const { data, isLoading } = useCustomerFrequencyQuery();
+function FrequencyChart({ period }: { period: AnalyticsPeriod }) {
+  const { data, isLoading } = useCustomerFrequencyQuery(period);
+
+  const pieData =
+    data?.data
+      ?.map((d) => {
+        const key =
+          d.bucket === "1 visit"
+            ? "visit1"
+            : d.bucket === "2 visits"
+              ? "visit2"
+              : d.bucket === "3-5 visits"
+                ? "visit3to5"
+                : d.bucket === "6+ visits"
+                  ? "visit6plus"
+                  : d.bucket;
+
+        return {
+          key,
+          name: d.bucket,
+          value: d.count,
+          fill: `var(--color-${key})`,
+        };
+      })
+      .filter((d) => typeof d.value === "number" && d.value > 0) ?? [];
 
   return (
-    <Card className="flex-1">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium">Visit Frequency</CardTitle>
-      </CardHeader>
-      <CardContent className="px-2 pb-2">
-        <div className="relative h-[200px] w-full">
-          <ChartContainer config={frequencyConfig} className="h-full w-full">
-            <BarChart
-              data={data?.data ?? []}
-              layout="vertical"
-              margin={{ top: 4, right: 20, left: 0, bottom: 0 }}
-            >
-              <CartesianGrid horizontal={false} strokeDasharray="3 3" />
-              <XAxis
-                type="number"
-                tickLine={false}
-                axisLine={false}
-                allowDecimals={false}
-                tickFormatter={(value) =>
-                  Math.round(value as number).toString()
-                }
-              />
-              <YAxis
-                dataKey="bucket"
-                type="category"
-                tickLine={false}
-                axisLine={false}
-                width={80}
-                className="text-xs"
-              />
-              <ChartTooltip content={<ChartTooltipContent />} />
-              <Bar
-                dataKey="count"
-                fill="var(--color-count)"
-                radius={[0, 4, 4, 0]}
-              />
-            </BarChart>
-          </ChartContainer>
-          {isLoading && (
-            <Skeleton className="absolute inset-0 h-full w-full rounded-lg" />
-          )}
-        </div>
-        {!isLoading && data && (
-          <p className="text-muted-foreground px-4 pb-2 text-xs">
-            {data.totalVisitors.toLocaleString()} total visitors
-          </p>
-        )}
-      </CardContent>
-    </Card>
+    <div className="relative h-[260px] w-full">
+      <ChartContainer config={frequencyConfig} className="h-full w-full">
+        <PieChart accessibilityLayer>
+          <Pie
+            data={pieData}
+            dataKey="value"
+            nameKey="name"
+            innerRadius={70}
+            outerRadius={100}
+            paddingAngle={2}
+            stroke="hsl(var(--background))"
+            strokeWidth={2}
+            labelLine
+            label={(props) => {
+              const { cx, cy, midAngle, outerRadius, value, name } =
+                props as unknown as {
+                  cx: number;
+                  cy: number;
+                  midAngle: number;
+                  outerRadius: number;
+                  value: number;
+                  name: string;
+                };
+
+              const RADIAN = Math.PI / 180;
+              const radius = outerRadius + 16;
+              const x = cx + radius * Math.cos(-midAngle * RADIAN);
+              const y = cy + radius * Math.sin(-midAngle * RADIAN);
+              const textAnchor = x > cx ? "start" : "end";
+
+              return (
+                <text
+                  x={x}
+                  y={y}
+                  textAnchor={textAnchor}
+                  fill="hsl(var(--foreground))"
+                  fontSize={12}
+                >
+                  {`${name}: ${Number(value).toLocaleString()}`}
+                </text>
+              );
+            }}
+          >
+            {pieData.map((entry) => (
+              <Cell key={entry.key} fill={entry.fill} />
+            ))}
+          </Pie>
+
+          <text
+            x="50%"
+            y="48%"
+            textAnchor="middle"
+            dominantBaseline="middle"
+            fill="hsl(var(--foreground))"
+            fontSize={28}
+            fontWeight={700}
+          >
+            {(data?.totalVisitors ?? 0).toLocaleString()}
+          </text>
+          <text
+            x="50%"
+            y="60%"
+            textAnchor="middle"
+            dominantBaseline="middle"
+            fill="hsl(var(--muted-foreground))"
+            fontSize={12}
+          >
+            Customers
+          </text>
+        </PieChart>
+      </ChartContainer>
+
+      {isLoading && (
+        <Skeleton className="absolute inset-0 h-full w-full rounded-lg" />
+      )}
+      {!isLoading && data && (
+        <p className="text-muted-foreground px-4 pt-2 text-xs">
+          {data.totalVisitors.toLocaleString()} total customers
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -199,8 +349,27 @@ export function CustomerSnapshotSection() {
         actions={<PeriodSelector value={period} onChange={setPeriod} />}
       />
       <SnapshotCards period={period} />
-      <NewVsRepeatChart period={period} />
-      <FrequencyChart />
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium">Visit frequency</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4 px-4 pb-4">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-stretch">
+            <div className="space-y-2">
+              <p className="text-muted-foreground text-xs font-medium">
+                Visit freq per day
+              </p>
+              <NewVsRepeatChart period={period} />
+            </div>
+            <div className="space-y-2">
+              <p className="text-muted-foreground text-xs font-medium">
+                Visit freq with customer relation
+              </p>
+              <FrequencyChart period={period} />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </section>
   );
 }

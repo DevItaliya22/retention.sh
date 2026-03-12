@@ -3,5 +3,5 @@ export { EngagementSection } from "./EngagementSection";
 export { HighlightsSection } from "./HighlightsSection";
 export { InsightsSection } from "./InsightsSection";
 export { LoyaltyPerformanceSection } from "./LoyaltyPerformanceSection";
-export { RevenueSection } from "./RevenueSection";
+export { RevenueSalesInteractiveBarSection } from "./RevenueSalesInteractiveBarSection";
 export { RfmSection } from "./RfmSection";
