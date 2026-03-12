@@ -106,6 +106,41 @@ export function useReferralProgram() {
   });
 }
 
+export type ReferralProgramTermsItemInput = { id?: string; content: string };
+export type UpdateReferralProgramTermsInput = Partial<{
+  termsAndConditionsNewCustomer: ReferralProgramTermsItemInput[];
+  termsAndConditionsExistingCustomer: ReferralProgramTermsItemInput[];
+}>;
+
+export function useUpdateReferralProgramTerms() {
+  const queryClient = useQueryClient();
+
+  return useMutation<
+    UpdateReferralProgramResponse,
+    Error,
+    UpdateReferralProgramTermsInput
+  >({
+    mutationFn: async (payload) => {
+      return fetcher<UpdateReferralProgramResponse>("/api/referral/program", {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      });
+    },
+    onSuccess: (data) => {
+      if (data.referralProgram) {
+        queryClient.setQueryData<ReferralProgramResponse | undefined>(
+          ["referralProgram"],
+          (existing) => ({
+            referralProgram:
+              data.referralProgram ?? existing?.referralProgram ?? null,
+            error: data.error ?? existing?.error,
+          }),
+        );
+      }
+    },
+  });
+}
+
 export interface PublicReferralProgramResponse {
   referralProgram: ReferralProgram | null;
   business: {

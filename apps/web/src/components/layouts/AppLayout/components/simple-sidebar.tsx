@@ -60,6 +60,7 @@ export function SimpleSidebar({
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
   const [, setIsContactModalOpen] = React.useState(false);
+  const settingsCollapsibleId = React.useId();
 
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -201,7 +202,7 @@ export function SimpleSidebar({
                         <ChevronRight className="ml-auto size-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
                       </SidebarMenuButton>
                     </CollapsibleTrigger>
-                    <CollapsibleContent>
+                    <CollapsibleContent id={settingsCollapsibleId}>
                       <SidebarMenuSub>
                         <SidebarMenuSubItem>
                           <SidebarMenuSubButton

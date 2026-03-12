@@ -45,6 +45,7 @@ export * from "./nav-user";
 export * from "./nuqs-adapter";
 export * from "./password-input";
 export * from "./phone-input";
+export * from "./pixel-art-icons";
 export * from "./popover";
 export * from "./radio-group";
 export * from "./resizable";

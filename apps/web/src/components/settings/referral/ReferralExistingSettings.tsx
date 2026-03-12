@@ -4,7 +4,10 @@ import { ChannelSelector } from "@/components/common/form-sections";
 import { TermCard } from "@/components/common/form-sections/TermCard";
 import { BrandingFieldGroup } from "@/components/common/settings/BrandingFieldGroup";
 import type { ReferralProgram } from "@/hooks/referral/useReferralProgram";
-import { useUpdateReferralProgram } from "@/hooks/referral/useReferralProgram";
+import {
+  useUpdateReferralProgram,
+  useUpdateReferralProgramTerms,
+} from "@/hooks/referral/useReferralProgram";
 import { useActiveSkusForSelect } from "@/hooks/sku/useSkusQuery";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -394,19 +397,11 @@ const ExistingCustomerBenefitsCard = forwardRef<
     onSubmit: (
       values: ExistingCustomerBenefitForm,
     ) => Promise<{ success: boolean; error?: string }>;
-    onLockChange?: (next: boolean) => void;
     embedded?: boolean;
     onDirtyChange?: (dirty: boolean) => void;
   }
 >(function ExistingCustomerBenefitsCard(
-  {
-    referralProgram,
-    skus,
-    onSubmit,
-    onLockChange,
-    embedded = false,
-    onDirtyChange,
-  },
+  { referralProgram, skus, onSubmit, embedded = false, onDirtyChange },
   ref,
 ) {
   const form = useForm<ExistingCustomerBenefitForm>({
@@ -632,14 +627,11 @@ const ExistingCustomerBenefitsCard = forwardRef<
                       Lock cashback until the referred customer’s first bill.
                     </p>
                   </div>
-                  <div className="col-span-8 flex items-center justify-end">
+                  <div className="col-span-8 flex items-center">
                     <FormControl>
                       <Switch
                         checked={field.value ?? false}
-                        onCheckedChange={(next: boolean) => {
-                          field.onChange(next);
-                          onLockChange?.(Boolean(next));
-                        }}
+                        onCheckedChange={field.onChange}
                       />
                     </FormControl>
                   </div>
@@ -903,11 +895,10 @@ export function ReferralExistingSettings({
   referralProgram,
 }: ReferralExistingSettingsProps) {
   const { mutateAsync: updateReferralProgram } = useUpdateReferralProgram();
+  const { mutateAsync: updateReferralProgramTerms } =
+    useUpdateReferralProgramTerms();
   const { data: skusData } = useActiveSkusForSelect();
   const skus = skusData?.items ?? [];
-  const [lockEnabledPreview, setLockEnabledPreview] = useState<boolean>(
-    Boolean(referralProgram.lockReferralPointsUntilFirstPurchase ?? false),
-  );
   const newBenefitsRef = useRef<SectionSaveHandle | null>(null);
   const newTermsRef = useRef<SectionSaveHandle | null>(null);
   const existingBenefitsRef = useRef<SectionSaveHandle | null>(null);
@@ -916,12 +907,6 @@ export function ReferralExistingSettings({
   const [newTermsDirty, setNewTermsDirty] = useState(false);
   const [existingBenefitsDirty, setExistingBenefitsDirty] = useState(false);
   const [existingTermsDirty, setExistingTermsDirty] = useState(false);
-
-  useEffect(() => {
-    setLockEnabledPreview(
-      Boolean(referralProgram.lockReferralPointsUntilFirstPurchase ?? false),
-    );
-  }, [referralProgram.lockReferralPointsUntilFirstPurchase]);
 
   const handleUpdateBranding = async (values: Record<string, string>) => {
     try {
@@ -996,6 +981,7 @@ export function ReferralExistingSettings({
           values.lockReferralPointsUntilFirstPurchase,
         ),
       });
+
       return { success: true };
     } catch (error: any) {
       return { success: false, error: error.message || "Failed to update" };
@@ -1028,7 +1014,7 @@ export function ReferralExistingSettings({
             description="Terms shown to new customers who join via referral"
             value={referralProgram.termsAndConditionsNewCustomer ?? []}
             fieldKey="termsAndConditionsNewCustomer"
-            onUpdate={updateReferralProgram}
+            onUpdateTerms={updateReferralProgramTerms}
             embedded
             onDirtyChange={setNewTermsDirty}
           />
@@ -1067,7 +1053,6 @@ export function ReferralExistingSettings({
             referralProgram={referralProgram}
             skus={skus}
             onSubmit={handleUpdateExistingCustomerBenefits}
-            onLockChange={setLockEnabledPreview}
             embedded
             onDirtyChange={setExistingBenefitsDirty}
           />
@@ -1077,8 +1062,7 @@ export function ReferralExistingSettings({
             description="Terms for existing customers who refer others"
             value={referralProgram.termsAndConditionsExistingCustomer ?? []}
             fieldKey="termsAndConditionsExistingCustomer"
-            onUpdate={updateReferralProgram}
-            requiredLabels={lockEnabledPreview ? [REFERRAL_LOCK_TERM] : []}
+            onUpdateTerms={updateReferralProgramTerms}
             embedded
             onDirtyChange={setExistingTermsDirty}
           />
@@ -1137,11 +1121,15 @@ export function ReferralExistingSettings({
 }
 
 type TermsItem = { id: string; content: string };
+type TermsItemInput = { id?: string; content: string };
 
 const REFERRAL_PAUSE_TERM =
   "The business may pause or end the referral program at any time. Existing earned rewards remain valid as per the configured expiry (if any).";
 const REFERRAL_LOCK_TERM =
   "Referrer's cashback will be locked until the person they referred makes their first bill. Locked amount shows in bill redemption UI. The referred customer can use their reward normally.";
+
+const SUGGESTED_DEFAULTS_NEW = [REFERRAL_PAUSE_TERM];
+const SUGGESTED_DEFAULTS_EXISTING = [REFERRAL_LOCK_TERM, REFERRAL_PAUSE_TERM];
 
 function InformationSectionsCard({
   sections,
@@ -1293,8 +1281,10 @@ const TermsCard = forwardRef<
     fieldKey:
       | "termsAndConditionsNewCustomer"
       | "termsAndConditionsExistingCustomer";
-    onUpdate: ReturnType<typeof useUpdateReferralProgram>["mutateAsync"];
-    requiredLabels?: string[];
+    onUpdateTerms: (payload: {
+      termsAndConditionsNewCustomer?: TermsItemInput[];
+      termsAndConditionsExistingCustomer?: TermsItemInput[];
+    }) => Promise<unknown>;
     embedded?: boolean;
     onDirtyChange?: (dirty: boolean) => void;
   }
@@ -1304,31 +1294,29 @@ const TermsCard = forwardRef<
     description,
     value,
     fieldKey,
-    onUpdate,
-    requiredLabels = [],
+    onUpdateTerms,
     embedded = false,
     onDirtyChange,
   },
   ref,
 ) {
-  const requiredSet = new Set(requiredLabels);
-  const presetLabels = [REFERRAL_PAUSE_TERM];
-  const presetDisplayLabels = [
-    ...requiredLabels.filter((l) => !presetLabels.includes(l)),
-    ...presetLabels,
-  ];
+  const presetDisplayLabels =
+    fieldKey === "termsAndConditionsExistingCustomer"
+      ? SUGGESTED_DEFAULTS_EXISTING
+      : SUGGESTED_DEFAULTS_NEW;
   const presetSet = new Set(presetDisplayLabels);
-  const itemsRaw = value.map((t) => t.content);
-  const items = Array.from(new Set([...itemsRaw, ...requiredLabels]));
-  const form = useForm<{ items: string[] }>({
-    defaultValues: {
-      items,
-    },
+  const contentToId = new Map(value.map((t) => [t.content, t.id]));
+  const items: TermsItemInput[] = Array.from(
+    new Map(
+      value.map((t) => [t.content, { id: t.id, content: t.content }]),
+    ).values(),
+  );
+  const form = useForm<{ items: TermsItemInput[] }>({
+    defaultValues: { items },
   });
+
   useEffect(() => {
-    form.reset({
-      items,
-    });
+    form.reset({ items });
   }, [value]);
 
   useEffect(() => {
@@ -1338,35 +1326,38 @@ const TermsCard = forwardRef<
   const watchItems = form.watch("items");
 
   const addPoint = () => {
-    form.setValue("items", [...watchItems, ""], { shouldDirty: true });
-  };
-  const removePoint = (index: number) => {
-    const next = watchItems.filter((_, i) => i !== index);
-    form.setValue("items", next, {
+    form.setValue("items", [...watchItems, { content: "" }], {
       shouldDirty: true,
     });
+  };
+  const removePoint = (index: number) => {
+    form.setValue(
+      "items",
+      watchItems.filter((_, i) => i !== index),
+      { shouldDirty: true },
+    );
   };
 
   const runSubmit = async () => {
     const data = form.getValues();
-    const filteredBase = data.items
-      .map((s) => s.trim())
-      .filter((s) => s.length > 0);
-    const filtered = Array.from(
-      new Set([...filteredBase, ...requiredLabels.map((s) => s.trim())]),
+    const normalized: TermsItemInput[] = Array.from(
+      new Map(
+        data.items
+          .map((t) => ({ id: t.id, content: t.content.trim() }))
+          .filter((t) => t.content.length > 0)
+          .map((t) => [t.content, t] as const),
+      ).values(),
     );
-    await onUpdate({ [fieldKey]: filtered });
+    await onUpdateTerms({ [fieldKey]: normalized });
     toast.success("Terms updated successfully");
     form.reset(data, { keepDefaultValues: false });
   };
 
   useImperativeHandle(
     ref,
-    () => ({
-      save: runSubmit,
-    }),
+    () => ({ save: runSubmit }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [form, value, requiredLabels.join("|")],
+    [form, value],
   );
 
   const content = (
@@ -1392,25 +1383,29 @@ const TermsCard = forwardRef<
               </p>
               <div className="mt-1 grid gap-2 md:grid-cols-2">
                 {presetDisplayLabels.map((label) => {
-                  const current = (form.getValues("items") as string[]) ?? [];
-                  const isSelected = current.includes(label);
-                  const isRequired = requiredSet.has(label);
+                  const current =
+                    (form.getValues("items") as TermsItemInput[]) ?? [];
+                  const isSelected = current.some((t) => t.content === label);
                   return (
                     <TermCard
                       key={label}
                       label={label}
-                      checked={isRequired ? true : isSelected}
-                      disabled={isRequired}
+                      checked={isSelected}
+                      disabled={false}
                       onCheckedChange={(next) => {
-                        if (isRequired) return;
                         const itemsNow =
-                          (form.getValues("items") as string[]) ?? [];
-                        const exists = itemsNow.includes(label);
+                          (form.getValues("items") as TermsItemInput[]) ?? [];
+                        const exists = itemsNow.some(
+                          (t) => t.content === label,
+                        );
                         const nextItems = next
                           ? exists
                             ? itemsNow
-                            : [...itemsNow, label]
-                          : itemsNow.filter((t) => t !== label);
+                            : [
+                                ...itemsNow,
+                                { id: contentToId.get(label), content: label },
+                              ]
+                          : itemsNow.filter((t) => t.content !== label);
                         form.setValue("items", nextItems, {
                           shouldDirty: true,
                         });
@@ -1419,19 +1414,12 @@ const TermsCard = forwardRef<
                   );
                 })}
               </div>
-              {requiredLabels.length > 0 && (
-                <p className="text-muted-foreground mt-2 text-xs">
-                  This term is required because “Lock referrer's reward…” is
-                  enabled.
-                </p>
-              )}
             </div>
-            {watchItems.map((_, index) => {
-              const valueAtIndex = watchItems[index] ?? "";
+            {watchItems.map((item, index) => {
+              const valueAtIndex = item?.content ?? "";
               if (presetSet.has(valueAtIndex)) {
                 return null;
               }
-              const isRequired = requiredSet.has(valueAtIndex);
               return (
                 <div
                   key={index}
@@ -1442,11 +1430,9 @@ const TermsCard = forwardRef<
                     className="min-w-0 flex-1"
                     value={valueAtIndex}
                     placeholder={`Point ${index + 1}`}
-                    disabled={isRequired}
                     onChange={(e) => {
-                      if (isRequired) return;
                       const next = [...watchItems];
-                      next[index] = e.target.value;
+                      next[index] = { ...next[index], content: e.target.value };
                       form.setValue("items", next, { shouldDirty: true });
                     }}
                   />
@@ -1455,11 +1441,7 @@ const TermsCard = forwardRef<
                     variant="ghost"
                     size="icon"
                     className="shrink-0"
-                    onClick={() => {
-                      if (isRequired) return;
-                      removePoint(index);
-                    }}
-                    disabled={isRequired}
+                    onClick={() => removePoint(index)}
                   >
                     <X className="h-4 w-4" />
                   </Button>

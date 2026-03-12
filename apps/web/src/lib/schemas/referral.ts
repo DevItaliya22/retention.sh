@@ -129,8 +129,30 @@ export type CreateReferralProgramInput = z.infer<
   typeof createReferralProgramSchema
 >;
 
-// Update schema: all fields optional (no refinements — .partial() cannot be used on refined schemas)
-export const updateReferralProgramSchema = referralProgramBaseSchema.partial();
+export const termsItemInputSchema = z.object({
+  id: z.string().uuid().optional(),
+  content: z
+    .string()
+    .trim()
+    .min(1, "Point is required")
+    .max(500, "Point is too long"),
+});
+export type TermsItemInput = z.infer<typeof termsItemInputSchema>;
+
+export const updateReferralProgramSchema = referralProgramBaseSchema
+  .partial()
+  .extend({
+    termsAndConditionsNewCustomer: z
+      .array(termsItemInputSchema)
+      .min(0)
+      .optional()
+      .nullable(),
+    termsAndConditionsExistingCustomer: z
+      .array(termsItemInputSchema)
+      .min(0)
+      .optional()
+      .nullable(),
+  });
 
 export type UpdateReferralProgramInput = z.infer<
   typeof updateReferralProgramSchema

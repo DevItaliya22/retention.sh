@@ -24,6 +24,7 @@ export function FormNavigation({
   return (
     <ButtonGroup>
       <Button
+        className="hit-area-y-2 hit-area-l-2"
         type="button"
         variant={prevEnabled ? "default" : "outline"}
         size="icon"
@@ -36,6 +37,7 @@ export function FormNavigation({
       </Button>
       <ButtonGroupSeparator orientation="vertical" className="bg-background" />
       <Button
+        className="hit-area-y-2 hit-area-r-2"
         type="button"
         variant={nextEnabled ? "default" : "outline"}
         size="icon"

@@ -66,3 +66,11 @@ https://uselayouts.com/docs/components/status-button#copy-the-code
 how it works section : https://uselayouts.com/docs/components/vertical-tabs
 
 https://illustrations.popsy.co/purple/business-analysis.svg
+
+Shopify how to work ?
+
+https://dev.shopify.com/dashboard/207268336/apps/326460112897 go here and create dev store which will lead to something like https://admin.shopify.com/store/dy2retention/orders
+
+then start ngrok , and edit the ebhook url in dev.shopify thng
+
+then just use the name if the store to connect (put the name exaclty in input )

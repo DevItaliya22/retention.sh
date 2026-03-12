@@ -132,16 +132,11 @@ export function LinearMultiStepForm<TValues extends FieldValues>(props: {
     return target.isContentEditable;
   };
 
-  // Only skip Arrow Up/Down when the element actually uses them (number, range, select, combobox).
   const shouldSkipArrowNav = (target: EventTarget | null) => {
     if (!target || !(target instanceof HTMLElement)) return false;
     if (target.isContentEditable) return true;
     const tagName = target.tagName.toLowerCase();
     if (tagName === "select") return true;
-    if (tagName === "input") {
-      const type = (target as HTMLInputElement).type?.toLowerCase();
-      return type === "number" || type === "range";
-    }
     const role = target.getAttribute?.("role");
     return role === "combobox" || role === "listbox" || role === "spinbutton";
   };

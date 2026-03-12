@@ -42,6 +42,89 @@ export function MaxCapToggleField<T extends FieldValues>({
 }: MaxCapToggleFieldProps<T>) {
   const form = useFormContext<T>();
   const isSettings = layout === "settings";
+  const enabled = form.watch(enabledName);
+
+  if (isSettings) {
+    return (
+      <div className="space-y-4">
+        <div className={SETTINGS_ROW_CLASS}>
+          <div className={SETTINGS_LABEL_CLASS}>
+            <FormLabel className="text-sm">{label}</FormLabel>
+          </div>
+          <div className={SETTINGS_CONTROL_CLASS}>
+            <FormField
+              control={form.control}
+              name={enabledName}
+              render={({ field }) => (
+                <FormItem>
+                  <div className="flex items-center">
+                    <FormControl>
+                      <Switch
+                        checked={field.value ?? false}
+                        onCheckedChange={(checked) => {
+                          field.onChange(checked);
+                          if (checked) {
+                            const current = form.getValues(valueName as never);
+                            if (
+                              current == null ||
+                              (typeof current === "string" && current === "")
+                            ) {
+                              form.setValue(valueName as never, 0 as never);
+                            }
+                          }
+                        }}
+                      />
+                    </FormControl>
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        </div>
+        {enabled && (
+          <FormField
+            control={form.control}
+            name={valueName}
+            render={({ field }) => (
+              <FormItem className={SETTINGS_ROW_CLASS}>
+                <div className={SETTINGS_LABEL_CLASS}>
+                  <FormLabel className="text-sm">{valueLabel}</FormLabel>
+                </div>
+                <div className={SETTINGS_CONTROL_CLASS}>
+                  <FormControl>
+                    <Input
+                      variant="underline"
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      placeholder={placeholder}
+                      disabled={!enabled}
+                      value={
+                        field.value === null || field.value === undefined
+                          ? ""
+                          : field.value
+                      }
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        if (raw === "" || Number.isNaN(Number(raw))) {
+                          field.onChange(null);
+                          return;
+                        }
+                        field.onChange(Math.max(0, Number(raw)));
+                      }}
+                      {...numericInputHandlers}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </div>
+              </FormItem>
+            )}
+          />
+        )}
+      </div>
+    );
+  }
 
   const controlContent = (
     <div className="space-y-4">
@@ -52,7 +135,7 @@ export function MaxCapToggleField<T extends FieldValues>({
           <FormItem className="border-input flex flex-row items-center justify-between border-b py-4">
             <div className="space-y-0.5">
               <FormLabel>{label}</FormLabel>
-              {!isSettings && tooltip && (
+              {tooltip && (
                 <p className="text-muted-foreground text-sm" title={tooltip}>
                   {tooltip}
                 </p>
@@ -115,17 +198,6 @@ export function MaxCapToggleField<T extends FieldValues>({
       />
     </div>
   );
-
-  if (isSettings) {
-    return (
-      <div className={SETTINGS_ROW_CLASS}>
-        <div className={SETTINGS_LABEL_CLASS}>
-          <FormLabel className="text-sm">{label}</FormLabel>
-        </div>
-        <div className={SETTINGS_CONTROL_CLASS}>{controlContent}</div>
-      </div>
-    );
-  }
 
   return <div className="space-y-2">{controlContent}</div>;
 }
