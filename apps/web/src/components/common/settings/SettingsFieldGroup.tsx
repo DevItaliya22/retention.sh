@@ -18,7 +18,7 @@ import {
   FormMessage,
   InfoIcon,
   Input,
-  SaveButton,
+  PixelIcon,
   Select,
   SelectContent,
   SelectItem,
@@ -87,6 +87,9 @@ export function SettingsFieldGroup({
   footerActions = [],
 }: SettingsFieldGroupProps) {
   const [actionLoading, setActionLoading] = useState<number | null>(null);
+  const [saveState, setSaveState] = useState<"idle" | "loading" | "success">(
+    "idle",
+  );
 
   const schema = z.object(
     fields.reduce(
@@ -111,21 +114,35 @@ export function SettingsFieldGroup({
 
   const runSubmit = async () => {
     const valid = await form.trigger();
-    if (!valid) throw new Error("Validation failed");
-    const values = form.getValues();
-    const filteredValues: Record<string, string> = {};
-    fields.forEach((field) => {
-      if (!field.disabled) {
-        filteredValues[field.name] = (values[field.name] ?? "") as string;
+    if (!valid) return;
+
+    setSaveState("loading");
+
+    try {
+      const values = form.getValues();
+      const filteredValues: Record<string, string> = {};
+      fields.forEach((field) => {
+        if (!field.disabled) {
+          filteredValues[field.name] = (values[field.name] ?? "") as string;
+        }
+      });
+
+      const result = await onSubmit(filteredValues);
+
+      if (result.success) {
+        toast.success("Settings updated successfully");
+        form.reset(values, { keepDefaultValues: false });
+        setSaveState("success");
+        setTimeout(() => {
+          setSaveState("idle");
+        }, 3000);
+      } else {
+        toast.error(result.error || "Failed to update settings");
+        setSaveState("idle");
       }
-    });
-    const result = await onSubmit(filteredValues);
-    if (result.success) {
-      toast.success("Settings updated successfully");
-      form.reset(values, { keepDefaultValues: false });
-    } else {
-      toast.error(result.error || "Failed to update settings");
-      throw new Error(result.error);
+    } catch (error) {
+      setSaveState("idle");
+      throw error;
     }
   };
 
@@ -273,15 +290,35 @@ export function SettingsFieldGroup({
                   </Button>
                 ))}
               </div>
-              <SaveButton
+              {/* <SaveButton
                 onSave={runSubmit}
                 disabled={!isDirty}
+                variant={isDirty ? "default" : "outline"}
+                className={
+                  isDirty
+                    ? "bg-primary text-primary-foreground hover:bg-primary/90 rounded-full shadow-sm hit-area-2"
+                    : "bg-background/50 text-foreground hover:bg-background rounded-full shadow-sm hit-area-2"
+                }
                 labels={{
                   idle: "Save changes",
                   loading: "Saving",
                   success: "Saved",
                 }}
-              />
+              /> */}
+              <Button
+                onClick={runSubmit}
+                variant="outline"
+                className="flex items-center gap-2"
+              >
+                <span className="inline-flex items-center gap-2">
+                  Save changes
+                  {saveState !== "idle" && (
+                    <PixelIcon
+                      state={saveState === "loading" ? "loading" : "success"}
+                    />
+                  )}
+                </span>
+              </Button>
             </CardFooter>
           </form>
         </Form>

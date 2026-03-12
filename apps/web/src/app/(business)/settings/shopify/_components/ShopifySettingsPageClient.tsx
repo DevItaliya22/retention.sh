@@ -2,6 +2,11 @@
 
 import { SettingsFieldGroup } from "@/components/common/settings/SettingsFieldGroup";
 import { DashboardPageShell } from "@/components/layouts";
+import {
+  SETTINGS_CONTROL_CLASS,
+  SETTINGS_LABEL_CLASS,
+  SETTINGS_ROW_CLASS,
+} from "@/components/settings/loyalty/common";
 import type { ShopifyStoreItem } from "@/hooks/shopify/useShopifyStores";
 import {
   useDisconnectShopifyStore,
@@ -9,21 +14,39 @@ import {
   useSyncShopifyProducts,
   useUpdateShopifyStore,
 } from "@/hooks/shopify/useShopifyStores";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Button,
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+  Input,
+  SaveButton,
   Skeleton,
 } from "@reelo/ui/components";
 import { RefreshCw, Trash2 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect } from "react";
+import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { z } from "zod";
 
 const SHOPIFY_INSTALL_PATH = "/api/shopify/install";
+
+const returnWindowSchema = z.object({
+  returnWindowDays: z.number().min(1, "Min 1 day").max(365, "Max 365 days"),
+});
+
+type ReturnWindowForm = z.infer<typeof returnWindowSchema>;
 
 function StoreCard({
   store,
@@ -40,102 +63,135 @@ function StoreCard({
   disconnectPending: boolean;
   updateStore: ReturnType<typeof useUpdateShopifyStore>;
 }) {
-  const [returnWindowDays, setReturnWindowDays] = useState(
-    store.returnWindowDays ?? 7,
-  );
-  const hasReturnWindowChanged =
-    (store.returnWindowDays ?? 7) !== returnWindowDays;
-  const isValidReturnWindow = returnWindowDays >= 1 && returnWindowDays <= 365;
+  const form = useForm<ReturnWindowForm>({
+    resolver: zodResolver(returnWindowSchema),
+    defaultValues: {
+      returnWindowDays: store.returnWindowDays ?? 7,
+    },
+  });
 
-  const handleSaveReturnWindow = useCallback(() => {
-    if (!hasReturnWindowChanged || !isValidReturnWindow) return;
-    updateStore
-      .mutateAsync({ storeId: store.id, returnWindowDays })
-      .then(() => toast.success("Return window updated."))
-      .catch(() => toast.error("Failed to update return window."));
-  }, [
-    store.id,
-    returnWindowDays,
-    hasReturnWindowChanged,
-    isValidReturnWindow,
-    updateStore,
-  ]);
+  useEffect(() => {
+    form.reset({ returnWindowDays: store.returnWindowDays ?? 7 });
+  }, [store.returnWindowDays, form]);
+
+  const runSubmit = useCallback(async () => {
+    const valid = await form.trigger();
+    if (!valid) throw new Error("Validation failed");
+    const values = form.getValues();
+    await updateStore.mutateAsync({
+      storeId: store.id,
+      returnWindowDays: values.returnWindowDays,
+    });
+    toast.success("Return window updated.");
+    form.reset(values, { keepDefaultValues: false });
+  }, [store.id, form, updateStore]);
 
   return (
-    <li className="border-border flex flex-wrap items-center justify-between gap-4 rounded-lg border p-4">
-      <div className="min-w-0 flex-1 space-y-1">
-        <p className="font-medium">{store.shopName || store.shopDomain}</p>
-        <p className="text-muted-foreground text-sm">
+    <Card className="border-border/45 bg-background/55 flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border shadow-none">
+      <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-4 pt-4 pb-0">
+        <CardTitle className="text-foreground text-base leading-none font-semibold">
+          {store.shopName || store.shopDomain}
+        </CardTitle>
+        <CardDescription className="text-muted-foreground mt-0.5 text-sm">
           {store.shopDomain}
           {store._count.productSyncs > 0 && (
             <> · {store._count.productSyncs} products linked</>
           )}
-        </p>
-        {store.lastSyncedAt && (
-          <p className="text-muted-foreground text-xs">
-            Last synced: {new Date(store.lastSyncedAt).toLocaleString()}
-          </p>
-        )}
-        <div className="flex flex-wrap items-center gap-2 pt-2">
-          <label
-            htmlFor={`return-window-${store.id}`}
-            className="text-muted-foreground text-sm"
-          >
-            Return window (days):
-          </label>
-          <input
-            id={`return-window-${store.id}`}
-            type="number"
-            min={1}
-            max={365}
-            className="border-input bg-background ring-offset-background focus-visible:ring-ring inline-flex h-9 w-16 rounded-md border px-2 py-1 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
-            value={returnWindowDays}
-            onChange={(e) =>
-              setReturnWindowDays(
-                Math.min(365, Math.max(1, Number(e.target.value) || 1)),
-              )
-            }
-          />
-          {hasReturnWindowChanged && (
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={handleSaveReturnWindow}
-              disabled={updateStore.isPending || !isValidReturnWindow}
-            >
-              Save
-            </Button>
+          {store.lastSyncedAt && (
+            <> · Last synced: {new Date(store.lastSyncedAt).toLocaleString()}</>
           )}
-        </div>
-        <p className="text-muted-foreground text-xs">
-          Points from Shopify orders are locked until this many days after
-          fulfillment (then redeemable).
-        </p>
-      </div>
-      <div className="flex items-center gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onSyncProducts}
-          disabled={syncProductsPending}
+        </CardDescription>
+      </CardHeader>
+      <Form {...form}>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            void runSubmit();
+          }}
+          className="flex min-h-0 flex-1 flex-col"
         >
-          <RefreshCw
-            className={`h-4 w-4 ${syncProductsPending ? "animate-spin" : ""}`}
-          />
-          Sync products
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-destructive hover:text-destructive"
-          onClick={() => onDisconnect(store.id)}
-          disabled={disconnectPending}
-        >
-          <Trash2 className="h-4 w-4" />
-          Disconnect
-        </Button>
-      </div>
-    </li>
+          <CardContent className="flex min-h-0 flex-1 flex-col gap-y-4 overflow-auto px-4 py-4 pt-4">
+            <FormField
+              control={form.control}
+              name="returnWindowDays"
+              render={({ field }) => (
+                <FormItem className={SETTINGS_ROW_CLASS}>
+                  <div className={SETTINGS_LABEL_CLASS}>
+                    <FormLabel className="text-sm">
+                      Return window (days)
+                    </FormLabel>
+                    <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
+                      Points from Shopify orders are locked until this many days
+                      after fulfillment (then redeemable).
+                    </p>
+                  </div>
+                  <div className={SETTINGS_CONTROL_CLASS}>
+                    <FormControl>
+                      <Input
+                        variant="underline"
+                        type="number"
+                        min={1}
+                        max={365}
+                        placeholder="7"
+                        value={field.value}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          field.onChange(
+                            v === ""
+                              ? 7
+                              : Math.min(
+                                  365,
+                                  Math.max(1, parseInt(v, 10) || 1),
+                                ),
+                          );
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </div>
+                </FormItem>
+              )}
+            />
+          </CardContent>
+          <CardFooter className="flex shrink-0 items-center justify-between gap-2 border-0 px-4 py-2">
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={onSyncProducts}
+                disabled={syncProductsPending}
+              >
+                <RefreshCw
+                  className={`mr-2 h-4 w-4 ${syncProductsPending ? "animate-spin" : ""}`}
+                />
+                Sync products
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                onClick={() => onDisconnect(store.id)}
+                disabled={disconnectPending}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Disconnect
+              </Button>
+            </div>
+            <SaveButton
+              onSave={runSubmit}
+              disabled={!form.formState.isDirty}
+              labels={{
+                idle: "Save changes",
+                loading: "Saving",
+                success: "Saved",
+              }}
+            />
+          </CardFooter>
+        </form>
+      </Form>
+    </Card>
   );
 }
 
@@ -146,7 +202,6 @@ export function ShopifySettingsPageClient() {
   const syncProducts = useSyncShopifyProducts();
   const updateStore = useUpdateShopifyStore();
 
-  // Toast from OAuth callback
   useEffect(() => {
     const connected = searchParams.get("connected");
     const error = searchParams.get("error");
@@ -217,30 +272,33 @@ export function ShopifySettingsPageClient() {
       contentVariant="contained"
     >
       <div className="space-y-6 pb-12">
-        <SettingsFieldGroup
-          title="Connect a store"
-          description="Enter your Shopify store domain. You will be redirected to Shopify to authorize access."
-          fields={[
-            {
-              name: "shop",
-              label: "Store domain",
-              placeholder: "my-store or my-store.myshopify.com",
-              helpText: "Enter your store name or full .myshopify.com domain.",
-            },
-          ]}
-          defaultValues={{ shop: "" }}
-          onSubmit={handleConnectSubmit}
-        />
+        {!hasStores && (
+          <SettingsFieldGroup
+            title="Connect a store"
+            description="Enter your Shopify store domain. You will be redirected to Shopify to authorize access."
+            fields={[
+              {
+                name: "shop",
+                label: "Store domain",
+                placeholder: "my-store or my-store.myshopify.com",
+                helpText:
+                  "Enter your store name or full .myshopify.com domain.",
+              },
+            ]}
+            defaultValues={{ shop: "" }}
+            onSubmit={handleConnectSubmit}
+          />
+        )}
 
-        {/* Connected stores */}
         <Card className="bg-sidebar-accent/50 flex min-h-0 flex-col gap-0 rounded-lg border-0 p-2">
           <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
-            <CardTitle className="text-foreground flex items-center gap-2 text-base leading-none font-semibold">
-              Connected stores
+            <CardTitle className="text-foreground text-base leading-none font-semibold">
+              Connected store
             </CardTitle>
             <CardDescription className="text-muted-foreground mt-0.5 text-sm">
-              Manage connected Shopify stores and sync products to your SKU
-              catalog.
+              {hasStores
+                ? "Manage your connected Shopify store and sync products to your SKU catalog."
+                : "Your connected Shopify store will appear here. One store per portal."}
             </CardDescription>
           </CardHeader>
           <Card className="border-border/45 bg-background/55 flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border shadow-none">
@@ -253,10 +311,10 @@ export function ShopifySettingsPageClient() {
                 </p>
               ) : !hasStores ? (
                 <p className="text-muted-foreground text-sm">
-                  No stores connected yet. Connect a store above to get started.
+                  No store connected yet. Connect a store above to get started.
                 </p>
               ) : (
-                <ul className="space-y-4">
+                <div className="space-y-3">
                   {stores.map((store) => (
                     <StoreCard
                       key={store.id}
@@ -268,7 +326,7 @@ export function ShopifySettingsPageClient() {
                       updateStore={updateStore}
                     />
                   ))}
-                </ul>
+                </div>
               )}
             </CardContent>
           </Card>

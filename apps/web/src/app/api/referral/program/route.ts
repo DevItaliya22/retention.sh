@@ -2,32 +2,100 @@ import { withAdminAuth } from "@/lib/auth/middleware";
 import {
   createReferralProgramSchema,
   updateReferralProgramSchema,
+  type TermsItemInput,
 } from "@/lib/schemas/referral";
 import {
   sanitizeErrorMessage,
   validateSchema,
 } from "@/lib/utils/error-handler";
 import {
-  type IsServiceEnabled,
   setServiceEnabled,
+  type IsServiceEnabled,
 } from "@/lib/utils/service-enabled";
 import { db } from "@reelo/db";
 import { NextResponse } from "next/server";
 
-const REFERRAL_LOCK_TERM =
-  "Referrer's cashback will be locked until the person they referred makes their first bill. Locked amount shows in bill redemption UI. The referred customer can use their reward normally.";
+type TermsSide =
+  | "termsAndConditionsNewCustomer"
+  | "termsAndConditionsExistingCustomer";
 
-function withRequiredExistingTerms(args: {
-  terms: string[];
-  lockEnabled: boolean;
-}) {
-  const base = args.terms.map((s) => s.trim()).filter(Boolean);
-  if (!args.lockEnabled) {
-    return base.filter((t) => t !== REFERRAL_LOCK_TERM);
+function normalizeIncoming(items: TermsItemInput[]) {
+  const seen = new Set<string>();
+  const out: Array<{ id?: string; content: string }> = [];
+  for (const item of items) {
+    const content = item.content.trim();
+    if (!content) continue;
+    if (seen.has(content)) continue;
+    seen.add(content);
+    out.push({ id: item.id, content });
   }
-  return base.includes(REFERRAL_LOCK_TERM)
-    ? base
-    : [...base, REFERRAL_LOCK_TERM];
+  return out;
+}
+
+async function syncTerms(args: {
+  referralProgramId: string;
+  side: TermsSide;
+  items: TermsItemInput[];
+}) {
+  const where =
+    args.side === "termsAndConditionsNewCustomer"
+      ? { referralProgramNewCustomerId: args.referralProgramId }
+      : { referralProgramExistingCustomerId: args.referralProgramId };
+
+  const current = await db.termsAndConditions.findMany({
+    where,
+    orderBy: { createdAt: "asc" },
+    select: { id: true, content: true, createdAt: true },
+  });
+
+  const currentById = new Map(current.map((t) => [t.id, t]));
+  const currentByContent = new Map(current.map((t) => [t.content, t]));
+
+  const normalized = normalizeIncoming(args.items);
+  const usedIds = new Set<string>();
+
+  for (const item of normalized) {
+    const existingByContent = currentByContent.get(item.content);
+    if (existingByContent) {
+      usedIds.add(existingByContent.id);
+      continue;
+    }
+
+    const existingById = item.id ? currentById.get(item.id) : undefined;
+    if (existingById) {
+      const updated = await db.termsAndConditions.update({
+        where: { id: existingById.id },
+        data: { content: item.content },
+        select: { id: true, content: true },
+      });
+      usedIds.add(updated.id);
+      currentByContent.set(updated.content, { ...existingById, ...updated });
+      continue;
+    }
+
+    const created = await db.termsAndConditions.create({
+      data: {
+        content: item.content,
+        ...(args.side === "termsAndConditionsNewCustomer"
+          ? { referralProgramNewCustomerId: args.referralProgramId }
+          : { referralProgramExistingCustomerId: args.referralProgramId }),
+      },
+      select: { id: true, content: true },
+    });
+    usedIds.add(created.id);
+    currentByContent.set(created.content, {
+      id: created.id,
+      content: created.content,
+      createdAt: new Date(),
+    });
+  }
+
+  const deleteIds = current.filter((t) => !usedIds.has(t.id)).map((t) => t.id);
+  if (deleteIds.length > 0) {
+    await db.termsAndConditions.deleteMany({
+      where: { id: { in: deleteIds } },
+    });
+  }
 }
 
 export const GET = withAdminAuth(async (request, context) => {
@@ -172,41 +240,6 @@ export const POST = withAdminAuth(async (request, context) => {
       update: createData,
     });
 
-    // Sync terms: replace all TermsAndConditions for this program
-    const newTerms = validatedData.termsAndConditionsNewCustomer ?? [];
-    const lockEnabled = Boolean(
-      validatedData.lockReferralPointsUntilFirstPurchase ?? false,
-    );
-    const existingTerms = withRequiredExistingTerms({
-      terms: validatedData.termsAndConditionsExistingCustomer ?? [],
-      lockEnabled,
-    });
-
-    await db.$transaction([
-      db.termsAndConditions.deleteMany({
-        where: { referralProgramNewCustomerId: referralProgram.id },
-      }),
-      db.termsAndConditions.deleteMany({
-        where: { referralProgramExistingCustomerId: referralProgram.id },
-      }),
-      ...newTerms.map((content) =>
-        db.termsAndConditions.create({
-          data: {
-            content,
-            referralProgramNewCustomerId: referralProgram.id,
-          },
-        }),
-      ),
-      ...existingTerms.map((content) =>
-        db.termsAndConditions.create({
-          data: {
-            content,
-            referralProgramExistingCustomerId: referralProgram.id,
-          },
-        }),
-      ),
-    ]);
-
     const business = await db.business.findUnique({
       where: { id: businessId },
       select: { isServiceEnabled: true },
@@ -221,7 +254,6 @@ export const POST = withAdminAuth(async (request, context) => {
       data: { isServiceEnabled: newServiceEnabled },
     });
 
-    // Refetch with terms included
     const updated = await db.referralProgram.findUnique({
       where: { businessId },
       include: {
@@ -365,75 +397,23 @@ export const PUT = withAdminAuth(async (request, context) => {
       data: updateData as any,
     });
 
-    // Sync terms when provided
-    if (validatedData.termsAndConditionsNewCustomer !== undefined) {
-      await db.termsAndConditions.deleteMany({
-        where: { referralProgramNewCustomerId: referralProgram.id },
-      });
-      const newTerms = validatedData.termsAndConditionsNewCustomer ?? [];
-      for (const content of newTerms) {
-        await db.termsAndConditions.create({
-          data: {
-            content,
-            referralProgramNewCustomerId: referralProgram.id,
-          },
-        });
-      }
-    }
-    if (validatedData.termsAndConditionsExistingCustomer !== undefined) {
-      await db.termsAndConditions.deleteMany({
-        where: { referralProgramExistingCustomerId: referralProgram.id },
-      });
-      const lockEnabled = Boolean(
-        validatedData.lockReferralPointsUntilFirstPurchase ??
-        existing.lockReferralPointsUntilFirstPurchase ??
-        false,
-      );
-      const existingTerms = withRequiredExistingTerms({
-        terms: validatedData.termsAndConditionsExistingCustomer ?? [],
-        lockEnabled,
-      });
-      for (const content of existingTerms) {
-        await db.termsAndConditions.create({
-          data: {
-            content,
-            referralProgramExistingCustomerId: referralProgram.id,
-          },
-        });
-      }
-    }
+    await Promise.all([
+      validatedData.termsAndConditionsNewCustomer != null
+        ? syncTerms({
+            referralProgramId: referralProgram.id,
+            side: "termsAndConditionsNewCustomer",
+            items: validatedData.termsAndConditionsNewCustomer,
+          })
+        : Promise.resolve(),
+      validatedData.termsAndConditionsExistingCustomer != null
+        ? syncTerms({
+            referralProgramId: referralProgram.id,
+            side: "termsAndConditionsExistingCustomer",
+            items: validatedData.termsAndConditionsExistingCustomer,
+          })
+        : Promise.resolve(),
+    ]);
 
-    // If lock toggle changed but terms were not explicitly updated,
-    // keep the lock-required term in sync automatically.
-    if (
-      validatedData.lockReferralPointsUntilFirstPurchase !== undefined &&
-      validatedData.termsAndConditionsExistingCustomer === undefined
-    ) {
-      const lockEnabled = Boolean(
-        validatedData.lockReferralPointsUntilFirstPurchase,
-      );
-      const current = await db.termsAndConditions.findMany({
-        where: { referralProgramExistingCustomerId: referralProgram.id },
-        orderBy: { createdAt: "asc" },
-      });
-      const nextTerms = withRequiredExistingTerms({
-        terms: current.map((t) => t.content),
-        lockEnabled,
-      });
-      await db.termsAndConditions.deleteMany({
-        where: { referralProgramExistingCustomerId: referralProgram.id },
-      });
-      for (const content of nextTerms) {
-        await db.termsAndConditions.create({
-          data: {
-            content,
-            referralProgramExistingCustomerId: referralProgram.id,
-          },
-        });
-      }
-    }
-
-    // Refetch with terms
     const updated = await db.referralProgram.findUnique({
       where: { businessId },
       include: {
