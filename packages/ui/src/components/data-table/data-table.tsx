@@ -94,7 +94,7 @@ export function DataTable<TData>({
         <div
           className={cn(
             "border-border/45 bg-background/55 rounded-lg border",
-            isTableScroll ? "overflow-auto" : "overflow-hidden",
+            isTableScroll ? "overflow-auto" : "overflow-x-auto",
             tableContainerClassName,
           )}
           style={isTableScroll ? { maxHeight: tableMaxHeight } : undefined}

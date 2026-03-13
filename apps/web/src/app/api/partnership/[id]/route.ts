@@ -4,6 +4,7 @@ import {
   sanitizeErrorMessage,
   validateSchema,
 } from "@/lib/utils/error-handler";
+import { writePartnershipLog } from "@/lib/utils/partnership-log";
 import { db } from "@reelo/db";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -105,6 +106,16 @@ export const PATCH = withAdminAuth<{ id: string }>(
         );
       }
 
+      if (partnership.settingsLocked) {
+        return NextResponse.json(
+          {
+            error:
+              "Partnership settings are locked. Request an unlock to make changes.",
+          },
+          { status: 403 },
+        );
+      }
+
       // Update member-specific fields (exchange rate, point conversion)
       if (exchangeRate !== undefined || pointToCurrencyRate !== undefined) {
         await db.partnershipMember.update({
@@ -147,6 +158,19 @@ export const PATCH = withAdminAuth<{ id: string }>(
               },
             },
           },
+        },
+      });
+
+      await writePartnershipLog({
+        actorBusinessId: context.business.id,
+        event: "SETTINGS_UPDATED",
+        partnershipId: partnershipId,
+        metadata: {
+          ...(exchangeRate !== undefined && { exchangeRate }),
+          ...(pointToCurrencyRate !== undefined && { pointToCurrencyRate }),
+          ...(sharedReferrals !== undefined && { sharedReferrals }),
+          ...(shareReferralRewards !== undefined && { shareReferralRewards }),
+          ...(sharedCampaigns !== undefined && { sharedCampaigns }),
         },
       });
 

@@ -15,6 +15,10 @@
 //   - PERMANENTLY_REJECTED: cannot re-request until moved back to REJECTED.
 //     From PERMANENTLY_REJECTED the receiver can offer to "send from your side"
 //     which creates a new request with the roles reversed.
+//
+// Lock flow:
+//   Either member locks → settingsLocked=true.
+//   To unlock, one member submits an unlock request; the OTHER member accepts.
 // ========================================================================
 
 enum PartnerRequestStatus {
@@ -27,6 +31,25 @@ enum PartnerRequestStatus {
 enum PartnershipStatus {
   ACTIVE
   DISSOLVED
+}
+
+enum PartnershipEventType {
+  // Request lifecycle
+  REQUEST_SENT
+  REQUEST_ACCEPTED
+  REQUEST_REJECTED
+  REQUEST_PERMANENTLY_REJECTED
+  REQUEST_UN_PERMANENTLY_REJECTED
+
+  // Partnership lifecycle
+  PARTNERSHIP_DISSOLVED
+
+  // Settings
+  SETTINGS_UPDATED
+  SETTINGS_LOCKED
+  SETTINGS_UNLOCK_REQUESTED
+  SETTINGS_UNLOCK_ACCEPTED
+  SETTINGS_UNLOCK_REJECTED
 }
 
 model PartnerRequest {
@@ -42,6 +65,8 @@ model PartnerRequest {
 
   partnershipId String?              @unique
   partnership   BusinessPartnership? @relation(fields: [partnershipId], references: [id])
+
+  eventLogs PartnershipEventLog[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -60,9 +85,16 @@ model BusinessPartnership {
   shareReferralRewards Boolean @default(false)
   sharedCampaigns      Boolean @default(false)
 
+  // Settings lock — when true neither member can change rates or referral toggles.
+  // To unlock, one member submits an unlock request; the OTHER member must accept.
+  settingsLocked             Boolean @default(false)
+  settingsLockedByBusinessId String?
+  unlockRequestByBusinessId  String? // null = no pending request; non-null = businessId of requester
+
   members   PartnershipMember[]
   campaigns PartnerCampaign[]
   request   PartnerRequest?
+  eventLogs PartnershipEventLog[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -144,4 +176,30 @@ model PartnerCampaign {
   @@index([partnershipId])
   @@index([createdByBusinessId])
   @@map("partner_campaign")
+}
+
+// Immutable audit trail for every significant partnership event.
+// Either partnershipId or partnerRequestId will be set (sometimes both).
+model PartnershipEventLog {
+  id String @id @default(uuid())
+
+  partnershipId String?
+  partnership   BusinessPartnership? @relation(fields: [partnershipId], references: [id], onDelete: Cascade)
+
+  partnerRequestId String?
+  partnerRequest   PartnerRequest? @relation(fields: [partnerRequestId], references: [id], onDelete: Cascade)
+
+  // The business that triggered the event
+  actorBusinessId String
+  actorBusiness   Business @relation("PartnershipEventLogs", fields: [actorBusinessId], references: [id], onDelete: Cascade)
+
+  event    PartnershipEventType
+  metadata Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([partnershipId])
+  @@index([partnerRequestId])
+  @@index([actorBusinessId])
+  @@map("partnership_event_log")
 }

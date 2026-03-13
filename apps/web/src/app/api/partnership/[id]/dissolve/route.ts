@@ -1,5 +1,6 @@
 import { withAdminAuth } from "@/lib/auth/middleware";
 import { sanitizeErrorMessage } from "@/lib/utils/error-handler";
+import { writePartnershipLog } from "@/lib/utils/partnership-log";
 import { db } from "@reelo/db";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -51,6 +52,12 @@ export const POST = withAdminAuth<{ id: string }>(
           data: { status: "EXPIRED" },
         }),
       ]);
+
+      await writePartnershipLog({
+        actorBusinessId: context.business.id,
+        event: "PARTNERSHIP_DISSOLVED",
+        partnershipId,
+      });
 
       return NextResponse.json({ success: true });
     } catch (error) {
