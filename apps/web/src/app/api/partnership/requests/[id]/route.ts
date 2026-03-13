@@ -4,6 +4,7 @@ import {
   sanitizeErrorMessage,
   validateSchema,
 } from "@/lib/utils/error-handler";
+import { writePartnershipLog } from "@/lib/utils/partnership-log";
 import { db } from "@reelo/db";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -67,6 +68,11 @@ export const PATCH = withAdminAuth<{ id: string }>(
           where: { id: requestId },
           data: { status: "REJECTED" },
         });
+        await writePartnershipLog({
+          actorBusinessId: context.business.id,
+          event: "REQUEST_REJECTED",
+          partnerRequestId: requestId,
+        });
         return NextResponse.json(updated);
       }
 
@@ -74,6 +80,11 @@ export const PATCH = withAdminAuth<{ id: string }>(
         const updated = await db.partnerRequest.update({
           where: { id: requestId },
           data: { status: "PERMANENTLY_REJECTED" },
+        });
+        await writePartnershipLog({
+          actorBusinessId: context.business.id,
+          event: "REQUEST_PERMANENTLY_REJECTED",
+          partnerRequestId: requestId,
         });
         return NextResponse.json(updated);
       }
@@ -148,6 +159,13 @@ export const PATCH = withAdminAuth<{ id: string }>(
         },
       });
 
+      await writePartnershipLog({
+        actorBusinessId: context.business.id,
+        event: "REQUEST_ACCEPTED",
+        partnerRequestId: requestId,
+        partnershipId: partnership.id,
+      });
+
       return NextResponse.json(partnership);
     } catch (error) {
       console.error("Partnership request PATCH error:", error);
@@ -194,6 +212,12 @@ export const PUT = withAdminAuth<{ id: string }>(
       const updated = await db.partnerRequest.update({
         where: { id: requestId },
         data: { status: "REJECTED" },
+      });
+
+      await writePartnershipLog({
+        actorBusinessId: context.business.id,
+        event: "REQUEST_UN_PERMANENTLY_REJECTED",
+        partnerRequestId: requestId,
       });
 
       return NextResponse.json(updated);

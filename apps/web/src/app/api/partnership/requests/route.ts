@@ -4,6 +4,7 @@ import {
   sanitizeErrorMessage,
   validateSchema,
 } from "@/lib/utils/error-handler";
+import { writePartnershipLog } from "@/lib/utils/partnership-log";
 import { db } from "@reelo/db";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -116,13 +117,24 @@ export const POST = withAdminAuth(async (request: NextRequest, context) => {
           },
         ],
       },
+      include: { partnership: { select: { status: true } } },
     });
     if (existing) {
-      const msg =
-        existing.status === "PENDING"
-          ? "A partnership request already exists between these businesses."
-          : "You already have an active partnership with this business.";
-      return NextResponse.json({ error: msg }, { status: 400 });
+      // Allow re-request if the linked partnership was dissolved
+      const isDissolved =
+        existing.status === "ACCEPTED" &&
+        existing.partnership?.status === "DISSOLVED";
+
+      if (isDissolved) {
+        // Remove the stale accepted request so a fresh one can be created
+        await db.partnerRequest.delete({ where: { id: existing.id } });
+      } else {
+        const msg =
+          existing.status === "PENDING"
+            ? "A partnership request already exists between these businesses."
+            : "You already have an active partnership with this business.";
+        return NextResponse.json({ error: msg }, { status: 400 });
+      }
     }
 
     // Check maxPartnerAllowed for both sides
@@ -184,6 +196,13 @@ export const POST = withAdminAuth(async (request: NextRequest, context) => {
       include: {
         receiverBusiness: { select: { id: true, name: true, slug: true } },
       },
+    });
+
+    await writePartnershipLog({
+      actorBusinessId: context.business.id,
+      event: "REQUEST_SENT",
+      partnerRequestId: partnerRequest.id,
+      metadata: { targetBusinessSlug: targetBusiness.slug },
     });
 
     return NextResponse.json(partnerRequest, { status: 201 });
