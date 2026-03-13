@@ -20,13 +20,18 @@ export interface SegmentsOverviewResponse {
 export async function getSegmentsOverview(
   businessId: string,
 ): Promise<SegmentsOverviewResponse> {
-  await seedDefaultSegments(businessId);
-
-  const segments = await db.segment.findMany({
+  let segments = await db.segment.findMany({
     where: { businessId },
     orderBy: { sortOrder: "asc" },
   });
 
+  if (segments.length === 0) {
+    await seedDefaultSegments(businessId);
+    segments = await db.segment.findMany({
+      where: { businessId },
+      orderBy: { sortOrder: "asc" },
+    });
+  }
   const wallets = await db.wallet.findMany({
     where: { businessId },
     select: {
