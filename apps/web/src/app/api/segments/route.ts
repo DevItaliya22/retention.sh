@@ -11,12 +11,18 @@ import { NextRequest, NextResponse } from "next/server";
 export const GET = withAdminAuth(async (_request: NextRequest, context) => {
   try {
     const businessId = context.business.id;
-    await seedDefaultSegments(businessId);
-
-    const segments = await db.segment.findMany({
+    let segments = await db.segment.findMany({
       where: { businessId },
       orderBy: { sortOrder: "asc" },
     });
+
+    if (segments.length === 0) {
+      await seedDefaultSegments(businessId);
+      segments = await db.segment.findMany({
+        where: { businessId },
+        orderBy: { sortOrder: "asc" },
+      });
+    }
 
     return NextResponse.json({ items: segments });
   } catch (error: unknown) {
