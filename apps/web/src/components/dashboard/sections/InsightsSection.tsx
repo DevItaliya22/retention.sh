@@ -16,7 +16,7 @@ export function InsightsSection() {
     <section className="space-y-3">
       <SectionHeader title="Top Insights" />
       <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-        <Card className="border-primary/20 bg-primary/5 gap-3 py-5">
+        <Card className="border-primary/20 from-primary/10 dark:from-primary/15 gap-3 bg-gradient-to-t to-transparent py-5">
           <CardContent className="flex items-start gap-3 px-4">
             <div className="bg-primary/10 flex size-9 shrink-0 items-center justify-center rounded-lg">
               <Users className="text-primary size-5" />
@@ -43,7 +43,7 @@ export function InsightsSection() {
           </CardContent>
         </Card>
 
-        <Card className="gap-3 py-5">
+        <Card className="from-primary/10 dark:from-primary/15 relative gap-3 overflow-hidden bg-gradient-to-t to-transparent py-5">
           <CardContent className="flex items-start gap-3 px-4">
             <div className="bg-muted flex size-9 shrink-0 items-center justify-center rounded-lg">
               <ShoppingCart className="text-muted-foreground size-5" />
@@ -68,7 +68,7 @@ export function InsightsSection() {
           </CardContent>
         </Card>
 
-        <Card className="gap-3 py-5">
+        <Card className="from-primary/10 dark:from-primary/15 relative gap-3 overflow-hidden bg-gradient-to-t to-transparent py-5">
           <CardContent className="flex items-start gap-3 px-4">
             <div className="bg-muted flex size-9 shrink-0 items-center justify-center rounded-lg">
               <BarChart3 className="text-muted-foreground size-5" />

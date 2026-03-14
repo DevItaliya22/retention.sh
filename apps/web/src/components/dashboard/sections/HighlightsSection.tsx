@@ -8,7 +8,10 @@ import { Card, CardContent } from "@reelo/ui/components";
 import { Skeleton } from "@reelo/ui/components/skeleton";
 import { cn } from "@reelo/ui/lib/utils";
 import { useState } from "react";
+import { CustomerFour } from "../../svg/customer-four";
 import { CustomerOne } from "../../svg/customer-one";
+import { CustomerThree } from "../../svg/customer-three";
+import { CustomerTwo } from "../../svg/customer-two";
 import { PeriodSelector, SectionHeader } from "../shared";
 
 function formatValue(
@@ -43,8 +46,9 @@ function IllustratedHighlightCard(props: {
   isLoading: boolean;
   currencySymbol: string;
   format: HighlightStat["format"];
+  svg: React.ReactNode;
 }) {
-  const { title, stat, isLoading, currencySymbol, format } = props;
+  const { title, stat, isLoading, currencySymbol, format, svg } = props;
 
   const delta = stat ? getDelta(stat.value, stat.previousValue) : null;
 
@@ -87,7 +91,7 @@ function IllustratedHighlightCard(props: {
           </div>
         </div>
       </CardContent>
-      <CustomerOne className="text-primary pointer-events-none absolute right-0 bottom-0 h-28 w-28 sm:h-28 sm:w-28 xl:h-32 xl:w-32" />
+      {svg}
     </Card>
   );
 }
@@ -111,6 +115,9 @@ export function HighlightsSection() {
           isLoading={isLoading}
           currencySymbol={currencySymbol}
           format="currency"
+          svg={
+            <CustomerOne className="text-primary pointer-events-none absolute right-0 bottom-0 h-28 w-28 sm:h-28 sm:w-28 xl:h-32 xl:w-32" />
+          }
         />
         <IllustratedHighlightCard
           title="Total orders"
@@ -118,6 +125,9 @@ export function HighlightsSection() {
           isLoading={isLoading}
           currencySymbol={currencySymbol}
           format="number"
+          svg={
+            <CustomerTwo className="text-primary pointer-events-none absolute right-0 bottom-0 h-28 w-28 sm:h-28 sm:w-28 xl:h-32 xl:w-32" />
+          }
         />
         <IllustratedHighlightCard
           title="Customers"
@@ -125,6 +135,9 @@ export function HighlightsSection() {
           isLoading={isLoading}
           currencySymbol={currencySymbol}
           format="number"
+          svg={
+            <CustomerThree className="text-primary pointer-events-none absolute right-0 bottom-0 h-28 w-28 sm:h-28 sm:w-28 xl:h-32 xl:w-32" />
+          }
         />
         <IllustratedHighlightCard
           title="Repeat customers"
@@ -132,6 +145,9 @@ export function HighlightsSection() {
           isLoading={isLoading}
           currencySymbol={currencySymbol}
           format="number"
+          svg={
+            <CustomerFour className="text-primary pointer-events-none absolute right-0 bottom-0 h-28 w-28 sm:h-28 sm:w-28 xl:h-32 xl:w-32" />
+          }
         />
       </div>
     </section>

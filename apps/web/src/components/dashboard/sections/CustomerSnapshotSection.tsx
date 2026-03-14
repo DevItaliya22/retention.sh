@@ -60,7 +60,10 @@ function SnapshotCards({ period }: { period: AnalyticsPeriod }) {
   return (
     <div className="grid grid-cols-3 gap-3">
       {cards.map((card) => (
-        <Card key={card.label} className="gap-2 py-4">
+        <Card
+          key={card.label}
+          className="from-primary/10 dark:from-primary/15 relative gap-2 overflow-hidden bg-gradient-to-t to-transparent py-4"
+        >
           <CardContent className="px-4">
             <p className="text-muted-foreground text-xs font-medium">
               {card.label}
