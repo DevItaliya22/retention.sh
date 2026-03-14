@@ -112,3 +112,48 @@ export function generateDateKeysInOffset(
   }
   return keys;
 }
+
+export const WEEKDAY_LABELS = [
+  "Mon",
+  "Tue",
+  "Wed",
+  "Thu",
+  "Fri",
+  "Sat",
+  "Sun",
+] as const;
+
+export function getWeekdayIndexInOffset(
+  date: Date,
+  tzOffsetMinutes = 0,
+): number {
+  const local = toLocalShiftedDate(date, tzOffsetMinutes);
+  const day = local.getUTCDay();
+  return (day + 6) % 7;
+}
+
+export function getThisWeekRange(tzOffsetMinutes = 0): {
+  from: Date;
+  to: Date;
+  todayWeekdayIndex: number;
+} {
+  const now = new Date();
+  const local = toLocalShiftedDate(now, tzOffsetMinutes);
+  const todayWeekdayIndex = (local.getUTCDay() + 6) % 7;
+  const localMonday = new Date(local);
+  localMonday.setUTCDate(local.getUTCDate() - todayWeekdayIndex);
+  localMonday.setUTCHours(0, 0, 0, 0);
+  const from = toUtcFromLocalShiftedDate(localMonday, tzOffsetMinutes);
+  const to = endOfDayUtcInOffset(now, tzOffsetMinutes);
+  return { from, to, todayWeekdayIndex };
+}
+
+export function getLastWeekRange(tzOffsetMinutes = 0): {
+  from: Date;
+  to: Date;
+} {
+  const { from: thisMonday } = getThisWeekRange(tzOffsetMinutes);
+  const from = new Date(thisMonday.getTime() - 7 * MS_PER_DAY);
+  const to = new Date(from.getTime() + 7 * MS_PER_DAY - 1);
+  return { from, to };
+}

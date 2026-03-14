@@ -1,20 +1,20 @@
 "use client";
 
-import { DashboardPageShell, ScaffoldSection } from "@/components/layouts";
+import {
+  DashboardPageShell,
+  GooeyTabs,
+  ScaffoldSection,
+} from "@/components/layouts";
 import { AddSkuModal } from "@/components/settings/sku/AddSkuModal";
 import { SkuImportSheet } from "@/components/settings/sku/SkuImportSheet";
 import { SkuTable } from "@/components/settings/sku/SkuTable";
 import { useSkusQuery } from "@/hooks/sku/useSkusQuery";
-import {
-  Button,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@reelo/ui/components";
-import { FileUp, Layers, Package, Plus } from "lucide-react";
+import { Button } from "@reelo/ui/components";
+import { FileUp, Plus } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { Suspense, useState } from "react";
+
+import { SKU_TABS } from "./sku-tabs-config";
 
 function SkuContent() {
   const { data, isLoading, isError, error } = useSkusQuery();
@@ -47,7 +47,12 @@ export function SkuSettingPageClient() {
   const [isImportSheetOpen, setIsImportSheetOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
-  const activeTab = pathname === "/settings/sku" ? "sku" : "categories";
+  const activeTab =
+    pathname === "/settings/sku"
+      ? "sku"
+      : pathname === "/settings/sku/analytics"
+        ? "analytics"
+        : "categories";
 
   return (
     <DashboardPageShell
@@ -78,38 +83,20 @@ export function SkuSettingPageClient() {
       }
     >
       <ScaffoldSection isFullWidth className="pt-0!">
-        <Tabs value={activeTab} className="w-full">
-          <div className="flex items-center justify-between gap-4">
-            <TabsList className="space-x-1 p-1">
-              <TabsTrigger
-                value="sku"
-                className="gap-2"
-                onClick={() => router.push("/settings/sku")}
-              >
-                <Package className="h-4 w-4" />
-                <span>SKU</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="categories"
-                className="gap-2"
-                onClick={() => router.push("/settings/sku/categories")}
-              >
-                <Layers className="h-4 w-4" />
-                <span>Categories</span>
-              </TabsTrigger>
-            </TabsList>
-          </div>
-
-          <TabsContent value="sku" className="mt-4">
-            <Suspense
-              fallback={
-                <SkuTable skus={[]} total={0} perPage={10} isLoading={true} />
-              }
-            >
-              <SkuContent />
-            </Suspense>
-          </TabsContent>
-        </Tabs>
+        <GooeyTabs
+          gooeyId="sku-gooey"
+          tabs={SKU_TABS}
+          activeTab={activeTab}
+          onTabChange={(path) => router.push(path)}
+        >
+          <Suspense
+            fallback={
+              <SkuTable skus={[]} total={0} perPage={10} isLoading={true} />
+            }
+          >
+            <SkuContent />
+          </Suspense>
+        </GooeyTabs>
       </ScaffoldSection>
       <AddSkuModal
         isOpen={isAddModalOpen}

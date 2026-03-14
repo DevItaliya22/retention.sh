@@ -75,6 +75,10 @@ const ROUTE_METADATA_MAP: Record<string, RouteMetadataConfig> = {
     title: "Loyalty stats",
     description: "Earned and redeemed points by source, customer and bill",
   },
+  "/loyalty-stats/activity": {
+    title: "Loyalty activity",
+    description: "Points earned and redeemed by source, customer and bill",
+  },
   "/settings": {
     title: "Settings",
     description:
@@ -127,6 +131,10 @@ const ROUTE_METADATA_MAP: Record<string, RouteMetadataConfig> = {
   "/feedback-stats": {
     title: "Feedback stats",
     description: "Customer feedback responses by rating and date",
+  },
+  "/feedback-stats/activity": {
+    title: "Feedback activity",
+    description: "Customer feedback responses by rating, comment and date",
   },
   "/message-logs": {
     title: "Message logs",

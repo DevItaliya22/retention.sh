@@ -7,6 +7,8 @@ export {
   DASHBOARD_PAGE_SECTION_CLASS,
   DashboardPageShell,
 } from "./DashboardPageShell";
+export { GooeyTabs } from "./GooeyTabs";
+export type { GooeyTabItem } from "./GooeyTabs";
 export { PageHeader, PageLayout, PageLayoutSkeleton } from "./PageLayout";
 
 // Scaffold Components

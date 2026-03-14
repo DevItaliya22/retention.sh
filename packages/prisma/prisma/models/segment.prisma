@@ -36,8 +36,6 @@ model Segment {
   sortOrder Int     @default(0) // Evaluation order (first match wins)
   isSystem  Boolean @default(false) // Predefined; can edit, cannot delete
 
-  campaignSegments CampaignSegment[]
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

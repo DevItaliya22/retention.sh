@@ -3,10 +3,10 @@
 import { Suspense } from "react";
 import {
   CustomerSnapshotSection,
+  CustomersByDaySection,
   EngagementSection,
   HighlightsSection,
   InsightsSection,
-  LoyaltyPerformanceSection,
   RevenueSalesInteractiveBarSection,
   WeeklyTrendsSection,
 } from "./sections";
@@ -21,13 +21,13 @@ export function DashboardPageClient() {
         <WeeklyTrendsSection />
       </Suspense>
       <Suspense>
+        <CustomersByDaySection />
+      </Suspense>
+      <Suspense>
         <RevenueSalesInteractiveBarSection />
       </Suspense>
       <Suspense>
         <CustomerSnapshotSection />
-      </Suspense>
-      <Suspense>
-        <LoyaltyPerformanceSection />
       </Suspense>
       <Suspense>
         <EngagementSection />

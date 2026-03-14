@@ -16,5 +16,8 @@
     "lib": "@/lib",
     "utils": "@reelo/ui/lib/utils",
     "ui": "@reelo/ui/components"
+  },
+  "registries": {
+    "@fancy": "https://fancycomponents.dev/r/{name}.json"
   }
 }

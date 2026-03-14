@@ -1,14 +1,21 @@
+import { FeedbackStatsView } from "@/components/feedback-stats/FeedbackStatsView";
 import { generateRouteMetadata } from "@/lib/utils/route-metadata";
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { FeedbackStatsPageClient } from "./_components/FeedbackStatsPageClient";
 
 export const metadata: Metadata = generateRouteMetadata("/feedback-stats");
 
 export default function FeedbackStatsPage() {
   return (
-    <Suspense fallback={<div className="h-96" />}>
-      <FeedbackStatsPageClient />
+    <Suspense
+      fallback={
+        <div className="space-y-6">
+          <div className="bg-muted h-32 w-full animate-pulse rounded-lg" />
+          <div className="bg-muted h-64 w-full animate-pulse rounded-lg" />
+        </div>
+      }
+    >
+      <FeedbackStatsView />
     </Suspense>
   );
 }

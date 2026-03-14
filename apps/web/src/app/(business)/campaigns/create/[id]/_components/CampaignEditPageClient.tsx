@@ -23,6 +23,7 @@ import {
   CAMPAIGN_STATUS_LABELS,
   CAMPAIGN_TERMS_OPTIONS,
 } from "@/lib/constants/forms/campaign";
+import { fetcher } from "@/lib/fetcher";
 import {
   CAMPAIGN_APPLIES_TO,
   CAMPAIGN_REDEMPTION_LIMITS,
@@ -62,6 +63,7 @@ import {
   Textarea,
 } from "@reelo/ui/components";
 import { cn } from "@reelo/ui/lib/utils";
+import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
   Check,
@@ -72,10 +74,11 @@ import {
   X,
   XCircle,
 } from "lucide-react";
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Control, Resolver } from "react-hook-form";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -112,7 +115,8 @@ const formSchema = z.object({
   emailSubject: z.string().max(500).trim().optional().nullable(),
   whatsappEnabled: z.boolean(),
   emailEnabled: z.boolean(),
-  targetSegmentIds: z.array(z.string().uuid()).optional(),
+  targetAudiences: z.array(z.string()).optional(),
+  messageScheduledAt: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -208,7 +212,7 @@ export function CampaignEditPageClient({
 }: CampaignEditPageClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const segmentsParam = searchParams.get("segments");
+  const audienceParam = searchParams.get("audience");
   const previewRef = useRef<HTMLDivElement>(null);
   const [sentenceEdited, setSentenceEdited] = useState(false);
   const [isFormHydrated, setIsFormHydrated] = useState(false);
@@ -254,7 +258,8 @@ export function CampaignEditPageClient({
       emailSubject: "",
       whatsappEnabled: false,
       emailEnabled: false,
-      targetSegmentIds: [],
+      targetAudiences: [],
+      messageScheduledAt: "",
     },
   });
 
@@ -329,7 +334,10 @@ export function CampaignEditPageClient({
       emailSubject: campaign.emailSubject ?? "",
       whatsappEnabled: campaign.whatsappEnabled ?? false,
       emailEnabled: campaign.emailEnabled ?? false,
-      targetSegmentIds: campaign.segmentIds ?? [],
+      targetAudiences: campaign.targetAudiences ?? [],
+      messageScheduledAt: campaign.messageScheduledAt
+        ? new Date(campaign.messageScheduledAt).toISOString().slice(0, 16)
+        : "",
     });
 
     // If server sentence differs from auto-generated, treat as edited.
@@ -340,32 +348,26 @@ export function CampaignEditPageClient({
   }, [campaign, form]);
 
   useEffect(() => {
-    if (isFormHydrated && segmentsParam && segmentsData?.items) {
-      const slugs = segmentsParam
+    if (isFormHydrated && audienceParam) {
+      const keys = audienceParam
         .split(",")
-        .map((s) => s.trim().toLowerCase())
+        .map((s) => s.trim())
         .filter(Boolean);
-      const matchedIds = segmentsData.items
-        .filter(
-          (s) =>
-            slugs.includes(s.slug.toLowerCase()) ||
-            slugs.includes(s.name.toLowerCase()),
-        )
-        .map((s) => s.id);
-
-      if (matchedIds.length > 0) {
-        const currentIds = form.getValues("targetSegmentIds") || [];
-        const combined = Array.from(new Set([...currentIds, ...matchedIds]));
-
+      if (keys.length > 0) {
+        const current = form.getValues("targetAudiences") || [];
+        const combined = Array.from(new Set([...current, ...keys]));
         if (
           JSON.stringify([...combined].sort()) !==
-          JSON.stringify([...currentIds].sort())
+          JSON.stringify([...current].sort())
         ) {
-          form.setValue("targetSegmentIds", combined);
+          form.setValue("targetAudiences", combined);
         }
       }
+      const url = new URL(window.location.href);
+      url.searchParams.delete("audience");
+      router.replace(url.pathname + url.search, { scroll: false });
     }
-  }, [isFormHydrated, segmentsParam, segmentsData, form]);
+  }, [isFormHydrated, audienceParam, form, router]);
 
   const onSubmit = form.handleSubmit(async (values) => {
     try {
@@ -402,9 +404,8 @@ export function CampaignEditPageClient({
         emailSubject: values.emailSubject || null,
         whatsappEnabled: values.whatsappEnabled,
         emailEnabled: values.emailEnabled,
-        segmentIds: values.targetSegmentIds?.length
-          ? values.targetSegmentIds
-          : undefined,
+        targetAudiences: values.targetAudiences ?? [],
+        messageScheduledAt: values.messageScheduledAt || null,
       });
       toast.success("Campaign saved");
     } catch (e) {
@@ -1111,9 +1112,11 @@ export function CampaignEditPageClient({
                       </FormDescription>
                       {field.value ? (
                         <div className="relative inline-block">
-                          <img
+                          <Image
                             src={field.value}
                             alt="Logo preview"
+                            width={80}
+                            height={80}
                             className="h-20 w-20 rounded-full border object-contain"
                           />
                           <button
@@ -1234,9 +1237,11 @@ export function CampaignEditPageClient({
                       </FormDescription>
                       {field.value ? (
                         <div className="relative">
-                          <img
+                          <Image
                             src={field.value}
                             alt="Banner preview"
+                            width={1200}
+                            height={320}
                             className="h-32 w-full rounded-lg border object-cover"
                           />
                           <button
@@ -1328,7 +1333,31 @@ export function CampaignEditPageClient({
                   />
                 )}
 
-                <SegmentsField control={form.control} />
+                {(watched.whatsappEnabled || watched.emailEnabled) && (
+                  <FormField
+                    control={form.control}
+                    name="messageScheduledAt"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Schedule message delivery</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="datetime-local"
+                            {...field}
+                            value={field.value ?? ""}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          When to send campaign messages. Leave empty to send
+                          immediately on activation.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+
+                <AudienceField control={form.control} />
               </Section>
             </div>
 
@@ -1350,35 +1379,63 @@ export function CampaignEditPageClient({
 }
 
 // ---------------------------------------------------------------------------
-// Segments multi-select field
+// Audience multi-select field (segments + feedback ratings)
 // ---------------------------------------------------------------------------
 
-function SegmentsField({ control }: { control: Control<FormValues> }) {
+const FEEDBACK_AUDIENCES = [
+  { value: "feedback:rating_1", label: "1-star feedback" },
+  { value: "feedback:rating_2", label: "2-star feedback" },
+  { value: "feedback:rating_3", label: "3-star feedback" },
+  { value: "feedback:rating_4", label: "4-star feedback" },
+  { value: "feedback:rating_5", label: "5-star feedback" },
+];
+
+function useAudiencePreview(keys: string[]) {
+  const keyStr = [...keys].sort().join(",");
+  return useQuery<{ count: number }>({
+    queryKey: ["audience-preview", keyStr],
+    queryFn: () =>
+      fetcher<{ count: number }>(
+        `/api/audiences/preview?key=${encodeURIComponent(keyStr)}`,
+      ),
+    enabled: keys.length > 0,
+    staleTime: 15_000,
+  });
+}
+
+function AudienceField({ control }: { control: Control<FormValues> }) {
   const [open, setOpen] = useState(false);
   const { data } = useSegmentsQuery();
-  const options = (data?.items ?? []).map((s) => ({
-    value: s.id,
+  const segmentOptions = (data?.items ?? []).map((s) => ({
+    value: `segment:${s.slug}`,
     label: s.name,
   }));
+
+  const allOptions = [...segmentOptions, ...FEEDBACK_AUDIENCES];
+
+  const watchedAudiences = useWatch({ control, name: "targetAudiences" }) ?? [];
+  const { data: previewData } = useAudiencePreview(watchedAudiences);
 
   return (
     <FormField
       control={control}
-      name="targetSegmentIds"
+      name="targetAudiences"
       render={({ field }) => {
-        const selectedIds = field.value ?? [];
-        const selectedSet = new Set(selectedIds);
-        const onToggle = (id: string) => {
-          const next = selectedSet.has(id)
-            ? selectedIds.filter((x: string) => x !== id)
-            : [...selectedIds, id];
+        const selected = field.value ?? [];
+        const selectedSet = new Set(selected);
+        const onToggle = (key: string) => {
+          const next = selectedSet.has(key)
+            ? selected.filter((x: string) => x !== key)
+            : [...selected, key];
           field.onChange(next);
         };
         const onClear = () => field.onChange([]);
+        const labelFor = (key: string) =>
+          allOptions.find((o) => o.value === key)?.label ?? key;
 
         return (
           <FormItem>
-            <FormLabel>Target segments</FormLabel>
+            <FormLabel>Target audience</FormLabel>
             <Popover open={open} onOpenChange={setOpen}>
               <FormControl>
                 <PopoverTrigger asChild>
@@ -1408,22 +1465,20 @@ function SegmentsField({ control }: { control: Control<FormValues> }) {
                     {selectedSet.size > 0 ? (
                       <>
                         <span className="truncate">
-                          {selectedSet.size} segment
+                          {selectedSet.size} audience
                           {selectedSet.size !== 1 ? "s" : ""} selected
                         </span>
                         <div className="ml-auto flex items-center gap-1">
                           {selectedSet.size <= 2 ? (
-                            options
-                              .filter((o) => selectedSet.has(o.value))
-                              .map((o) => (
-                                <Badge
-                                  key={o.value}
-                                  variant="secondary"
-                                  className="rounded-sm px-1 font-normal"
-                                >
-                                  {o.label}
-                                </Badge>
-                              ))
+                            selected.map((key) => (
+                              <Badge
+                                key={key}
+                                variant="secondary"
+                                className="rounded-sm px-1 font-normal"
+                              >
+                                {labelFor(key)}
+                              </Badge>
+                            ))
                           ) : (
                             <Badge
                               variant="secondary"
@@ -1435,7 +1490,7 @@ function SegmentsField({ control }: { control: Control<FormValues> }) {
                         </div>
                       </>
                     ) : (
-                      "Select segments..."
+                      "Select target audience..."
                     )}
                   </Button>
                 </PopoverTrigger>
@@ -1445,11 +1500,42 @@ function SegmentsField({ control }: { control: Control<FormValues> }) {
                 align="start"
               >
                 <Command>
-                  <CommandInput placeholder="Search segments..." />
+                  <CommandInput placeholder="Search audiences..." />
                   <CommandList className="max-h-[300px]">
-                    <CommandEmpty>No segments found.</CommandEmpty>
-                    <CommandGroup className="overflow-y-auto">
-                      {options.map((opt) => {
+                    <CommandEmpty>No audiences found.</CommandEmpty>
+                    {segmentOptions.length > 0 && (
+                      <CommandGroup heading="Customer Segments">
+                        {segmentOptions.map((opt) => {
+                          const isSelected = selectedSet.has(opt.value);
+                          return (
+                            <CommandItem
+                              key={opt.value}
+                              onSelect={() => onToggle(opt.value)}
+                            >
+                              <div
+                                className={cn(
+                                  "mr-2 flex size-4 shrink-0 items-center justify-center rounded-[4px]",
+                                  isSelected
+                                    ? "bg-primary"
+                                    : "bg-muted [&_svg]:invisible",
+                                )}
+                              >
+                                <Check
+                                  className={cn(
+                                    "h-3 w-3 stroke-[2.5]",
+                                    isSelected && "text-white",
+                                  )}
+                                />
+                              </div>
+                              {opt.label}
+                            </CommandItem>
+                          );
+                        })}
+                      </CommandGroup>
+                    )}
+                    <CommandSeparator />
+                    <CommandGroup heading="Feedback Ratings">
+                      {FEEDBACK_AUDIENCES.map((opt) => {
                         const isSelected = selectedSet.has(opt.value);
                         return (
                           <CommandItem
@@ -1494,7 +1580,14 @@ function SegmentsField({ control }: { control: Control<FormValues> }) {
               </PopoverContent>
             </Popover>
             <FormDescription>
-              Target customers in these segments. Leave empty to target all.
+              Target specific customer groups. Leave empty to target all
+              customers.
+              {selected.length > 0 && previewData != null && (
+                <span className="text-foreground ml-1 font-medium">
+                  ({previewData.count.toLocaleString()} customer
+                  {previewData.count !== 1 ? "s" : ""})
+                </span>
+              )}
             </FormDescription>
             <FormMessage />
           </FormItem>

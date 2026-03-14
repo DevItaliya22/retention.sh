@@ -1,21 +1,20 @@
 "use client";
 
-import { DashboardPageShell, ScaffoldSection } from "@/components/layouts";
+import {
+  DashboardPageShell,
+  GooeyTabs,
+  ScaffoldSection,
+} from "@/components/layouts";
 import { AddCategoryModal } from "@/components/settings/category/AddCategoryModal";
 import { CategoryImportSheet } from "@/components/settings/category/CategoryImportSheet";
 import { CategoryTable } from "@/components/settings/category/CategoryTable";
 import { useCategoriesQuery } from "@/hooks/category/useCategoriesQuery";
-
-import {
-  Button,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@reelo/ui/components";
-import { FileUp, Layers, Package, Plus } from "lucide-react";
+import { Button } from "@reelo/ui/components";
+import { FileUp, Plus } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
+
+import { SKU_TABS } from "../../_components/sku-tabs-config";
 
 export function CategorySettingPageClient() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -24,7 +23,12 @@ export function CategorySettingPageClient() {
   const pathname = usePathname();
   const router = useRouter();
   const { data, isLoading } = useCategoriesQuery();
-  const activeTab = pathname === "/settings/sku" ? "sku" : "categories";
+  const activeTab =
+    pathname === "/settings/sku"
+      ? "sku"
+      : pathname === "/settings/sku/analytics"
+        ? "analytics"
+        : "categories";
   const categories = data?.items ?? [];
   const total = data?.total ?? 0;
   const perPage = data?.perPage ?? 10;
@@ -62,37 +66,19 @@ export function CategorySettingPageClient() {
       }
     >
       <ScaffoldSection isFullWidth className="pt-0!">
-        <Tabs value={activeTab} className="w-full">
-          <div className="flex items-center justify-between gap-4">
-            <TabsList className="space-x-1 p-1">
-              <TabsTrigger
-                value="sku"
-                className="gap-2"
-                onClick={() => router.push("/settings/sku")}
-              >
-                <Package className="h-4 w-4" />
-                <span>SKU</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="categories"
-                className="gap-2"
-                onClick={() => router.push("/settings/sku/categories")}
-              >
-                <Layers className="h-4 w-4" />
-                <span>Categories</span>
-              </TabsTrigger>
-            </TabsList>
-          </div>
-
-          <TabsContent value="categories" className="mt-4">
-            <CategoryTable
-              categories={categories}
-              total={total}
-              perPage={perPage}
-              isLoading={isLoading}
-            />
-          </TabsContent>
-        </Tabs>
+        <GooeyTabs
+          gooeyId="sku-gooey"
+          tabs={SKU_TABS}
+          activeTab={activeTab}
+          onTabChange={(path) => router.push(path)}
+        >
+          <CategoryTable
+            categories={categories}
+            total={total}
+            perPage={perPage}
+            isLoading={isLoading}
+          />
+        </GooeyTabs>
       </ScaffoldSection>
       <AddCategoryModal
         isOpen={isAddModalOpen}

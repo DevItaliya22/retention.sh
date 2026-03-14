@@ -12,6 +12,9 @@ import {
   EmptyDescription,
   EmptyHeader,
   EmptyTitle,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
   Skeleton,
 } from "@reelo/ui/components";
 import { useDataTable } from "@reelo/ui/hooks";
@@ -19,7 +22,120 @@ import { cn } from "@reelo/ui/lib/utils";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Eye, MessageSquare } from "lucide-react";
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, useRef, useState } from "react";
+
+function BillFeedbackPopover({
+  bill,
+  businessSlug,
+}: {
+  bill: Bill;
+  businessSlug: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearCloseTimeout = () => {
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
+    }
+  };
+
+  const handleOpen = () => {
+    clearCloseTimeout();
+    setOpen(true);
+  };
+
+  const handleClose = () => {
+    closeTimeoutRef.current = setTimeout(() => setOpen(false), 150);
+  };
+
+  const hasFeedback = !!bill.feedback;
+  const rating = bill.feedback?.rating ?? null;
+  const isNegative = rating !== null && rating <= 2;
+
+  if (!bill.feedbackLink || !hasFeedback) return null;
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          tabIndex={-1}
+          onClick={(e) => e.stopPropagation()}
+          onMouseEnter={handleOpen}
+          onMouseLeave={(e) => {
+            handleClose();
+            e.currentTarget.blur();
+          }}
+          aria-label={`Feedback for bill ${bill.billNumber}`}
+          className={cn(
+            buttonVariants({ variant: "ghost", size: "xs" }),
+            "h-8 w-8 p-0",
+            isNegative ? "text-red-600 dark:text-red-400" : "text-primary",
+          )}
+        >
+          <MessageSquare className="h-4 w-4" fill="currentColor" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="z-[100] w-72 p-4"
+        align="end"
+        side="top"
+        onMouseEnter={clearCloseTimeout}
+        onMouseLeave={handleClose}
+      >
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+              Feedback
+            </p>
+            {rating !== null && (
+              <p className="text-sm font-medium">
+                {rating}
+                <span className="text-muted-foreground text-xs">/5</span>
+              </p>
+            )}
+          </div>
+          {bill.feedback?.selectionOptions &&
+            bill.feedback.selectionOptions.length > 0 && (
+              <div className="space-y-1">
+                <p className="text-muted-foreground text-xs font-medium">
+                  Selection options
+                </p>
+                <div className="flex flex-wrap gap-1">
+                  {bill.feedback.selectionOptions.map((opt) => (
+                    <span
+                      key={opt.id}
+                      className="bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-xs"
+                    >
+                      {opt.label}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          {bill.feedback?.howDidYouHear && (
+            <div className="space-y-1">
+              <p className="text-muted-foreground text-xs font-medium">
+                How did they hear?
+              </p>
+              <p className="text-xs">{bill.feedback.howDidYouHear}</p>
+            </div>
+          )}
+          <Link
+            href={`/feedback/${businessSlug}/${bill.feedbackLink.token}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary text-xs font-medium underline underline-offset-2"
+          >
+            View full feedback form
+          </Link>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 export function BillsTable() {
   const { data, isLoading, isError, error } = useBillsQuery();
@@ -41,6 +157,7 @@ export function BillsTable() {
         customerPhone: null,
         customerEmail: "",
         feedbackLink: null,
+        feedback: null,
         lineItems: [],
         createdAt: "",
         updatedAt: "",
@@ -365,19 +482,27 @@ export function BillsTable() {
           return (
             <div className="flex justify-end gap-1">
               {bill.feedbackLink && businessSlug && (
-                <Link
-                  href={`/feedback/${businessSlug}/${bill.feedbackLink.token}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={`Feedback link for bill ${bill.billNumber}`}
-                  className={cn(
-                    buttonVariants({ variant: "ghost", size: "xs" }),
-                    "h-8 w-8 p-0",
+                <>
+                  <BillFeedbackPopover
+                    bill={bill}
+                    businessSlug={businessSlug}
+                  />
+                  {!bill.feedback && (
+                    <Link
+                      href={`/feedback/${businessSlug}/${bill.feedbackLink!.token}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={`Feedback link for bill ${bill.billNumber}`}
+                      className={cn(
+                        buttonVariants({ variant: "ghost", size: "xs" }),
+                        "h-8 w-8 p-0",
+                      )}
+                      title="Feedback link"
+                    >
+                      <MessageSquare className="h-4 w-4" />
+                    </Link>
                   )}
-                  title="Feedback link"
-                >
-                  <MessageSquare className="h-4 w-4" />
-                </Link>
+                </>
               )}
               <Link
                 href={`/bills/${bill.id}`}

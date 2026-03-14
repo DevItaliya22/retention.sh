@@ -121,6 +121,7 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
           minPurchaseForRedemption: true,
           instantCashbackRedeemable: true,
           redemptionLimit: true,
+          targetAudiences: true,
           createdAt: true,
           updatedAt: true,
         },

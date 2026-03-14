@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { formatDate, formatRelativeTime } from "../lib/format";
+import { TimestampInfo } from "./time-stamp-info";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 
 interface DateDisplayProps {
@@ -9,6 +10,7 @@ interface DateDisplayProps {
   className?: string;
   formatOptions?: Intl.DateTimeFormatOptions;
   relative?: boolean;
+  variant?: "current" | "timestampInfo";
 }
 
 export function DateDisplay({
@@ -16,6 +18,7 @@ export function DateDisplay({
   className,
   formatOptions,
   relative,
+  variant = "current",
 }: DateDisplayProps) {
   // If formatOptions is provided, default to absolute formatting (relative=false)
   // Otherwise, default to relative formatting (relative=true)
@@ -93,6 +96,16 @@ export function DateDisplay({
   }, [dateObj]);
 
   if (!dateObj || !displayedText) return null;
+
+  if (variant === "timestampInfo") {
+    return (
+      <TimestampInfo
+        utcTimestamp={dateObj.toISOString()}
+        label={displayedText}
+        className={className}
+      />
+    );
+  }
 
   return (
     <Tooltip>

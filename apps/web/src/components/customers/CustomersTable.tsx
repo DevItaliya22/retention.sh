@@ -529,6 +529,15 @@ export function CustomersTable() {
     prefix: getDataTableConfig("customers").prefix,
   });
 
+  const createDraft = useCreateCampaignDraft();
+  const searchParams = useSearchParams();
+  const segmentParam = searchParams.get("segment") ?? "";
+  const [period, setPeriod] = useState<AnalyticsPeriod>("30d");
+  const { data: rfmStats, isLoading: isStatsLoading } = useRfmStatsQuery({
+    period,
+    segment: segmentParam || undefined,
+  });
+
   if (isError) {
     return (
       <div className="flex flex-col items-center justify-center py-12">
@@ -542,22 +551,18 @@ export function CustomersTable() {
     );
   }
 
-  const createDraft = useCreateCampaignDraft();
-  const searchParams = useSearchParams();
-  const segmentParam = searchParams.get("segment") ?? "";
-  const [period, setPeriod] = useState<AnalyticsPeriod>("30d");
-  const { data: rfmStats, isLoading: isStatsLoading } = useRfmStatsQuery({
-    period,
-    segment: segmentParam || undefined,
-  });
-
   const handleCreateCampaign = async () => {
     try {
       const result = await createDraft.mutateAsync();
-      const segments = segmentParam
-        ? `?segments=${encodeURIComponent(segmentParam)}`
+      const audience = segmentParam
+        ? `?audience=${encodeURIComponent(
+            segmentParam
+              .split(",")
+              .map((s) => `segment:${s.trim()}`)
+              .join(","),
+          )}`
         : "";
-      router.push(`/campaigns/create/${result.id}${segments}`);
+      router.push(`/campaigns/create/${result.id}${audience}`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to create campaign");
     }

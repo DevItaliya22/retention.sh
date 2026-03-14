@@ -156,6 +156,8 @@ model FeedbackResponse {
 
   @@index([configId])
   @@index([customerId])
+  @@index([businessId, rating])
+  @@index([businessId, customerId])
   @@map("feedback_response")
 }
 

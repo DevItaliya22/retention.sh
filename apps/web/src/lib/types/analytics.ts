@@ -197,6 +197,131 @@ export interface InsightsResponse {
   error?: string;
 }
 
+// --- Customers by day (weekday / weekend / both) ---
+
+export interface CustomersByDayResponse {
+  weekdays: number;
+  weekends: number;
+  both: number;
+  total: number;
+  weekdaysPercent: number;
+  weekendsPercent: number;
+  bothPercent: number;
+  topLabel: string;
+  error?: string;
+}
+
+// --- Weekly trends (dashboard) ---
+
+export interface WeeklyTrendsDataPoint {
+  day: string;
+  thisWeek: number;
+  lastWeek: number;
+}
+
+export interface WeeklyTrendsResponse {
+  visits: {
+    data: WeeklyTrendsDataPoint[];
+    thisWeekTotal: number;
+    lastWeekTotal: number;
+  };
+  messages: {
+    data: WeeklyTrendsDataPoint[];
+    thisWeekTotal: number;
+    lastWeekTotal: number;
+  };
+  revenue: {
+    data: WeeklyTrendsDataPoint[];
+    thisWeekTotal: number;
+    lastWeekTotal: number;
+  };
+  error?: string;
+}
+
+// --- Section 8: SKU & Category Analytics ---
+
+export interface SkuOverviewResponse {
+  itemsSold: number;
+  itemRevenue: number;
+  uniqueSkusSold: number;
+  avgItemsPerBill: number;
+  error?: string;
+}
+
+export interface SkuTopItem {
+  skuId: string;
+  skuName: string;
+  skuCode: string;
+  categoryName: string | null;
+  qtySold: number;
+  revenue: number;
+  revenueShare: number;
+}
+
+export interface SkuTopItemsResponse {
+  topSelling: SkuTopItem[];
+  slowMoving: Array<{
+    skuId: string;
+    skuName: string;
+    skuCode: string;
+    categoryName: string | null;
+    qtySold: number;
+    lastSoldAt: string | null;
+  }>;
+  error?: string;
+}
+
+export interface CategoryBreakdownItem {
+  categoryId: string | null;
+  categoryName: string;
+  revenue: number;
+  revenueShare: number;
+  itemsSold: number;
+}
+
+export interface SkuCategoryBreakdownResponse {
+  categories: CategoryBreakdownItem[];
+  error?: string;
+}
+
+export interface SkuTrendDataPoint {
+  month: string;
+  revenue: number;
+  itemsSold: number;
+}
+
+export interface SkuTrendResponse {
+  data: SkuTrendDataPoint[];
+  error?: string;
+}
+
+// --- Section 9: Referral Enhanced Analytics ---
+
+export interface ReferralOverviewResponse {
+  totalReferrals: number;
+  conversionRate: number;
+  rewardsCost: number;
+  referralRevenue: number;
+  avgDaysToFirstVisit: number | null;
+  rewardsLocked: number;
+  rewardsUnlocked: number;
+  avgReferredCustomerSpend: number;
+  error?: string;
+}
+
+export interface ReferralMonthlyDataPoint {
+  month: string;
+  totalReferrals: number;
+  converted: number;
+  rewardsCost: number;
+  referralRevenue: number;
+}
+
+export interface ReferralMonthlyResponse {
+  data: ReferralMonthlyDataPoint[];
+  error?: string;
+}
+
 // --- Shared ---
 
 export interface AnalyticsQueryParams {

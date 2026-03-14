@@ -132,7 +132,10 @@ export function SimpleSidebar({
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     asChild
-                    isActive={pathname === "/loyalty-stats"}
+                    isActive={
+                      pathname === "/loyalty-stats" ||
+                      pathname.startsWith("/loyalty-stats/")
+                    }
                     tooltip="Loyalty stats"
                   >
                     <Link href="/loyalty-stats">
@@ -144,7 +147,10 @@ export function SimpleSidebar({
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     asChild
-                    isActive={pathname === "/feedback-stats"}
+                    isActive={
+                      pathname === "/feedback-stats" ||
+                      pathname.startsWith("/feedback-stats/")
+                    }
                     tooltip="Feedback stats"
                   >
                     <Link href="/feedback-stats">

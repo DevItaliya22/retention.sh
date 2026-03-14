@@ -133,7 +133,21 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
             },
           },
           feedbackLink: {
-            select: { token: true },
+            select: {
+              token: true,
+              feedbackResponse: {
+                select: {
+                  rating: true,
+                  howDidYouHear: true,
+                  selectedSelectionOptions: {
+                    select: {
+                      id: true,
+                      label: true,
+                    },
+                  },
+                },
+              },
+            },
           },
           lineItems: {
             include: {
@@ -202,6 +216,20 @@ export const GET = withAdminAuth(async (request: NextRequest, context) => {
         feedbackLink: bill.feedbackLink
           ? { token: bill.feedbackLink.token }
           : null,
+        feedback:
+          bill.feedbackLink && bill.feedbackLink.feedbackResponse
+            ? {
+                rating: bill.feedbackLink.feedbackResponse.rating,
+                howDidYouHear: bill.feedbackLink.feedbackResponse.howDidYouHear,
+                selectionOptions:
+                  bill.feedbackLink.feedbackResponse.selectedSelectionOptions.map(
+                    (opt) => ({
+                      id: opt.id,
+                      label: opt.label,
+                    }),
+                  ),
+              }
+            : null,
         lineItems: bill.lineItems.map((li) => ({
           id: li.id,
           skuId: li.skuId,

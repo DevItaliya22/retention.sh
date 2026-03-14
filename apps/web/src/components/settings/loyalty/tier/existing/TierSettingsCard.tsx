@@ -1,5 +1,6 @@
 "use client";
 
+import { GooeyTabs } from "@/components/layouts";
 import {
   SETTINGS_CONTROL_CLASS,
   SETTINGS_LABEL_CLASS,
@@ -11,6 +12,14 @@ import {
   validateTierRanges,
 } from "@/lib/loyalty/helpers";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
   Button,
   Card,
   CardContent,
@@ -30,7 +39,8 @@ import {
   Switch,
   useForm,
 } from "@reelo/ui/components";
-import { Plus } from "lucide-react";
+import { Plus, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { useFieldArray } from "react-hook-form";
 import { toast } from "sonner";
 import type { TierSettingsFormValues } from "./TierFieldsSection";
@@ -96,6 +106,10 @@ export function TierSettingsCard({
   onSave,
   isSaving,
 }: TierSettingsCardProps) {
+  const [activeTierIndex, setActiveTierIndex] = useState(0);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteIndex, setDeleteIndex] = useState<number | null>(null);
+
   const initialMaxRank =
     tierConfig.tiers?.length > 0
       ? Math.max(...tierConfig.tiers.map((t) => t.rank))
@@ -120,6 +134,78 @@ export function TierSettingsCard({
     watchedTiers?.length > 0
       ? Math.max(...watchedTiers.map((t) => Number(t?.rank ?? 0)))
       : 0;
+
+  useEffect(() => {
+    setActiveTierIndex((prev) => {
+      if (fields.length === 0) return 0;
+      return Math.max(0, Math.min(prev, fields.length - 1));
+    });
+  }, [fields.length]);
+
+  const tabs = useMemo(() => {
+    return fields.map((_, index) => ({
+      value: String(index),
+      label: (
+        <div className="flex items-center gap-2">
+          <span>Tier {index + 1}</span>
+          {fields.length > 1 && (
+            <span
+              role="button"
+              tabIndex={0}
+              aria-label={`Delete tier ${index + 1}`}
+              className="text-muted-foreground hover:text-destructive -mr-1 inline-flex h-6 w-6 items-center justify-center rounded-md transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                setDeleteIndex(index);
+                setDeleteOpen(true);
+              }}
+              onKeyDown={(e) => {
+                if (e.key !== "Enter" && e.key !== " ") return;
+                e.preventDefault();
+                e.stopPropagation();
+                setDeleteIndex(index);
+                setDeleteOpen(true);
+              }}
+            >
+              <X className="h-3.5 w-3.5" />
+            </span>
+          )}
+        </div>
+      ),
+      path: String(index),
+    }));
+  }, [fields, fields.length]);
+
+  const handleAddTier = () => {
+    const nextRank = fields.length + 1;
+    append({
+      ...DEFAULT_TIER,
+      rank: nextRank,
+    });
+    setActiveTierIndex(fields.length);
+  };
+
+  const handleRequestDelete = (index: number) => {
+    setDeleteIndex(index);
+    setDeleteOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    const idx = deleteIndex;
+    if (idx === null) return;
+    const nextLen = Math.max(0, fields.length - 1);
+
+    remove(idx);
+    setDeleteOpen(false);
+    setDeleteIndex(null);
+
+    setActiveTierIndex((prev) => {
+      if (nextLen === 0) return 0;
+      if (idx < prev) return prev - 1;
+      if (idx === prev) return Math.min(prev, nextLen - 1);
+      return prev;
+    });
+  };
 
   const runSubmit = async () => {
     const valid = await form.trigger();
@@ -314,46 +400,52 @@ export function TierSettingsCard({
                   />
                 </CardContent>
               </Card>
-              <div className="space-y-0.5 px-4">
-                <h3 className="text-foreground text-base leading-none font-semibold">
-                  Reward stages
-                </h3>
-                <p className="text-muted-foreground text-sm">
-                  Customers redeem points for these rewards.
-                </p>
-              </div>
-              {fields.map((field, index) => (
-                <Card
-                  key={field.id}
-                  className="border-border/45 bg-background/55 flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border shadow-none"
+
+              <div className="px-3">
+                <div className="mb-3 flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h3 className="text-foreground text-base leading-none font-semibold">
+                      Reward stages
+                    </h3>
+                    <p className="text-muted-foreground mt-0.5 text-sm">
+                      Define tiers by lifetime spend
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleAddTier}
+                    className="shrink-0"
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    New tier
+                  </Button>
+                </div>
+                <GooeyTabs
+                  gooeyId="loyalty-tier-existing-gooey"
+                  tabs={tabs}
+                  activeTab={String(activeTierIndex)}
+                  onTabChange={(path) => setActiveTierIndex(Number(path))}
+                  fullBleed={false}
+                  bgClassName="bg-[#F6F4ED]"
+                  contentClassName="px-4 pt-4 pb-4"
                 >
-                  <CardContent className="px-4 py-4">
+                  {fields[activeTierIndex] ? (
                     <TierFieldsSection
-                      index={index}
-                      onRemove={() => remove(index)}
-                      canRemove={fields.length > 1}
+                      index={activeTierIndex}
                       isTopTier={
-                        Number(watchedTiers?.[index]?.rank ?? 0) === maxRank &&
-                        maxRank > 0
+                        Number(watchedTiers?.[activeTierIndex]?.rank ?? 0) ===
+                          maxRank && maxRank > 0
                       }
                     />
-                  </CardContent>
-                </Card>
-              ))}
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  append({
-                    ...DEFAULT_TIER,
-                    rank: fields.length + 1,
-                  })
-                }
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Add tier
-              </Button>
+                  ) : (
+                    <div className="text-muted-foreground text-sm">
+                      No tiers found.
+                    </div>
+                  )}
+                </GooeyTabs>
+              </div>
             </div>
             <CardFooter className="flex shrink-0 justify-end border-0 px-4 py-2">
               <SaveButton
@@ -369,6 +461,33 @@ export function TierSettingsCard({
           </form>
         </Form>
       </FormProvider>
+
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {deleteIndex === null
+                ? "Delete tier?"
+                : `Delete tier ${deleteIndex + 1}?`}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This tier will be removed. You can add it back later if needed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDeleteIndex(null)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-destructive hover:bg-destructive/90 text-white hover:text-white"
+              disabled={fields.length <= 1}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
