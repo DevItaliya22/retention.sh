@@ -8,6 +8,7 @@ import {
   InsightsSection,
   LoyaltyPerformanceSection,
   RevenueSalesInteractiveBarSection,
+  WeeklyTrendsSection,
 } from "./sections";
 
 export function DashboardPageClient() {
@@ -16,6 +17,9 @@ export function DashboardPageClient() {
       <Suspense>
         <HighlightsSection />
       </Suspense>{" "}
+      <Suspense>
+        <WeeklyTrendsSection />
+      </Suspense>
       <Suspense>
         <RevenueSalesInteractiveBarSection />
       </Suspense>

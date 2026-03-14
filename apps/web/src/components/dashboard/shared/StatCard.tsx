@@ -52,7 +52,7 @@ export function StatCard({
 
   if (isLoading || !stat) {
     return (
-      <Card className="gap-2 py-4">
+      <Card className="from-primary/10 dark:from-primary/15 relative gap-2 overflow-hidden bg-gradient-to-t to-transparent py-4">
         <CardContent className="px-4">
           <p className="text-muted-foreground text-xs font-medium">
             {displayLabel}
@@ -77,7 +77,7 @@ export function StatCard({
   const delta = getDelta(stat.value, stat.previousValue);
 
   return (
-    <Card className="gap-2 py-4">
+    <Card className="from-primary/10 dark:from-primary/15 relative gap-2 overflow-hidden bg-gradient-to-t to-transparent py-4">
       <CardContent className="px-4">
         <p className="text-muted-foreground text-xs font-medium">
           {displayLabel}

@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
 
 const headerVariants = {
   initial: { opacity: 0, y: -20 },
@@ -10,7 +10,7 @@ const headerVariants = {
 export function SidebarHeader() {
   return (
     <AnimatePresence>
-      <motion.div
+      {/* <motion.div
         className=""
         variants={headerVariants}
         initial="initial"
@@ -18,9 +18,9 @@ export function SidebarHeader() {
         exit={{ opacity: 0, y: -20 }}
       >
         <div className="px-2 py-2">
-          <span className="text-sm font-semibold">Reelo</span>
+          <span className="text-sm font-semibold"></span>
         </div>
-      </motion.div>
+      </motion.div> */}
     </AnimatePresence>
   );
 }

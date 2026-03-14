@@ -59,7 +59,10 @@ function LoyaltyKpiCards({ period }: { period: AnalyticsPeriod }) {
   return (
     <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
       {kpis.map((kpi) => (
-        <Card key={kpi.label} className="gap-2 py-4">
+        <Card
+          key={kpi.label}
+          className="from-primary/10 dark:from-primary/15 relative gap-2 overflow-hidden bg-gradient-to-t to-transparent py-4"
+        >
           <CardContent className="px-4">
             <p className="text-muted-foreground text-xs font-medium">
               {kpi.label}

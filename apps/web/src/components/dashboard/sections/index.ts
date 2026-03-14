@@ -5,3 +5,4 @@ export { InsightsSection } from "./InsightsSection";
 export { LoyaltyPerformanceSection } from "./LoyaltyPerformanceSection";
 export { RevenueSalesInteractiveBarSection } from "./RevenueSalesInteractiveBarSection";
 export { RfmSection } from "./RfmSection";
+export { WeeklyTrendsSection } from "./WeeklyTrendsSection";
