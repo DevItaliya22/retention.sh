@@ -1,3 +1,4 @@
+import { isCustomerInAudience } from "@/lib/audiences";
 import { parseFreeItems, type FreeItemEntry } from "@/lib/utils/free-items";
 import {
   Prisma,
@@ -57,6 +58,17 @@ export async function applyCampaignForBill(
 
   for (const campaign of activeCampaigns) {
     if (campaign.rewardType === "NO_REWARD") continue;
+
+    const audiences = campaign.targetAudiences ?? [];
+    if (audiences.length > 0) {
+      const inAudience = await isCustomerInAudience(
+        tx,
+        businessId,
+        customerId,
+        audiences,
+      );
+      if (!inAudience) continue;
+    }
 
     if (
       campaign.minPurchaseForEarningEnabled &&

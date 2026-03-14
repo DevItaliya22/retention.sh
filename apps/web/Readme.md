@@ -74,3 +74,5 @@ https://dev.shopify.com/dashboard/207268336/apps/326460112897 go here and create
 then start ngrok , and edit the ebhook url in dev.shopify thng
 
 then just use the name if the store to connect (put the name exaclty in input )
+
+tabs https://www.fancycomponents.dev/docs/components/filter/gooey-svg-filter

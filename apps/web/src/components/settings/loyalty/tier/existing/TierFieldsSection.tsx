@@ -8,7 +8,6 @@ import {
   SETTINGS_ROW_CLASS,
 } from "@/components/settings/loyalty/common";
 import {
-  Button,
   FormControl,
   FormField,
   FormItem,
@@ -17,7 +16,6 @@ import {
   Input,
   useFormContext,
 } from "@reelo/ui/components";
-import { Trash2 } from "lucide-react";
 
 /** Form values shape for the single tier settings form (pointsPerRupee + onFinalAmount + allowSameBillRedemption + tiers). */
 export interface TierSettingsFormValues {
@@ -40,16 +38,12 @@ export interface TierSettingsFormValues {
 
 interface TierFieldsSectionProps {
   index: number;
-  onRemove: () => void;
-  canRemove: boolean;
   isTopTier?: boolean;
 }
 
 /** Single tier block (no Card): heading row + fields. Used inside TierSettingsCard with separators. */
 export function TierFieldsSection({
   index,
-  onRemove,
-  canRemove,
   isTopTier = false,
 }: TierFieldsSectionProps) {
   const form = useFormContext<TierSettingsFormValues>();
@@ -58,20 +52,6 @@ export function TierFieldsSection({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-row items-center justify-between">
-        <span className="text-sm font-medium">Tier {index + 1}</span>
-        {canRemove && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="text-muted-foreground hover:text-destructive h-8 w-8"
-            onClick={onRemove}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        )}
-      </div>
       <FormField
         control={form.control}
         name={`${prefix}.name`}

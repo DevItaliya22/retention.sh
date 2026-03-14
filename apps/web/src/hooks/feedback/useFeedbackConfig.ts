@@ -141,6 +141,107 @@ export function useFeedbackConfigQuery() {
   });
 }
 
+export interface FeedbackOverviewResponse {
+  totalFeedback: number;
+  averageRating: number;
+  positiveCount: number;
+  negativeCount: number;
+  neutralCount: number;
+  positivePercent: number;
+  negativePercent: number;
+  neutralPercent: number;
+  ratingBreakdown: { 1: number; 2: number; 3: number; 4: number; 5: number };
+  error?: string;
+}
+
+export function useFeedbackOverviewQuery() {
+  return useQuery<FeedbackOverviewResponse, Error>({
+    queryKey: ["feedbackStats", "overview"],
+    queryFn: () =>
+      fetcher<FeedbackOverviewResponse>("/api/feedback/stats/overview"),
+    placeholderData: (prev) => prev,
+    staleTime: 30_000,
+  });
+}
+
+export interface CategoryWiseStat {
+  name: string;
+  avgRating: number;
+  positive: number;
+  neutral: number;
+  negative: number;
+}
+
+export interface FeedbackCategoryWiseResponse {
+  categories: CategoryWiseStat[];
+  error?: string;
+}
+
+export function useFeedbackCategoryWiseQuery() {
+  return useQuery<FeedbackCategoryWiseResponse, Error>({
+    queryKey: ["feedbackStats", "category-wise"],
+    queryFn: () =>
+      fetcher<FeedbackCategoryWiseResponse>(
+        "/api/feedback/stats/category-wise",
+      ),
+    placeholderData: (prev) => prev,
+    staleTime: 30_000,
+  });
+}
+
+export interface HowDidYouHearOptionStat {
+  name: string;
+  count: number;
+  percent: number;
+}
+
+export interface FeedbackHowDidYouHearResponse {
+  enabled: boolean;
+  options: HowDidYouHearOptionStat[];
+  error?: string;
+}
+
+export function useFeedbackHowDidYouHearQuery() {
+  return useQuery<FeedbackHowDidYouHearResponse, Error>({
+    queryKey: ["feedbackStats", "how-did-you-hear"],
+    queryFn: () =>
+      fetcher<FeedbackHowDidYouHearResponse>(
+        "/api/feedback/stats/how-did-you-hear",
+      ),
+    placeholderData: (prev) => prev,
+    staleTime: 30_000,
+  });
+}
+
+export interface SelectionOptionStat {
+  id: string;
+  label: string;
+  count: number;
+  percent: number;
+  avgRating: number;
+  positive: number;
+  neutral: number;
+  negative: number;
+}
+
+export interface FeedbackSelectionOptionsStatsResponse {
+  totalResponses: number;
+  options: SelectionOptionStat[];
+  error?: string;
+}
+
+export function useFeedbackSelectionOptionsStatsQuery() {
+  return useQuery<FeedbackSelectionOptionsStatsResponse, Error>({
+    queryKey: ["feedbackStats", "selection-options"],
+    queryFn: () =>
+      fetcher<FeedbackSelectionOptionsStatsResponse>(
+        "/api/feedback/stats/selection-options",
+      ),
+    placeholderData: (prev) => prev,
+    staleTime: 30_000,
+  });
+}
+
 export function useUpdateFeedbackConfig() {
   const queryClient = useQueryClient();
   return useMutation<FeedbackConfigResponse, Error, FeedbackConfigUpdateInput>({

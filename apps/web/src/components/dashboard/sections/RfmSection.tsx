@@ -149,7 +149,7 @@ export function RfmSection() {
     try {
       const result = await createDraft.mutateAsync();
       router.push(
-        `/campaigns/create/${result.id}?segments=${encodeURIComponent(slug)}`,
+        `/campaigns/create/${result.id}?audience=${encodeURIComponent(`segment:${slug}`)}`,
       );
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to create campaign");

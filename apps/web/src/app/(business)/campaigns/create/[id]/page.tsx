@@ -43,23 +43,17 @@ export default async function CampaignCreatePage({ params }: Props) {
       id,
       businessId: admin.businessId,
     },
-    include: {
-      campaignSegments: { select: { segmentId: true } },
-    },
   });
 
   if (!campaign) {
     notFound();
   }
 
-  const { campaignSegments, ...campaignRest } = campaign;
-  const segmentIds = campaignSegments.map((cs) => cs.segmentId);
-
   const initialCampaign = {
-    ...campaignRest,
-    segmentIds,
+    ...campaign,
     startsAt: campaign.startsAt?.toISOString() ?? null,
     expiresAt: campaign.expiresAt.toISOString(),
+    messageScheduledAt: campaign.messageScheduledAt?.toISOString() ?? null,
     createdAt: campaign.createdAt.toISOString(),
     updatedAt: campaign.updatedAt.toISOString(),
   };

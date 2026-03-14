@@ -38,6 +38,11 @@ export interface Bill {
   customerPhone: string | null;
   customerEmail: string;
   feedbackLink: { token: string } | null;
+  feedback: {
+    rating: number | null;
+    howDidYouHear: string | null;
+    selectionOptions: { id: string; label: string }[];
+  } | null;
   lineItems: BillLineItemResponse[];
   createdAt: string;
   updatedAt: string;

@@ -172,6 +172,8 @@ export async function proxy(req: NextRequest) {
     pathname.startsWith("/bills/") ||
     pathname.startsWith("/customers/") ||
     pathname.startsWith("/campaigns/") ||
+    pathname.startsWith("/feedback-stats/") ||
+    pathname.startsWith("/loyalty-stats/") ||
     pathname.startsWith("/settings");
 
   // Protected admin routes - require valid session

@@ -43,6 +43,7 @@ export interface CampaignListItem {
   minPurchaseForRedemption: number | null;
   instantCashbackRedeemable: boolean;
   redemptionLimit: string;
+  targetAudiences: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -99,7 +100,8 @@ export function useCreateCampaignDraft() {
 
 /** Full campaign as returned by GET /api/campaigns/[id] */
 export interface CampaignFull extends CampaignListItem {
-  segmentIds: string[];
+  targetAudiences: string[];
+  messageScheduledAt: string | null;
   emailSubject: string | null;
 
   // Branding
@@ -139,7 +141,8 @@ export interface UpdateCampaignInput {
   contactNumber?: string | null;
   startsAt?: string;
   expiresAt?: string;
-  segmentIds?: string[];
+  targetAudiences?: string[];
+  messageScheduledAt?: string | null;
   status?: string;
   emailSubject?: string | null;
 

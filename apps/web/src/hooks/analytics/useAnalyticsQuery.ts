@@ -5,6 +5,7 @@ import type { AnalyticsPeriod } from "@/lib/schemas/analytics";
 import type {
   CampaignAnalyticsResponse,
   CustomerFrequencyResponse,
+  CustomersByDayResponse,
   CustomerSegmentsResponse,
   CustomerSnapshotResponse,
   FeedbackAnalyticsResponse,
@@ -14,7 +15,14 @@ import type {
   LoyaltyOverviewResponse,
   NewVsRepeatResponse,
   ReferralAnalyticsResponse,
+  ReferralMonthlyResponse,
+  ReferralOverviewResponse,
   RevenueResponse,
+  SkuCategoryBreakdownResponse,
+  SkuOverviewResponse,
+  SkuTopItemsResponse,
+  SkuTrendResponse,
+  WeeklyTrendsResponse,
 } from "@/lib/types/analytics";
 import { useQuery } from "@tanstack/react-query";
 
@@ -46,7 +54,37 @@ export function useHighlightsQuery(period: AnalyticsPeriod = "30d") {
   });
 }
 
-// --- Section 2: Revenue ---
+// --- Section 2: Customers by day (weekday / weekend / both) ---
+
+export function useCustomersByDayQuery() {
+  const tzOffsetMinutes = getBrowserTzOffsetMinutes();
+  return useQuery<CustomersByDayResponse, Error>({
+    queryKey: ["analytics", "customers-by-day", tzOffsetMinutes],
+    queryFn: () =>
+      fetcher<CustomersByDayResponse>(
+        `/api/analytics/customers-by-day?tzOffsetMinutes=${tzOffsetMinutes}`,
+      ),
+    placeholderData: (prev) => prev,
+    staleTime: 60_000,
+  });
+}
+
+// --- Section 3: Weekly trends ---
+
+export function useWeeklyTrendsQuery() {
+  const tzOffsetMinutes = getBrowserTzOffsetMinutes();
+  return useQuery<WeeklyTrendsResponse, Error>({
+    queryKey: ["analytics", "weekly-trends", tzOffsetMinutes],
+    queryFn: () =>
+      fetcher<WeeklyTrendsResponse>(
+        `/api/analytics/weekly-trends?tzOffsetMinutes=${tzOffsetMinutes}`,
+      ),
+    placeholderData: (prev) => prev,
+    staleTime: 30_000,
+  });
+}
+
+// --- Section 3: Revenue ---
 
 export function useRevenueChartQuery(period: AnalyticsPeriod = "30d") {
   const tzOffsetMinutes = getBrowserTzOffsetMinutes();
@@ -207,7 +245,95 @@ export function useInsightsQuery() {
   });
 }
 
-// --- Section 8: RFM Stats ---
+// --- Section 8: SKU & Category Analytics ---
+
+export function useSkuOverviewQuery(period: AnalyticsPeriod = "30d") {
+  const tzOffsetMinutes = getBrowserTzOffsetMinutes();
+  return useQuery<SkuOverviewResponse, Error>({
+    queryKey: ["analytics", "sku", "overview", period, tzOffsetMinutes],
+    queryFn: () =>
+      fetcher<SkuOverviewResponse>(
+        buildUrl("/api/analytics/sku/overview", period),
+      ),
+    placeholderData: (prev) => prev,
+    staleTime: 30_000,
+  });
+}
+
+export function useSkuTopItemsQuery(period: AnalyticsPeriod = "30d") {
+  const tzOffsetMinutes = getBrowserTzOffsetMinutes();
+  return useQuery<SkuTopItemsResponse, Error>({
+    queryKey: ["analytics", "sku", "top-items", period, tzOffsetMinutes],
+    queryFn: () =>
+      fetcher<SkuTopItemsResponse>(
+        buildUrl("/api/analytics/sku/top-items", period),
+      ),
+    placeholderData: (prev) => prev,
+    staleTime: 30_000,
+  });
+}
+
+export function useSkuCategoryBreakdownQuery(period: AnalyticsPeriod = "30d") {
+  const tzOffsetMinutes = getBrowserTzOffsetMinutes();
+  return useQuery<SkuCategoryBreakdownResponse, Error>({
+    queryKey: [
+      "analytics",
+      "sku",
+      "category-breakdown",
+      period,
+      tzOffsetMinutes,
+    ],
+    queryFn: () =>
+      fetcher<SkuCategoryBreakdownResponse>(
+        buildUrl("/api/analytics/sku/category-breakdown", period),
+      ),
+    placeholderData: (prev) => prev,
+    staleTime: 30_000,
+  });
+}
+
+export function useSkuTrendQuery() {
+  const tzOffsetMinutes = getBrowserTzOffsetMinutes();
+  return useQuery<SkuTrendResponse, Error>({
+    queryKey: ["analytics", "sku", "trend", tzOffsetMinutes],
+    queryFn: () =>
+      fetcher<SkuTrendResponse>(
+        `/api/analytics/sku/trend?tzOffsetMinutes=${tzOffsetMinutes}`,
+      ),
+    placeholderData: (prev) => prev,
+    staleTime: 60_000,
+  });
+}
+
+// --- Section 9: Referral Enhanced Analytics ---
+
+export function useReferralOverviewQuery(period: AnalyticsPeriod = "30d") {
+  const tzOffsetMinutes = getBrowserTzOffsetMinutes();
+  return useQuery<ReferralOverviewResponse, Error>({
+    queryKey: ["analytics", "referrals", "overview", period, tzOffsetMinutes],
+    queryFn: () =>
+      fetcher<ReferralOverviewResponse>(
+        buildUrl("/api/analytics/referrals/overview", period),
+      ),
+    placeholderData: (prev) => prev,
+    staleTime: 30_000,
+  });
+}
+
+export function useReferralMonthlyQuery() {
+  const tzOffsetMinutes = getBrowserTzOffsetMinutes();
+  return useQuery<ReferralMonthlyResponse, Error>({
+    queryKey: ["analytics", "referrals", "monthly", tzOffsetMinutes],
+    queryFn: () =>
+      fetcher<ReferralMonthlyResponse>(
+        `/api/analytics/referrals/monthly?tzOffsetMinutes=${tzOffsetMinutes}`,
+      ),
+    placeholderData: (prev) => prev,
+    staleTime: 60_000,
+  });
+}
+
+// --- Section 10: RFM Stats ---
 
 export interface RfmStatsResponse {
   totalCustomers: number;

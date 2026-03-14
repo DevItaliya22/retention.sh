@@ -1,5 +1,6 @@
 "use client";
 
+import { useWeeklyTrendsQuery } from "@/hooks/analytics/useAnalyticsQuery";
 import {
   Card,
   CardContent,
@@ -13,7 +14,7 @@ import {
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 import { SectionHeader } from "../shared";
 
-const ordersChartConfig = {
+const visitsChartConfig = {
   thisWeek: {
     label: "This week",
     color: "var(--chart-1)",
@@ -35,36 +36,16 @@ const revenueChartConfig = {
   },
 } satisfies ChartConfig;
 
-const inventoryChartConfig = {
-  inbound: {
-    label: "Inbound",
+const messagesChartConfig = {
+  thisWeek: {
+    label: "This week",
     color: "var(--chart-5)",
   },
-  outbound: {
-    label: "Outbound",
+  lastWeek: {
+    label: "Last week",
     color: "var(--chart-6)",
   },
 } satisfies ChartConfig;
-
-const weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-
-const ordersTrend = weekDays.map((day, index) => ({
-  day,
-  thisWeek: [70, 78, 82, 90, 96, 84, 74][index],
-  lastWeek: [60, 64, 68, 72, 80, 70, 61][index],
-}));
-
-const revenueTrend = weekDays.map((day, index) => ({
-  day,
-  thisWeek: [2800, 3200, 3500, 4000, 4500, 3900, 3440][index],
-  lastWeek: [2500, 2700, 2900, 3200, 3600, 3100, 2470][index],
-}));
-
-const inventoryTrend = weekDays.map((day, index) => ({
-  day,
-  inbound: [160, 175, 190, 210, 220, 195, 160][index],
-  outbound: [130, 135, 145, 160, 175, 170, 175][index],
-}));
 
 function MetricRow(props: {
   label: string;
@@ -94,7 +75,7 @@ function MetricRow(props: {
 }
 
 function MiniLineChart(props: {
-  data: any[];
+  data: { day: string; thisWeek: number; lastWeek: number }[];
   config: ChartConfig;
   primaryKey: string;
   secondaryKey: string;
@@ -148,32 +129,110 @@ function MiniLineChart(props: {
   );
 }
 
+function formatRevenue(value: number): string {
+  if (value >= 1_00_000) {
+    return `${(value / 1_00_000).toFixed(1)}L`;
+  }
+  if (value >= 1_000) {
+    return `${(value / 1_000).toFixed(1)}k`;
+  }
+  return Math.round(value).toLocaleString();
+}
+
 export function WeeklyTrendsSection() {
+  const { data, isLoading, isError, error } = useWeeklyTrendsQuery();
+
+  if (isError) {
+    return (
+      <section className="space-y-3">
+        <SectionHeader title="This Week Overview" />
+        <div className="border-destructive/20 bg-destructive/5 text-destructive rounded-lg border px-4 py-6 text-center">
+          {error?.message ?? "Failed to load weekly trends"}
+        </div>
+      </section>
+    );
+  }
+
+  const visitsData = data?.visits.data ?? [];
+  const messagesData = data?.messages.data ?? [];
+  const revenueData = data?.revenue.data ?? [];
+
+  const visitsThisTotal = data?.visits.thisWeekTotal ?? 0;
+  const visitsLastTotal = data?.visits.lastWeekTotal ?? 0;
+  const messagesThisTotal = data?.messages.thisWeekTotal ?? 0;
+  const messagesLastTotal = data?.messages.lastWeekTotal ?? 0;
+  const revenueThisTotal = data?.revenue.thisWeekTotal ?? 0;
+  const revenueLastTotal = data?.revenue.lastWeekTotal ?? 0;
+
+  const skeletonData = [
+    { day: "Mon", thisWeek: 0, lastWeek: 0 },
+    { day: "Tue", thisWeek: 0, lastWeek: 0 },
+    { day: "Wed", thisWeek: 0, lastWeek: 0 },
+    { day: "Thu", thisWeek: 0, lastWeek: 0 },
+    { day: "Fri", thisWeek: 0, lastWeek: 0 },
+    { day: "Sat", thisWeek: 0, lastWeek: 0 },
+    { day: "Sun", thisWeek: 0, lastWeek: 0 },
+  ];
+
+  const chartData = visitsData.length === 7 ? visitsData : skeletonData;
+  const messagesChartData =
+    messagesData.length === 7 ? messagesData : skeletonData;
+  const revenueChartData =
+    revenueData.length === 7 ? revenueData : skeletonData;
+
   return (
     <section className="space-y-3">
       <SectionHeader title="This Week Overview" />
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
         <Card className="from-primary/10 dark:from-primary/15 relative overflow-hidden bg-gradient-to-t to-transparent">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Orders</CardTitle>
+            <CardTitle className="text-sm font-medium">Visits</CardTitle>
           </CardHeader>
           <CardContent className="px-4 pb-4">
-            <div className="grid grid-cols-1 items-center gap-4 md:grid-cols-[minmax(0,150px),minmax(0,1fr)]">
-              <div className="space-y-3">
+            <div className="grid grid-cols-1 items-stretch gap-4 sm:grid-cols-[auto_1fr]">
+              <div className="flex flex-col justify-center gap-3">
                 <MetricRow
                   label="This week"
-                  value={574}
+                  value={isLoading ? "—" : visitsThisTotal}
                   colorClass="bg-[var(--chart-1)]"
                 />
                 <MetricRow
                   label="Last week"
-                  value={455}
+                  value={isLoading ? "—" : visitsLastTotal}
                   colorClass="bg-[var(--chart-3)]"
                 />
               </div>
               <MiniLineChart
-                data={ordersTrend}
-                config={ordersChartConfig}
+                data={chartData}
+                config={visitsChartConfig}
+                primaryKey="thisWeek"
+                secondaryKey="lastWeek"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="from-primary/10 dark:from-primary/15 relative overflow-hidden bg-gradient-to-t to-transparent">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Messages</CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pb-4">
+            <div className="grid grid-cols-1 items-stretch gap-4 sm:grid-cols-[auto_1fr]">
+              <div className="flex flex-col justify-center gap-3">
+                <MetricRow
+                  label="This week"
+                  value={isLoading ? "—" : messagesThisTotal}
+                  colorClass="bg-[var(--chart-5)]"
+                />
+                <MetricRow
+                  label="Last week"
+                  value={isLoading ? "—" : messagesLastTotal}
+                  colorClass="bg-[var(--chart-6)]"
+                />
+              </div>
+              <MiniLineChart
+                data={messagesChartData}
+                config={messagesChartConfig}
                 primaryKey="thisWeek"
                 secondaryKey="lastWeek"
               />
@@ -186,54 +245,24 @@ export function WeeklyTrendsSection() {
             <CardTitle className="text-sm font-medium">Gross Revenue</CardTitle>
           </CardHeader>
           <CardContent className="px-4 pb-4">
-            <div className="grid grid-cols-1 items-center gap-4 md:grid-cols-[minmax(0,150px),minmax(0,1fr)]">
-              <div className="space-y-3">
+            <div className="grid grid-cols-1 items-stretch gap-4 sm:grid-cols-[auto_1fr]">
+              <div className="flex flex-col justify-center gap-3">
                 <MetricRow
                   label="This week"
-                  value="25,840"
+                  value={isLoading ? "—" : formatRevenue(revenueThisTotal)}
                   colorClass="bg-[var(--chart-2)]"
                 />
                 <MetricRow
                   label="Last week"
-                  value="20,470"
+                  value={isLoading ? "—" : formatRevenue(revenueLastTotal)}
                   colorClass="bg-[var(--chart-4)]"
                 />
               </div>
               <MiniLineChart
-                data={revenueTrend}
+                data={revenueChartData}
                 config={revenueChartConfig}
                 primaryKey="thisWeek"
                 secondaryKey="lastWeek"
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="from-primary/10 dark:from-primary/15 relative overflow-hidden bg-gradient-to-t to-transparent">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">
-              Inventory Movement
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-4 pb-4">
-            <div className="grid grid-cols-1 items-center gap-4 md:grid-cols-[minmax(0,150px),minmax(0,1fr)]">
-              <div className="space-y-3">
-                <MetricRow
-                  label="Inbound"
-                  value="1,310"
-                  colorClass="bg-[var(--chart-5)]"
-                />
-                <MetricRow
-                  label="Outbound"
-                  value="1,190"
-                  colorClass="bg-[var(--chart-6)]"
-                />
-              </div>
-              <MiniLineChart
-                data={inventoryTrend}
-                config={inventoryChartConfig}
-                primaryKey="inbound"
-                secondaryKey="outbound"
               />
             </div>
           </CardContent>

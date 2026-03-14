@@ -15,6 +15,7 @@ enum MessageSource {
   REFERRAL_CLAIM
   MEMBERSHIP_ENROLLMENT
   CAMPAIGN_APPLIED
+  CAMPAIGN_BROADCAST
   QR_REWARD_EXPIRE
 }
 
@@ -37,11 +38,17 @@ model MessageLog {
   source   MessageSource
   sourceId String?
 
+  campaignId String?
+  campaign   Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+
+  scheduledAt DateTime?
+
   status    MessageStatus @default(PENDING)
   createdAt DateTime      @default(now())
 
   @@index([businessId])
   @@index([status])
   @@index([source])
+  @@index([campaignId])
   @@map("message_log")
 }

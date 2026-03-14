@@ -25,6 +25,7 @@ export * from "./dropdown-button";
 export * from "./dropdown-menu";
 export * from "./empty";
 export * from "./faceted";
+export { default as GooeySvgFilter } from "./fancy/filter/gooey-svg-filter";
 export * from "./faq";
 export * from "./form";
 export * from "./info-icon";

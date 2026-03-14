@@ -1,11 +1,20 @@
 "use client";
 
 import { CustomerImportSheet } from "@/components/customers/CustomerImportSheet";
-import { DashboardPageShell, ScaffoldSection } from "@/components/layouts";
-import { Button, Tabs, TabsList, TabsTrigger } from "@reelo/ui/components";
+import {
+  DashboardPageShell,
+  GooeyTabs,
+  ScaffoldSection,
+} from "@/components/layouts";
+import { Button } from "@reelo/ui/components";
 import { FileUp } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { ReactNode, useState } from "react";
+
+const CUSTOMERS_TABS = [
+  { value: "all", label: "Customers", path: "/customers" },
+  { value: "rfm", label: "Customer segments", path: "/customers/rfm" },
+];
 
 export default function CustomersLayout({ children }: { children: ReactNode }) {
   const [isImportSheetOpen, setIsImportSheetOpen] = useState(false);
@@ -17,7 +26,6 @@ export default function CustomersLayout({ children }: { children: ReactNode }) {
     pathname !== "/customers" &&
     pathname !== "/customers/rfm";
 
-  // Customer detail has its own page shell; avoid double headers/tabs.
   if (isCustomerDetailRoute) {
     return children;
   }
@@ -37,25 +45,14 @@ export default function CustomersLayout({ children }: { children: ReactNode }) {
       }
     >
       <ScaffoldSection isFullWidth className="pt-0!">
-        <Tabs value={activeTab} className="w-full">
-          <div className="flex items-center justify-between gap-4">
-            <TabsList className="space-x-1 p-1">
-              <TabsTrigger
-                value="all"
-                onClick={() => router.push("/customers")}
-              >
-                Customers
-              </TabsTrigger>
-              <TabsTrigger
-                value="rfm"
-                onClick={() => router.push("/customers/rfm")}
-              >
-                Customer segments
-              </TabsTrigger>
-            </TabsList>
-          </div>
-          <div className="mt-4">{children}</div>
-        </Tabs>
+        <GooeyTabs
+          gooeyId="customers-gooey"
+          tabs={CUSTOMERS_TABS}
+          activeTab={activeTab}
+          onTabChange={(path) => router.push(path)}
+        >
+          {children}
+        </GooeyTabs>
       </ScaffoldSection>
       <CustomerImportSheet
         isOpen={isImportSheetOpen}

@@ -4,6 +4,7 @@ import {
   type CampaignListItem,
   useCampaignsQuery,
 } from "@/hooks/campaigns/useCampaignsQuery";
+import { getAudienceLabel } from "@/lib/audiences/labels";
 import {
   CAMPAIGN_APPLIES_TO_LABELS,
   CAMPAIGN_REDEMPTION_LABELS,
@@ -23,7 +24,6 @@ import {
   DataTable,
   DataTableColumnHeader,
   DataTableToolbar,
-  DateDisplay,
   Empty,
   EmptyDescription,
   EmptyHeader,
@@ -69,6 +69,7 @@ function createSkeletonCampaign(id: string): CampaignListItem {
     minPurchaseForRedemption: null,
     instantCashbackRedeemable: false,
     redemptionLimit: "ONCE",
+    targetAudiences: [],
     createdAt: "",
     updatedAt: "",
   };
@@ -168,6 +169,47 @@ export function CampaignsTable({ onEdit, onDownload }: CampaignsTableProps) {
         },
       },
       {
+        id: "targetAudiences",
+        accessorKey: "targetAudiences",
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} label="Audience" />
+        ),
+        cell: ({ row }) => {
+          const campaign = row.original;
+          if (campaign.id === "empty-state") return null;
+          if (isLoading && campaign.id.startsWith("skeleton-")) {
+            return <Skeleton className="h-5 w-24" />;
+          }
+          const audiences = campaign.targetAudiences ?? [];
+          if (audiences.length === 0) {
+            return (
+              <span className="text-muted-foreground text-xs">
+                All customers
+              </span>
+            );
+          }
+          return (
+            <div className="flex flex-wrap gap-1">
+              {audiences.slice(0, 2).map((key) => (
+                <Badge
+                  key={key}
+                  variant="outline"
+                  className="text-[10px] capitalize"
+                >
+                  {getAudienceLabel(key)}
+                </Badge>
+              ))}
+              {audiences.length > 2 && (
+                <Badge variant="outline" className="text-[10px]">
+                  +{audiences.length - 2}
+                </Badge>
+              )}
+            </div>
+          );
+        },
+        enableSorting: false,
+      },
+      {
         id: "rewardType",
         accessorKey: "rewardType",
         header: ({ column }) => (
@@ -255,49 +297,49 @@ export function CampaignsTable({ onEdit, onDownload }: CampaignsTableProps) {
           })),
         },
       },
-      {
-        id: "expiresAt",
-        accessorKey: "expiresAt",
-        header: ({ column }) => (
-          <DataTableColumnHeader column={column} label="Expires" />
-        ),
-        cell: ({ row }) => {
-          const campaign = row.original;
-          if (campaign.id === "empty-state") return null;
-          if (isLoading && campaign.id.startsWith("skeleton-")) {
-            return <Skeleton className="h-4 w-24" />;
-          }
-          return (
-            <DateDisplay
-              date={campaign.expiresAt}
-              relative={false}
-              className="text-muted-foreground text-sm"
-            />
-          );
-        },
-        enableSorting: true,
-      },
-      {
-        id: "updatedAt",
-        accessorKey: "updatedAt",
-        header: ({ column }) => (
-          <DataTableColumnHeader column={column} label="Updated" />
-        ),
-        cell: ({ row }) => {
-          const campaign = row.original;
-          if (campaign.id === "empty-state") return null;
-          if (isLoading && campaign.id.startsWith("skeleton-")) {
-            return <Skeleton className="h-4 w-24" />;
-          }
-          return (
-            <DateDisplay
-              date={campaign.updatedAt}
-              className="text-muted-foreground text-sm"
-            />
-          );
-        },
-        enableSorting: true,
-      },
+      // {
+      //   id: "expiresAt",
+      //   accessorKey: "expiresAt",
+      //   header: ({ column }) => (
+      //     <DataTableColumnHeader column={column} label="Expires" />
+      //   ),
+      //   cell: ({ row }) => {
+      //     const campaign = row.original;
+      //     if (campaign.id === "empty-state") return null;
+      //     if (isLoading && campaign.id.startsWith("skeleton-")) {
+      //       return <Skeleton className="h-4 w-24" />;
+      //     }
+      //     return (
+      //       <DateDisplay
+      //         date={campaign.expiresAt}
+      //         relative={false}
+      //         className="text-muted-foreground text-sm"
+      //       />
+      //     );
+      //   },
+      //   enableSorting: true,
+      // },
+      // {
+      //   id: "updatedAt",
+      //   accessorKey: "updatedAt",
+      //   header: ({ column }) => (
+      //     <DataTableColumnHeader column={column} label="Updated" />
+      //   ),
+      //   cell: ({ row }) => {
+      //     const campaign = row.original;
+      //     if (campaign.id === "empty-state") return null;
+      //     if (isLoading && campaign.id.startsWith("skeleton-")) {
+      //       return <Skeleton className="h-4 w-24" />;
+      //     }
+      //     return (
+      //       <DateDisplay
+      //         date={campaign.updatedAt}
+      //         className="text-muted-foreground text-sm"
+      //       />
+      //     );
+      //   },
+      //   enableSorting: true,
+      // },
       {
         id: "actions",
         header: () => <span className="sr-only">Actions</span>,
