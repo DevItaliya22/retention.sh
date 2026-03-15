@@ -1,22 +1,11 @@
 "use client";
 
+import { getClosedTierMax, getNextTier } from "@/lib/loyalty/form-defaults";
 import type { LoyaltyProgramFormValues } from "@/lib/schemas/loyalty-form";
 import { Button, Separator, useFormContext } from "@reelo/ui/components";
 import { Plus } from "lucide-react";
 import { useFieldArray } from "react-hook-form";
 import { TierCard } from "./TierCard";
-
-const DEFAULT_TIER = {
-  name: "",
-  rank: 1,
-  minLifetimeSpend: 0,
-  maxLifetimeSpend: null as number | null,
-  cashbackPercentage: 0,
-  minPurchaseForRedemptionEnabled: false,
-  minPurchaseForRedemption: null as number | null,
-  maxCashbackCapEnabled: false,
-  maxCashbackCap: null as number | null,
-};
 
 export function TierEditorStep() {
   const form = useFormContext<LoyaltyProgramFormValues>();
@@ -61,12 +50,17 @@ export function TierEditorStep() {
         type="button"
         variant="outline"
         size="sm"
-        onClick={() =>
-          append({
-            ...DEFAULT_TIER,
-            rank: fields.length + 1,
-          })
-        }
+        onClick={() => {
+          const previousTier = form.getValues("tiers")?.[fields.length - 1];
+          if (previousTier && previousTier.maxLifetimeSpend == null) {
+            form.setValue(
+              `tiers.${fields.length - 1}.maxLifetimeSpend`,
+              getClosedTierMax(previousTier),
+              { shouldDirty: true, shouldValidate: true },
+            );
+          }
+          append(getNextTier(previousTier, fields.length + 1));
+        }}
       >
         <Plus className="mr-2 h-4 w-4" />
         Add tier

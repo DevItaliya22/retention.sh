@@ -2,15 +2,22 @@
 
 import { GooeyTabs } from "@/components/layouts";
 import {
+  numericInputHandlers,
   SETTINGS_CONTROL_CLASS,
   SETTINGS_LABEL_CLASS,
   SETTINGS_ROW_CLASS,
 } from "@/components/settings/loyalty/common";
 import type { LoyaltyTier } from "@/hooks/loyalty/useLoyaltySettings";
 import {
+  createDefaultTier,
+  getClosedTierMax,
+  getNextTier,
+} from "@/lib/loyalty/form-defaults";
+import {
   TIER_TOP_MAX_LIFETIME_SPEND,
   validateTierRanges,
 } from "@/lib/loyalty/helpers";
+import { tierEditorStepSchema } from "@/lib/schemas/loyalty-form";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -46,26 +53,13 @@ import { toast } from "sonner";
 import type { TierSettingsFormValues } from "./TierFieldsSection";
 import { TierFieldsSection } from "./TierFieldsSection";
 
-const DEFAULT_TIER = {
-  name: "",
-  rank: 1,
-  minLifetimeSpend: 0,
-  maxLifetimeSpend: null as number | null,
-  cashbackPercentage: 0,
-  minPurchaseForRedemptionEnabled: false,
-  minPurchaseForRedemption: null as number | null,
-  maxCashbackCapEnabled: false,
-  maxCashbackCap: null as number | null,
-};
-
 function mapTierToForm(
   tier: LoyaltyTier,
   isTopTier: boolean,
 ): TierSettingsFormValues["tiers"][number] {
-  return {
+  return createDefaultTier(tier.rank, {
     id: tier.id,
     name: tier.name,
-    rank: tier.rank,
     minLifetimeSpend: tier.minLifetimeSpend,
     maxLifetimeSpend:
       isTopTier && tier.maxLifetimeSpend === TIER_TOP_MAX_LIFETIME_SPEND
@@ -76,7 +70,7 @@ function mapTierToForm(
     minPurchaseForRedemption: tier.minPurchaseForRedemption,
     maxCashbackCapEnabled: tier.maxCashbackCapEnabled,
     maxCashbackCap: tier.maxCashbackCap,
-  };
+  });
 }
 
 type TierConfig = {
@@ -95,7 +89,7 @@ interface TierSettingsCardProps {
       allowSameBillRedemption: boolean;
       tiers: Omit<LoyaltyTier, "id">[];
     },
-    options?: { onSuccess?: () => void },
+    options?: { onSuccess?: () => void; onError?: (e: unknown) => void },
   ) => void;
   isSaving: boolean;
 }
@@ -174,20 +168,19 @@ export function TierSettingsCard({
       ),
       path: String(index),
     }));
-  }, [fields, fields.length]);
+  }, [fields]);
 
   const handleAddTier = () => {
-    const nextRank = fields.length + 1;
-    append({
-      ...DEFAULT_TIER,
-      rank: nextRank,
-    });
+    const previousTier = form.getValues("tiers")?.[fields.length - 1];
+    if (previousTier && previousTier.maxLifetimeSpend == null) {
+      form.setValue(
+        `tiers.${fields.length - 1}.maxLifetimeSpend`,
+        getClosedTierMax(previousTier),
+        { shouldDirty: true, shouldValidate: true },
+      );
+    }
+    append(getNextTier(previousTier, fields.length + 1));
     setActiveTierIndex(fields.length);
-  };
-
-  const handleRequestDelete = (index: number) => {
-    setDeleteIndex(index);
-    setDeleteOpen(true);
   };
 
   const handleConfirmDelete = () => {
@@ -211,6 +204,32 @@ export function TierSettingsCard({
     const valid = await form.trigger();
     if (!valid) throw new Error("Validation failed");
     const values = form.getValues();
+    form.clearErrors("tiers");
+    const tiersValidation = tierEditorStepSchema.safeParse({
+      tiers: values.tiers,
+    });
+    if (!tiersValidation.success) {
+      const firstIssue = tiersValidation.error.issues[0];
+      for (const issue of tiersValidation.error.issues) {
+        const [root, index, field] = issue.path;
+        if (
+          root === "tiers" &&
+          typeof index === "number" &&
+          typeof field === "string"
+        ) {
+          form.setError(`tiers.${index}.${field}` as never, {
+            type: "manual",
+            message: issue.message,
+          });
+        }
+      }
+      const message =
+        typeof firstIssue?.path?.[1] === "number" && firstIssue.path[2]
+          ? `Tier ${Number(firstIssue.path[1]) + 1}: ${String(firstIssue.path[2])} is required.`
+          : firstIssue?.message || "Please complete all tiers before saving.";
+      toast.error(message);
+      throw new Error(message);
+    }
     const validation = validateTierRanges(
       values.tiers.map((t) => ({
         rank: t.rank,
@@ -326,6 +345,7 @@ export function TierSettingsCard({
                                 if (!Number.isNaN(n))
                                   field.onChange(Math.max(0, n));
                               }}
+                              {...numericInputHandlers}
                             />
                           </FormControl>
                           <FormMessage />
@@ -450,7 +470,7 @@ export function TierSettingsCard({
             <CardFooter className="flex shrink-0 justify-end border-0 px-4 py-2">
               <SaveButton
                 onSave={runSubmit}
-                disabled={!form.formState.isDirty}
+                disabled={!form.formState.isDirty || isSaving}
                 labels={{
                   idle: "Save changes",
                   loading: "Saving",

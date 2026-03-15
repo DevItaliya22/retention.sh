@@ -3,6 +3,10 @@
  * Pre-fills the multi-step form so users can tweak instead of starting from scratch.
  */
 
+import {
+  createDefaultRewardStage,
+  createDefaultTier,
+} from "@/lib/loyalty/form-defaults";
 import type {
   LoyaltyProgramFormValues,
   LoyaltyType,
@@ -30,52 +34,40 @@ export const LOYALTY_COMMON_DEFAULTS: Partial<LoyaltyProgramFormValues> = {
 };
 
 /** Default reward stage used for AMOUNT_SPENT and VISIT_MADE (one starter reward). */
-const DEFAULT_REWARD_STAGE = {
-  pointsRequired: 100,
-  rewardType: "PERCENTAGE_DISCOUNT" as const,
-  rewardName: "10% off on next purchase",
-  freeItemSkuId: null,
-  freeItemName: null,
-  percentageValue: 10,
-  appliesToEntirePurchase: true,
-  specificProductIds: [] as string[],
-  cashAmount: null,
-  minPurchaseForRedemptionEnabled: true,
-  minPurchaseForRedemption: 200,
-  maxDiscountCapEnabled: true,
-  maxDiscountCap: 500,
-};
+const DEFAULT_REWARD_STAGE = createDefaultRewardStage();
 
 /** Default tiers for TIER type: Silver, Gold, Platinum with non-overlapping spend ranges. */
 const DEFAULT_TIERS = [
   {
-    name: "Silver",
-    rank: 1,
-    minLifetimeSpend: 0,
-    maxLifetimeSpend: 9_999,
-    cashbackPercentage: 2,
+    ...createDefaultTier(1, {
+      name: "Silver",
+      maxLifetimeSpend: 9_999,
+      cashbackPercentage: 5,
+    }),
     minPurchaseForRedemptionEnabled: false,
     minPurchaseForRedemption: null,
     maxCashbackCapEnabled: false,
     maxCashbackCap: null,
   },
   {
-    name: "Gold",
-    rank: 2,
-    minLifetimeSpend: 10_000,
-    maxLifetimeSpend: 49_999,
-    cashbackPercentage: 5,
+    ...createDefaultTier(2, {
+      name: "Gold",
+      minLifetimeSpend: 10_000,
+      maxLifetimeSpend: 49_999,
+      cashbackPercentage: 7,
+    }),
     minPurchaseForRedemptionEnabled: false,
     minPurchaseForRedemption: null,
     maxCashbackCapEnabled: false,
     maxCashbackCap: null,
   },
   {
-    name: "Platinum",
-    rank: 3,
-    minLifetimeSpend: 50_000,
-    maxLifetimeSpend: null,
-    cashbackPercentage: 10,
+    ...createDefaultTier(3, {
+      name: "Platinum",
+      minLifetimeSpend: 50_000,
+      maxLifetimeSpend: null,
+      cashbackPercentage: 10,
+    }),
     minPurchaseForRedemptionEnabled: false,
     minPurchaseForRedemption: null,
     maxCashbackCapEnabled: false,
@@ -150,7 +142,7 @@ export function getLoyaltyFormDefaults(
           {
             ...DEFAULT_REWARD_STAGE,
             pointsRequired: 50,
-            rewardName: "Free item or 10% off",
+            rewardName: "5% off",
           },
         ],
       };

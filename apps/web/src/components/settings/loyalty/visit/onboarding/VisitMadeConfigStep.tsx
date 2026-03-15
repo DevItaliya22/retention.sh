@@ -1,5 +1,6 @@
 "use client";
 
+import { numericInputHandlers } from "@/components/settings/loyalty/common";
 import type { LoyaltyProgramFormValues } from "@/lib/schemas/loyalty-form";
 import {
   FormControl,
@@ -51,6 +52,7 @@ export function VisitMadeConfigStep() {
                     v === "" ? undefined : Math.max(0, parseInt(v, 10) || 0),
                   );
                 }}
+                {...numericInputHandlers}
               />
             </FormControl>
             <FormMessage />
@@ -108,6 +110,7 @@ export function VisitMadeConfigStep() {
                           : Math.min(maxVal, Math.max(1, parseInt(v, 10) || 1)),
                       );
                     }}
+                    {...numericInputHandlers}
                   />
                 </FormControl>
                 <FormMessage />

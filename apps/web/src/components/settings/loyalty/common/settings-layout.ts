@@ -6,6 +6,9 @@ export const SETTINGS_CONTROL_CLASS = "col-span-8 flex flex-col gap-1";
 /** Prevent scroll wheel and step (up/down) from changing number inputs in multi-step/loyalty forms */
 export const numericInputHandlers = {
   onWheel: (e: React.WheelEvent<HTMLInputElement>) => e.currentTarget.blur(),
+  onFocus: (e: React.FocusEvent<HTMLInputElement>) => {
+    e.currentTarget.select();
+  },
   onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "ArrowUp" || e.key === "ArrowDown") e.preventDefault();
   },

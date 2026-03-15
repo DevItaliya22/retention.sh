@@ -34,7 +34,7 @@ export function CashbackConfigStep() {
                 min={0}
                 max={100}
                 step="0.01"
-                placeholder="10"
+                placeholder="5"
                 {...field}
                 value={field.value ?? ""}
                 onChange={(e) => {

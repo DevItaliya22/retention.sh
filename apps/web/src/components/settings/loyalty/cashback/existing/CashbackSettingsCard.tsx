@@ -8,6 +8,7 @@ import {
   SETTINGS_ROW_CLASS,
 } from "@/components/settings/loyalty/common";
 import type { LoyaltyResponse } from "@/hooks/loyalty/useLoyaltySettings";
+import { DEFAULT_LOYALTY_PERCENTAGE } from "@/lib/loyalty/form-defaults";
 import {
   Card,
   CardContent,
@@ -39,7 +40,7 @@ interface CashbackSettingsCardProps {
   config: CashbackConfig;
   onSave: (
     payload: Partial<CashbackConfig>,
-    options?: { onSuccess?: () => void },
+    options?: { onSuccess?: () => void; onError?: (e: unknown) => void },
   ) => void;
   isSaving: boolean;
 }
@@ -51,7 +52,8 @@ export function CashbackSettingsCard({
 }: CashbackSettingsCardProps) {
   const form = useForm({
     defaultValues: {
-      cashbackPercentage: config.cashbackPercentage ?? 0,
+      cashbackPercentage:
+        config.cashbackPercentage ?? DEFAULT_LOYALTY_PERCENTAGE,
       onFinalAmount: config.onFinalAmount ?? false,
       maxCashbackCap: config.maxCashbackCap ?? null,
       minPurchaseForEarningEnabled:
@@ -140,7 +142,7 @@ export function CashbackSettingsCard({
                             min={0}
                             max={100}
                             step="0.01"
-                            placeholder="10"
+                            placeholder="5"
                             {...field}
                             value={field.value ?? ""}
                             onChange={(e) => {
@@ -584,7 +586,7 @@ export function CashbackSettingsCard({
               <CardFooter className="flex shrink-0 justify-end border-0 px-4 py-2">
                 <SaveButton
                   onSave={runSubmit}
-                  disabled={!form.formState.isDirty}
+                  disabled={!form.formState.isDirty || isSaving}
                   labels={{
                     idle: "Save changes",
                     loading: "Saving",

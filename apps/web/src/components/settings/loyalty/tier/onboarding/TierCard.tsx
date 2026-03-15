@@ -3,6 +3,7 @@
 import {
   MaxCapToggleField,
   MinPurchaseToggleField,
+  numericInputHandlers,
 } from "@/components/settings/loyalty/common";
 import type { LoyaltyProgramFormValues } from "@/lib/schemas/loyalty-form";
 import {
@@ -133,6 +134,7 @@ export function TierCard({
                     const n = Number(v);
                     if (!Number.isNaN(n)) field.onChange(Math.max(1, n));
                   }}
+                  {...numericInputHandlers}
                 />
               </FormControl>
               <FormMessage />
@@ -163,13 +165,14 @@ export function TierCard({
                   onChange={(e) => {
                     const v = e.target.value;
                     if (v === "") {
-                      field.onChange(0);
+                      field.onChange(5);
                       return;
                     }
                     const n = Number(v);
                     if (!Number.isNaN(n))
                       field.onChange(Math.min(100, Math.max(0, n)));
                   }}
+                  {...numericInputHandlers}
                 />
               </FormControl>
               <FormMessage />
@@ -205,6 +208,7 @@ export function TierCard({
                     const n = Number(v);
                     if (!Number.isNaN(n)) field.onChange(Math.max(0, n));
                   }}
+                  {...numericInputHandlers}
                 />
               </FormControl>
               <FormMessage />
@@ -245,6 +249,7 @@ export function TierCard({
                     const n = Number(v);
                     if (!Number.isNaN(n)) field.onChange(Math.max(0, n));
                   }}
+                  {...numericInputHandlers}
                 />
               </FormControl>
               <FormMessage />

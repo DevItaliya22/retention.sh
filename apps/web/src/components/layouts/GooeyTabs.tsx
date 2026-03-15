@@ -100,13 +100,14 @@ export function GooeyTabs({
 
         <div
           className={cn(
-            "relative z-10 px-3 pt-4 pb-6 @lg:px-4 @xl:px-6",
+            "relative z-10 min-h-[368px] px-3 pt-4 pb-6 @lg:px-4 @xl:px-6",
             contentClassName,
           )}
         >
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}
+              className="min-h-[calc(368px-2.5rem)]"
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
