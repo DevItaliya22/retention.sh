@@ -46,6 +46,7 @@ const frequencyConfig = {
   visit2: { label: "2 visits", color: "var(--chart-2)" },
   visit3to5: { label: "3-5 visits", color: "var(--chart-3)" },
   visit6plus: { label: "6+ visits", color: "var(--chart-4)" },
+  empty: { label: "", color: "var(--chart-5)" },
 } satisfies ChartConfig;
 
 function SnapshotCards({ period }: { period: AnalyticsPeriod }) {
@@ -234,28 +235,39 @@ function NewVsRepeatChart({ period }: { period: AnalyticsPeriod }) {
 function FrequencyChart({ period }: { period: AnalyticsPeriod }) {
   const { data, isLoading } = useCustomerFrequencyQuery(period);
 
-  const pieData =
-    data?.data
-      ?.map((d) => {
-        const key =
-          d.bucket === "1 visit"
-            ? "visit1"
-            : d.bucket === "2 visits"
-              ? "visit2"
-              : d.bucket === "3-5 visits"
-                ? "visit3to5"
-                : d.bucket === "6+ visits"
-                  ? "visit6plus"
-                  : d.bucket;
+  const hasData =
+    data && Array.isArray(data.data) && data.data.some((d) => d.count > 0);
 
-        return {
-          key,
-          name: d.bucket,
-          value: d.count,
-          fill: `var(--color-${key})`,
-        };
-      })
-      .filter((d) => typeof d.value === "number" && d.value > 0) ?? [];
+  const pieData = hasData
+    ? data!.data
+        .map((d) => {
+          const key =
+            d.bucket === "1 visit"
+              ? "visit1"
+              : d.bucket === "2 visits"
+                ? "visit2"
+                : d.bucket === "3-5 visits"
+                  ? "visit3to5"
+                  : d.bucket === "6+ visits"
+                    ? "visit6plus"
+                    : d.bucket;
+
+          return {
+            key,
+            name: d.bucket,
+            value: d.count,
+            fill: `var(--color-${key})`,
+          };
+        })
+        .filter((d) => typeof d.value === "number" && d.value > 0)
+    : [
+        {
+          key: "empty",
+          name: "No data yet",
+          value: 1,
+          fill: "var(--color-empty)",
+        },
+      ];
 
   return (
     <div className="relative h-[260px] w-full">
@@ -270,7 +282,7 @@ function FrequencyChart({ period }: { period: AnalyticsPeriod }) {
             paddingAngle={2}
             stroke="hsl(var(--background))"
             strokeWidth={2}
-            labelLine
+            labelLine={hasData}
             label={(props) => {
               const { cx, cy, midAngle, outerRadius, value, name } =
                 props as unknown as {
@@ -288,6 +300,11 @@ function FrequencyChart({ period }: { period: AnalyticsPeriod }) {
               const y = cy + radius * Math.sin(-midAngle * RADIAN);
               const textAnchor = x > cx ? "start" : "end";
 
+              const display =
+                hasData && name !== "No data yet"
+                  ? `${name}: ${Number(value).toLocaleString()}`
+                  : name;
+
               return (
                 <text
                   x={x}
@@ -296,7 +313,7 @@ function FrequencyChart({ period }: { period: AnalyticsPeriod }) {
                   fill="hsl(var(--foreground))"
                   fontSize={12}
                 >
-                  {`${name}: ${Number(value).toLocaleString()}`}
+                  {display}
                 </text>
               );
             }}
@@ -312,7 +329,7 @@ function FrequencyChart({ period }: { period: AnalyticsPeriod }) {
             textAnchor="middle"
             dominantBaseline="middle"
             fill="hsl(var(--foreground))"
-            fontSize={28}
+            fontSize={24}
             fontWeight={700}
           >
             {(data?.totalVisitors ?? 0).toLocaleString()}

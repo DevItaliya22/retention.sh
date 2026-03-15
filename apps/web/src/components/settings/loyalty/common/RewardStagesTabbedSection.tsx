@@ -54,6 +54,7 @@ export function RewardStagesTabbedSection({
   useEffect(() => {
     if (fields.length > 0) return;
     append(createDefaultRewardStage(defaultStage, 0));
+    append(createDefaultRewardStage(defaultStage, 1));
   }, [append, defaultStage, fields.length]);
 
   useEffect(() => {

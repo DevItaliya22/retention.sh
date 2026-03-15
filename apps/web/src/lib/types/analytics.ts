@@ -150,42 +150,7 @@ export interface SegmentCustomersResponse {
   error?: string;
 }
 
-// --- Section 6: Engagement (3 separate responses) ---
-
-export interface FeedbackTrendPoint {
-  date: string;
-  avgRating: number;
-  count: number;
-}
-
-export interface FeedbackAnalyticsResponse {
-  total: number;
-  averageRating: number;
-  negativePercentage: number;
-  positiveCount: number;
-  negativeCount: number;
-  neutralCount: number;
-  trend: FeedbackTrendPoint[];
-  error?: string;
-}
-
-export interface CampaignAnalyticsResponse {
-  totalSent: number;
-  whatsappCount: number;
-  smsCount: number;
-  emailCount: number;
-  error?: string;
-}
-
-export interface ReferralAnalyticsResponse {
-  totalReferred: number;
-  converted: number;
-  conversionRate: number;
-  totalRewardPoints: number;
-  error?: string;
-}
-
-// --- Section 7: Insights ---
+// --- Section 6: Insights ---
 
 export interface InsightsResponse {
   revenuePareto: {
@@ -238,7 +203,7 @@ export interface WeeklyTrendsResponse {
   error?: string;
 }
 
-// --- Section 8: SKU & Category Analytics ---
+// --- Section 7: SKU & Category Analytics ---
 
 export interface SkuOverviewResponse {
   itemsSold: number;
@@ -295,7 +260,7 @@ export interface SkuTrendResponse {
   error?: string;
 }
 
-// --- Section 9: Referral Enhanced Analytics ---
+// --- Section 8: Referral Enhanced Analytics ---
 
 export interface ReferralOverviewResponse {
   totalReferrals: number;

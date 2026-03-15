@@ -6,6 +6,7 @@
 import {
   createDefaultRewardStage,
   createDefaultTier,
+  getNextRewardStage,
 } from "@/lib/loyalty/form-defaults";
 import type {
   LoyaltyProgramFormValues,
@@ -114,7 +115,9 @@ export function getLoyaltyFormDefaults(
         allowSameBillRedemption: false,
         tiers: DEFAULT_TIERS,
       };
-    case "AMOUNT_SPENT":
+    case "AMOUNT_SPENT": {
+      const firstStage = createDefaultRewardStage({}, 0);
+      const secondStage = getNextRewardStage(firstStage, 1);
       return {
         ...base,
         pointsPerRupee: 1,
@@ -125,9 +128,19 @@ export function getLoyaltyFormDefaults(
         visitIntervalEnabled: false,
         visitIntervalValue: null,
         visitIntervalUnit: null,
-        rewardStages: [{ ...DEFAULT_REWARD_STAGE }],
+        rewardStages: [firstStage, secondStage],
       };
-    case "VISIT_MADE":
+    }
+    case "VISIT_MADE": {
+      const firstStage = createDefaultRewardStage(
+        {
+          ...DEFAULT_REWARD_STAGE,
+          pointsRequired: 50,
+          rewardName: "5% off",
+        },
+        0,
+      );
+      const secondStage = getNextRewardStage(firstStage, 1);
       return {
         ...base,
         pointsPerRupee: 1,
@@ -138,14 +151,9 @@ export function getLoyaltyFormDefaults(
         visitIntervalValue: 1,
         visitIntervalUnit: "DAY",
         allowSameBillRedemption: true,
-        rewardStages: [
-          {
-            ...DEFAULT_REWARD_STAGE,
-            pointsRequired: 50,
-            rewardName: "5% off",
-          },
-        ],
+        rewardStages: [firstStage, secondStage],
       };
+    }
     default:
       return base;
   }

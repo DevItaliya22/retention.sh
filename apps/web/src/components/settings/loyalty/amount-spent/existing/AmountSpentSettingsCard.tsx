@@ -12,6 +12,7 @@ import type {
 } from "@/hooks/loyalty/useLoyaltySettings";
 import {
   createDefaultRewardStage,
+  getNextRewardStage,
   normalizeRewardStageForForm,
 } from "@/lib/loyalty/form-defaults";
 import type { LoyaltyRewardType } from "@/lib/schemas/loyalty";
@@ -92,7 +93,7 @@ export function AmountSpentSettingsCard({
       rewardStages:
         config.rewardStages?.length > 0
           ? config.rewardStages.map(mapStageToForm)
-          : [DEFAULT_STAGE],
+          : [DEFAULT_STAGE, getNextRewardStage(DEFAULT_STAGE, 1)],
     },
   });
 
