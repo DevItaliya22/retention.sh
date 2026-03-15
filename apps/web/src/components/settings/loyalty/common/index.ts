@@ -6,6 +6,8 @@ export { MaxCapToggleField } from "./MaxCapToggleField";
 export { MinPurchaseToggleField } from "./MinPurchaseToggleField";
 export { RewardStageCard } from "./RewardStageCard";
 export { RewardStageEditorStep } from "./RewardStageEditorStep";
+export { RewardStageFieldsSection } from "./RewardStageFieldsSection";
+export { RewardStagesTabbedSection } from "./RewardStagesTabbedSection";
 export {
   SETTINGS_CONTROL_CLASS,
   SETTINGS_LABEL_CLASS,

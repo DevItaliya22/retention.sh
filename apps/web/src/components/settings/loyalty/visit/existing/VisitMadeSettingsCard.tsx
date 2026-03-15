@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  RewardStageCard,
+  RewardStagesTabbedSection,
   SETTINGS_CONTROL_CLASS,
   SETTINGS_LABEL_CLASS,
   SETTINGS_ROW_CLASS,
@@ -16,7 +16,6 @@ import type {
 } from "@/lib/schemas/loyalty";
 import type { LoyaltyProgramFormValues } from "@/lib/schemas/loyalty-form";
 import {
-  Button,
   Card,
   CardContent,
   CardDescription,
@@ -40,8 +39,6 @@ import {
   Switch,
   useForm,
 } from "@reelo/ui/components";
-import { Plus } from "lucide-react";
-import { useFieldArray } from "react-hook-form";
 
 const VISIT_INTERVAL_UNITS = [
   { value: "MINUTE", label: "Minute(s)", max: 60 },
@@ -117,11 +114,6 @@ export function VisitMadeSettingsCard({
           ? config.rewardStages.map(mapStageToForm)
           : [DEFAULT_STAGE],
     },
-  });
-
-  const { fields, append, remove } = useFieldArray({
-    control: form.control,
-    name: "rewardStages",
   });
 
   const runSubmit = async () => {
@@ -376,42 +368,18 @@ export function VisitMadeSettingsCard({
                   />
                 </CardContent>
               </Card>
-              <div className="space-y-0.5 px-4">
-                <h3 className="text-foreground text-base leading-none font-semibold">
-                  Reward stages
-                </h3>
-                <p className="text-muted-foreground text-sm">
-                  Customers redeem points for these rewards.
-                </p>
-              </div>
-              {fields.map((field, index) => (
-                <Card
-                  key={field.id}
-                  className="border-border/45 bg-background/55 flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border shadow-none"
-                >
-                  <CardContent className="px-4 py-4">
-                    <RewardStageCard
-                      index={index}
-                      onRemove={() => remove(index)}
-                      canRemove={fields.length > 1}
-                    />
-                  </CardContent>
-                </Card>
-              ))}
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => append(DEFAULT_STAGE)}
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Add reward stage
-              </Button>
+              <RewardStagesTabbedSection
+                title="Reward stages"
+                description="Customers redeem points for these rewards."
+                addButtonLabel="New stage"
+                gooeyId="loyalty-visit-existing-gooey"
+                defaultStage={DEFAULT_STAGE}
+              />
             </div>
             <CardFooter className="flex shrink-0 justify-end border-0 px-4 py-2">
               <SaveButton
                 onSave={runSubmit}
-                disabled={!form.formState.isDirty}
+                disabled={!form.formState.isDirty || isSaving}
                 labels={{
                   idle: "Save changes",
                   loading: "Saving",
