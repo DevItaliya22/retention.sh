@@ -62,16 +62,6 @@ export const referralProgramStep2Schema = z
     whatsappEnabled: z.boolean().optional().default(true),
     emailEnabled: z.boolean().optional().default(false),
     smsEnabled: z.boolean().optional().default(false),
-    termsAndConditionsNewCustomer: z
-      .array(z.string().min(1).max(500))
-      .min(0)
-      .optional()
-      .nullable(),
-    termsAndConditionsExistingCustomer: z
-      .array(z.string().min(1).max(500))
-      .min(0)
-      .optional()
-      .nullable(),
   })
   .superRefine((data, ctx) => {
     if (data.existingCustomerBenefitType === "AMOUNT_CASHBACK") {
@@ -98,6 +88,19 @@ export const referralProgramStep2Schema = z
   });
 
 export const referralProgramStep3Schema = z.object({
+  termsAndConditionsNewCustomer: z
+    .array(z.string().min(1).max(500))
+    .min(0)
+    .optional()
+    .nullable(),
+  termsAndConditionsExistingCustomer: z
+    .array(z.string().min(1).max(500))
+    .min(0)
+    .optional()
+    .nullable(),
+});
+
+export const referralProgramStep4Schema = z.object({
   branding: referralBrandingSchema,
 });
 
@@ -105,6 +108,7 @@ export const referralProgramFormSchema = z.object({
   ...referralProgramStep1Schema.shape,
   ...referralProgramStep2Schema.shape,
   ...referralProgramStep3Schema.shape,
+  ...referralProgramStep4Schema.shape,
 });
 
 export type ReferralProgramFormValues = z.infer<

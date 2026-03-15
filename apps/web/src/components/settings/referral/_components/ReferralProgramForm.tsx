@@ -6,6 +6,7 @@ import {
   referralProgramStep1Schema,
   referralProgramStep2Schema,
   referralProgramStep3Schema,
+  referralProgramStep4Schema,
   type ReferralProgramFormValues,
 } from "@/lib/schemas/referral-form";
 import { getErrorMessageFromResponse } from "@/lib/utils/error-handler";
@@ -22,6 +23,7 @@ import { toast } from "sonner";
 import { ReferralProgramStep1 } from "./ReferralProgramStep1";
 import { ReferralProgramStep2 } from "./ReferralProgramStep2";
 import { ReferralProgramStep3 } from "./ReferralProgramStep3";
+import { ReferralProgramStep4 } from "./ReferralProgramStep4";
 
 interface ReferralProgramFormProps {
   initialData: any;
@@ -139,8 +141,6 @@ export function ReferralProgramForm({
           "whatsappEnabled",
           "emailEnabled",
           "smsEnabled",
-          "termsAndConditionsNewCustomer",
-          "termsAndConditionsExistingCustomer",
         ],
         schema: referralProgramStep2Schema,
         Component: ({ stepIndex, totalSteps }) => (
@@ -148,7 +148,7 @@ export function ReferralProgramForm({
             stepIndex={stepIndex}
             totalSteps={totalSteps}
             title="Existing customer benefits"
-            description="Set up rewards for customers who refer others, and add terms."
+            description="Set up rewards for customers who refer others."
             required
           >
             <ReferralProgramStep2 />
@@ -157,9 +157,28 @@ export function ReferralProgramForm({
       },
       {
         id: "step-3",
+        title: "Terms & Conditions",
+        fields: [
+          "termsAndConditionsNewCustomer",
+          "termsAndConditionsExistingCustomer",
+        ],
+        schema: referralProgramStep3Schema,
+        Component: ({ stepIndex, totalSteps }) => (
+          <StepContent
+            stepIndex={stepIndex}
+            totalSteps={totalSteps}
+            title="Terms & conditions"
+            description="Add terms & conditions for new and existing customers."
+          >
+            <ReferralProgramStep3 />
+          </StepContent>
+        ),
+      },
+      {
+        id: "step-4",
         title: "Branding & Review",
         fields: ["branding"],
-        schema: referralProgramStep3Schema,
+        schema: referralProgramStep4Schema,
         Component: ({ stepIndex, totalSteps }) => (
           <StepContent
             stepIndex={stepIndex}
@@ -167,7 +186,7 @@ export function ReferralProgramForm({
             title="Branding & review"
             description="Customize the appearance of your referral pages and review settings."
           >
-            <ReferralProgramStep3 />
+            <ReferralProgramStep4 />
           </StepContent>
         ),
       },

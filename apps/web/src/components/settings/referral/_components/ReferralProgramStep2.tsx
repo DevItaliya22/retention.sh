@@ -1,7 +1,6 @@
 "use client";
 
 import { ChannelSelector } from "@/components/common/form-sections/ChannelSelector";
-import { TermsConditionsEditor } from "@/components/common/form-sections/TermsConditionsEditor";
 import { useActiveSkusForSelect } from "@/hooks/sku/useSkusQuery";
 import type { ReferralProgramFormValues } from "@/lib/schemas/referral-form";
 import {
@@ -28,18 +27,8 @@ const BENEFIT_TYPE_OPTIONS = [
 export function ReferralProgramStep2() {
   const form = useFormContext<ReferralProgramFormValues>();
   const existingCustomerBenefitType = form.watch("existingCustomerBenefitType");
-  const lockEnabled =
-    form.watch("lockReferralPointsUntilFirstPurchase") ?? false;
   const { data: skusData } = useActiveSkusForSelect();
   const skus = skusData?.items ?? [];
-
-  const REFERRAL_PAUSE_TERM =
-    "The business may pause or end the referral program at any time. Existing earned rewards remain valid as per the configured expiry (if any).";
-  const REFERRAL_LOCK_TERM =
-    "Referrer's cashback will be locked until the person they referred makes their first bill. Locked amount shows in bill redemption UI. The referred customer can use their reward normally.";
-
-  const REFERRAL_PRESET_LABELS = [REFERRAL_PAUSE_TERM];
-
   return (
     <div className="grid gap-6">
       <FormField
@@ -186,24 +175,6 @@ export function ReferralProgramStep2() {
             <FormMessage variant="banner" />
           </FormItem>
         )}
-      />
-
-      <TermsConditionsEditor
-        name="termsAndConditionsNewCustomer"
-        label="Terms for New Customers"
-        presetLabels={REFERRAL_PRESET_LABELS}
-      />
-
-      <TermsConditionsEditor
-        name="termsAndConditionsExistingCustomer"
-        label="Terms for Existing Customers"
-        presetLabels={REFERRAL_PRESET_LABELS}
-        requiredLabels={lockEnabled ? [REFERRAL_LOCK_TERM] : []}
-        requiredHelperText={
-          lockEnabled
-            ? "This term is required because “Lock referrer's reward…” is enabled."
-            : undefined
-        }
       />
     </div>
   );
