@@ -1,5 +1,6 @@
 "use client";
 
+import { TermsConditionsEditor } from "@/components/common/form-sections/TermsConditionsEditor";
 import type { ReferralProgramFormValues } from "@/lib/schemas/referral-form";
 import {
   FormControl,
@@ -7,13 +8,8 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-  Input,
-  Textarea,
   useFormContext,
 } from "@reelo/ui/components";
-
-const textareaUnderlineClass =
-  "border-input min-h-20 border-0 border-b rounded-none bg-transparent resize-none px-0 py-3 shadow-none focus-visible:ring-0";
 
 export function ReferralProgramStep3() {
   const form = useFormContext<ReferralProgramFormValues>();
@@ -24,16 +20,14 @@ export function ReferralProgramStep3() {
     <div className="grid gap-6">
       <FormField
         control={form.control}
-        name="branding.logo"
+        name="termsAndConditionsNewCustomer"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Logo URL</FormLabel>
+            <FormLabel>Terms for New Customers</FormLabel>
             <FormControl>
-              <Input
-                variant="underline"
-                placeholder="https://..."
-                {...field}
-                value={field.value ?? ""}
+              <TermsConditionsEditor
+                name={field.name}
+                label="Terms for New Customers"
               />
             </FormControl>
             <FormMessage variant="banner" />
@@ -43,126 +37,20 @@ export function ReferralProgramStep3() {
 
       <FormField
         control={form.control}
-        name="branding.themeColor"
+        name="termsAndConditionsExistingCustomer"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Theme Color</FormLabel>
+            <FormLabel>Terms for Existing Customers</FormLabel>
             <FormControl>
-              <Input
-                variant="underline"
-                placeholder="#7c3aed"
-                {...field}
-                value={field.value ?? ""}
+              <TermsConditionsEditor
+                name={field.name}
+                label="Terms for Existing Customers"
               />
             </FormControl>
             <FormMessage variant="banner" />
           </FormItem>
         )}
       />
-
-      <FormField
-        control={form.control}
-        name="branding.textColor"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Text Color</FormLabel>
-            <FormControl>
-              <Input
-                variant="underline"
-                placeholder="#ffffff"
-                {...field}
-                value={field.value ?? ""}
-              />
-            </FormControl>
-            <FormMessage variant="banner" />
-          </FormItem>
-        )}
-      />
-
-      <FormField
-        control={form.control}
-        name="branding.bannerImage"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Banner Image URL</FormLabel>
-            <FormControl>
-              <Input
-                variant="underline"
-                placeholder="https://..."
-                {...field}
-                value={field.value ?? ""}
-              />
-            </FormControl>
-            <FormMessage variant="banner" />
-          </FormItem>
-        )}
-      />
-
-      <FormField
-        control={form.control}
-        name="branding.header"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Header</FormLabel>
-            <FormControl>
-              <Input
-                variant="underline"
-                placeholder="Welcome to our referral program"
-                {...field}
-                value={field.value ?? ""}
-              />
-            </FormControl>
-            <FormMessage variant="banner" />
-          </FormItem>
-        )}
-      />
-
-      <FormField
-        control={form.control}
-        name="branding.subtitle"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Subtitle</FormLabel>
-            <FormControl>
-              <Textarea
-                placeholder="Earn rewards by referring friends"
-                className={textareaUnderlineClass}
-                {...field}
-                value={field.value ?? ""}
-                rows={3}
-              />
-            </FormControl>
-            <FormMessage variant="banner" />
-          </FormItem>
-        )}
-      />
-
-      <div className="bg-muted/50 overflow-hidden rounded-xl border">
-        <div className="border-b px-6 py-4">
-          <h4 className="text-primary font-semibold">Review</h4>
-        </div>
-        <div className="space-y-4 p-6 text-sm">
-          <div>
-            <p className="text-muted-foreground">New Customer Benefit</p>
-            <p className="font-medium">
-              {values.newCustomerBenefitType} – {values.newCustomerBenefitValue}
-            </p>
-          </div>
-          <div>
-            <p className="text-muted-foreground">Existing Customer Benefit</p>
-            <p className="font-medium">
-              {values.existingCustomerBenefitType} –{" "}
-              {values.existingCustomerBenefitValue}
-            </p>
-          </div>
-          <div>
-            <p className="text-muted-foreground">Information Sections</p>
-            <p className="font-medium">
-              {values.informationSections?.length ?? 0}
-            </p>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
