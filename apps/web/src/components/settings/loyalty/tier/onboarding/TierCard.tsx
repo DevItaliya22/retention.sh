@@ -7,15 +7,6 @@ import {
 } from "@/components/settings/loyalty/common";
 import type { LoyaltyProgramFormValues } from "@/lib/schemas/loyalty-form";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  Button,
   FormControl,
   FormField,
   FormItem,
@@ -24,72 +15,19 @@ import {
   Input,
   useFormContext,
 } from "@reelo/ui/components";
-import { Trash2 } from "lucide-react";
-import { useState } from "react";
 
 interface TierCardProps {
   index: number;
-  onRemove: () => void;
-  canRemove: boolean;
   isTopTier?: boolean;
 }
 
-export function TierCard({
-  index,
-  onRemove,
-  canRemove,
-  isTopTier = false,
-}: TierCardProps) {
-  const [deleteOpen, setDeleteOpen] = useState(false);
+export function TierCard({ index, isTopTier = false }: TierCardProps) {
   const form = useFormContext<LoyaltyProgramFormValues>();
   const prefix = `tiers.${index}` as const;
   const minLifetimeSpend = form.watch(`${prefix}.minLifetimeSpend`) ?? 0;
 
-  const handleConfirmRemove = () => {
-    onRemove();
-    setDeleteOpen(false);
-  };
-
   return (
     <section className="space-y-4">
-      <div className="flex flex-row items-center justify-between gap-2">
-        <h2 className="text-xl font-semibold">Tier {index + 1}</h2>
-        {canRemove && (
-          <>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="text-destructive hover:bg-destructive/10 hover:text-destructive h-8 w-8"
-              onClick={() => setDeleteOpen(true)}
-              aria-label={`Delete tier ${index + 1}`}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-            <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete Tier {index + 1}?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This tier will be removed. You can add it back later if
-                    needed.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={handleConfirmRemove}
-                    className="bg-destructive hover:bg-destructive/90 text-white hover:text-white"
-                  >
-                    Delete
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </>
-        )}
-      </div>
-
       <div className="grid gap-4">
         <FormField
           control={form.control}

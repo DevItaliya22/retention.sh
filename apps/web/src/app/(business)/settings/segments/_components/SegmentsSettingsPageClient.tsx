@@ -218,105 +218,214 @@ export function SegmentsSettingsPageClient() {
       subtitle="Configure recency, frequency, and monetary thresholds. Recency = days since last visit. Frequency = number of visits. Monetary = ratio (× avg spend) or absolute (₹ lifetime spend)."
       contentVariant="contained"
     >
-      <div className="mb-4 flex items-center justify-end">
-        <Button
-          onClick={() => setIsCreateOpen(true)}
-          icon={<Plus className="h-4 w-4" />}
-        >
-          Create segment
-        </Button>
+      <div className="space-y-6">
+        <div className="bg-muted/40 flex flex-col gap-4 rounded-xl border p-4 md:flex-row md:items-center md:justify-between">
+          <div className="space-y-2">
+            <p className="text-muted-foreground text-sm font-medium">
+              Define smart customer slices using RFM-style rules.
+            </p>
+            <p className="text-muted-foreground text-xs">
+              Use recency, frequency, and monetary thresholds to group customers
+              into meaningful segments for campaigns and insights.
+            </p>
+          </div>
+          <div className="flex flex-col items-start gap-2 md:items-end">
+            <div className="text-muted-foreground flex items-center gap-3 text-xs">
+              <div>
+                <span className="text-foreground font-semibold">
+                  {segments.length}
+                </span>{" "}
+                segments
+              </div>
+              <span className="bg-border h-4 w-px" />
+              <div>
+                <span className="text-foreground font-semibold">
+                  {segments.filter((s) => s.isSystem).length}
+                </span>{" "}
+                system
+              </div>
+              <span className="bg-border h-4 w-px" />
+              <div>
+                <span className="text-foreground font-semibold">
+                  {segments.filter((s) => !s.isSystem).length}
+                </span>{" "}
+                custom
+              </div>
+            </div>
+            <Button
+              size="sm"
+              onClick={() => setIsCreateOpen(true)}
+              icon={<Plus className="h-4 w-4" />}
+            >
+              Create segment
+            </Button>
+          </div>
+        </div>
+
+        <div className="bg-card overflow-hidden rounded-xl border shadow-sm">
+          <div className="bg-muted/40 border-b px-4 py-3">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <p className="text-sm font-medium">Segment rules</p>
+                <p className="text-muted-foreground text-xs">
+                  Hover on values to see a plain-language explanation.
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="max-h-[540px] overflow-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Recency</TableHead>
+                  <TableHead>Frequency</TableHead>
+                  <TableHead>Monetary</TableHead>
+                  <TableHead className="w-[112px] text-right">
+                    Actions
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading &&
+                  Array.from({ length: 4 }).map((_, idx) => (
+                    <TableRow key={`skeleton-${idx}`}>
+                      <TableCell>
+                        <Skeleton className="h-4 w-40" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-4 w-32" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-4 w-32" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-4 w-32" />
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Skeleton className="ml-auto h-8 w-16" />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+
+                {!isLoading && segments.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={5}>
+                      <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
+                        <p className="text-sm font-medium">No segments yet</p>
+                        <p className="text-muted-foreground max-w-md text-xs">
+                          Create your first segment to start grouping customers
+                          by how recently and frequently they visit, and how
+                          much they spend.
+                        </p>
+                        <Button
+                          size="sm"
+                          onClick={() => setIsCreateOpen(true)}
+                          icon={<Plus className="h-4 w-4" />}
+                        >
+                          Create segment
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )}
+
+                {!isLoading &&
+                  segments.map((seg) => (
+                    <TableRow key={seg.id}>
+                      <TableCell className="align-top">
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{seg.name}</span>
+                            {seg.isSystem && (
+                              <span className="bg-muted text-muted-foreground rounded-full border px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase">
+                                System
+                              </span>
+                            )}
+                          </div>
+                          {seg.description && (
+                            <p className="text-muted-foreground line-clamp-2 text-xs">
+                              {seg.description}
+                            </p>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground align-top text-sm">
+                        <FilterCell
+                          display={formatFilter(
+                            seg.recencyOperator,
+                            seg.recencyValue,
+                            seg.recencyValue2,
+                            seg.recencyUnit,
+                          )}
+                          tooltip={getRecencyTooltip(
+                            seg.recencyOperator,
+                            seg.recencyValue,
+                            seg.recencyValue2,
+                            seg.recencyUnit,
+                          )}
+                        />
+                      </TableCell>
+                      <TableCell className="text-muted-foreground align-top text-sm">
+                        <FilterCell
+                          display={formatFilter(
+                            seg.frequencyOperator,
+                            seg.frequencyValue,
+                            seg.frequencyValue2,
+                            null,
+                          )}
+                          tooltip={getFrequencyTooltip(
+                            seg.frequencyOperator,
+                            seg.frequencyValue,
+                            seg.frequencyValue2,
+                          )}
+                        />
+                      </TableCell>
+                      <TableCell className="text-muted-foreground align-top text-sm">
+                        <FilterCell
+                          display={formatFilter(
+                            seg.monetaryOperator,
+                            seg.monetaryValue,
+                            seg.monetaryValue2,
+                            seg.monetaryUnit ?? "RATIO",
+                          )}
+                          tooltip={getMonetaryTooltip(
+                            seg.monetaryOperator,
+                            seg.monetaryValue,
+                            seg.monetaryValue2,
+                            seg.monetaryUnit ?? "RATIO",
+                          )}
+                        />
+                      </TableCell>
+                      <TableCell className="align-top">
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => handleEdit(seg)}
+                            disabled={isUpdating}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => handleDelete(seg)}
+                            disabled={seg.isSystem || isDeleting}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
       </div>
-      {isLoading ? (
-        <Skeleton className="h-64 w-full" />
-      ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Recency</TableHead>
-              <TableHead>Frequency</TableHead>
-              <TableHead>Monetary</TableHead>
-              <TableHead className="w-[100px]">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {segments.map((seg) => (
-              <TableRow key={seg.id}>
-                <TableCell>
-                  <span className="font-medium">{seg.name}</span>
-                </TableCell>
-                <TableCell className="text-muted-foreground text-sm">
-                  <FilterCell
-                    display={formatFilter(
-                      seg.recencyOperator,
-                      seg.recencyValue,
-                      seg.recencyValue2,
-                      seg.recencyUnit,
-                    )}
-                    tooltip={getRecencyTooltip(
-                      seg.recencyOperator,
-                      seg.recencyValue,
-                      seg.recencyValue2,
-                      seg.recencyUnit,
-                    )}
-                  />
-                </TableCell>
-                <TableCell className="text-muted-foreground text-sm">
-                  <FilterCell
-                    display={formatFilter(
-                      seg.frequencyOperator,
-                      seg.frequencyValue,
-                      seg.frequencyValue2,
-                      null,
-                    )}
-                    tooltip={getFrequencyTooltip(
-                      seg.frequencyOperator,
-                      seg.frequencyValue,
-                      seg.frequencyValue2,
-                    )}
-                  />
-                </TableCell>
-                <TableCell className="text-muted-foreground text-sm">
-                  <FilterCell
-                    display={formatFilter(
-                      seg.monetaryOperator,
-                      seg.monetaryValue,
-                      seg.monetaryValue2,
-                      seg.monetaryUnit ?? "RATIO",
-                    )}
-                    tooltip={getMonetaryTooltip(
-                      seg.monetaryOperator,
-                      seg.monetaryValue,
-                      seg.monetaryValue2,
-                      seg.monetaryUnit ?? "RATIO",
-                    )}
-                  />
-                </TableCell>
-                <TableCell>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleEdit(seg)}
-                      disabled={isUpdating}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDelete(seg)}
-                      disabled={seg.isSystem || isDeleting}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      )}
 
       {editingSegment && (
         <SegmentFormSheet

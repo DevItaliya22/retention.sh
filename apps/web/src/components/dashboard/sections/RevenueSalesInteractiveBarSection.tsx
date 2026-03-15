@@ -57,19 +57,29 @@ export function RevenueSalesInteractiveBarSection() {
     };
   }, [data]);
 
-  const chartData = data?.data ?? [];
+  const chartData =
+    data?.data && data.data.length > 0
+      ? data.data
+      : [
+          {
+            date: new Date().toISOString().slice(0, 10),
+            revenue: 0,
+            orders: 0,
+            aov: 0,
+          },
+        ];
 
   return (
     <section className="space-y-3">
       <Card className="gap-0 py-0">
-        <CardHeader className="flex flex-col items-stretch gap-0 p-0 sm:flex-row">
-          <div className="flex flex-1 flex-col justify-center gap-1 px-4 pt-4 pb-3 sm:py-0">
-            <div className="flex items-center justify-between gap-4">
+        <CardHeader className="flex flex-col items-stretch gap-0 p-0 md:flex-row">
+          <div className="flex flex-1 flex-col justify-center gap-1 px-4 pt-4 pb-3 md:py-0">
+            <div className="flex items-start justify-between gap-3 md:items-center md:gap-4">
               <div className="space-y-1">
-                <p className="text-foreground text-sm font-semibold tracking-tight">
+                <p className="text-foreground text-sm font-semibold tracking-tight md:text-base">
                   Revenue & Sales
                 </p>
-                <p className="text-muted-foreground text-xs">
+                <p className="text-muted-foreground text-xs md:text-sm">
                   Showing revenue and orders for the last {period}
                 </p>
               </div>
@@ -77,21 +87,21 @@ export function RevenueSalesInteractiveBarSection() {
             </div>
           </div>
 
-          <div className="grid w-full grid-cols-2 sm:w-[360px]">
+          <div className="grid w-full grid-cols-2 border-t md:w-[360px] md:border-t-0 md:border-l">
             {(["revenue", "orders"] as const).map((key) => {
               const metric = key as keyof typeof chartConfig;
               return (
                 <button
                   key={metric}
                   data-active={activeMetric === metric}
-                  className="data-[active=true]:bg-muted/50 relative z-30 flex w-full flex-col justify-center gap-1 border-t px-4 py-4 text-left even:border-l sm:border-t-0 sm:border-l sm:px-6 sm:py-6"
+                  className="data-[active=true]:bg-muted/50 relative z-30 flex w-full flex-col justify-center gap-1 px-4 py-4 text-left even:border-l md:px-6 md:py-6"
                   onClick={() => setActiveMetric(metric)}
                   type="button"
                 >
-                  <span className="text-muted-foreground text-xs">
+                  <span className="text-muted-foreground text-xs md:text-sm">
                     {chartConfig[metric].label}
                   </span>
-                  <span className="text-lg leading-none font-bold tabular-nums sm:text-3xl">
+                  <span className="text-xl leading-none font-bold tabular-nums md:text-3xl">
                     {isLoading ? (
                       <Skeleton className="mt-1 h-7 w-28" />
                     ) : metric === "revenue" ? (
@@ -108,8 +118,8 @@ export function RevenueSalesInteractiveBarSection() {
 
         <div className="border-b" />
 
-        <CardContent className="px-0 pt-2 pb-2 sm:pt-4 sm:pb-6">
-          <div className="relative h-[280px] w-full">
+        <CardContent className="px-0 pt-2 pb-2 sm:pt-3 sm:pb-5 md:pt-4 md:pb-6">
+          <div className="relative h-[220px] w-full sm:h-[260px] md:h-[300px]">
             <ChartContainer config={chartConfig} className="h-full w-full">
               <LineChart
                 accessibilityLayer

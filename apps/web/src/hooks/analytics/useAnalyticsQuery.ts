@@ -3,18 +3,15 @@
 import { fetcher } from "@/lib/fetcher";
 import type { AnalyticsPeriod } from "@/lib/schemas/analytics";
 import type {
-  CampaignAnalyticsResponse,
   CustomerFrequencyResponse,
   CustomersByDayResponse,
   CustomerSegmentsResponse,
   CustomerSnapshotResponse,
-  FeedbackAnalyticsResponse,
   HighlightsResponse,
   InsightsResponse,
   LoyaltyChartResponse,
   LoyaltyOverviewResponse,
   NewVsRepeatResponse,
-  ReferralAnalyticsResponse,
   ReferralMonthlyResponse,
   ReferralOverviewResponse,
   RevenueResponse,
@@ -191,47 +188,6 @@ export function useCustomerSegmentsQuery() {
     queryFn: () => fetcher<CustomerSegmentsResponse>("/api/analytics/segments"),
     placeholderData: (prev) => prev,
     staleTime: 60_000,
-  });
-}
-
-// --- Section 6: Engagement (3 hooks) ---
-
-export function useFeedbackAnalyticsQuery(period: AnalyticsPeriod = "30d") {
-  const tzOffsetMinutes = getBrowserTzOffsetMinutes();
-  return useQuery<FeedbackAnalyticsResponse, Error>({
-    queryKey: ["analytics", "feedback", period, tzOffsetMinutes],
-    queryFn: () =>
-      fetcher<FeedbackAnalyticsResponse>(
-        buildUrl("/api/analytics/feedback", period),
-      ),
-    placeholderData: (prev) => prev,
-    staleTime: 30_000,
-  });
-}
-
-export function useCampaignAnalyticsQuery(period: AnalyticsPeriod = "30d") {
-  const tzOffsetMinutes = getBrowserTzOffsetMinutes();
-  return useQuery<CampaignAnalyticsResponse, Error>({
-    queryKey: ["analytics", "campaigns", period, tzOffsetMinutes],
-    queryFn: () =>
-      fetcher<CampaignAnalyticsResponse>(
-        buildUrl("/api/analytics/campaigns", period),
-      ),
-    placeholderData: (prev) => prev,
-    staleTime: 30_000,
-  });
-}
-
-export function useReferralAnalyticsQuery(period: AnalyticsPeriod = "30d") {
-  const tzOffsetMinutes = getBrowserTzOffsetMinutes();
-  return useQuery<ReferralAnalyticsResponse, Error>({
-    queryKey: ["analytics", "referrals", period, tzOffsetMinutes],
-    queryFn: () =>
-      fetcher<ReferralAnalyticsResponse>(
-        buildUrl("/api/analytics/referrals", period),
-      ),
-    placeholderData: (prev) => prev,
-    staleTime: 30_000,
   });
 }
 
