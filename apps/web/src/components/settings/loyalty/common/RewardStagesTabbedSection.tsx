@@ -1,6 +1,10 @@
 "use client";
 
 import { GooeyTabs } from "@/components/layouts";
+import {
+  createDefaultRewardStage,
+  getNextRewardStage,
+} from "@/lib/loyalty/form-defaults";
 import type { LoyaltyProgramFormValues } from "@/lib/schemas/loyalty-form";
 import {
   AlertDialog,
@@ -31,13 +35,6 @@ interface RewardStagesTabbedSectionProps {
   defaultStage: RewardStageFormValue;
 }
 
-function cloneStage(defaultStage: RewardStageFormValue): RewardStageFormValue {
-  return {
-    ...defaultStage,
-    specificProductIds: [...(defaultStage.specificProductIds ?? [])],
-  };
-}
-
 export function RewardStagesTabbedSection({
   title,
   description,
@@ -53,6 +50,11 @@ export function RewardStagesTabbedSection({
     control: form.control,
     name: "rewardStages",
   });
+
+  useEffect(() => {
+    if (fields.length > 0) return;
+    append(createDefaultRewardStage(defaultStage, 0));
+  }, [append, defaultStage, fields.length]);
 
   useEffect(() => {
     setActiveStageIndex((prev) => {
@@ -98,7 +100,12 @@ export function RewardStagesTabbedSection({
   );
 
   const handleAddStage = () => {
-    append(cloneStage(defaultStage));
+    const previousStage = form.getValues("rewardStages")?.[fields.length - 1];
+    append(
+      previousStage
+        ? getNextRewardStage(previousStage, fields.length)
+        : createDefaultRewardStage(defaultStage, fields.length),
+    );
     setActiveStageIndex(fields.length);
   };
 

@@ -90,7 +90,10 @@ export function LoyaltyExistingSettings() {
                   toast.success("Cashback settings saved");
                   options?.onSuccess?.();
                 },
-                onError: (e) => toast.error(e.message),
+                onError: (e) => {
+                  options?.onError?.(e);
+                  toast.error(e.message);
+                },
               },
             )
           }
@@ -123,6 +126,7 @@ export function LoyaltyExistingSettings() {
               toast.success("Tier configuration saved");
               options?.onSuccess?.();
             } catch (e) {
+              options?.onError?.(e);
               toast.error(e instanceof Error ? e.message : "Failed to save");
             }
           }}
@@ -146,6 +150,7 @@ export function LoyaltyExistingSettings() {
               toast.success("Points & reward stages saved");
               options?.onSuccess?.();
             } catch (e) {
+              options?.onError?.(e);
               toast.error(e instanceof Error ? e.message : "Failed to save");
             }
           }}
@@ -169,6 +174,7 @@ export function LoyaltyExistingSettings() {
               toast.success("Visit & reward stages saved");
               options?.onSuccess?.();
             } catch (e) {
+              options?.onError?.(e);
               toast.error(e instanceof Error ? e.message : "Failed to save");
             }
           }}

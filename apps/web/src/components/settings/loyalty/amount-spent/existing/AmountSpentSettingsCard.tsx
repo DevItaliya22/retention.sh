@@ -10,8 +10,15 @@ import type {
   LoyaltyResponse,
   LoyaltyRewardStage,
 } from "@/hooks/loyalty/useLoyaltySettings";
+import {
+  createDefaultRewardStage,
+  normalizeRewardStageForForm,
+} from "@/lib/loyalty/form-defaults";
 import type { LoyaltyRewardType } from "@/lib/schemas/loyalty";
-import type { LoyaltyProgramFormValues } from "@/lib/schemas/loyalty-form";
+import {
+  rewardStagesStepSchema,
+  type LoyaltyProgramFormValues,
+} from "@/lib/schemas/loyalty-form";
 import {
   Card,
   CardContent,
@@ -31,40 +38,30 @@ import {
   Switch,
   useForm,
 } from "@reelo/ui/components";
+import { toast } from "sonner";
 
-const DEFAULT_STAGE = {
-  pointsRequired: 0,
-  rewardType: "PERCENTAGE_DISCOUNT" as const,
-  rewardName: "",
-  freeItemSkuId: null as string | null,
-  freeItemName: null as string | null,
-  percentageValue: null as number | null,
-  appliesToEntirePurchase: true,
-  specificProductIds: [] as string[],
-  cashAmount: null as number | null,
-  minPurchaseForRedemptionEnabled: false,
-  minPurchaseForRedemption: null as number | null,
-  maxDiscountCapEnabled: false,
-  maxDiscountCap: null as number | null,
-};
+const DEFAULT_STAGE = createDefaultRewardStage();
 
-function mapStageToForm(stage: LoyaltyRewardStage) {
-  return {
-    id: stage.id,
-    pointsRequired: stage.pointsRequired,
-    rewardType: stage.rewardType,
-    rewardName: stage.rewardName,
-    freeItemSkuId: stage.freeItemSkuId,
-    freeItemName: stage.freeItemName,
-    percentageValue: stage.percentageValue,
-    appliesToEntirePurchase: stage.appliesToEntirePurchase,
-    specificProductIds: stage.specificProductIds ?? [],
-    cashAmount: stage.cashAmount,
-    minPurchaseForRedemptionEnabled: stage.minPurchaseForRedemptionEnabled,
-    minPurchaseForRedemption: stage.minPurchaseForRedemption,
-    maxDiscountCapEnabled: stage.maxDiscountCapEnabled,
-    maxDiscountCap: stage.maxDiscountCap,
-  };
+function mapStageToForm(stage: LoyaltyRewardStage, index: number) {
+  return normalizeRewardStageForForm(
+    {
+      id: stage.id,
+      pointsRequired: stage.pointsRequired,
+      rewardType: stage.rewardType,
+      rewardName: stage.rewardName,
+      freeItemSkuId: stage.freeItemSkuId,
+      freeItemName: stage.freeItemName,
+      percentageValue: stage.percentageValue,
+      appliesToEntirePurchase: stage.appliesToEntirePurchase,
+      specificProductIds: stage.specificProductIds ?? [],
+      cashAmount: stage.cashAmount,
+      minPurchaseForRedemptionEnabled: stage.minPurchaseForRedemptionEnabled,
+      minPurchaseForRedemption: stage.minPurchaseForRedemption,
+      maxDiscountCapEnabled: stage.maxDiscountCapEnabled,
+      maxDiscountCap: stage.maxDiscountCap,
+    },
+    index,
+  );
 }
 
 type AmountSpentConfig = NonNullable<LoyaltyResponse["amountSpentConfig"]>;
@@ -76,7 +73,7 @@ interface AmountSpentSettingsCardProps {
       amountSpentConfig: Partial<Omit<AmountSpentConfig, "rewardStages">>;
       rewardStages: Omit<LoyaltyRewardStage, "id">[];
     },
-    options?: { onSuccess?: () => void },
+    options?: { onSuccess?: () => void; onError?: (e: unknown) => void },
   ) => void;
   isSaving: boolean;
 }
@@ -103,6 +100,32 @@ export function AmountSpentSettingsCard({
     const valid = await form.trigger();
     if (!valid) throw new Error("Validation failed");
     const values = form.getValues();
+    form.clearErrors("rewardStages");
+    const rewardStagesValidation = rewardStagesStepSchema.safeParse({
+      rewardStages: values.rewardStages,
+    });
+    if (!rewardStagesValidation.success) {
+      const firstIssue = rewardStagesValidation.error.issues[0];
+      for (const issue of rewardStagesValidation.error.issues) {
+        const [root, index, field] = issue.path;
+        if (
+          root === "rewardStages" &&
+          typeof index === "number" &&
+          typeof field === "string"
+        ) {
+          form.setError(`rewardStages.${index}.${field}` as never, {
+            type: "manual",
+            message: issue.message,
+          });
+        }
+      }
+      const message =
+        typeof firstIssue?.path?.[1] === "number" && firstIssue.path[2]
+          ? `Reward stage ${Number(firstIssue.path[1]) + 1}: ${String(firstIssue.path[2])} is required.`
+          : "Please complete all reward stages before saving.";
+      toast.error(message);
+      throw new Error(message);
+    }
     const payload = {
       amountSpentConfig: {
         pointsPerRupee: values.pointsPerRupee ?? 1,
@@ -191,6 +214,7 @@ export function AmountSpentSettingsCard({
                                   v === "" ? undefined : Math.max(0, Number(v)),
                                 );
                               }}
+                              onFocus={(e) => e.currentTarget.select()}
                             />
                           </FormControl>
                           <FormMessage />
@@ -260,6 +284,7 @@ export function AmountSpentSettingsCard({
                                     : Math.max(0, parseInt(v, 10) || 0),
                                 );
                               }}
+                              onFocus={(e) => e.currentTarget.select()}
                             />
                           </FormControl>
                           <FormMessage />

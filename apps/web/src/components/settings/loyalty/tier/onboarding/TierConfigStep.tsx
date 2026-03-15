@@ -1,5 +1,6 @@
 "use client";
 
+import { numericInputHandlers } from "@/components/settings/loyalty/common";
 import type { LoyaltyProgramFormValues } from "@/lib/schemas/loyalty-form";
 import {
   FormControl,
@@ -35,6 +36,7 @@ export function TierConfigStep() {
                   const v = e.target.value;
                   field.onChange(v === "" ? undefined : Math.max(0, Number(v)));
                 }}
+                {...numericInputHandlers}
               />
             </FormControl>
             <FormMessage />

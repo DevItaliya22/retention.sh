@@ -3,6 +3,7 @@
 import {
   MaxCapToggleField,
   MinPurchaseToggleField,
+  numericInputHandlers,
   SETTINGS_CONTROL_CLASS,
   SETTINGS_LABEL_CLASS,
   SETTINGS_ROW_CLASS,
@@ -102,6 +103,7 @@ export function TierFieldsSection({
                     const n = Number(v);
                     if (!Number.isNaN(n)) field.onChange(Math.max(1, n));
                   }}
+                  {...numericInputHandlers}
                 />
               </FormControl>
               <FormMessage />
@@ -136,13 +138,14 @@ export function TierFieldsSection({
                   onChange={(e) => {
                     const v = e.target.value;
                     if (v === "") {
-                      field.onChange(0);
+                      field.onChange(5);
                       return;
                     }
                     const n = Number(v);
                     if (!Number.isNaN(n))
                       field.onChange(Math.min(100, Math.max(0, n)));
                   }}
+                  {...numericInputHandlers}
                 />
               </FormControl>
               <FormMessage />
@@ -182,6 +185,7 @@ export function TierFieldsSection({
                     const n = Number(v);
                     if (!Number.isNaN(n)) field.onChange(Math.max(0, n));
                   }}
+                  {...numericInputHandlers}
                 />
               </FormControl>
               <FormMessage />
@@ -222,6 +226,7 @@ export function TierFieldsSection({
                     const n = Number(v);
                     if (!Number.isNaN(n)) field.onChange(Math.max(0, n));
                   }}
+                  {...numericInputHandlers}
                 />
               </FormControl>
               {isTopTier && (

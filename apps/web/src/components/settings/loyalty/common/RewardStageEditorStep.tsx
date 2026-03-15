@@ -1,26 +1,14 @@
 "use client";
 
+import {
+  createDefaultRewardStage,
+  getNextRewardStage,
+} from "@/lib/loyalty/form-defaults";
 import type { LoyaltyProgramFormValues } from "@/lib/schemas/loyalty-form";
 import { Button, Separator, useFormContext } from "@reelo/ui/components";
 import { Plus } from "lucide-react";
 import { useFieldArray } from "react-hook-form";
 import { RewardStageCard } from "./RewardStageCard";
-
-const DEFAULT_STAGE = {
-  pointsRequired: 0,
-  rewardType: "PERCENTAGE_DISCOUNT" as const,
-  rewardName: "",
-  freeItemSkuId: null as string | null,
-  freeItemName: null as string | null,
-  percentageValue: null as number | null,
-  appliesToEntirePurchase: true,
-  specificProductIds: [] as string[],
-  cashAmount: null as number | null,
-  minPurchaseForRedemptionEnabled: false,
-  minPurchaseForRedemption: null as number | null,
-  maxDiscountCapEnabled: false,
-  maxDiscountCap: null as number | null,
-};
 
 export function RewardStageEditorStep() {
   const form = useFormContext<LoyaltyProgramFormValues>();
@@ -52,7 +40,15 @@ export function RewardStageEditorStep() {
         type="button"
         variant="outline"
         size="sm"
-        onClick={() => append(DEFAULT_STAGE)}
+        onClick={() => {
+          const previousStage =
+            form.getValues("rewardStages")?.[fields.length - 1];
+          append(
+            previousStage
+              ? getNextRewardStage(previousStage, fields.length)
+              : createDefaultRewardStage({}, fields.length),
+          );
+        }}
       >
         <Plus className="mr-2 h-4 w-4" />
         Add reward stage

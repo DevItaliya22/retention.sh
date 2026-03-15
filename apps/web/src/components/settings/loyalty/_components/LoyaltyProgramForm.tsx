@@ -19,6 +19,10 @@ import {
 import { VisitMadeConfigStep } from "@/components/settings/loyalty/visit";
 import { useCreateLoyaltyMutation } from "@/hooks/loyalty/useLoyaltySettings";
 import { getLoyaltyFormDefaults } from "@/lib/constants/forms/loyalty";
+import {
+  DEFAULT_LOYALTY_PERCENTAGE,
+  DEFAULT_LOYALTY_TIER_CASHBACK,
+} from "@/lib/loyalty/form-defaults";
 import type {
   LoyaltyCreateInput,
   LoyaltyRewardType,
@@ -368,7 +372,8 @@ function valuesToPayload(values: LoyaltyProgramFormValues): LoyaltyCreateInput {
         loyaltyType: "CASHBACK",
         ...common,
         cashbackConfig: {
-          cashbackPercentage: values.cashbackPercentage ?? 0,
+          cashbackPercentage:
+            values.cashbackPercentage ?? DEFAULT_LOYALTY_PERCENTAGE,
           onFinalAmount: values.onFinalAmount ?? false,
           maxCashbackCap: values.maxCashbackCap ?? null,
           minPurchaseForEarningEnabled:
@@ -404,7 +409,8 @@ function valuesToPayload(values: LoyaltyProgramFormValues): LoyaltyCreateInput {
             rank: t.rank,
             minLifetimeSpend: t.minLifetimeSpend,
             maxLifetimeSpend: t.maxLifetimeSpend ?? null,
-            cashbackPercentage: t.cashbackPercentage ?? 0,
+            cashbackPercentage:
+              t.cashbackPercentage ?? DEFAULT_LOYALTY_TIER_CASHBACK,
             minPurchaseForRedemptionEnabled:
               t.minPurchaseForRedemptionEnabled ?? false,
             minPurchaseForRedemption: t.minPurchaseForRedemption ?? null,
@@ -506,9 +512,10 @@ const TYPE_SELECTION_STEP = {
 };
 
 export function LoyaltyProgramForm({
-  initialData,
+  initialData: _initialData,
   embedded = false,
 }: LoyaltyProgramFormProps) {
+  void _initialData;
   const queryClient = useQueryClient();
   const createMutation = useCreateLoyaltyMutation();
   const mergeValues = useLinearMultiStepFormStore((s) => s.mergeValues);
