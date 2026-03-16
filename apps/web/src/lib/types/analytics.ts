@@ -36,6 +36,21 @@ export interface RevenueResponse {
   error?: string;
 }
 
+// --- Section 2b: Feedback rating analytics ---
+
+export interface FeedbackRatingTrendPoint {
+  date: string;
+  avgRating: number;
+  count: number;
+}
+
+export interface FeedbackAnalyticsResponse {
+  trend: FeedbackRatingTrendPoint[];
+  totalFeedback: number;
+  averageRating: number;
+  error?: string;
+}
+
 // --- Section 3: Customers (4 separate responses) ---
 
 export interface CustomerSnapshotResponse {
