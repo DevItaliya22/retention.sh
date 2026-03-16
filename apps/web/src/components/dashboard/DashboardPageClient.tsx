@@ -12,10 +12,10 @@ import {
 
 export function DashboardPageClient() {
   return (
-    <div className="space-y-8 pb-8">
+    <div className="space-y-6 pb-6">
       <Suspense>
         <HighlightsSection />
-      </Suspense>{" "}
+      </Suspense>
       <Suspense>
         <WeeklyTrendsSection />
       </Suspense>

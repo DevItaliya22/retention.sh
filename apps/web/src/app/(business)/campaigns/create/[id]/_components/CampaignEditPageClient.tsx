@@ -413,6 +413,43 @@ export function CampaignEditPageClient({
     }
   });
 
+  const onFieldClick = useCallback(
+    (fieldName: string) => {
+      try {
+        form.setFocus(fieldName as keyof FormValues);
+      } catch (e) {
+        // Ignore if focus fails
+      }
+      setTimeout(() => {
+        const el =
+          document.querySelector(`[name="${fieldName}"]`) ||
+          document.getElementById(fieldName);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+          const container =
+            el.closest(".space-y-2, .space-y-4, .rounded-lg, .border") ||
+            el.parentElement;
+          if (container) {
+            container.classList.add(
+              "ring-2",
+              "ring-primary",
+              "ring-offset-2",
+              "transition-all",
+            );
+            setTimeout(() => {
+              container.classList.remove(
+                "ring-2",
+                "ring-primary",
+                "ring-offset-2",
+              );
+            }, 1500);
+          }
+        }
+      }, 50);
+    },
+    [form],
+  );
+
   // Error state
   if (isError) {
     return (
@@ -1090,9 +1127,11 @@ export function CampaignEditPageClient({
                   )}
                 />
 
-                <TermsConditionsEditor
-                  presetLabels={[...CAMPAIGN_TERMS_OPTIONS]}
-                />
+                <div id="termsAndConditions" className="rounded-lg border p-0">
+                  <TermsConditionsEditor
+                    presetLabels={[...CAMPAIGN_TERMS_OPTIONS]}
+                  />
+                </div>
               </Section>
 
               {/* ---- Campaign Creative ---- */}
@@ -1104,7 +1143,7 @@ export function CampaignEditPageClient({
                   control={form.control}
                   name="logo"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem id="logo">
                       <FormLabel>Logo</FormLabel>
                       <FormDescription>
                         Recommended size 512 x 512 px in JPG, GIF or PNG format
@@ -1229,7 +1268,7 @@ export function CampaignEditPageClient({
                   control={form.control}
                   name="bannerImage"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem id="bannerImage">
                       <FormLabel>Banner Image</FormLabel>
                       <FormDescription>
                         Recommended size 512 x 512 px in JPG, GIF or PNG format
@@ -1369,6 +1408,7 @@ export function CampaignEditPageClient({
                 branding={previewBranding}
                 businessName={businessData?.business?.name}
                 className="shadow-2xl"
+                onFieldClick={onFieldClick}
               />
             </div>
           </form>
