@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { storageAssetSchema } from "./shared";
 
 export const customersQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1).optional(),
@@ -133,6 +134,13 @@ export const customerImportItemSchema = z.object({
     .nullable(),
   isBlocked: z.boolean().optional().nullable(),
 });
+
+export const customerAvatarSchema = z.object({
+  avatarUrl: z.string().max(2048).optional().nullable(),
+  avatarAsset: storageAssetSchema.optional().nullable(),
+});
+
+export type CustomerAvatarInput = z.infer<typeof customerAvatarSchema>;
 
 export const customerImportSchema = z.object({
   items: z.array(customerImportItemSchema),

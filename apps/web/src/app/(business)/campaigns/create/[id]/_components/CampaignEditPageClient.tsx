@@ -13,6 +13,7 @@ import {
   type CampaignRewardType,
 } from "@/hooks/campaigns/useCampaignsQuery";
 import { useSegmentsQuery } from "@/hooks/segments/useSegmentsQuery";
+import { useR2Upload } from "@/hooks/storage/useR2Upload";
 import {
   CAMPAIGN_APPLIES_TO_LABELS,
   CAMPAIGN_DEFAULT_TERMS,
@@ -1168,8 +1169,9 @@ export function CampaignEditPageClient({
                         </div>
                       ) : (
                         <ImageUploadButton
-                          onFile={(dataUrl) => field.onChange(dataUrl)}
+                          onFile={(url) => field.onChange(url)}
                           label="Upload your logo"
+                          uploadType="logo"
                         />
                       )}
                       <FormMessage />
@@ -1293,9 +1295,10 @@ export function CampaignEditPageClient({
                         </div>
                       ) : (
                         <ImageUploadButton
-                          onFile={(dataUrl) => field.onChange(dataUrl)}
+                          onFile={(url) => field.onChange(url)}
                           label="Upload Your Own"
                           icon="image"
+                          uploadType="banner"
                         />
                       )}
                       <FormMessage />
@@ -1673,15 +1676,18 @@ function ImageUploadButton({
   onFile,
   label,
   icon = "upload",
+  uploadType,
 }: {
-  onFile: (dataUrl: string) => void;
+  onFile: (url: string) => void;
   label: string;
   icon?: "upload" | "image";
+  uploadType: "logo" | "banner";
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const { uploadFile, isUploading } = useR2Upload();
 
   const handleChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) return;
 
@@ -1694,18 +1700,20 @@ function ImageUploadButton({
         return;
       }
 
-      const reader = new FileReader();
-      reader.onload = () => {
-        if (typeof reader.result === "string") {
-          onFile(reader.result);
-        }
-      };
-      reader.readAsDataURL(file);
-
-      // Reset so the same file can be re-selected
-      e.target.value = "";
+      try {
+        const result = await uploadFile(file, {
+          type: uploadType === "logo" ? "business_logo" : "business_banner",
+        });
+        onFile(result.url);
+      } catch (err) {
+        toast.error(
+          err instanceof Error ? err.message : "Failed to upload image",
+        );
+      } finally {
+        e.target.value = "";
+      }
     },
-    [onFile],
+    [onFile, uploadFile, uploadType],
   );
 
   const Icon = icon === "image" ? ImagePlus : Upload;
@@ -1715,9 +1723,10 @@ function ImageUploadButton({
       type="button"
       onClick={() => inputRef.current?.click()}
       className="border-input hover:bg-muted/50 flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed py-4 text-sm font-medium transition-colors"
+      disabled={isUploading}
     >
       <Icon className="text-muted-foreground h-4 w-4" />
-      {label}
+      {isUploading ? "Uploading..." : label}
       <input
         ref={inputRef}
         type="file"
