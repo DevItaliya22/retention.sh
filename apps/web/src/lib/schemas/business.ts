@@ -9,6 +9,7 @@ import {
   themeColorSchema,
   urlSchema,
 } from "./common";
+import { storageAssetSchema } from "./shared";
 
 export const updateBusinessSchema = z.object({
   name: businessNameSchema.optional(),
@@ -35,6 +36,8 @@ export const updateBusinessSchema = z.object({
       subtitle: textSchema(500),
     })
     .optional(),
+  logoAsset: storageAssetSchema.optional(),
+  bannerImageAsset: storageAssetSchema.optional(),
 });
 
 export type UpdateBusinessInput = z.infer<typeof updateBusinessSchema>;

@@ -1,6 +1,8 @@
 "use client";
 
+import { useR2Upload } from "@/hooks/storage/useR2Upload";
 import {
+  Button,
   FormControl,
   FormField,
   FormItem,
@@ -10,6 +12,7 @@ import {
   Label,
   useFormContext,
 } from "@reelo/ui/components";
+import { useState } from "react";
 import type { FieldPath, FieldValues } from "react-hook-form";
 
 const SETTINGS_ROW_CLASS = "flex flex-col gap-2 md:grid md:grid-cols-12";
@@ -31,12 +34,17 @@ export function BrandingFormFields<T extends FieldValues>({
   const form = useFormContext<T>();
   const p = String(prefix);
   const isSettings = layout === "settings";
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [isUploadingBanner, setIsUploadingBanner] = useState(false);
+  const { uploadFile } = useR2Upload();
 
   const fields = [
     {
       name: `${p}.logo` as FieldPath<T>,
       label: "Logo URL",
       placeholder: "https://...",
+      isImage: true,
+      uploadingFlag: "logo" as const,
     },
     {
       name: `${p}.themeColor` as FieldPath<T>,
@@ -52,6 +60,8 @@ export function BrandingFormFields<T extends FieldValues>({
       name: `${p}.bannerImage` as FieldPath<T>,
       label: "Banner Image URL",
       placeholder: "https://...",
+      isImage: true,
+      uploadingFlag: "banner" as const,
     },
     {
       name: `${p}.header` as FieldPath<T>,
@@ -65,9 +75,27 @@ export function BrandingFormFields<T extends FieldValues>({
     },
   ];
 
+  const handleImageUpload = async (
+    file: File,
+    target: "logo" | "banner",
+    onChange: (value: string | null) => void,
+  ) => {
+    const setUploading =
+      target === "logo" ? setIsUploadingLogo : setIsUploadingBanner;
+    setUploading(true);
+    try {
+      const result = await uploadFile(file, {
+        type: target === "logo" ? "business_logo" : "business_banner",
+      });
+      onChange(result.url ?? null);
+    } finally {
+      setUploading(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
-      {fields.map(({ name, label, placeholder }) => (
+      {fields.map(({ name, label, placeholder, isImage, uploadingFlag }) => (
         <FormField
           key={String(name)}
           control={form.control}
@@ -84,34 +112,108 @@ export function BrandingFormFields<T extends FieldValues>({
               {isSettings ? (
                 <div className={SETTINGS_CONTROL_CLASS}>
                   <FormControl>
-                    <Input
-                      variant="underline"
-                      placeholder={placeholder}
-                      {...field}
-                      value={field.value ?? ""}
-                      onChange={(e) =>
-                        field.onChange(
-                          e.target.value === "" ? null : e.target.value,
-                        )
-                      }
-                    />
+                    <div className="flex items-center gap-2">
+                      <Input
+                        variant="underline"
+                        placeholder={placeholder}
+                        {...field}
+                        value={field.value ?? ""}
+                        onChange={(e) =>
+                          field.onChange(
+                            e.target.value === "" ? null : e.target.value,
+                          )
+                        }
+                      />
+                      {isImage && (
+                        <Button
+                          type="button"
+                          size="xs"
+                          variant="outline"
+                          disabled={
+                            uploadingFlag === "logo"
+                              ? isUploadingLogo
+                              : isUploadingBanner
+                          }
+                          onClick={() => {
+                            const input = document.createElement("input");
+                            input.type = "file";
+                            input.accept = "image/*";
+                            input.onchange = async () => {
+                              const file = input.files?.[0];
+                              if (!file) return;
+                              await handleImageUpload(
+                                file,
+                                uploadingFlag!,
+                                (v) => field.onChange(v),
+                              );
+                            };
+                            input.click();
+                          }}
+                        >
+                          {uploadingFlag === "logo"
+                            ? isUploadingLogo
+                              ? "Uploading..."
+                              : "Upload"
+                            : isUploadingBanner
+                              ? "Uploading..."
+                              : "Upload"}
+                        </Button>
+                      )}
+                    </div>
                   </FormControl>
                   <FormMessage />
                 </div>
               ) : (
                 <>
                   <FormControl>
-                    <Input
-                      variant="underline"
-                      placeholder={placeholder}
-                      {...field}
-                      value={field.value ?? ""}
-                      onChange={(e) =>
-                        field.onChange(
-                          e.target.value === "" ? null : e.target.value,
-                        )
-                      }
-                    />
+                    <div className="flex items-center gap-2">
+                      <Input
+                        variant="underline"
+                        placeholder={placeholder}
+                        {...field}
+                        value={field.value ?? ""}
+                        onChange={(e) =>
+                          field.onChange(
+                            e.target.value === "" ? null : e.target.value,
+                          )
+                        }
+                      />
+                      {isImage && (
+                        <Button
+                          type="button"
+                          size="xs"
+                          variant="outline"
+                          disabled={
+                            uploadingFlag === "logo"
+                              ? isUploadingLogo
+                              : isUploadingBanner
+                          }
+                          onClick={() => {
+                            const input = document.createElement("input");
+                            input.type = "file";
+                            input.accept = "image/*";
+                            input.onchange = async () => {
+                              const file = input.files?.[0];
+                              if (!file) return;
+                              await handleImageUpload(
+                                file,
+                                uploadingFlag!,
+                                (v) => field.onChange(v),
+                              );
+                            };
+                            input.click();
+                          }}
+                        >
+                          {uploadingFlag === "logo"
+                            ? isUploadingLogo
+                              ? "Uploading..."
+                              : "Upload"
+                            : isUploadingBanner
+                              ? "Uploading..."
+                              : "Upload"}
+                        </Button>
+                      )}
+                    </div>
                   </FormControl>
                   <FormMessage />
                 </>

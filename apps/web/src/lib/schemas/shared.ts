@@ -24,6 +24,17 @@ export const baseBusinessSchema = {
   website: urlSchema,
 };
 
+export const storageAssetSchema = z.object({
+  url: urlSchema,
+  key: z.string().max(512, "Storage key is too long").optional().nullable(),
+  contentType: z
+    .string()
+    .max(255, "Content type is too long")
+    .optional()
+    .nullable(),
+  size: z.number().int().min(0).optional().nullable(),
+});
+
 export const baseCashierSchema = {
   cashierName: nameSchema.optional().or(z.literal("")),
   cashierEmailLocalPart: cashierEmailLocalPartSchema
