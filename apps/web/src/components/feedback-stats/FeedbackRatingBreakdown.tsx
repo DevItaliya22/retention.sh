@@ -62,6 +62,7 @@ export function FeedbackRatingBreakdown() {
               <CartesianGrid vertical={false} strokeDasharray="3 3" />
               <XAxis
                 dataKey="label"
+                hide
                 tickLine={false}
                 axisLine={false}
                 tickMargin={8}
@@ -97,9 +98,12 @@ export function FeedbackRatingBreakdown() {
             </BarChart>
           </ChartContainer>
         </div>
-        <div className="mt-2 flex flex-wrap justify-between gap-2 text-center text-xs">
+        <div className="mt-3 grid grid-cols-5 gap-3 text-center text-xs">
           {chartData.map((d) => (
-            <div key={d.rating} className="flex flex-col items-center gap-1">
+            <div key={d.rating} className="flex min-w-0 flex-col items-center">
+              <span className="text-[18px] leading-none opacity-90" aria-hidden>
+                {d.label}
+              </span>
               <span className="text-muted-foreground font-medium tabular-nums">
                 {d.percent}%
               </span>
@@ -109,7 +113,7 @@ export function FeedbackRatingBreakdown() {
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="text-muted-foreground hover:text-primary h-auto px-1 py-0.5 text-[10px]"
+                  className="text-muted-foreground hover:text-primary mt-1 h-auto px-1 py-0.5 text-[10px]"
                   disabled={createDraft.isPending}
                   onClick={async () => {
                     try {

@@ -71,6 +71,7 @@ function DetailRow({
 export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
   const prefersReducedMotion = useReducedMotion();
   const [isDownloadingInvoice, setIsDownloadingInvoice] = useState(false);
+  const [isUploadingReceipt, setIsUploadingReceipt] = useState(false);
   const { data, isLoading, isError, error } = useBillQuery(billId);
   const { data: invoiceData, isLoading: isInvoiceLoading } =
     useBillInvoiceQuery(billId);
@@ -110,6 +111,46 @@ export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
     } finally {
       setIsDownloadingInvoice(false);
     }
+  };
+
+  const handleUploadReceipt = async () => {
+    if (!bill) return;
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*,application/pdf";
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      try {
+        setIsUploadingReceipt(true);
+        const params = new URLSearchParams({
+          filename: file.name,
+          contentType: file.type || "application/octet-stream",
+        });
+        const res = await fetch(
+          `/api/bills/${bill.id}/receipt?${params.toString()}`,
+          {
+            method: "POST",
+            headers: {
+              "content-type": "application/octet-stream",
+            },
+            body: await file.arrayBuffer(),
+          },
+        );
+        if (!res.ok) {
+          const data = await res.json().catch(() => null);
+          throw new Error(data?.error || "Failed to upload receipt");
+        }
+        toast.success("Receipt uploaded");
+      } catch (e) {
+        toast.error(
+          e instanceof Error ? e.message : "Failed to upload receipt",
+        );
+      } finally {
+        setIsUploadingReceipt(false);
+      }
+    };
+    input.click();
   };
 
   if (isError) {
@@ -222,6 +263,14 @@ export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
                 onClick={handleDownloadInvoice}
               >
                 {isDownloadingInvoice ? "Preparing..." : "Download invoice"}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={isUploadingReceipt || !bill}
+                onClick={handleUploadReceipt}
+              >
+                {isUploadingReceipt ? "Uploading..." : "Upload receipt"}
               </Button>
               {bill?.businessCustomerId && (
                 <Link

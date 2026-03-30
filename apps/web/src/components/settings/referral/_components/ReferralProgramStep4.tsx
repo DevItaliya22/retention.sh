@@ -1,5 +1,6 @@
 "use client";
 
+import { BrandingImageUploadFormField } from "@/components/common/form-sections/BrandingFormFields";
 import type { ReferralProgramFormValues } from "@/lib/schemas/referral-form";
 import {
   FormControl,
@@ -20,23 +21,11 @@ export function ReferralProgramStep4() {
 
   return (
     <div className="grid gap-6">
-      <FormField
-        control={form.control}
+      <BrandingImageUploadFormField<ReferralProgramFormValues>
         name="branding.logo"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Logo URL</FormLabel>
-            <FormControl>
-              <Input
-                variant="underline"
-                placeholder="https://..."
-                {...field}
-                value={field.value ?? ""}
-              />
-            </FormControl>
-            <FormMessage variant="banner" />
-          </FormItem>
-        )}
+        label="Logo"
+        uploadKind="logo"
+        formMessageVariant="banner"
       />
 
       <FormField
@@ -77,23 +66,11 @@ export function ReferralProgramStep4() {
         )}
       />
 
-      <FormField
-        control={form.control}
+      <BrandingImageUploadFormField<ReferralProgramFormValues>
         name="branding.bannerImage"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Banner Image URL</FormLabel>
-            <FormControl>
-              <Input
-                variant="underline"
-                placeholder="https://..."
-                {...field}
-                value={field.value ?? ""}
-              />
-            </FormControl>
-            <FormMessage variant="banner" />
-          </FormItem>
-        )}
+        label="Banner image"
+        uploadKind="banner"
+        formMessageVariant="banner"
       />
 
       <FormField

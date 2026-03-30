@@ -15,11 +15,12 @@ import { Skeleton } from "@reelo/ui/components/skeleton";
 import { useState } from "react";
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 
-const chartConfig = {
+const chartConfig: ChartConfig = {
   avgRating: { label: "Avg. Rating", color: "var(--chart-2)" },
-} satisfies ChartConfig;
+};
 
-function formatDateLabel(dateStr: string): string {
+function formatDateLabel(raw: string | number | undefined): string {
+  const dateStr = typeof raw === "string" ? raw : String(raw ?? "");
   const d = new Date(dateStr + "T00:00:00");
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }

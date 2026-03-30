@@ -223,9 +223,8 @@ export function LinearMultiStepForm<TValues extends FieldValues>(props: {
           <div className="shrink-0 px-4 py-4">{NavigationElement}</div>
         )}
 
-        {/* Scrollable content area - vertically centers the step */}
         <div className="flex flex-1 flex-col overflow-y-auto">
-          <div className="relative flex flex-1 items-center justify-center overflow-x-hidden px-4 pt-4 pb-28 sm:px-6">
+          <div className="relative flex flex-1 justify-center overflow-x-hidden px-4 pt-6 pb-28 sm:px-6 sm:pt-8">
             {animateSteps ? (
               <AnimatePresence mode="wait" initial={false}>
                 <motion.div
@@ -249,7 +248,7 @@ export function LinearMultiStepForm<TValues extends FieldValues>(props: {
                     duration: STEP_TRANSITION_DURATION,
                     ease: [0.32, 0.72, 0, 1],
                   }}
-                  className="flex w-full max-w-full flex-1 flex-col items-center justify-center"
+                  className="flex w-full max-w-full flex-1 flex-col items-center"
                 >
                   <StepComponent
                     formId={msf.formId}
