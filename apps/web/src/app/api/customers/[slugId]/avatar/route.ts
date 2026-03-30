@@ -1,6 +1,6 @@
 import { withAdminAuth } from "@/lib/auth/middleware";
 import { customerSlugIdParamSchema } from "@/lib/schemas/customer";
-import { r2KeyBuilders, uploadObject } from "@/lib/storage/r2";
+import { getUploadSignedUrl, r2KeyBuilders } from "@/lib/storage/r2";
 import {
   sanitizeErrorMessage,
   validateSchema,
@@ -11,7 +11,7 @@ import { z } from "zod";
 
 const avatarQuerySchema = z.object({
   filename: z.string().max(255),
-  contentType: z.string().max(255).optional(),
+  contentType: z.string().max(255),
 });
 
 export const POST = withAdminAuth<{ slugId: string }>(
@@ -60,23 +60,20 @@ export const POST = withAdminAuth<{ slugId: string }>(
         );
       }
 
-      const buffer = Buffer.from(await request.arrayBuffer());
-
       const key = r2KeyBuilders.avatar(
         businessCustomer.customer.user.id,
         filename,
       );
 
-      const uploaded = await uploadObject({
+      const uploadUrl = await getUploadSignedUrl({
         key,
-        body: buffer,
         contentType,
       });
 
       const updatedUser = await db.user.update({
         where: { id: businessCustomer.customer.user.id },
         data: {
-          image: uploaded.url,
+          image: key,
         },
         select: {
           id: true,
@@ -94,6 +91,7 @@ export const POST = withAdminAuth<{ slugId: string }>(
         email: businessCustomer.customer.email,
         phone: updatedUser.phoneNumber,
         avatarUrl: updatedUser.image,
+        avatarUploadUrl: uploadUrl,
       };
 
       return NextResponse.json({ customer: responseCustomer });

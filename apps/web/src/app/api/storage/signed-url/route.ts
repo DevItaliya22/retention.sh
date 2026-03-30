@@ -1,5 +1,4 @@
-import { withAdminAuth } from "@/lib/auth/middleware";
-import { getSignedObjectUrl } from "@/lib/storage/r2";
+import { getReadSignedUrl, normalizeR2Key } from "@/lib/storage/r2";
 import {
   sanitizeErrorMessage,
   validateSchema,
@@ -11,32 +10,7 @@ const querySchema = z.object({
   src: z.string().max(4096),
 });
 
-function resolveKeyFromSrc(src: string) {
-  const trimmed = src.trim();
-  if (!trimmed) return null;
-
-  if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://")) {
-    return trimmed.replace(/^\/+/, "");
-  }
-
-  try {
-    const parsed = new URL(trimmed);
-    const parts = parsed.pathname.split("/").filter(Boolean);
-    if (parts.length < 2) return null;
-    return parts.slice(1).join("/");
-  } catch {
-    return null;
-  }
-}
-
-function isBusinessBrandingKey(key: string, businessId: string) {
-  return (
-    key.startsWith(`business/${businessId}/branding/`) ||
-    key.startsWith(`private/business/${businessId}/branding/`)
-  );
-}
-
-export const GET = withAdminAuth(async (request, context) => {
+export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
     const validation = validateSchema(querySchema, {
@@ -46,15 +20,14 @@ export const GET = withAdminAuth(async (request, context) => {
       return NextResponse.json({ error: validation.error }, { status: 400 });
     }
 
-    const key = resolveKeyFromSrc(validation.data.src);
-    if (!key || !isBusinessBrandingKey(key, context.business.id)) {
+    const key = normalizeR2Key(validation.data.src);
+    if (!key)
       return NextResponse.json(
-        { error: "Invalid branding image path" },
+        { error: "Invalid image path" },
         { status: 400 },
       );
-    }
 
-    const signedUrl = await getSignedObjectUrl(key, 300);
+    const signedUrl = await getReadSignedUrl(key, 300);
     return NextResponse.json({ url: signedUrl });
   } catch (error: unknown) {
     return NextResponse.json(
@@ -66,4 +39,4 @@ export const GET = withAdminAuth(async (request, context) => {
       { status: 500 },
     );
   }
-});
+}

@@ -24,7 +24,6 @@ export function ReferralProgramStep4() {
       <BrandingImageUploadFormField<ReferralProgramFormValues>
         name="branding.logo"
         label="Logo"
-        uploadKind="logo"
         formMessageVariant="banner"
       />
 
@@ -69,7 +68,6 @@ export function ReferralProgramStep4() {
       <BrandingImageUploadFormField<ReferralProgramFormValues>
         name="branding.bannerImage"
         label="Banner image"
-        uploadKind="banner"
         formMessageVariant="banner"
       />
 

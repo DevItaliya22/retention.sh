@@ -3,29 +3,28 @@
 import { useCallback, useState } from "react";
 
 type UploadType =
-  | "avatar"
   | "business_logo"
   | "business_banner"
-  | "bill_receipt";
-
-type UploadResult = {
-  url: string;
-  key?: string;
-  contentType?: string;
-};
+  | "campaign_logo"
+  | "campaign_banner";
 
 type UploadOptions = {
   type: UploadType;
-  billId?: string;
+  campaignId?: string;
 };
 
 export function useR2Upload() {
-  const [isUploading, setIsUploading] = useState(false);
+  const [isGettingUploadSignedUrl, setIsGettingUploadSignedUrl] =
+    useState(false);
+  const [isGettingReadSignedUrl, setIsGettingReadSignedUrl] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const uploadFile = useCallback(
-    async (file: File, options: UploadOptions): Promise<UploadResult> => {
-      setIsUploading(true);
+  const getUploadSignedUrl = useCallback(
+    async (
+      file: File,
+      options: UploadOptions,
+    ): Promise<{ uploadUrl: string; key: string }> => {
+      setIsGettingUploadSignedUrl(true);
       setError(null);
       try {
         const params = new URLSearchParams({
@@ -34,16 +33,12 @@ export function useR2Upload() {
           contentType: file.type || "application/octet-stream",
         });
 
-        if (options.type === "bill_receipt" && options.billId) {
-          params.set("billId", options.billId);
+        if (options.campaignId) {
+          params.set("campaignId", options.campaignId);
         }
 
         const res = await fetch(`/api/storage/upload?${params.toString()}`, {
           method: "POST",
-          headers: {
-            "content-type": "application/octet-stream",
-          },
-          body: await file.arrayBuffer(),
         });
 
         if (!res.ok) {
@@ -58,18 +53,47 @@ export function useR2Upload() {
           throw new Error(message);
         }
 
-        const data = (await res.json()) as UploadResult;
+        const data = (await res.json()) as { uploadUrl: string; key: string };
         return data;
       } finally {
-        setIsUploading(false);
+        setIsGettingUploadSignedUrl(false);
       }
     },
     [],
   );
 
+  const getReadSignedUrl = useCallback(async (src: string): Promise<string> => {
+    setIsGettingReadSignedUrl(true);
+    setError(null);
+    try {
+      const trimmed = src.trim();
+      const res = await fetch(
+        `/api/storage/signed-url?src=${encodeURIComponent(trimmed)}`,
+      );
+      if (!res.ok) {
+        let message = "Failed to resolve image URL";
+        try {
+          const data = (await res.json()) as { error?: string };
+          if (data?.error) {
+            message = data.error;
+          }
+        } catch {}
+        setError(message);
+        throw new Error(message);
+      }
+
+      const data = (await res.json()) as { url: string };
+      return data.url;
+    } finally {
+      setIsGettingReadSignedUrl(false);
+    }
+  }, []);
+
   return {
-    isUploading,
+    isGettingUploadSignedUrl,
+    isGettingReadSignedUrl,
     error,
-    uploadFile,
+    getUploadSignedUrl,
+    getReadSignedUrl,
   };
 }

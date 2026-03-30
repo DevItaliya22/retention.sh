@@ -1,5 +1,5 @@
 import { withAdminAuth } from "@/lib/auth/middleware";
-import { r2KeyBuilders, uploadObject } from "@/lib/storage/r2";
+import { getUploadSignedUrl, r2KeyBuilders } from "@/lib/storage/r2";
 import {
   sanitizeErrorMessage,
   validateSchema,
@@ -14,7 +14,7 @@ const receiptParamSchema = z.object({
 
 const receiptQuerySchema = z.object({
   filename: z.string().max(255),
-  contentType: z.string().max(255).optional(),
+  contentType: z.string().max(255),
 });
 
 export const POST = withAdminAuth<{ id: string }>(
@@ -54,23 +54,24 @@ export const POST = withAdminAuth<{ id: string }>(
         );
       }
 
-      const buffer = Buffer.from(await request.arrayBuffer());
-
       const key = r2KeyBuilders.billReceipt(
         context.business.id,
         bill.id,
         queryValidation.data.filename,
       );
 
-      const uploaded = await uploadObject({
+      const uploadUrl = await getUploadSignedUrl({
         key,
-        body: buffer,
         contentType: queryValidation.data.contentType,
       });
 
       return NextResponse.json({
         bill,
-        receipt: uploaded,
+        receipt: {
+          key,
+          uploadUrl,
+          contentType: queryValidation.data.contentType,
+        },
       });
     } catch (error: unknown) {
       return NextResponse.json(

@@ -1,6 +1,5 @@
 "use client";
 
-import { useSignedImageUrl } from "@/hooks/storage/useSignedImageUrl";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { forwardRef, useState } from "react";
 import { CAMPAIGN_PREVIEW_TEMPLATES } from "./previews/config";
@@ -27,8 +26,6 @@ export const CampaignPreview = forwardRef<HTMLDivElement, CampaignPreviewProps>(
     ref,
   ) {
     const [currentIndex, setCurrentIndex] = useState(0);
-    const signedLogoUrl = useSignedImageUrl(branding.logo);
-    const signedBannerUrl = useSignedImageUrl(branding.bannerImage);
 
     const prev = () =>
       setCurrentIndex((c) =>
@@ -46,12 +43,6 @@ export const CampaignPreview = forwardRef<HTMLDivElement, CampaignPreviewProps>(
     const templateName =
       CAMPAIGN_PREVIEW_TEMPLATES[validIndex]?.name ||
       CAMPAIGN_PREVIEW_TEMPLATES[0]!.name;
-    const resolvedBranding: CampaignPreviewBranding = {
-      ...branding,
-      logo: signedLogoUrl,
-      bannerImage: signedBannerUrl,
-    };
-
     return (
       <div className="flex w-full flex-col gap-4">
         {/* Template container (receives the ref so only this part is downloaded) */}
@@ -59,7 +50,7 @@ export const CampaignPreview = forwardRef<HTMLDivElement, CampaignPreviewProps>(
           <Template
             ref={ref}
             data={data}
-            branding={resolvedBranding}
+            branding={branding}
             businessName={businessName}
             className={className}
             onFieldClick={onFieldClick}

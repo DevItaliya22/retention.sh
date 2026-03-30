@@ -1,5 +1,4 @@
 import {
-  DeleteObjectCommand,
   GetObjectCommand,
   PutObjectCommand,
   S3Client,
@@ -30,88 +29,58 @@ const r2Client = new S3Client({
   },
 });
 
-type UploadObjectParams = {
+export async function getUploadSignedUrl(params: {
   key: string;
-  body: Buffer | Uint8Array | Blob | string;
-  contentType?: string;
-};
-
-export async function uploadObject(params: UploadObjectParams) {
+  contentType: string;
+  expiresInSeconds?: number;
+}) {
   try {
     const command = new PutObjectCommand({
       Bucket: R2_BUCKET_NAME,
       Key: params.key,
-      Body: params.body,
       ContentType: params.contentType,
     });
 
-    await r2Client.send(command);
-
-    return {
-      key: params.key,
-      url: getObjectUrl(params.key),
-      contentType: params.contentType,
-    };
-  } catch (error) {
-    throw new Error(sanitizeErrorMessage(error));
-  }
-}
-
-export function getObjectUrl(key: string) {
-  return `${R2_ENDPOINT}/${R2_BUCKET_NAME}/${key}`;
-}
-
-export async function deleteObject(key: string) {
-  try {
-    const command = new DeleteObjectCommand({
-      Bucket: R2_BUCKET_NAME,
-      Key: key,
+    return await getSignedUrl(r2Client as any, command, {
+      expiresIn: params.expiresInSeconds ?? 300,
     });
-
-    await r2Client.send(command);
   } catch (error) {
     throw new Error(sanitizeErrorMessage(error));
   }
 }
 
-export async function getObject(key: string) {
+export async function getReadSignedUrl(key: string, expiresInSeconds = 300) {
   try {
     const command = new GetObjectCommand({
       Bucket: R2_BUCKET_NAME,
       Key: key,
     });
 
-    const response = await r2Client.send(command);
-    if (!response.Body) {
-      throw new Error("File body is empty");
-    }
-
-    const bytes = await response.Body.transformToByteArray();
-    return {
-      body: Buffer.from(bytes),
-      contentType: response.ContentType || "application/octet-stream",
-      cacheControl: response.CacheControl,
-      etag: response.ETag,
-      lastModified: response.LastModified,
-    };
-  } catch (error) {
-    throw new Error(sanitizeErrorMessage(error));
-  }
-}
-
-export async function getSignedObjectUrl(key: string, expiresInSeconds = 300) {
-  try {
-    const command = new GetObjectCommand({
-      Bucket: R2_BUCKET_NAME,
-      Key: key,
-    });
-
-    return await getSignedUrl(r2Client, command, {
+    return await getSignedUrl(r2Client as any, command, {
       expiresIn: expiresInSeconds,
     });
   } catch (error) {
     throw new Error(sanitizeErrorMessage(error));
   }
+}
+
+function safeFilename(filename: string) {
+  const segments = filename.split(".");
+  const ext = segments.length > 1 ? (segments.pop() ?? "") : "";
+  const name = segments.join(".") || "file";
+  const normalizedName = name
+    .toLowerCase()
+    .replace(/[^a-z0-9-_]/g, "-")
+    .replace(/-+/g, "-")
+    .slice(0, 60);
+  const normalizedExt = ext
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "")
+    .slice(0, 10);
+  const stamp = Date.now();
+  return normalizedExt
+    ? `${normalizedName}-${stamp}.${normalizedExt}`
+    : `${normalizedName}-${stamp}`;
 }
 
 export const r2KeyBuilders = {
@@ -123,9 +92,35 @@ export const r2KeyBuilders = {
     assetType: "logo" | "banner",
     filename: string,
   ) {
-    return `business/${businessId}/branding/${assetType}/${filename}`;
+    return `business/${businessId}/branding/${assetType}/${safeFilename(filename)}`;
+  },
+  campaignAsset(
+    businessId: string,
+    campaignId: string,
+    assetType: "logo" | "banner",
+    filename: string,
+  ) {
+    return `business/${businessId}/campaigns/${campaignId}/${assetType}/${safeFilename(filename)}`;
   },
   billReceipt(businessId: string, billId: string, filename: string) {
     return `bills/${businessId}/${billId}/receipts/${filename}`;
   },
 };
+
+export function normalizeR2Key(src: string) {
+  const trimmed = src.trim();
+  if (!trimmed) return null;
+
+  if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://")) {
+    return trimmed.replace(/^\/+/, "");
+  }
+
+  try {
+    const parsed = new URL(trimmed);
+    const parts = parsed.pathname.split("/").filter(Boolean);
+    if (parts.length < 2) return null;
+    return parts.slice(1).join("/");
+  } catch {
+    return null;
+  }
+}
