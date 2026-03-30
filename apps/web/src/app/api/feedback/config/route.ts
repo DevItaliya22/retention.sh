@@ -51,32 +51,36 @@ export const PUT = withAdminAuth(async (request: NextRequest, context) => {
       where: { businessId },
     });
 
-    // Handle branding upsert if provided
+    // Branding: only feedback's Branding row (or a new one). Never update Business.defaultBranding.
+    // If feedback still pointed at the shared business-default row, create a dedicated row instead.
     let brandingId: string | null | undefined = undefined;
     if (data.branding !== undefined) {
       if (data.branding === null) {
         brandingId = null;
       } else {
-        const branding = await db.branding.upsert({
-          where: { businessId },
-          create: {
-            businessId,
-            logo: data.branding.logo ?? null,
-            themeColor: data.branding.themeColor ?? null,
-            textColor: data.branding.textColor ?? null,
-            bannerImage: data.branding.bannerImage ?? null,
-            header: data.branding.header ?? null,
-            subtitle: data.branding.subtitle ?? null,
-          },
-          update: {
-            logo: data.branding.logo ?? null,
-            themeColor: data.branding.themeColor ?? null,
-            textColor: data.branding.textColor ?? null,
-            bannerImage: data.branding.bannerImage ?? null,
-            header: data.branding.header ?? null,
-            subtitle: data.branding.subtitle ?? null,
-          },
-        });
+        const payload = {
+          logo: data.branding.logo ?? null,
+          themeColor: data.branding.themeColor ?? null,
+          textColor: data.branding.textColor ?? null,
+          bannerImage: data.branding.bannerImage ?? null,
+          header: data.branding.header ?? null,
+          subtitle: data.branding.subtitle ?? null,
+        };
+        const existingBranding = existing?.brandingId
+          ? await db.branding.findUnique({
+              where: { id: existing.brandingId },
+              select: { id: true, businessId: true },
+            })
+          : null;
+        const branding =
+          existingBranding && !existingBranding.businessId
+            ? await db.branding.update({
+                where: { id: existingBranding.id },
+                data: payload,
+              })
+            : await db.branding.create({
+                data: payload as any,
+              });
         brandingId = branding.id;
       }
     }

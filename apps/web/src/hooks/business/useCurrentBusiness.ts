@@ -22,6 +22,7 @@ export interface CurrentBusiness {
   defaultPointsName: string;
   defaultCurrencySymbol: string;
   defaultCurrencyCode: string;
+  useDefaultBrandingForServices: boolean;
   registrationBonusPoints: number;
   nextBillNumber: number;
   defaultBranding?: CurrentBusinessBranding | null;
@@ -58,6 +59,7 @@ export interface UpdateBusinessInput {
   defaultPointsName?: string;
   defaultCurrencySymbol?: string;
   defaultCurrencyCode?: string;
+  useDefaultBrandingForServices?: boolean;
   registrationBonusPoints?: number;
   nextBillNumber?: number;
   serviceEnabled?: IsServiceEnabled;
@@ -79,7 +81,7 @@ export function useUpdateBusiness() {
         body: JSON.stringify(payload),
       });
     },
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
       queryClient.setQueryData<CurrentBusinessResponse | undefined>(
         ["currentBusiness"],
         (existing) => {
@@ -92,6 +94,13 @@ export function useUpdateBusiness() {
           };
         },
       );
+      const shouldRefreshServiceBranding =
+        variables.defaultBranding !== undefined ||
+        variables.useDefaultBrandingForServices === true;
+      if (shouldRefreshServiceBranding) {
+        queryClient.invalidateQueries({ queryKey: ["loyalty-settings"] });
+        queryClient.invalidateQueries({ queryKey: ["feedbackConfig"] });
+      }
     },
   });
 }

@@ -15,6 +15,45 @@ import {
 import { db } from "@reelo/db";
 import { NextResponse } from "next/server";
 
+type BrandingShape = {
+  logo?: string | null;
+  themeColor?: string | null;
+  textColor?: string | null;
+  bannerImage?: string | null;
+  header?: string | null;
+  subtitle?: string | null;
+};
+
+function isMissing(value: unknown) {
+  if (value === null || value === undefined || value === "") return true;
+  if (typeof value === "string" && value.trim() === "") return true;
+  return false;
+}
+
+function fillMissingBranding(
+  current: BrandingShape | null | undefined,
+  defaults: BrandingShape,
+): BrandingShape {
+  return {
+    logo: isMissing(current?.logo) ? (defaults.logo ?? null) : current?.logo,
+    themeColor: isMissing(current?.themeColor)
+      ? (defaults.themeColor ?? null)
+      : current?.themeColor,
+    textColor: isMissing(current?.textColor)
+      ? (defaults.textColor ?? null)
+      : current?.textColor,
+    bannerImage: isMissing(current?.bannerImage)
+      ? (defaults.bannerImage ?? null)
+      : current?.bannerImage,
+    header: isMissing(current?.header)
+      ? (defaults.header ?? null)
+      : current?.header,
+    subtitle: isMissing(current?.subtitle)
+      ? (defaults.subtitle ?? null)
+      : current?.subtitle,
+  };
+}
+
 /** GET returns current business or null when admin has no business (onboarding). */
 export const GET = withAdminAuthOptionalBusiness(async (request, context) => {
   try {
@@ -74,6 +113,7 @@ export const PUT = withAdminAuth(async (request, context) => {
       where: { id: businessId },
       select: {
         isServiceEnabled: true,
+        useDefaultBrandingForServices: true,
         feedbackConfig: { select: { id: true } },
       },
     });
@@ -121,6 +161,8 @@ export const PUT = withAdminAuth(async (request, context) => {
           defaultCurrencySymbol:
             validatedData.defaultCurrencySymbol ?? undefined,
           defaultCurrencyCode: validatedData.defaultCurrencyCode ?? undefined,
+          useDefaultBrandingForServices:
+            validatedData.useDefaultBrandingForServices ?? undefined,
           registrationBonusPoints:
             validatedData.registrationBonusPoints ?? undefined,
           nextBillNumber: validatedData.nextBillNumber ?? undefined,
@@ -162,6 +204,133 @@ export const PUT = withAdminAuth(async (request, context) => {
         },
       });
     });
+
+    // Propagate default branding into referral / campaigns / feedback / loyalty when:
+    // - "Use default branding" is on, and
+    // - This request changed default branding (or turned that switch on).
+    // Service on/off flags do not gate this; only whether a row exists (e.g. feedbackConfig).
+    const previousUseDefault = business?.useDefaultBrandingForServices ?? false;
+    const turnedOnDefaultBranding =
+      validatedData.useDefaultBrandingForServices === true &&
+      !previousUseDefault;
+    const shouldCascadeBranding =
+      updated.useDefaultBrandingForServices &&
+      updated.defaultBranding &&
+      (validatedData.defaultBranding !== undefined || turnedOnDefaultBranding);
+
+    const defaultBrandingRow = updated.defaultBranding;
+    if (shouldCascadeBranding && defaultBrandingRow) {
+      const defaults: BrandingShape = {
+        logo: defaultBrandingRow.logo ?? null,
+        themeColor: defaultBrandingRow.themeColor ?? null,
+        textColor: defaultBrandingRow.textColor ?? null,
+        bannerImage: defaultBrandingRow.bannerImage ?? null,
+        header: defaultBrandingRow.header ?? null,
+        subtitle: defaultBrandingRow.subtitle ?? null,
+      };
+
+      // Referral keeps branding in JSON; backfill only missing fields.
+      const referralProgram = await db.referralProgram.findUnique({
+        where: { businessId },
+        select: { id: true, branding: true },
+      });
+      if (referralProgram) {
+        const mergedReferralBranding = fillMissingBranding(
+          (referralProgram.branding as BrandingShape | null | undefined) ??
+            null,
+          defaults,
+        );
+        await db.referralProgram.update({
+          where: { id: referralProgram.id },
+          data: { branding: mergedReferralBranding as any },
+        });
+      }
+
+      // Campaign stores branding columns directly; fill only null fields.
+      if (defaults.logo != null) {
+        await db.campaign.updateMany({
+          where: { businessId, logo: null },
+          data: { logo: defaults.logo },
+        });
+      }
+      if (defaults.themeColor != null) {
+        await db.campaign.updateMany({
+          where: { businessId, themeColor: null },
+          data: { themeColor: defaults.themeColor },
+        });
+      }
+      if (defaults.textColor != null) {
+        await db.campaign.updateMany({
+          where: { businessId, textColor: null },
+          data: { textColor: defaults.textColor },
+        });
+      }
+      if (defaults.bannerImage != null) {
+        await db.campaign.updateMany({
+          where: { businessId, bannerImage: null },
+          data: { bannerImage: defaults.bannerImage },
+        });
+      }
+
+      const feedbackConfig = await db.feedbackConfig.findUnique({
+        where: { businessId },
+        include: { branding: true },
+      });
+      if (feedbackConfig) {
+        const mergedFeedbackBranding = fillMissingBranding(
+          feedbackConfig.branding ?? null,
+          defaults,
+        );
+        const canUpdateFeedbackBrandingDirectly =
+          !!feedbackConfig.brandingId && !feedbackConfig.branding?.businessId;
+        const feedbackBrandingRecord = canUpdateFeedbackBrandingDirectly
+          ? await db.branding.update({
+              where: { id: feedbackConfig.brandingId! },
+              data: mergedFeedbackBranding,
+            })
+          : await db.branding.create({
+              data: mergedFeedbackBranding as any,
+            });
+
+        if (
+          !feedbackConfig.brandingId ||
+          feedbackConfig.branding?.businessId != null
+        ) {
+          await db.feedbackConfig.update({
+            where: { id: feedbackConfig.id },
+            data: { brandingId: feedbackBrandingRecord.id },
+          });
+        }
+      }
+
+      const loyalty = await db.loyalty.findUnique({
+        where: { businessId },
+        include: { branding: true },
+      });
+      if (loyalty) {
+        const mergedLoyaltyBranding = fillMissingBranding(
+          loyalty.branding ?? null,
+          defaults,
+        );
+        const canUpdateLoyaltyBrandingDirectly =
+          !!loyalty.brandingId && !loyalty.branding?.businessId;
+        const loyaltyBrandingRecord = canUpdateLoyaltyBrandingDirectly
+          ? await db.branding.update({
+              where: { id: loyalty.brandingId! },
+              data: mergedLoyaltyBranding,
+            })
+          : await db.branding.create({
+              data: mergedLoyaltyBranding as any,
+            });
+
+        if (!loyalty.brandingId || loyalty.branding?.businessId != null) {
+          await db.loyalty.update({
+            where: { id: loyalty.id },
+            data: { brandingId: loyaltyBrandingRecord.id },
+          });
+        }
+      }
+    }
 
     const updatedWithComputed = {
       ...updated,

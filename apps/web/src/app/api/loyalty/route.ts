@@ -96,25 +96,15 @@ export const POST = withAdminAuth(async (request, context) => {
       // 1. Upsert branding
       let brandingId: string | null = null;
       if (data.branding != null) {
-        const branding = await tx.branding.upsert({
-          where: { businessId },
-          create: {
-            businessId,
+        const branding = await tx.branding.create({
+          data: {
             logo: data.branding.logo ?? null,
             themeColor: data.branding.themeColor ?? null,
             textColor: data.branding.textColor ?? null,
             bannerImage: data.branding.bannerImage ?? null,
             header: data.branding.header ?? null,
             subtitle: data.branding.subtitle ?? null,
-          },
-          update: {
-            logo: data.branding.logo ?? null,
-            themeColor: data.branding.themeColor ?? null,
-            textColor: data.branding.textColor ?? null,
-            bannerImage: data.branding.bannerImage ?? null,
-            header: data.branding.header ?? null,
-            subtitle: data.branding.subtitle ?? null,
-          },
+          } as any,
         });
         brandingId = branding.id;
       }
@@ -371,27 +361,31 @@ export const PUT = withAdminAuth(async (request, context) => {
       ]);
     }
 
+    // Loyalty only: update/create a Branding row for this loyalty record — never business default branding.
     if (section === "branding" && data.branding != null) {
-      const branding = await db.branding.upsert({
-        where: { businessId },
-        create: {
-          businessId,
-          logo: data.branding.logo ?? null,
-          themeColor: data.branding.themeColor ?? null,
-          textColor: data.branding.textColor ?? null,
-          bannerImage: data.branding.bannerImage ?? null,
-          header: data.branding.header ?? null,
-          subtitle: data.branding.subtitle ?? null,
-        },
-        update: {
-          logo: data.branding.logo ?? null,
-          themeColor: data.branding.themeColor ?? null,
-          textColor: data.branding.textColor ?? null,
-          bannerImage: data.branding.bannerImage ?? null,
-          header: data.branding.header ?? null,
-          subtitle: data.branding.subtitle ?? null,
-        },
-      });
+      const payload = {
+        logo: data.branding.logo ?? null,
+        themeColor: data.branding.themeColor ?? null,
+        textColor: data.branding.textColor ?? null,
+        bannerImage: data.branding.bannerImage ?? null,
+        header: data.branding.header ?? null,
+        subtitle: data.branding.subtitle ?? null,
+      };
+      const existingBranding = existing.brandingId
+        ? await db.branding.findUnique({
+            where: { id: existing.brandingId },
+            select: { id: true, businessId: true },
+          })
+        : null;
+      const branding =
+        existingBranding && !existingBranding.businessId
+          ? await db.branding.update({
+              where: { id: existingBranding.id },
+              data: payload,
+            })
+          : await db.branding.create({
+              data: payload as any,
+            });
       await db.loyalty.update({
         where: { businessId },
         data: { brandingId: branding.id },

@@ -28,6 +28,8 @@ export function BusinessExistingSettings({
   const [referralPending, startReferralTransition] = useTransition();
   const [loyaltyPending, startLoyaltyTransition] = useTransition();
   const [feedbackPending, startFeedbackTransition] = useTransition();
+  const [defaultBrandingPending, startDefaultBrandingTransition] =
+    useTransition();
 
   const handleLoyaltyEnabledChange = (enabled: boolean) => {
     startLoyaltyTransition(async () => {
@@ -62,6 +64,19 @@ export function BusinessExistingSettings({
     });
   };
 
+  const handleDefaultBrandingForServicesChange = (enabled: boolean) => {
+    startDefaultBrandingTransition(async () => {
+      try {
+        await updateBusiness({
+          useDefaultBrandingForServices: enabled,
+        });
+        toast.success("Default branding preference updated");
+      } catch (error: any) {
+        toast.error(error?.message || "Failed to update");
+      }
+    });
+  };
+
   const handleUpdateBasicInfo = async (values: Record<string, string>) => {
     try {
       const nextBillNumber =
@@ -77,16 +92,6 @@ export function BusinessExistingSettings({
         defaultPointsName: business.defaultPointsName,
         defaultCurrencySymbol: business.defaultCurrencySymbol,
         defaultCurrencyCode: business.defaultCurrencyCode,
-        defaultBranding: business.defaultBranding
-          ? {
-              logo: business.defaultBranding.logo ?? null,
-              themeColor: business.defaultBranding.themeColor ?? null,
-              textColor: business.defaultBranding.textColor ?? null,
-              bannerImage: business.defaultBranding.bannerImage ?? null,
-              header: business.defaultBranding.header ?? null,
-              subtitle: business.defaultBranding.subtitle ?? null,
-            }
-          : undefined,
       });
       return { success: true };
     } catch (error: any) {
@@ -114,16 +119,6 @@ export function BusinessExistingSettings({
         ...(registrationBonusPoints !== undefined
           ? { registrationBonusPoints }
           : {}),
-        defaultBranding: business.defaultBranding
-          ? {
-              logo: business.defaultBranding.logo ?? null,
-              themeColor: business.defaultBranding.themeColor ?? null,
-              textColor: business.defaultBranding.textColor ?? null,
-              bannerImage: business.defaultBranding.bannerImage ?? null,
-              header: business.defaultBranding.header ?? null,
-              subtitle: business.defaultBranding.subtitle ?? null,
-            }
-          : undefined,
       });
       return { success: true };
     } catch (error: any) {
@@ -265,6 +260,38 @@ export function BusinessExistingSettings({
           }}
           onSubmit={handleUpdateBranding}
         />
+
+        <Card className="bg-sidebar-accent/50 flex min-h-0 flex-col gap-0 rounded-lg border-0 p-2">
+          <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
+            <CardTitle className="text-base font-medium">
+              Branding behavior
+            </CardTitle>
+            <CardDescription className="text-xs">
+              Apply your business default branding across referral, feedback,
+              loyalty, and new campaigns.
+            </CardDescription>
+          </CardHeader>
+          <Card className="border-border/45 bg-background/55 flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border shadow-none">
+            <CardContent className="flex flex-col divide-y px-4 py-0">
+              <div className="flex flex-row items-center justify-between py-4">
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-sm font-medium">
+                    Use this as default branding
+                  </span>
+                  <span className="text-muted-foreground text-xs">
+                    When enabled, all services use business-level default
+                    branding.
+                  </span>
+                </div>
+                <Switch
+                  checked={business.useDefaultBrandingForServices ?? false}
+                  onCheckedChange={handleDefaultBrandingForServicesChange}
+                  disabled={defaultBrandingPending}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </Card>
 
         <Card className="bg-sidebar-accent/50 flex min-h-0 flex-col gap-0 rounded-lg border-0 p-2">
           <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
