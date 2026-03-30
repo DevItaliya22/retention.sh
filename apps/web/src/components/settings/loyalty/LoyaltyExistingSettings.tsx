@@ -29,7 +29,7 @@ import {
   SaveButton,
   useForm,
 } from "@reelo/ui/components";
-import { useEffect } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { AmountSpentSettingsCard } from "./amount-spent";
 import { CashbackSettingsCard } from "./cashback";
@@ -294,6 +294,8 @@ function BrandingSettingsCard({
   loyalty,
   updateMutation,
 }: BrandingSettingsCardProps) {
+  const resolvePendingUploadsRef = useRef<null | (() => Promise<void>)>(null);
+  const [hasPendingImageChanges, setHasPendingImageChanges] = useState(false);
   const branding = loyalty.branding ?? {
     logo: null,
     themeColor: null,
@@ -306,8 +308,17 @@ function BrandingSettingsCard({
   const form = useForm({
     defaultValues: { branding },
   });
+  const handleResolvePendingUploads = useCallback(
+    (resolver: () => Promise<void>) => {
+      resolvePendingUploadsRef.current = resolver;
+    },
+    [],
+  );
 
   const runSubmit = async () => {
+    if (resolvePendingUploadsRef.current) {
+      await resolvePendingUploadsRef.current();
+    }
     const valid = await form.trigger();
     if (!valid) throw new Error("Validation failed");
     const values = form.getValues();
@@ -347,12 +358,17 @@ function BrandingSettingsCard({
               className="flex min-h-0 flex-1 flex-col"
             >
               <CardContent className="flex min-h-0 flex-1 flex-col overflow-auto px-4 py-4">
-                <BrandingFormFields prefix="branding" layout="settings" />
+                <BrandingFormFields
+                  prefix="branding"
+                  layout="settings"
+                  onResolvePendingUploads={handleResolvePendingUploads}
+                  onPendingImageChanges={setHasPendingImageChanges}
+                />
               </CardContent>
               <CardFooter className="flex shrink-0 justify-end border-0 px-4 py-2">
                 <SaveButton
                   onSave={runSubmit}
-                  disabled={!form.formState.isDirty}
+                  disabled={!form.formState.isDirty && !hasPendingImageChanges}
                   labels={{
                     idle: "Save changes",
                     loading: "Saving",
