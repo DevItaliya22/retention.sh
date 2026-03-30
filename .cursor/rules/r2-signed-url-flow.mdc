@@ -1,0 +1,91 @@
+---
+description: Enforce single R2 signed URL flow and storage key conventions
+alwaysApply: true
+---
+
+# R2 Signed URL Flow (Single Source of Truth)
+
+Use one consistent flow for Cloudflare R2 across the app.
+
+## Core Principles
+
+- Keep R2 helpers centralized in `apps/web/src/lib/storage/r2.ts`.
+- Use signed URLs only:
+  - Upload: signed `PUT` URL
+  - Read: signed `GET` URL
+- Do not upload file bytes through app API routes unless explicitly required.
+- Backend decides storage path/key; frontend never invents final key paths.
+
+## What To Store In DB
+
+- Store **R2 object key/path** in DB fields, not raw signed URLs.
+- Example stored value:
+  - `business/<businessId>/branding/logo/<file>`
+  - `business/<businessId>/campaigns/<campaignId>/banner/<file>`
+- Never store temporary signed URLs in DB.
+- Signed URLs are short-lived and should be generated on demand.
+
+## Key Generation Rules
+
+- Build keys only in backend via `r2KeyBuilders`.
+- Include stable ownership context in key path:
+  - `businessId` for business assets
+  - `campaignId` for campaign assets
+  - user/customer/bill context where relevant
+- Sanitize filenames and add uniqueness (timestamp or equivalent).
+
+## Upload Flow (How It Must Work)
+
+1. Frontend asks backend for signed upload URL (`POST` API route).
+2. Backend validates auth (for write), validates input, builds key, returns:
+   - `key`
+   - `uploadUrl` (signed `PUT`)
+3. Frontend uploads file directly to R2 using `PUT uploadUrl`.
+4. Frontend saves/sends the returned `key` in mutation payload.
+5. Backend persists that `key` in DB.
+
+## Read Flow (How It Must Work)
+
+1. Frontend has stored `key` from DB.
+2. Frontend requests signed read URL from backend (`GET /api/storage/signed-url?src=...`).
+3. Backend resolves/normalizes key and returns signed `GET` URL.
+4. Frontend uses that signed URL for image/file display.
+
+## Auth Rules
+
+- Upload signed URL endpoints: require auth/authorization.
+- Read signed URL endpoint: may be no-auth only when intentionally allowed by product requirements.
+- Never bypass write auth checks.
+
+## Frontend Integration Rules
+
+- Use one storage hook (`useR2Upload`) with focused functions:
+  - get upload signed URL
+  - get read signed URL
+- Keep loading/error states in hook, not duplicated per component.
+- Current primary upload surfaces:
+  - campaign create/edit flow
+  - business branding settings
+
+## API Contract Expectations
+
+- Upload signed URL route response:
+  - `{ key: string, uploadUrl: string }`
+- Read signed URL route response:
+  - `{ url: string }`
+- Return sanitized error messages only; never leak raw storage/provider errors.
+
+## CORS Requirement
+
+- Direct browser-to-R2 uploads require bucket CORS for app origins.
+- Ensure R2 CORS allows:
+  - methods: `PUT`, `GET`, `HEAD` (and preflight)
+  - allowed headers: includes `content-type` and `x-amz-*` (or `*`)
+  - origins: local + production domains
+
+## Anti-Patterns (Do Not Do)
+
+- Do not store signed URLs in DB.
+- Do not let frontend decide final storage key path.
+- Do not duplicate multiple R2 helper files/hooks for same purpose.
+- Do not add new legacy "upload file bytes to API route" implementations unless explicitly required.

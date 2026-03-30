@@ -5,6 +5,7 @@ import {
   currencyCodeSchema,
   currencySymbolSchema,
   pointsNameSchema,
+  storagePathOrUrlSchema,
   textSchema,
   themeColorSchema,
   urlSchema,
@@ -28,10 +29,10 @@ export const updateBusinessSchema = z.object({
   serviceEnabled: isServiceEnabledSchema,
   defaultBranding: z
     .object({
-      logo: urlSchema,
+      logo: storagePathOrUrlSchema,
       themeColor: themeColorSchema,
       textColor: themeColorSchema,
-      bannerImage: urlSchema,
+      bannerImage: storagePathOrUrlSchema,
       header: textSchema(200),
       subtitle: textSchema(500),
     })

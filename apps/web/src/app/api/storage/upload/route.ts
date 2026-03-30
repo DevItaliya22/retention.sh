@@ -1,5 +1,5 @@
 import { withAdminAuth } from "@/lib/auth/middleware";
-import { r2KeyBuilders, uploadObject } from "@/lib/storage/r2";
+import { getUploadSignedUrl, r2KeyBuilders } from "@/lib/storage/r2";
 import {
   sanitizeErrorMessage,
   validateSchema,
@@ -8,31 +8,25 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 const uploadBodySchema = z.object({
-  type: z.enum(["avatar", "business_logo", "business_banner", "bill_receipt"]),
-  billId: z.string().uuid().optional(),
+  type: z.enum([
+    "business_logo",
+    "business_banner",
+    "campaign_logo",
+    "campaign_banner",
+  ]),
+  campaignId: z.string().uuid().optional(),
   filename: z.string().max(255),
-  contentType: z.string().max(255).optional(),
+  contentType: z.string().max(255),
 });
 
 export const POST = withAdminAuth(async (request, context) => {
   try {
-    const contentType = request.headers.get("content-type") || "";
-
-    if (!contentType.startsWith("application/octet-stream")) {
-      return NextResponse.json(
-        {
-          error: "Invalid content type. Expected application/octet-stream.",
-        },
-        { status: 400 },
-      );
-    }
-
     const url = new URL(request.url);
     const bodyParams = {
       type: url.searchParams.get("type"),
-      billId: url.searchParams.get("billId") || undefined,
+      campaignId: url.searchParams.get("campaignId") || undefined,
       filename: url.searchParams.get("filename"),
-      contentType: url.searchParams.get("contentType") || undefined,
+      contentType: url.searchParams.get("contentType"),
     };
 
     const validation = validateSchema(uploadBodySchema, bodyParams);
@@ -42,38 +36,44 @@ export const POST = withAdminAuth(async (request, context) => {
 
     const data = validation.data;
     const businessId = context.business.id;
-    const userId = context.user.id;
-
-    const buffer = Buffer.from(await request.arrayBuffer());
 
     let key: string;
 
-    if (data.type === "avatar") {
-      key = r2KeyBuilders.avatar(userId, data.filename);
-    } else if (data.type === "business_logo") {
+    if (data.type === "business_logo") {
       key = r2KeyBuilders.businessBranding(businessId, "logo", data.filename);
     } else if (data.type === "business_banner") {
       key = r2KeyBuilders.businessBranding(businessId, "banner", data.filename);
-    } else {
-      if (!data.billId) {
+    } else if (
+      data.type === "campaign_logo" ||
+      data.type === "campaign_banner"
+    ) {
+      if (!data.campaignId) {
         return NextResponse.json(
-          { error: "billId is required for bill_receipt" },
+          { error: "campaignId is required for campaign assets" },
           { status: 400 },
         );
       }
-      key = r2KeyBuilders.billReceipt(businessId, data.billId, data.filename);
+      key = r2KeyBuilders.campaignAsset(
+        businessId,
+        data.campaignId,
+        data.type === "campaign_logo" ? "logo" : "banner",
+        data.filename,
+      );
+    } else {
+      return NextResponse.json(
+        { error: "Unsupported upload type" },
+        { status: 400 },
+      );
     }
 
-    const result = await uploadObject({
+    const uploadUrl = await getUploadSignedUrl({
       key,
-      body: buffer,
       contentType: data.contentType,
     });
 
     return NextResponse.json({
-      url: result.url,
-      key: result.key,
-      contentType: result.contentType,
+      key,
+      uploadUrl,
     });
   } catch (error: unknown) {
     return NextResponse.json(

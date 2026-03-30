@@ -1,7 +1,6 @@
 "use client";
 
 import { useR2Upload } from "@/hooks/storage/useR2Upload";
-import { useSignedImageUrl } from "@/hooks/storage/useSignedImageUrl";
 import {
   Button,
   FormControl,
@@ -112,6 +111,7 @@ function useBrandingImageField({
   clearPendingFile,
   markDirty,
   isUploading,
+  resolveSignedUrl,
 }: {
   field: ControllerRenderProps<FieldValues, FieldPath<FieldValues>>;
   pendingPreviewUrl?: string;
@@ -119,6 +119,7 @@ function useBrandingImageField({
   clearPendingFile: () => void;
   markDirty: () => void;
   isUploading: boolean;
+  resolveSignedUrl: (src: string) => string | null;
 }) {
   const pickFile = useCallback(() => {
     const input = document.createElement("input");
@@ -144,8 +145,8 @@ function useBrandingImageField({
     field.onChange(null);
   }, [clearPendingFile, field]);
 
-  const displayUrl = useSignedImageUrl(
-    pendingPreviewUrl || (field.value as string | null | undefined) || null,
+  const displayUrl = resolveSignedUrl(
+    pendingPreviewUrl || (field.value as string | null | undefined) || "",
   );
 
   // Keep existing behavior of trimming empty strings to null if an external caller sets ""
@@ -172,6 +173,7 @@ function BrandingImageFieldRow<T extends FieldValues>({
   clearPendingFile,
   markDirty,
   isUploading,
+  resolveSignedUrl,
 }: {
   field: ControllerRenderProps<T, FieldPath<T>>;
   label: string;
@@ -181,6 +183,7 @@ function BrandingImageFieldRow<T extends FieldValues>({
   clearPendingFile: () => void;
   markDirty: () => void;
   isUploading: boolean;
+  resolveSignedUrl: (src: string) => string | null;
 }) {
   const { displayUrl, pickFile, remove, chooseDisabled } =
     useBrandingImageField({
@@ -193,6 +196,7 @@ function BrandingImageFieldRow<T extends FieldValues>({
       clearPendingFile,
       markDirty,
       isUploading,
+      resolveSignedUrl,
     });
 
   return (
@@ -252,6 +256,7 @@ function BrandingImageUploadFormFieldInner<T extends FieldValues>({
       clearPendingFile: () => {},
       markDirty: () => {},
       isUploading: false,
+      resolveSignedUrl: (src) => src || null,
     });
 
   return (
@@ -303,7 +308,8 @@ export function BrandingFormFields<T extends FieldValues>({
   onPendingImageChanges,
 }: BrandingFormFieldsProps<T>) {
   const form = useFormContext<T>();
-  const { uploadFile, isUploading } = useR2Upload();
+  const { getUploadSignedUrl, getReadSignedUrl, isGettingUploadSignedUrl } =
+    useR2Upload();
   const p = String(prefix);
   const isSettings = layout === "settings";
   const [pendingFiles, setPendingFiles] = useState<
@@ -312,6 +318,7 @@ export function BrandingFormFields<T extends FieldValues>({
   const [pendingPreviews, setPendingPreviews] = useState<
     Partial<Record<BrandingImageUploadKind, string>>
   >({});
+  const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
   const pendingPreviewsRef = useRef<
     Partial<Record<BrandingImageUploadKind, string>>
   >({});
@@ -368,6 +375,45 @@ export function BrandingFormFields<T extends FieldValues>({
     };
   }, []);
 
+  useEffect(() => {
+    const currentLogo =
+      (form.getValues(`${p}.logo` as FieldPath<T>) as string) || "";
+    const currentBanner =
+      (form.getValues(`${p}.bannerImage` as FieldPath<T>) as string) || "";
+    const candidates = [currentLogo, currentBanner].filter(
+      (value) =>
+        value &&
+        !value.startsWith("blob:") &&
+        !value.startsWith("http://") &&
+        !value.startsWith("https://"),
+    );
+    if (candidates.length === 0) return;
+
+    let isCancelled = false;
+    void Promise.all(
+      candidates.map(async (src) => {
+        if (signedUrls[src]) return;
+        const url = await getReadSignedUrl(src);
+        if (isCancelled) return;
+        setSignedUrls((prev) => ({ ...prev, [src]: url }));
+      }),
+    ).catch(() => {});
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [form, p, getReadSignedUrl, signedUrls]);
+
+  const resolveSignedUrl = useCallback(
+    (src: string) => {
+      if (!src) return null;
+      if (src.startsWith("blob:")) return src;
+      if (src.startsWith("http://") || src.startsWith("https://")) return src;
+      return signedUrls[src] ?? null;
+    },
+    [signedUrls],
+  );
+
   const setPendingFile = useCallback(
     (kind: BrandingImageUploadKind, file: File) => {
       const nextPreviewUrl = URL.createObjectURL(file);
@@ -410,20 +456,32 @@ export function BrandingFormFields<T extends FieldValues>({
 
       uploadTasks.push(
         (async () => {
-          const result = await uploadFile(file, {
+          const result = await getUploadSignedUrl(file, {
             type:
               fieldConfig.uploadKind === "logo"
                 ? "business_logo"
                 : "business_banner",
           });
+          const uploadRes = await fetch(result.uploadUrl, {
+            method: "PUT",
+            headers: {
+              "content-type": file.type || "application/octet-stream",
+            },
+            body: file,
+          });
+          if (!uploadRes.ok) {
+            throw new Error("Failed to upload image file");
+          }
           form.setValue(
             fieldConfig.name,
-            (result.url ?? null) as T[FieldPath<T>],
+            (result.key ?? null) as T[FieldPath<T>],
             {
               shouldDirty: true,
               shouldTouch: true,
             },
           );
+          const signed = await getReadSignedUrl(result.key);
+          setSignedUrls((prev) => ({ ...prev, [result.key]: signed }));
         })(),
       );
     }
@@ -436,7 +494,7 @@ export function BrandingFormFields<T extends FieldValues>({
       });
       return {};
     });
-  }, [pendingFiles, imageFields, uploadFile, form]);
+  }, [pendingFiles, imageFields, getUploadSignedUrl, getReadSignedUrl, form]);
 
   useEffect(() => {
     if (!onResolvePendingUploads) return;
@@ -469,7 +527,8 @@ export function BrandingFormFields<T extends FieldValues>({
                   shouldTouch: true,
                 })
               }
-              isUploading={isUploading}
+              isUploading={isGettingUploadSignedUrl}
+              resolveSignedUrl={resolveSignedUrl}
             />
           )}
         />

@@ -141,6 +141,22 @@ export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
           const data = await res.json().catch(() => null);
           throw new Error(data?.error || "Failed to upload receipt");
         }
+        const data = (await res.json()) as {
+          receipt?: { uploadUrl?: string };
+        };
+        if (!data.receipt?.uploadUrl) {
+          throw new Error("Missing upload URL");
+        }
+        const uploadRes = await fetch(data.receipt.uploadUrl, {
+          method: "PUT",
+          headers: {
+            "content-type": file.type || "application/octet-stream",
+          },
+          body: file,
+        });
+        if (!uploadRes.ok) {
+          throw new Error("Failed to upload receipt file");
+        }
         toast.success("Receipt uploaded");
       } catch (e) {
         toast.error(

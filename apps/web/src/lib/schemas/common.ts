@@ -87,6 +87,22 @@ export const urlSchema = z
   .nullable()
   .or(z.literal(""));
 
+export const storagePathOrUrlSchema = z
+  .string()
+  .max(2048, "Path is too long (max 2048 characters)")
+  .refine((value) => {
+    const trimmed = value.trim();
+    if (!trimmed) return true;
+    if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+      return z.string().url().safeParse(trimmed).success;
+    }
+    // Allow stored R2 keys like business/<id>/branding/logo/file.jpg
+    return /^[a-zA-Z0-9/_\-.]+$/.test(trimmed);
+  }, "Invalid URL format")
+  .optional()
+  .nullable()
+  .or(z.literal(""));
+
 export const textSchema = (maxLength: number = 1000) =>
   z
     .string()

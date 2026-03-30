@@ -14,7 +14,6 @@ import {
 } from "@/hooks/campaigns/useCampaignsQuery";
 import { useSegmentsQuery } from "@/hooks/segments/useSegmentsQuery";
 import { useR2Upload } from "@/hooks/storage/useR2Upload";
-import { useSignedImageUrl } from "@/hooks/storage/useSignedImageUrl";
 import {
   CAMPAIGN_APPLIES_TO_LABELS,
   CAMPAIGN_DEFAULT_TERMS,
@@ -221,11 +220,12 @@ export function CampaignEditPageClient({
   const [pendingBannerFile, setPendingBannerFile] = useState<File | null>(null);
   const [logoBlobUrl, setLogoBlobUrl] = useState<string | null>(null);
   const [bannerBlobUrl, setBannerBlobUrl] = useState<string | null>(null);
+  const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [previewFocusedField, setPreviewFocusedField] = useState<string | null>(
     null,
   );
-  const { uploadFile } = useR2Upload();
+  const { getUploadSignedUrl, getReadSignedUrl } = useR2Upload();
   const {
     data: campaign,
     isLoading,
@@ -294,17 +294,28 @@ export function CampaignEditPageClient({
   });
 
   const watched = form.watch();
-  const resolvedLogoUrl = useSignedImageUrl(
-    logoBlobUrl || watched.logo || null,
-  );
-  const resolvedBannerUrl = useSignedImageUrl(
-    bannerBlobUrl || watched.bannerImage || null,
-  );
+  const resolvedLogoUrl =
+    logoBlobUrl ||
+    (watched.logo
+      ? watched.logo.startsWith("http://") ||
+        watched.logo.startsWith("https://")
+        ? watched.logo
+        : (signedUrls[watched.logo] ?? null)
+      : null);
+  const resolvedBannerUrl =
+    bannerBlobUrl ||
+    (watched.bannerImage
+      ? watched.bannerImage.startsWith("http://") ||
+        watched.bannerImage.startsWith("https://")
+        ? watched.bannerImage
+        : (signedUrls[watched.bannerImage] ?? null)
+      : null);
 
   useEffect(() => {
     setIsFormHydrated(false);
     setPendingLogoFile(null);
     setPendingBannerFile(null);
+    setSignedUrls({});
     setPreviewFocusedField(null);
   }, [campaignId]);
 
@@ -389,6 +400,31 @@ export function CampaignEditPageClient({
   }, [campaign, form]);
 
   useEffect(() => {
+    const candidates = [watched.logo, watched.bannerImage].filter(
+      (src): src is string =>
+        !!src &&
+        !src.startsWith("blob:") &&
+        !src.startsWith("http://") &&
+        !src.startsWith("https://"),
+    );
+    if (candidates.length === 0) return;
+
+    let isCancelled = false;
+    void Promise.all(
+      candidates.map(async (src) => {
+        if (signedUrls[src]) return;
+        const signed = await getReadSignedUrl(src);
+        if (isCancelled) return;
+        setSignedUrls((prev) => ({ ...prev, [src]: signed }));
+      }),
+    ).catch(() => {});
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [watched.logo, watched.bannerImage, signedUrls, getReadSignedUrl]);
+
+  useEffect(() => {
     if (isFormHydrated && audienceParam) {
       const keys = audienceParam
         .split(",")
@@ -417,16 +453,43 @@ export function CampaignEditPageClient({
       let bannerUrl = values.bannerImage?.trim() ? values.bannerImage : null;
 
       if (pendingLogoFile) {
-        const result = await uploadFile(pendingLogoFile, {
-          type: "business_logo",
+        const result = await getUploadSignedUrl(pendingLogoFile, {
+          type: "campaign_logo",
+          campaignId,
         });
-        logoUrl = result.url;
+        const uploadRes = await fetch(result.uploadUrl, {
+          method: "PUT",
+          headers: {
+            "content-type": pendingLogoFile.type || "application/octet-stream",
+          },
+          body: pendingLogoFile,
+        });
+        if (!uploadRes.ok) {
+          throw new Error("Failed to upload logo");
+        }
+        logoUrl = result.key;
+        const signed = await getReadSignedUrl(result.key);
+        setSignedUrls((prev) => ({ ...prev, [result.key]: signed }));
       }
       if (pendingBannerFile) {
-        const result = await uploadFile(pendingBannerFile, {
-          type: "business_banner",
+        const result = await getUploadSignedUrl(pendingBannerFile, {
+          type: "campaign_banner",
+          campaignId,
         });
-        bannerUrl = result.url;
+        const uploadRes = await fetch(result.uploadUrl, {
+          method: "PUT",
+          headers: {
+            "content-type":
+              pendingBannerFile.type || "application/octet-stream",
+          },
+          body: pendingBannerFile,
+        });
+        if (!uploadRes.ok) {
+          throw new Error("Failed to upload banner");
+        }
+        bannerUrl = result.key;
+        const signed = await getReadSignedUrl(result.key);
+        setSignedUrls((prev) => ({ ...prev, [result.key]: signed }));
       }
 
       await updateCampaign.mutateAsync({
