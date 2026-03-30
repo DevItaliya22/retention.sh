@@ -20,8 +20,8 @@ model Branding {
   membership     Membership?
   scratchCard    ScratchCard?
 
-  businessId String   @unique
-  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  businessId String?   @unique
+  business   Business? @relation(fields: [businessId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
