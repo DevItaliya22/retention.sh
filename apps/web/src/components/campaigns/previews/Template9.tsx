@@ -8,7 +8,7 @@ import { DEFAULT_THEME, formatExpiryDate, renderBoldText } from "./utils";
 
 export const Template9 = forwardRef<HTMLDivElement, CampaignTemplateProps>(
   function Template9(
-    { data, branding, businessName, className, onFieldClick },
+    { data, branding, businessName, className, onFieldClick, focusedField },
     ref,
   ) {
     const themeColor = branding.themeColor || DEFAULT_THEME;
@@ -24,21 +24,33 @@ export const Template9 = forwardRef<HTMLDivElement, CampaignTemplateProps>(
       >
         <div className="m-2 flex h-full flex-col items-center justify-center border border-[#E0E0E0] p-8 text-center">
           <div className="mb-8 border-b border-[#2C2C2C] px-6 pb-2">
-            <InteractiveField fieldName="title" onClick={onFieldClick}>
+            <InteractiveField
+              fieldName="title"
+              onClick={onFieldClick}
+              isFocused={focusedField === "title"}
+            >
               <h2 className="font-serif text-3xl tracking-widest uppercase">
                 {data.title || "Elegant"}
               </h2>
             </InteractiveField>
           </div>
 
-          <InteractiveField fieldName="description" onClick={onFieldClick}>
+          <InteractiveField
+            fieldName="description"
+            onClick={onFieldClick}
+            isFocused={focusedField === "description"}
+          >
             <p className="mb-10 max-w-[85%] font-serif text-lg leading-relaxed text-[#666666] italic">
               {data.description}
             </p>
           </InteractiveField>
 
           {data.rewardValue && (
-            <InteractiveField fieldName="offerStatement" onClick={onFieldClick}>
+            <InteractiveField
+              fieldName="offerStatement"
+              onClick={onFieldClick}
+              isFocused={focusedField === "offerStatement"}
+            >
               <p
                 className="font-serif text-2xl font-medium tracking-wide"
                 style={{ color: themeColor }}
@@ -52,7 +64,11 @@ export const Template9 = forwardRef<HTMLDivElement, CampaignTemplateProps>(
             <div className="mb-4 h-px w-16 bg-[#2C2C2C]" />
 
             {data.expiresAt && (
-              <InteractiveField fieldName="expiresAt" onClick={onFieldClick}>
+              <InteractiveField
+                fieldName="expiresAt"
+                onClick={onFieldClick}
+                isFocused={focusedField === "expiresAt"}
+              >
                 <p className="font-serif text-xs tracking-widest text-[#888888] uppercase">
                   Expires // {formatExpiryDate(data.expiresAt)}
                 </p>
@@ -63,6 +79,7 @@ export const Template9 = forwardRef<HTMLDivElement, CampaignTemplateProps>(
               fieldName="maxRedemptionEnabled"
               onClick={onFieldClick}
               className="w-full"
+              isFocused={focusedField === "maxRedemptionEnabled"}
             >
               <div className="w-full space-y-1 border-t border-b border-[#E0E0E0] px-4 py-4 text-center font-serif text-sm text-[#444]">
                 <p>
@@ -104,6 +121,7 @@ export const Template9 = forwardRef<HTMLDivElement, CampaignTemplateProps>(
               <InteractiveField
                 fieldName="termsAndConditions"
                 onClick={onFieldClick}
+                isFocused={focusedField === "termsAndConditions"}
               >
                 <div className="w-full space-y-1 pt-2 text-center font-serif text-[11px] text-[#666] opacity-80">
                   {data.termsAndConditions.map((t, i) => (
@@ -117,6 +135,7 @@ export const Template9 = forwardRef<HTMLDivElement, CampaignTemplateProps>(
               <InteractiveField
                 fieldName="contactNumber"
                 onClick={onFieldClick}
+                isFocused={focusedField === "contactNumber"}
               >
                 <p className="mt-2 font-serif text-xs text-[#888888] italic">
                   Call {data.contactNumber}

@@ -61,8 +61,6 @@ for feedbaack : https://uselayouts.com/docs/components/multi-step-form
 
 https://uselayouts.com/docs/components/smooth-dropdown
 
-https://uselayouts.com/docs/components/status-button#copy-the-code
-
 how it works section : https://uselayouts.com/docs/components/vertical-tabs
 
 https://illustrations.popsy.co/purple/business-analysis.svg

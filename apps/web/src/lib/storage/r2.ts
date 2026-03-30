@@ -1,8 +1,10 @@
 import {
   DeleteObjectCommand,
+  GetObjectCommand,
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { sanitizeErrorMessage } from "../utils/error-handler";
 
 const R2_ENDPOINT = process.env.R2_ENDPOINT;
@@ -67,6 +69,46 @@ export async function deleteObject(key: string) {
     });
 
     await r2Client.send(command);
+  } catch (error) {
+    throw new Error(sanitizeErrorMessage(error));
+  }
+}
+
+export async function getObject(key: string) {
+  try {
+    const command = new GetObjectCommand({
+      Bucket: R2_BUCKET_NAME,
+      Key: key,
+    });
+
+    const response = await r2Client.send(command);
+    if (!response.Body) {
+      throw new Error("File body is empty");
+    }
+
+    const bytes = await response.Body.transformToByteArray();
+    return {
+      body: Buffer.from(bytes),
+      contentType: response.ContentType || "application/octet-stream",
+      cacheControl: response.CacheControl,
+      etag: response.ETag,
+      lastModified: response.LastModified,
+    };
+  } catch (error) {
+    throw new Error(sanitizeErrorMessage(error));
+  }
+}
+
+export async function getSignedObjectUrl(key: string, expiresInSeconds = 300) {
+  try {
+    const command = new GetObjectCommand({
+      Bucket: R2_BUCKET_NAME,
+      Key: key,
+    });
+
+    return await getSignedUrl(r2Client, command, {
+      expiresIn: expiresInSeconds,
+    });
   } catch (error) {
     throw new Error(sanitizeErrorMessage(error));
   }

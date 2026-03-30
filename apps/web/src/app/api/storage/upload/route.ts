@@ -4,6 +4,7 @@ import {
   sanitizeErrorMessage,
   validateSchema,
 } from "@/lib/utils/error-handler";
+import { NextResponse } from "next/server";
 import { z } from "zod";
 
 const uploadBodySchema = z.object({
@@ -18,10 +19,10 @@ export const POST = withAdminAuth(async (request, context) => {
     const contentType = request.headers.get("content-type") || "";
 
     if (!contentType.startsWith("application/octet-stream")) {
-      return new Response(
-        JSON.stringify({
+      return NextResponse.json(
+        {
           error: "Invalid content type. Expected application/octet-stream.",
-        }),
+        },
         { status: 400 },
       );
     }
@@ -36,14 +37,12 @@ export const POST = withAdminAuth(async (request, context) => {
 
     const validation = validateSchema(uploadBodySchema, bodyParams);
     if (!validation.success) {
-      return new Response(JSON.stringify({ error: validation.error }), {
-        status: 400,
-      });
+      return NextResponse.json({ error: validation.error }, { status: 400 });
     }
 
     const data = validation.data;
     const businessId = context.business.id;
-    const userId = context.session.user.id;
+    const userId = context.user.id;
 
     const buffer = Buffer.from(await request.arrayBuffer());
 
@@ -57,8 +56,8 @@ export const POST = withAdminAuth(async (request, context) => {
       key = r2KeyBuilders.businessBranding(businessId, "banner", data.filename);
     } else {
       if (!data.billId) {
-        return new Response(
-          JSON.stringify({ error: "billId is required for bill_receipt" }),
+        return NextResponse.json(
+          { error: "billId is required for bill_receipt" },
           { status: 400 },
         );
       }
@@ -71,21 +70,18 @@ export const POST = withAdminAuth(async (request, context) => {
       contentType: data.contentType,
     });
 
-    return new Response(
-      JSON.stringify({
-        url: result.url,
-        key: result.key,
-        contentType: result.contentType,
-      }),
-      { status: 200 },
-    );
-  } catch (error: any) {
-    return new Response(
-      JSON.stringify({
+    return NextResponse.json({
+      url: result.url,
+      key: result.key,
+      contentType: result.contentType,
+    });
+  } catch (error: unknown) {
+    return NextResponse.json(
+      {
         error:
           sanitizeErrorMessage(error) ||
           "Failed to upload file. Please try again.",
-      }),
+      },
       { status: 500 },
     );
   }

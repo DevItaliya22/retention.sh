@@ -28,4 +28,5 @@ export interface CampaignTemplateProps {
   businessName?: string | null;
   className?: string;
   onFieldClick?: (fieldName: string) => void;
+  focusedField?: string | null;
 }
