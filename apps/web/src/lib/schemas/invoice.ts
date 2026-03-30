@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { storageAssetSchema } from "./shared";
 
 export const billInvoiceParamSchema = z.object({
   id: z.string().uuid("Invalid bill ID"),
@@ -43,6 +44,8 @@ export const billInvoiceSchema = z.object({
   notes: z.string().nullable(),
   items: z.array(billInvoiceItemSchema).min(1),
   totals: billInvoiceTotalsSchema,
+  receiptUrl: z.string().max(2048).optional().nullable(),
+  receiptAsset: storageAssetSchema.optional().nullable(),
 });
 
 export const billInvoiceResponseSchema = z.object({

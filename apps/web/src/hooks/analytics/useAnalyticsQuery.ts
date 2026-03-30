@@ -7,6 +7,7 @@ import type {
   CustomersByDayResponse,
   CustomerSegmentsResponse,
   CustomerSnapshotResponse,
+  FeedbackAnalyticsResponse,
   HighlightsResponse,
   InsightsResponse,
   LoyaltyChartResponse,
@@ -322,5 +323,20 @@ export function useRfmStatsQuery(params?: {
     },
     placeholderData: (prev) => prev,
     staleTime: 60_000,
+  });
+}
+
+// --- Section 11: Feedback rating analytics ---
+
+export function useFeedbackAnalyticsQuery(period: AnalyticsPeriod = "30d") {
+  const tzOffsetMinutes = getBrowserTzOffsetMinutes();
+  return useQuery<FeedbackAnalyticsResponse, Error>({
+    queryKey: ["analytics", "feedback-rating-trend", period, tzOffsetMinutes],
+    queryFn: () =>
+      fetcher<FeedbackAnalyticsResponse>(
+        `/api/feedback/stats/rating-trend?period=${period}&tzOffsetMinutes=${tzOffsetMinutes}`,
+      ),
+    placeholderData: (prev) => prev,
+    staleTime: 30_000,
   });
 }

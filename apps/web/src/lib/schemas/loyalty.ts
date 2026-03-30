@@ -1,5 +1,6 @@
 import { validateTierRanges } from "@/lib/loyalty/helpers";
 import { z } from "zod";
+import { storageAssetSchema } from "./shared";
 
 // ─── Enums ────────────────────────────────────────────────────────────────
 
@@ -41,6 +42,8 @@ export const loyaltyBrandingSchema = z
     bannerImage: z.string().max(2048).optional().nullable(),
     header: z.string().max(200).optional().nullable(),
     subtitle: z.string().max(500).optional().nullable(),
+    logoAsset: storageAssetSchema.optional().nullable(),
+    bannerImageAsset: storageAssetSchema.optional().nullable(),
   })
   .optional()
   .nullable();

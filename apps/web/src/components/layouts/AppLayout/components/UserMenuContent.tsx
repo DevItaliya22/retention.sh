@@ -21,6 +21,7 @@ interface UserMenuContentProps {
     id: string;
     name: string | null;
     email: string;
+    avatarUrl?: string | null;
   };
   onContactClick?: () => void;
 }
@@ -61,7 +62,10 @@ export function UserMenuContent({
       <DropdownMenuLabel className="p-0 font-normal">
         <div className="flex items-center gap-2 px-1 py-1.5">
           <Avatar className="h-8 w-8 rounded-lg">
-            <AvatarImage src={undefined} alt={user.name || user.email} />
+            <AvatarImage
+              src={user.avatarUrl ?? undefined}
+              alt={user.name || user.email}
+            />
             <AvatarFallback className="rounded-lg">
               {userInitials}
             </AvatarFallback>

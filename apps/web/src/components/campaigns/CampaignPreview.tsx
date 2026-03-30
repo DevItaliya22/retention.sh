@@ -1,279 +1,94 @@
 "use client";
 
-import { cn } from "@reelo/ui/lib/utils";
-import { forwardRef, type ReactNode } from "react";
+import { useSignedImageUrl } from "@/hooks/storage/useSignedImageUrl";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { forwardRef, useState } from "react";
+import { CAMPAIGN_PREVIEW_TEMPLATES } from "./previews/config";
+import type {
+  CampaignPreviewBranding,
+  CampaignPreviewData,
+} from "./previews/types";
 
-/** Parses **bold** markers in text and returns React nodes with <strong> tags */
-function renderBoldText(text: string): ReactNode[] {
-  const parts = text.split(/(\*\*[^*]+\*\*)/g);
-  return parts.map((part, i) => {
-    if (part.startsWith("**") && part.endsWith("**")) {
-      return (
-        <strong key={i} className="font-extrabold">
-          {part.slice(2, -2)}
-        </strong>
-      );
-    }
-    return part;
-  });
-}
-
-export interface CampaignPreviewData {
-  title: string | null;
-  description: string | null;
-  contactNumber: string | null;
-  rewardValue: string | null;
-  expiresAt: string | null;
-  termsAndConditions: string[];
-  maxRedemptionEnabled?: boolean;
-  maxRedemptionAmount?: number | null;
-  minPurchaseForEarningEnabled?: boolean;
-  minPurchaseForEarning?: number | null;
-  minPurchaseForRedemptionEnabled?: boolean;
-  minPurchaseForRedemption?: number | null;
-  instantCashbackRedeemable?: boolean;
-  redemptionLimit?: string | null;
-}
-
-export interface CampaignPreviewBranding {
-  logo: string | null;
-  themeColor: string | null;
-  textColor: string | null;
-  bannerImage: string | null;
-}
+export type { CampaignPreviewBranding, CampaignPreviewData };
 
 interface CampaignPreviewProps {
   data: CampaignPreviewData;
   branding: CampaignPreviewBranding;
   businessName?: string | null;
   className?: string;
+  onFieldClick?: (fieldName: string) => void;
+  /** When set, that preview region keeps the dashed outline (after click). */
+  focusedField?: string | null;
 }
 
-const DEFAULT_THEME = "#7F4899";
-const DEFAULT_TEXT = "#ffffff";
-
-function formatExpiryDate(dateStr: string | null): string | null {
-  if (!dateStr) return null;
-  try {
-    const d = new Date(dateStr);
-    if (Number.isNaN(d.getTime())) return null;
-    return d.toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Campaign card preview — matching Reelo campaign card design.
- *
- * Structure:
- * 1. Banner image (top ~35%)
- * 2. Curved themed section (bottom ~65%) with arc overlapping the banner
- * 3. Logo circle at the overlap point
- * 4. All content center-aligned: title, description, separator, expiry, terms, contact
- */
 export const CampaignPreview = forwardRef<HTMLDivElement, CampaignPreviewProps>(
-  function CampaignPreview({ data, branding, businessName, className }, ref) {
-    const themeColor = branding.themeColor || DEFAULT_THEME;
-    const textColor = branding.textColor || DEFAULT_TEXT;
-    const bannerImage = branding.bannerImage;
-    const logo = branding.logo;
-    const title = data.title || "Your Campaign Title";
-    const description =
-      data.description || "Your campaign description goes here.";
-    const contactNumber = data.contactNumber;
-    const rewardValue = data.rewardValue;
-    const expiryFormatted = formatExpiryDate(data.expiresAt);
-    const terms = data.termsAndConditions;
-    const maxRedemptionEnabled = data.maxRedemptionEnabled ?? false;
-    const maxRedemptionAmount = data.maxRedemptionAmount;
-    const minEarningEnabled = data.minPurchaseForEarningEnabled ?? false;
-    const minEarningAmount = data.minPurchaseForEarning;
-    const minRedemptionEnabled = data.minPurchaseForRedemptionEnabled ?? false;
-    const minRedemptionAmount = data.minPurchaseForRedemption;
-    const instantCashback = data.instantCashbackRedeemable ?? false;
-    const redemptionLimit = data.redemptionLimit ?? "ONCE";
+  function CampaignPreview(
+    { data, branding, businessName, className, onFieldClick, focusedField },
+    ref,
+  ) {
+    const [currentIndex, setCurrentIndex] = useState(0);
+    const signedLogoUrl = useSignedImageUrl(branding.logo);
+    const signedBannerUrl = useSignedImageUrl(branding.bannerImage);
 
-    // Build redemption line
-    const redemptionLabel =
-      redemptionLimit === "MULTIPLE"
-        ? "This offer can be redeemed multiple times per customer."
-        : "This offer can be redeemed once per customer.";
+    const prev = () =>
+      setCurrentIndex((c) =>
+        c > 0 ? c - 1 : CAMPAIGN_PREVIEW_TEMPLATES.length - 1,
+      );
+    const next = () =>
+      setCurrentIndex((c) =>
+        c < CAMPAIGN_PREVIEW_TEMPLATES.length - 1 ? c + 1 : 0,
+      );
 
-    const hasLogo = !!logo;
-    const hasBusinessName = !!businessName;
+    const validIndex = currentIndex % CAMPAIGN_PREVIEW_TEMPLATES.length;
+    const Template =
+      CAMPAIGN_PREVIEW_TEMPLATES[validIndex]?.component ||
+      CAMPAIGN_PREVIEW_TEMPLATES[0]!.component;
+    const templateName =
+      CAMPAIGN_PREVIEW_TEMPLATES[validIndex]?.name ||
+      CAMPAIGN_PREVIEW_TEMPLATES[0]!.name;
+    const resolvedBranding: CampaignPreviewBranding = {
+      ...branding,
+      logo: signedLogoUrl,
+      bannerImage: signedBannerUrl,
+    };
 
     return (
-      <div
-        ref={ref}
-        className={cn(
-          "relative flex w-full flex-col overflow-hidden rounded-2xl",
-          className,
-        )}
-        style={{ backgroundColor: themeColor }}
-      >
-        {/* ===== BANNER ===== */}
-        <div
-          className="relative w-full"
-          style={{
-            height: 180,
-            ...(bannerImage
-              ? {
-                  backgroundImage: `url(${bannerImage})`,
-                  backgroundSize: "cover",
-                  backgroundPosition: "center",
-                  backgroundRepeat: "no-repeat",
-                }
-              : {
-                  background:
-                    "linear-gradient(135deg, #c8a882 0%, #a08060 50%, #7a6040 100%)",
-                }),
-          }}
-        />
+      <div className="flex w-full flex-col gap-4">
+        {/* Template container (receives the ref so only this part is downloaded) */}
+        <div className="relative w-full transition-all duration-300">
+          <Template
+            ref={ref}
+            data={data}
+            branding={resolvedBranding}
+            businessName={businessName}
+            className={className}
+            onFieldClick={onFieldClick}
+            focusedField={focusedField}
+          />
+        </div>
 
-        {/* ===== CURVED THEMED SECTION ===== */}
-        <div
-          className="relative -mt-8 flex flex-col items-center px-6 pb-6"
-          style={{
-            backgroundColor: themeColor,
-            borderTopLeftRadius: "2rem",
-            borderTopRightRadius: "2rem",
-            color: textColor,
-          }}
-        >
-          {/* Logo circle — sits at the overlap */}
-          {(hasLogo || hasBusinessName) && (
-            <div
-              className="-mt-12 mb-3 flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-full border-[3px] bg-white shadow-lg"
-              style={{ borderColor: `${themeColor}` }}
-            >
-              {hasLogo ? (
-                <img
-                  src={logo!}
-                  alt="Logo"
-                  className="h-full w-full object-contain"
-                />
-              ) : (
-                <span
-                  className="text-lg font-bold"
-                  style={{ color: themeColor }}
-                >
-                  {businessName!
-                    .split(" ")
-                    .map((w) => w[0])
-                    .join("")
-                    .toUpperCase()}
-                </span>
-              )}
-            </div>
-          )}
-
-          {/* Title */}
-          <h3 className="mt-2 text-center text-[1.85rem] leading-tight font-extrabold tracking-tight capitalize">
-            {title}
-          </h3>
-
-          {/* Description */}
-          <p className="mt-3 text-center text-[1rem] leading-relaxed whitespace-pre-wrap opacity-90">
-            {description}
-          </p>
-
-          {/* Reward offer sentence — **text** rendered bold */}
-          {rewardValue && (
-            <p className="mt-2.5 text-center text-[0.95rem] leading-relaxed whitespace-pre-wrap opacity-90">
-              {renderBoldText(rewardValue)}
-            </p>
-          )}
-
-          {/* Separator + Expiry + Terms + Contact */}
-          {(expiryFormatted || terms.length > 0 || contactNumber) && (
-            <>
-              {/* Separator line */}
-              <div
-                className="mx-auto my-5 w-4/5"
-                style={{
-                  height: 1,
-                  backgroundColor: `${textColor}30`,
-                }}
-              />
-
-              {/* Expiry */}
-              {expiryFormatted && (
-                <p className="text-center text-[1rem] font-extrabold tracking-wide">
-                  Offer valid till {expiryFormatted}
-                </p>
-              )}
-
-              {/* Terms */}
-              {terms.length > 0 && (
-                <div className="mt-3 space-y-1 text-center">
-                  {terms.map((term) => (
-                    <p
-                      key={term}
-                      className="text-[0.95rem] leading-relaxed opacity-90"
-                    >
-                      {term}
-                    </p>
-                  ))}
-                </div>
-              )}
-
-              {/* Redemption info & constraints */}
-              <div className="mt-5 space-y-1 text-center">
-                <p className="text-[0.85rem] opacity-85">{redemptionLabel}</p>
-                {maxRedemptionEnabled &&
-                  maxRedemptionAmount != null &&
-                  maxRedemptionAmount > 0 && (
-                    <p className="text-[0.85rem] opacity-85">
-                      <span className="font-semibold">
-                        Max discount up to ₹{maxRedemptionAmount}
-                      </span>
-                      .
-                    </p>
-                  )}
-                {minEarningEnabled &&
-                  minEarningAmount != null &&
-                  minEarningAmount > 0 && (
-                    <p className="text-[0.85rem] opacity-85">
-                      <span className="font-semibold">
-                        Min. purchase of ₹{minEarningAmount}
-                      </span>{" "}
-                      required to earn reward.
-                    </p>
-                  )}
-                {minRedemptionEnabled &&
-                  minRedemptionAmount != null &&
-                  minRedemptionAmount > 0 && (
-                    <p className="text-[0.85rem] opacity-85">
-                      <span className="font-semibold">
-                        Min. purchase of ₹{minRedemptionAmount}
-                      </span>{" "}
-                      required to redeem.
-                    </p>
-                  )}
-                {instantCashback && (
-                  <p className="text-[0.85rem] opacity-85">
-                    Cashback is instantly redeemable on the same bill.
-                  </p>
-                )}
-
-                {/* Contact */}
-                {contactNumber && (
-                  <p className="mt-1 text-[0.85rem] opacity-85">
-                    Call{" "}
-                    <span className="font-bold underline decoration-1 underline-offset-2">
-                      {contactNumber}
-                    </span>{" "}
-                    for more details
-                  </p>
-                )}
-              </div>
-            </>
-          )}
+        {/* Navigation arrows underneath */}
+        <div className="bg-background mt-2 flex w-full items-center justify-between rounded-lg border p-2 px-4 shadow-sm">
+          <button
+            type="button"
+            onClick={prev}
+            className="hover:bg-muted rounded-full p-2 transition-colors"
+          >
+            <ChevronLeft size={18} />
+          </button>
+          <div className="flex flex-col items-center">
+            <span className="text-muted-foreground mb-1 text-xs font-bold tracking-widest uppercase">
+              Preview Style
+            </span>
+            <span className="text-sm font-semibold">{templateName}</span>
+          </div>
+          <button
+            type="button"
+            onClick={next}
+            className="hover:bg-muted rounded-full p-2 transition-colors"
+          >
+            <ChevronRight size={18} />
+          </button>
         </div>
       </div>
     );
