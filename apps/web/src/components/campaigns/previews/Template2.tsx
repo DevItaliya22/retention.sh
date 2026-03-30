@@ -8,7 +8,7 @@ import { DEFAULT_THEME, formatExpiryDate, renderBoldText } from "./utils";
 
 export const Template2 = forwardRef<HTMLDivElement, CampaignTemplateProps>(
   function Template2(
-    { data, branding, businessName, className, onFieldClick },
+    { data, branding, businessName, className, onFieldClick, focusedField },
     ref,
   ) {
     const themeColor = branding.themeColor || DEFAULT_THEME;
@@ -32,6 +32,7 @@ export const Template2 = forwardRef<HTMLDivElement, CampaignTemplateProps>(
           fieldName="bannerImage"
           onClick={onFieldClick}
           className="!m-0 !p-0"
+          isFocused={focusedField === "bannerImage"}
         >
           <div
             className="w-full"
@@ -51,7 +52,11 @@ export const Template2 = forwardRef<HTMLDivElement, CampaignTemplateProps>(
         <div className="flex flex-col p-6">
           <div className="mb-4 flex items-center gap-4">
             {(logo || businessName) && (
-              <InteractiveField fieldName="logo" onClick={onFieldClick}>
+              <InteractiveField
+                fieldName="logo"
+                onClick={onFieldClick}
+                isFocused={focusedField === "logo"}
+              >
                 <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded border bg-gray-50">
                   {logo ? (
                     <img
@@ -71,7 +76,11 @@ export const Template2 = forwardRef<HTMLDivElement, CampaignTemplateProps>(
               </InteractiveField>
             )}
             <div>
-              <InteractiveField fieldName="title" onClick={onFieldClick}>
+              <InteractiveField
+                fieldName="title"
+                onClick={onFieldClick}
+                isFocused={focusedField === "title"}
+              >
                 <h3
                   className="text-xl font-bold tracking-tight"
                   style={{ color: themeColor }}
@@ -82,14 +91,22 @@ export const Template2 = forwardRef<HTMLDivElement, CampaignTemplateProps>(
             </div>
           </div>
 
-          <InteractiveField fieldName="description" onClick={onFieldClick}>
+          <InteractiveField
+            fieldName="description"
+            onClick={onFieldClick}
+            isFocused={focusedField === "description"}
+          >
             <p className="mb-4 text-sm leading-relaxed text-gray-600">
               {description}
             </p>
           </InteractiveField>
 
           {data.rewardValue && (
-            <InteractiveField fieldName="offerStatement" onClick={onFieldClick}>
+            <InteractiveField
+              fieldName="offerStatement"
+              onClick={onFieldClick}
+              isFocused={focusedField === "offerStatement"}
+            >
               <div
                 className="mb-4 rounded-lg p-4 text-center text-lg font-medium tracking-tight shadow-sm"
                 style={{
@@ -103,7 +120,11 @@ export const Template2 = forwardRef<HTMLDivElement, CampaignTemplateProps>(
           )}
 
           {expiryFormatted && (
-            <InteractiveField fieldName="expiresAt" onClick={onFieldClick}>
+            <InteractiveField
+              fieldName="expiresAt"
+              onClick={onFieldClick}
+              isFocused={focusedField === "expiresAt"}
+            >
               <p className="mb-4 w-full text-center text-sm font-semibold text-gray-800">
                 Valid until {expiryFormatted}
               </p>
@@ -114,6 +135,7 @@ export const Template2 = forwardRef<HTMLDivElement, CampaignTemplateProps>(
             <InteractiveField
               fieldName="termsAndConditions"
               onClick={onFieldClick}
+              isFocused={focusedField === "termsAndConditions"}
             >
               <ul className="mb-4 list-disc space-y-1 pl-4 text-xs text-gray-500">
                 {terms.map((t, i) => (
@@ -126,6 +148,7 @@ export const Template2 = forwardRef<HTMLDivElement, CampaignTemplateProps>(
           <InteractiveField
             fieldName="maxRedemptionEnabled"
             onClick={onFieldClick}
+            isFocused={focusedField === "maxRedemptionEnabled"}
           >
             <div className="mt-2 space-y-1 rounded-lg border bg-slate-50 p-3 text-center text-xs text-slate-500">
               <p>
@@ -162,7 +185,11 @@ export const Template2 = forwardRef<HTMLDivElement, CampaignTemplateProps>(
             </div>
           </InteractiveField>
 
-          <InteractiveField fieldName="contactNumber" onClick={onFieldClick}>
+          <InteractiveField
+            fieldName="contactNumber"
+            onClick={onFieldClick}
+            isFocused={focusedField === "contactNumber"}
+          >
             {data.contactNumber && (
               <p className="mt-4 text-center text-xs font-semibold text-gray-500">
                 Contact: {data.contactNumber}

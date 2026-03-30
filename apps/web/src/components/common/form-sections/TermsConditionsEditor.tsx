@@ -71,6 +71,7 @@ export function TermsConditionsEditor<T extends FieldValues>({
                 <TermCard
                   key={label}
                   label={label}
+                  variant="minimal"
                   checked={isRequired ? true : isSelected}
                   disabled={isRequired}
                   onCheckedChange={(next) => {

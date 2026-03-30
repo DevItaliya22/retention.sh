@@ -13,6 +13,8 @@ interface TermCardProps {
   onRemove?: () => void;
   placeholder?: string;
   disabled?: boolean;
+  /** `minimal` — no box border; hover background only (e.g. suggested defaults). */
+  variant?: "default" | "minimal";
 }
 
 export function TermCard({
@@ -25,17 +27,22 @@ export function TermCard({
   onRemove,
   placeholder,
   disabled = false,
+  variant = "default",
 }: TermCardProps) {
+  const isMinimal = variant === "minimal";
   return (
     <div
       role="button"
       tabIndex={disabled ? -1 : 0}
       aria-disabled={disabled}
       className={[
-        "border-input bg-card flex w-full items-center gap-3 rounded-lg border px-3 py-2 transition-colors",
+        "flex w-full items-center gap-3 rounded-lg px-3 py-2 transition-colors",
+        isMinimal ? "bg-transparent" : "border-input bg-card border",
         disabled
           ? "cursor-not-allowed opacity-70"
-          : "hover:bg-accent/50 cursor-pointer",
+          : isMinimal
+            ? "hover:bg-muted/50 cursor-pointer"
+            : "hover:bg-accent/50 cursor-pointer",
       ].join(" ")}
       onClick={() => {
         if (disabled) return;

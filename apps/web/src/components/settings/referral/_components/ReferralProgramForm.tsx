@@ -1,6 +1,5 @@
 "use client";
 
-import { useCurrentBusiness } from "@/hooks/business/useCurrentBusiness";
 import { useCreateReferralProgram } from "@/hooks/referral/useReferralProgram";
 import {
   referralProgramStep1Schema,
@@ -19,6 +18,7 @@ import {
   type LinearMultiStepFormConfig,
 } from "@reelo/ui/components";
 import { useQueryClient } from "@tanstack/react-query";
+import { useMemo } from "react";
 import { toast } from "sonner";
 import { ReferralProgramStep1 } from "./ReferralProgramStep1";
 import { ReferralProgramStep2 } from "./ReferralProgramStep2";
@@ -31,167 +31,171 @@ interface ReferralProgramFormProps {
   embedded?: boolean;
 }
 
-export function ReferralProgramForm({
+function ReferralProgramFormInner({
   initialData,
   embedded = false,
 }: ReferralProgramFormProps) {
   const queryClient = useQueryClient();
-  const { data: businessData } = useCurrentBusiness();
   const { mutateAsync: createReferralProgram } = useCreateReferralProgram();
 
-  // Check if loyalty exists - we'll need to fetch it separately or include it in the query
   const hasLoyalty = true; // TODO: Add proper loyalty check
 
-  const config: LinearMultiStepFormConfig<ReferralProgramFormValues> = {
-    id: "referral-program-form",
-    title: "Set up Referral Program",
-    onSubmit: async ({ values }) => {
-      try {
-        const result = await createReferralProgram({
-          newCustomerBenefitType: values.newCustomerBenefitType,
-          newCustomerBenefitValue: values.newCustomerBenefitValue ?? 0,
-          newCustomerBenefitExpiresInDays:
-            values.newCustomerBenefitExpiresInDays || null,
-          newCustomerFreeItemSkuId:
-            values.newCustomerBenefitType === "FREE_ITEM_ON_NEXT_PURCHASE"
-              ? values.newCustomerFreeItemSkuId || null
-              : null,
-          existingCustomerBenefitType: values.existingCustomerBenefitType,
-          existingCustomerBenefitValue:
-            values.existingCustomerBenefitValue ?? 0,
-          existingCustomerBenefitExpiresInDays:
-            values.existingCustomerBenefitExpiresInDays || null,
-          existingCustomerFreeItemSkuId:
-            values.existingCustomerBenefitType === "FREE_ITEM_ON_NEXT_PURCHASE"
-              ? values.existingCustomerFreeItemSkuId || null
-              : null,
-          sendReminderToCustomer: values.sendReminderToCustomer,
-          whatsappEnabled: values.whatsappEnabled ?? true,
-          emailEnabled: values.emailEnabled ?? false,
-          smsEnabled: values.smsEnabled ?? false,
-          lockReferralPointsUntilFirstPurchase:
-            values.lockReferralPointsUntilFirstPurchase ?? false,
-          informationSections: [], // Information sections temporarily disabled
-          branding: values.branding,
-          termsAndConditionsNewCustomer:
-            (values.termsAndConditionsNewCustomer ?? []).filter(
-              (s) => s.trim().length > 0,
-            ) || null,
-          termsAndConditionsExistingCustomer:
-            (values.termsAndConditionsExistingCustomer ?? []).filter(
-              (s) => s.trim().length > 0,
-            ) || null,
-        });
+  const config: LinearMultiStepFormConfig<ReferralProgramFormValues> =
+    useMemo(() => {
+      return {
+        id: "referral-program-form",
+        title: "Set up Referral Program",
+        onSubmit: async ({ values }) => {
+          try {
+            const result = await createReferralProgram({
+              newCustomerBenefitType: values.newCustomerBenefitType,
+              newCustomerBenefitValue: values.newCustomerBenefitValue ?? 0,
+              newCustomerBenefitExpiresInDays:
+                values.newCustomerBenefitExpiresInDays || null,
+              newCustomerFreeItemSkuId:
+                values.newCustomerBenefitType === "FREE_ITEM_ON_NEXT_PURCHASE"
+                  ? values.newCustomerFreeItemSkuId || null
+                  : null,
+              existingCustomerBenefitType: values.existingCustomerBenefitType,
+              existingCustomerBenefitValue:
+                values.existingCustomerBenefitValue ?? 0,
+              existingCustomerBenefitExpiresInDays:
+                values.existingCustomerBenefitExpiresInDays || null,
+              existingCustomerFreeItemSkuId:
+                values.existingCustomerBenefitType ===
+                "FREE_ITEM_ON_NEXT_PURCHASE"
+                  ? values.existingCustomerFreeItemSkuId || null
+                  : null,
+              sendReminderToCustomer: values.sendReminderToCustomer,
+              whatsappEnabled: values.whatsappEnabled ?? true,
+              emailEnabled: values.emailEnabled ?? false,
+              smsEnabled: values.smsEnabled ?? false,
+              lockReferralPointsUntilFirstPurchase:
+                values.lockReferralPointsUntilFirstPurchase ?? false,
+              informationSections: [],
+              branding: values.branding,
+              termsAndConditionsNewCustomer:
+                (values.termsAndConditionsNewCustomer ?? []).filter(
+                  (s) => s.trim().length > 0,
+                ) || null,
+              termsAndConditionsExistingCustomer:
+                (values.termsAndConditionsExistingCustomer ?? []).filter(
+                  (s) => s.trim().length > 0,
+                ) || null,
+            });
 
-        if (result.referralProgram) {
-          toast.success("Referral program created successfully!");
-          queryClient.invalidateQueries({ queryKey: ["referralProgram"] });
-          return undefined;
-        } else {
-          throw new Error(result.error || "Failed to create referral program");
-        }
-      } catch (error: any) {
-        const errorMessage = getErrorMessageFromResponse(
-          error,
-          "Failed to create referral program. Please try again.",
-        );
-        toast.error(errorMessage);
-        throw error;
-      }
-    },
-    disableNext: ({ stepId, values }) => {
-      if (stepId === "step-1" && !hasLoyalty) {
-        return true; // Disable if loyalty is not enabled
-      }
-      return false;
-    },
-    steps: [
-      {
-        id: "step-1",
-        title: "How It Works",
-        fields: [
-          "newCustomerBenefitType",
-          "newCustomerBenefitValue",
-          "newCustomerFreeItemSkuId",
-          "newCustomerBenefitExpiresInDays",
-          "sendReminderToCustomer",
+            if (result.referralProgram) {
+              toast.success("Referral program created successfully!");
+              queryClient.invalidateQueries({ queryKey: ["referralProgram"] });
+              return undefined;
+            } else {
+              throw new Error(
+                result.error || "Failed to create referral program",
+              );
+            }
+          } catch (error: any) {
+            const errorMessage = getErrorMessageFromResponse(
+              error,
+              "Failed to create referral program. Please try again.",
+            );
+            toast.error(errorMessage);
+            throw error;
+          }
+        },
+        disableNext: ({ stepId, values }) => {
+          if (stepId === "step-1" && !hasLoyalty) {
+            return true;
+          }
+          return false;
+        },
+        steps: [
+          {
+            id: "step-1",
+            title: "How It Works",
+            fields: [
+              "newCustomerBenefitType",
+              "newCustomerBenefitValue",
+              "newCustomerFreeItemSkuId",
+              "newCustomerBenefitExpiresInDays",
+              "sendReminderToCustomer",
+            ],
+            schema: referralProgramStep1Schema,
+            Component: ({ stepIndex, totalSteps }) => (
+              <StepContent
+                stepIndex={stepIndex}
+                totalSteps={totalSteps}
+                title="New customer benefits"
+                description="Set up rewards for customers who join through referrals."
+                required
+              >
+                <ReferralProgramStep1 />
+              </StepContent>
+            ),
+          },
+          {
+            id: "step-2",
+            title: "Existing Customer Benefits",
+            fields: [
+              "existingCustomerBenefitType",
+              "existingCustomerBenefitValue",
+              "existingCustomerFreeItemSkuId",
+              "existingCustomerBenefitExpiresInDays",
+              "lockReferralPointsUntilFirstPurchase",
+              "whatsappEnabled",
+              "emailEnabled",
+              "smsEnabled",
+            ],
+            schema: referralProgramStep2Schema,
+            Component: ({ stepIndex, totalSteps }) => (
+              <StepContent
+                stepIndex={stepIndex}
+                totalSteps={totalSteps}
+                title="Existing customer benefits"
+                description="Set up rewards for customers who refer others."
+                required
+              >
+                <ReferralProgramStep2 />
+              </StepContent>
+            ),
+          },
+          {
+            id: "step-3",
+            title: "Terms & Conditions",
+            fields: [
+              "termsAndConditionsNewCustomer",
+              "termsAndConditionsExistingCustomer",
+            ],
+            schema: referralProgramStep3Schema,
+            Component: ({ stepIndex, totalSteps }) => (
+              <StepContent
+                stepIndex={stepIndex}
+                totalSteps={totalSteps}
+                title="Terms & conditions"
+                description="Add terms & conditions for new and existing customers."
+              >
+                <ReferralProgramStep3 />
+              </StepContent>
+            ),
+          },
+          {
+            id: "step-4",
+            title: "Branding & Review",
+            fields: ["branding"],
+            schema: referralProgramStep4Schema,
+            Component: ({ stepIndex, totalSteps }) => (
+              <StepContent
+                stepIndex={stepIndex}
+                totalSteps={totalSteps}
+                title="Branding & review"
+                description="Customize the appearance of your referral pages and review settings."
+              >
+                <ReferralProgramStep4 />
+              </StepContent>
+            ),
+          },
         ],
-        schema: referralProgramStep1Schema,
-        Component: ({ stepIndex, totalSteps }) => (
-          <StepContent
-            stepIndex={stepIndex}
-            totalSteps={totalSteps}
-            title="New customer benefits"
-            description="Set up rewards for customers who join through referrals."
-            required
-          >
-            <ReferralProgramStep1 />
-          </StepContent>
-        ),
-      },
-      {
-        id: "step-2",
-        title: "Existing Customer Benefits",
-        fields: [
-          "existingCustomerBenefitType",
-          "existingCustomerBenefitValue",
-          "existingCustomerFreeItemSkuId",
-          "existingCustomerBenefitExpiresInDays",
-          "lockReferralPointsUntilFirstPurchase",
-          "whatsappEnabled",
-          "emailEnabled",
-          "smsEnabled",
-        ],
-        schema: referralProgramStep2Schema,
-        Component: ({ stepIndex, totalSteps }) => (
-          <StepContent
-            stepIndex={stepIndex}
-            totalSteps={totalSteps}
-            title="Existing customer benefits"
-            description="Set up rewards for customers who refer others."
-            required
-          >
-            <ReferralProgramStep2 />
-          </StepContent>
-        ),
-      },
-      {
-        id: "step-3",
-        title: "Terms & Conditions",
-        fields: [
-          "termsAndConditionsNewCustomer",
-          "termsAndConditionsExistingCustomer",
-        ],
-        schema: referralProgramStep3Schema,
-        Component: ({ stepIndex, totalSteps }) => (
-          <StepContent
-            stepIndex={stepIndex}
-            totalSteps={totalSteps}
-            title="Terms & conditions"
-            description="Add terms & conditions for new and existing customers."
-          >
-            <ReferralProgramStep3 />
-          </StepContent>
-        ),
-      },
-      {
-        id: "step-4",
-        title: "Branding & Review",
-        fields: ["branding"],
-        schema: referralProgramStep4Schema,
-        Component: ({ stepIndex, totalSteps }) => (
-          <StepContent
-            stepIndex={stepIndex}
-            totalSteps={totalSteps}
-            title="Branding & review"
-            description="Customize the appearance of your referral pages and review settings."
-          >
-            <ReferralProgramStep4 />
-          </StepContent>
-        ),
-      },
-    ],
-  };
+      };
+    }, [createReferralProgram, hasLoyalty, queryClient]);
 
   const defaultValues: Partial<ReferralProgramFormValues> = initialData
     ? {
@@ -289,4 +293,8 @@ export function ReferralProgramForm({
       <CardContent className="p-8">{form}</CardContent>
     </Card>
   );
+}
+
+export function ReferralProgramForm(props: ReferralProgramFormProps) {
+  return <ReferralProgramFormInner {...props} />;
 }

@@ -73,31 +73,27 @@ export const POST = withAdminAuth<{ slugId: string }>(
         contentType,
       });
 
-      const updatedCustomer = await db.customer.update({
-        where: { id: businessCustomer.customer.id },
+      const updatedUser = await db.user.update({
+        where: { id: businessCustomer.customer.user.id },
         data: {
-          avatarUrl: uploaded.url,
-          avatarKey: uploaded.key,
+          image: uploaded.url,
         },
-        include: {
-          user: {
-            select: {
-              id: true,
-              name: true,
-              phoneNumber: true,
-            },
-          },
+        select: {
+          id: true,
+          name: true,
+          phoneNumber: true,
+          image: true,
         },
       });
 
       const responseCustomer = {
         id: businessCustomer.slugId,
         slugId: businessCustomer.slugId,
-        customerId: updatedCustomer.id,
-        name: updatedCustomer.user.name,
-        email: updatedCustomer.email,
-        phone: updatedCustomer.user.phoneNumber,
-        avatarUrl: updatedCustomer.avatarUrl,
+        customerId: businessCustomer.customer.id,
+        name: updatedUser.name,
+        email: businessCustomer.customer.email,
+        phone: updatedUser.phoneNumber,
+        avatarUrl: updatedUser.image,
       };
 
       return NextResponse.json({ customer: responseCustomer });

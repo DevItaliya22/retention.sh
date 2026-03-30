@@ -68,15 +68,10 @@ export const POST = withAdminAuth<{ id: string }>(
         contentType: queryValidation.data.contentType,
       });
 
-      const updatedBill = await db.bill.update({
-        where: { id: bill.id },
-        data: {
-          receiptUrl: uploaded.url,
-          receiptKey: uploaded.key,
-        },
+      return NextResponse.json({
+        bill,
+        receipt: uploaded,
       });
-
-      return NextResponse.json({ bill: updatedBill });
     } catch (error: unknown) {
       return NextResponse.json(
         {

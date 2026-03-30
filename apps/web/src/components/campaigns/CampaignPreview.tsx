@@ -1,5 +1,6 @@
 "use client";
 
+import { useSignedImageUrl } from "@/hooks/storage/useSignedImageUrl";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { forwardRef, useState } from "react";
 import { CAMPAIGN_PREVIEW_TEMPLATES } from "./previews/config";
@@ -16,14 +17,18 @@ interface CampaignPreviewProps {
   businessName?: string | null;
   className?: string;
   onFieldClick?: (fieldName: string) => void;
+  /** When set, that preview region keeps the dashed outline (after click). */
+  focusedField?: string | null;
 }
 
 export const CampaignPreview = forwardRef<HTMLDivElement, CampaignPreviewProps>(
   function CampaignPreview(
-    { data, branding, businessName, className, onFieldClick },
+    { data, branding, businessName, className, onFieldClick, focusedField },
     ref,
   ) {
     const [currentIndex, setCurrentIndex] = useState(0);
+    const signedLogoUrl = useSignedImageUrl(branding.logo);
+    const signedBannerUrl = useSignedImageUrl(branding.bannerImage);
 
     const prev = () =>
       setCurrentIndex((c) =>
@@ -41,18 +46,24 @@ export const CampaignPreview = forwardRef<HTMLDivElement, CampaignPreviewProps>(
     const templateName =
       CAMPAIGN_PREVIEW_TEMPLATES[validIndex]?.name ||
       CAMPAIGN_PREVIEW_TEMPLATES[0]!.name;
+    const resolvedBranding: CampaignPreviewBranding = {
+      ...branding,
+      logo: signedLogoUrl,
+      bannerImage: signedBannerUrl,
+    };
 
     return (
       <div className="flex w-full flex-col gap-4">
         {/* Template container (receives the ref so only this part is downloaded) */}
-        <div className="group relative w-full transition-all duration-300">
+        <div className="relative w-full transition-all duration-300">
           <Template
             ref={ref}
             data={data}
-            branding={branding}
+            branding={resolvedBranding}
             businessName={businessName}
             className={className}
             onFieldClick={onFieldClick}
+            focusedField={focusedField}
           />
         </div>
 

@@ -14,6 +14,7 @@ import {
 } from "@/hooks/campaigns/useCampaignsQuery";
 import { useSegmentsQuery } from "@/hooks/segments/useSegmentsQuery";
 import { useR2Upload } from "@/hooks/storage/useR2Upload";
+import { useSignedImageUrl } from "@/hooks/storage/useSignedImageUrl";
 import {
   CAMPAIGN_APPLIES_TO_LABELS,
   CAMPAIGN_DEFAULT_TERMS,
@@ -75,7 +76,6 @@ import {
   X,
   XCircle,
 } from "lucide-react";
-import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Control, Resolver } from "react-hook-form";
@@ -217,6 +217,15 @@ export function CampaignEditPageClient({
   const previewRef = useRef<HTMLDivElement>(null);
   const [sentenceEdited, setSentenceEdited] = useState(false);
   const [isFormHydrated, setIsFormHydrated] = useState(false);
+  const [pendingLogoFile, setPendingLogoFile] = useState<File | null>(null);
+  const [pendingBannerFile, setPendingBannerFile] = useState<File | null>(null);
+  const [logoBlobUrl, setLogoBlobUrl] = useState<string | null>(null);
+  const [bannerBlobUrl, setBannerBlobUrl] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [previewFocusedField, setPreviewFocusedField] = useState<string | null>(
+    null,
+  );
+  const { uploadFile } = useR2Upload();
   const {
     data: campaign,
     isLoading,
@@ -226,6 +235,26 @@ export function CampaignEditPageClient({
   const { data: businessData } = useCurrentBusiness();
   const { data: segmentsData } = useSegmentsQuery();
   const updateCampaign = useUpdateCampaign(campaignId);
+
+  useEffect(() => {
+    if (!pendingLogoFile) {
+      setLogoBlobUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(pendingLogoFile);
+    setLogoBlobUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [pendingLogoFile]);
+
+  useEffect(() => {
+    if (!pendingBannerFile) {
+      setBannerBlobUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(pendingBannerFile);
+    setBannerBlobUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [pendingBannerFile]);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema) as Resolver<FormValues>,
@@ -265,9 +294,18 @@ export function CampaignEditPageClient({
   });
 
   const watched = form.watch();
+  const resolvedLogoUrl = useSignedImageUrl(
+    logoBlobUrl || watched.logo || null,
+  );
+  const resolvedBannerUrl = useSignedImageUrl(
+    bannerBlobUrl || watched.bannerImage || null,
+  );
 
   useEffect(() => {
     setIsFormHydrated(false);
+    setPendingLogoFile(null);
+    setPendingBannerFile(null);
+    setPreviewFocusedField(null);
   }, [campaignId]);
 
   useEffect(() => {
@@ -345,6 +383,8 @@ export function CampaignEditPageClient({
     setSentenceEdited(
       !!currentOffer && currentOffer.trim() !== autoSentence.trim(),
     );
+    setPendingLogoFile(null);
+    setPendingBannerFile(null);
     setIsFormHydrated(true);
   }, [campaign, form]);
 
@@ -371,7 +411,24 @@ export function CampaignEditPageClient({
   }, [isFormHydrated, audienceParam, form, router]);
 
   const onSubmit = form.handleSubmit(async (values) => {
+    setIsSaving(true);
     try {
+      let logoUrl = values.logo?.trim() ? values.logo : null;
+      let bannerUrl = values.bannerImage?.trim() ? values.bannerImage : null;
+
+      if (pendingLogoFile) {
+        const result = await uploadFile(pendingLogoFile, {
+          type: "business_logo",
+        });
+        logoUrl = result.url;
+      }
+      if (pendingBannerFile) {
+        const result = await uploadFile(pendingBannerFile, {
+          type: "business_banner",
+        });
+        bannerUrl = result.url;
+      }
+
       await updateCampaign.mutateAsync({
         title: values.title || null,
         description: values.description || null,
@@ -399,8 +456,8 @@ export function CampaignEditPageClient({
         termsAndConditions: values.termsAndConditions,
         themeColor: values.themeColor || null,
         textColor: values.textColor || null,
-        logo: values.logo || null,
-        bannerImage: values.bannerImage || null,
+        logo: logoUrl,
+        bannerImage: bannerUrl,
         status: values.status,
         emailSubject: values.emailSubject || null,
         whatsappEnabled: values.whatsappEnabled,
@@ -408,14 +465,23 @@ export function CampaignEditPageClient({
         targetAudiences: values.targetAudiences ?? [],
         messageScheduledAt: values.messageScheduledAt || null,
       });
+
+      setPendingLogoFile(null);
+      setPendingBannerFile(null);
+      form.setValue("logo", logoUrl ?? "");
+      form.setValue("bannerImage", bannerUrl ?? "");
+
       toast.success("Campaign saved");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to save");
+    } finally {
+      setIsSaving(false);
     }
   });
 
   const onFieldClick = useCallback(
     (fieldName: string) => {
+      setPreviewFocusedField(fieldName);
       try {
         form.setFocus(fieldName as keyof FormValues);
       } catch (e) {
@@ -501,10 +567,10 @@ export function CampaignEditPageClient({
   };
 
   const previewBranding = {
-    logo: watched.logo || null,
+    logo: resolvedLogoUrl,
     themeColor: watched.themeColor || DEFAULT_THEME_COLOR,
     textColor: watched.textColor || DEFAULT_TEXT_COLOR,
-    bannerImage: watched.bannerImage || null,
+    bannerImage: resolvedBannerUrl,
   };
 
   return (
@@ -562,7 +628,7 @@ export function CampaignEditPageClient({
               type="button"
               size="sm"
               onClick={onSubmit}
-              loading={updateCampaign.isPending}
+              loading={isSaving || updateCampaign.isPending}
             >
               Save
             </Button>
@@ -1128,7 +1194,7 @@ export function CampaignEditPageClient({
                   )}
                 />
 
-                <div id="termsAndConditions" className="rounded-lg border p-0">
+                <div id="termsAndConditions">
                   <TermsConditionsEditor
                     presetLabels={[...CAMPAIGN_TERMS_OPTIONS]}
                   />
@@ -1150,10 +1216,10 @@ export function CampaignEditPageClient({
                         Recommended size 512 x 512 px in JPG, GIF or PNG format
                         up to max size of 10MB.
                       </FormDescription>
-                      {field.value ? (
+                      {logoBlobUrl || field.value ? (
                         <div className="relative inline-block">
-                          <Image
-                            src={field.value}
+                          <BrandingImagePreview
+                            src={resolvedLogoUrl || ""}
                             alt="Logo preview"
                             width={80}
                             height={80}
@@ -1161,17 +1227,20 @@ export function CampaignEditPageClient({
                           />
                           <button
                             type="button"
-                            onClick={() => field.onChange("")}
+                            onClick={() => {
+                              setPendingLogoFile(null);
+                              field.onChange("");
+                            }}
                             className="bg-destructive text-destructive-foreground absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full shadow"
                           >
                             <X className="h-3 w-3" />
                           </button>
                         </div>
                       ) : (
-                        <ImageUploadButton
-                          onFile={(url) => field.onChange(url)}
+                        <LocalImagePickerButton
+                          onFileSelected={setPendingLogoFile}
                           label="Upload your logo"
-                          uploadType="logo"
+                          maxSizeBytes={10 * 1024 * 1024}
                         />
                       )}
                       <FormMessage />
@@ -1276,10 +1345,10 @@ export function CampaignEditPageClient({
                         Recommended size 512 x 512 px in JPG, GIF or PNG format
                         up to max size of 5MB.
                       </FormDescription>
-                      {field.value ? (
+                      {bannerBlobUrl || field.value ? (
                         <div className="relative">
-                          <Image
-                            src={field.value}
+                          <BrandingImagePreview
+                            src={resolvedBannerUrl || ""}
                             alt="Banner preview"
                             width={1200}
                             height={320}
@@ -1287,18 +1356,21 @@ export function CampaignEditPageClient({
                           />
                           <button
                             type="button"
-                            onClick={() => field.onChange("")}
+                            onClick={() => {
+                              setPendingBannerFile(null);
+                              field.onChange("");
+                            }}
                             className="bg-destructive text-destructive-foreground absolute top-1.5 right-1.5 flex h-6 w-6 items-center justify-center rounded-full shadow"
                           >
                             <X className="h-3.5 w-3.5" />
                           </button>
                         </div>
                       ) : (
-                        <ImageUploadButton
-                          onFile={(url) => field.onChange(url)}
+                        <LocalImagePickerButton
+                          onFileSelected={setPendingBannerFile}
                           label="Upload Your Own"
                           icon="image"
-                          uploadType="banner"
+                          maxSizeBytes={10 * 1024 * 1024}
                         />
                       )}
                       <FormMessage />
@@ -1412,6 +1484,7 @@ export function CampaignEditPageClient({
                 businessName={businessData?.business?.name}
                 className="shadow-2xl"
                 onFieldClick={onFieldClick}
+                focusedField={previewFocusedField}
               />
             </div>
           </form>
@@ -1669,51 +1742,70 @@ function Section({
 }
 
 // ---------------------------------------------------------------------------
-// Image upload button (client-side only — reads file as data URL for preview)
+// Preview image wrapper.
 // ---------------------------------------------------------------------------
 
-function ImageUploadButton({
-  onFile,
+function BrandingImagePreview({
+  src,
+  alt,
+  width,
+  height,
+  className,
+}: {
+  src: string;
+  alt: string;
+  width: number;
+  height: number;
+  className?: string;
+}) {
+  return (
+    <img
+      src={src}
+      alt={alt}
+      width={width}
+      height={height}
+      className={className}
+    />
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Pick image locally; R2 upload runs on Save.
+// ---------------------------------------------------------------------------
+
+function LocalImagePickerButton({
+  onFileSelected,
   label,
   icon = "upload",
-  uploadType,
+  maxSizeBytes,
 }: {
-  onFile: (url: string) => void;
+  onFileSelected: (file: File) => void;
   label: string;
   icon?: "upload" | "image";
-  uploadType: "logo" | "banner";
+  maxSizeBytes: number;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const { uploadFile, isUploading } = useR2Upload();
 
   const handleChange = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
+    (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) return;
 
       if (!file.type.startsWith("image/")) {
-        toast.error("Please select an image file (JPG, PNG, GIF)");
+        toast.error("Please select an image file (JPG, PNG, GIF, WebP)");
         return;
       }
-      if (file.size > 10 * 1024 * 1024) {
-        toast.error("File too large. Max 10MB.");
+      if (file.size > maxSizeBytes) {
+        toast.error(
+          `File too large. Max ${Math.round(maxSizeBytes / (1024 * 1024))}MB.`,
+        );
         return;
       }
 
-      try {
-        const result = await uploadFile(file, {
-          type: uploadType === "logo" ? "business_logo" : "business_banner",
-        });
-        onFile(result.url);
-      } catch (err) {
-        toast.error(
-          err instanceof Error ? err.message : "Failed to upload image",
-        );
-      } finally {
-        e.target.value = "";
-      }
+      onFileSelected(file);
+      e.target.value = "";
     },
-    [onFile, uploadFile, uploadType],
+    [onFileSelected, maxSizeBytes],
   );
 
   const Icon = icon === "image" ? ImagePlus : Upload;
@@ -1723,10 +1815,9 @@ function ImageUploadButton({
       type="button"
       onClick={() => inputRef.current?.click()}
       className="border-input hover:bg-muted/50 flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed py-4 text-sm font-medium transition-colors"
-      disabled={isUploading}
     >
       <Icon className="text-muted-foreground h-4 w-4" />
-      {isUploading ? "Uploading..." : label}
+      {label}
       <input
         ref={inputRef}
         type="file"
