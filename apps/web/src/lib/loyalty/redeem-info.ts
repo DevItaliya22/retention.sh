@@ -33,6 +33,8 @@ export interface RewardStageRedeemInfo {
   freeItemName: string | null;
   percentageValue: number | null;
   cashAmount: number | null;
+  minPurchaseForRedemptionEnabled?: boolean;
+  minPurchaseForRedemption?: number | null;
 }
 
 export interface RewardStageInput {
@@ -284,6 +286,8 @@ export async function getRedeemableInfo(
     freeItemName: s.freeItemName,
     percentageValue: s.percentageValue,
     cashAmount: s.cashAmount,
+    minPurchaseForRedemptionEnabled: s.minPurchaseForRedemptionEnabled ?? false,
+    minPurchaseForRedemption: s.minPurchaseForRedemption ?? null,
   }));
 
   const earnablePoints = isCashbackType

@@ -12,6 +12,8 @@ export interface RewardStagePreview {
   freeItemName: string | null;
   percentageValue: number | null;
   cashAmount: number | null;
+  minPurchaseForRedemptionEnabled?: boolean;
+  minPurchaseForRedemption?: number | null;
 }
 
 export interface FreeItemPreview {
@@ -37,6 +39,8 @@ export interface LoyaltyPreviewData {
   /** Cashback balance (₹) for CASHBACK/TIER types. */
   cashbackBalance?: number;
   redeemablePoints: number;
+  /** AMOUNT_SPENT / VISIT_MADE: max wallet cashback (₹) applicable to this bill. */
+  maxRedeemableFromCashback?: number;
   earnablePoints: number;
   /** Unclaimed free items (e.g. from referral) that can be claimed on this bill. */
   freeItems: FreeItemPreview[];

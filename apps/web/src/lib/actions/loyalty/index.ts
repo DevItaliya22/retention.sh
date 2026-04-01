@@ -12,6 +12,7 @@ import {
   safeAmount,
   type LoyaltyContext,
 } from "@/lib/loyalty";
+import { parseFreeItems, type FreeItemEntry } from "@/lib/utils/free-items";
 import {
   isServiceEnabled,
   type IsServiceEnabled,
@@ -209,12 +210,17 @@ async function recordCashbackRedemption(
 }
 
 /**
- * Redeem points for bill discount: convert points → cashback first, then use that cashback.
- * Creates 3 transactions on the bill (all linked to billId):
- *   1. Points dec: -N points (REDEEMED)
- *   2. Cashback inc: +discountValue cashback (EARNED) — from converting points
- *   3. Cashback dec: -discountValue cashback (REDEEMED) — used on bill
+ * Redeem points for bill discount: convert points → cashback and/or pending free item.
+ * Points: REDEEMED tx. Cashback path: EARNED CASHBACK + wallet increment.
+ * FREE_ITEM path: append wallet.freeItems + EARNED FREE_ITEM (claim later via claim-free-item).
  */
+export type FreeItemRewardParams = {
+  rewardName: string;
+  freeItemName: string | null;
+  freeItemSkuId: string | null;
+  rewardStageId: string;
+};
+
 async function recordPointsRedemptionAsCashbackFlow(
   tx: Prisma.TransactionClient,
   params: {
@@ -225,8 +231,7 @@ async function recordPointsRedemptionAsCashbackFlow(
     context: LoyaltyContext;
     pointsDec: number;
     cashbackValue: number;
-    /** When redeeming for FREE_ITEM, pass so we can show "You got: X" on the bill. */
-    freeItemReward?: { rewardName: string; freeItemName: string | null };
+    freeItemReward?: FreeItemRewardParams;
   },
 ) {
   const {
@@ -283,6 +288,21 @@ async function recordPointsRedemptionAsCashbackFlow(
   });
 
   if (freeItemReward) {
+    const skuName =
+      freeItemReward.freeItemName?.trim() || freeItemReward.rewardName;
+    const entryId = crypto.randomUUID();
+    const newEntry: FreeItemEntry = {
+      id: entryId,
+      skuId: freeItemReward.freeItemSkuId,
+      skuName,
+      source: "LOYALTY",
+      sourceId: freeItemReward.rewardStageId,
+      createdAt: new Date().toISOString(),
+    };
+    const walletFresh = await tx.wallet.findUnique({
+      where: { businessId_customerId: { businessId, customerId } },
+    });
+    const existing = parseFreeItems(walletFresh?.freeItems);
     await tx.transaction.create({
       data: {
         businessId,
@@ -291,55 +311,91 @@ async function recordPointsRedemptionAsCashbackFlow(
         loyaltyId,
         valueKind: TransactionValueKind.FREE_ITEM,
         amount: 0,
-        type: TransactionType.REDEEMED,
-        source: TransactionSource.BILL,
-        sourceId: billId,
-        description: `Claimed: ${freeItemReward.freeItemName ?? freeItemReward.rewardName}`,
-        metadata: {
-          freeItemClaimed: true,
-          freeItemName:
-            freeItemReward.freeItemName ?? freeItemReward.rewardName,
-          rewardName: freeItemReward.rewardName,
-        },
-      },
-    });
-  }
-
-  if (cashbackValue > 0) {
-    // 2. Cashback inc (points converted to cashback) — stays in wallet until user "redeems cashback on bill"
-    await tx.transaction.create({
-      data: {
-        businessId,
-        customerId,
-        billId,
-        loyaltyId,
-        valueKind: TransactionValueKind.CASHBACK,
-        amount: cashbackValue,
         type: TransactionType.EARNED,
         source: TransactionSource.BILL,
         sourceId: billId,
-        description: `Points converted to ₹${cashbackValue} cashback`,
-        metadata: { fromPointsConversion: true, pointsDeducted: pointsDec },
+        description: `Free item from points: ${skuName}`,
+        metadata: {
+          freeItemName: skuName,
+          rewardName: freeItemReward.rewardName,
+          freeItemId: entryId,
+          rewardStageId: freeItemReward.rewardStageId,
+        },
       },
     });
-  }
+    if (cashbackValue > 0) {
+      await tx.transaction.create({
+        data: {
+          businessId,
+          customerId,
+          billId,
+          loyaltyId,
+          valueKind: TransactionValueKind.CASHBACK,
+          amount: cashbackValue,
+          type: TransactionType.EARNED,
+          source: TransactionSource.BILL,
+          sourceId: billId,
+          description: `Points converted to ₹${cashbackValue} cashback`,
+          metadata: { fromPointsConversion: true, pointsDeducted: pointsDec },
+        },
+      });
+    }
+    const pointsField =
+      context.type === "AMOUNT_SPENT"
+        ? { amountSpentBalance: { decrement: pointsDec } }
+        : { visitPointsBalance: { decrement: pointsDec } };
+    const data: {
+      amountSpentBalance?: { decrement: number };
+      visitPointsBalance?: { decrement: number };
+      cashbackBalance?: { increment: number };
+      freeItems?: Prisma.JsonArray;
+    } = {
+      ...pointsField,
+      freeItems: [...existing, newEntry] as unknown as Prisma.JsonArray,
+    };
+    if (cashbackValue > 0) {
+      data.cashbackBalance = { increment: cashbackValue };
+    }
+    await tx.wallet.update({
+      where: { businessId_customerId: { businessId, customerId } },
+      data,
+    });
+  } else {
+    if (cashbackValue > 0) {
+      await tx.transaction.create({
+        data: {
+          businessId,
+          customerId,
+          billId,
+          loyaltyId,
+          valueKind: TransactionValueKind.CASHBACK,
+          amount: cashbackValue,
+          type: TransactionType.EARNED,
+          source: TransactionSource.BILL,
+          sourceId: billId,
+          description: `Points converted to ₹${cashbackValue} cashback`,
+          metadata: { fromPointsConversion: true, pointsDeducted: pointsDec },
+        },
+      });
+    }
 
-  const pointsField =
-    context.type === "AMOUNT_SPENT"
-      ? { amountSpentBalance: { decrement: pointsDec } }
-      : { visitPointsBalance: { decrement: pointsDec } };
-  const data: {
-    amountSpentBalance?: { decrement: number };
-    visitPointsBalance?: { decrement: number };
-    cashbackBalance?: { increment: number };
-  } = pointsField;
-  if (cashbackValue > 0) {
-    data.cashbackBalance = { increment: cashbackValue };
+    const pointsField =
+      context.type === "AMOUNT_SPENT"
+        ? { amountSpentBalance: { decrement: pointsDec } }
+        : { visitPointsBalance: { decrement: pointsDec } };
+    const data: {
+      amountSpentBalance?: { decrement: number };
+      visitPointsBalance?: { decrement: number };
+      cashbackBalance?: { increment: number };
+    } = pointsField;
+    if (cashbackValue > 0) {
+      data.cashbackBalance = { increment: cashbackValue };
+    }
+    await tx.wallet.update({
+      where: { businessId_customerId: { businessId, customerId } },
+      data,
+    });
   }
-  await tx.wallet.update({
-    where: { businessId_customerId: { businessId, customerId } },
-    data,
-  });
 }
 
 async function recordCashbackEarned(
@@ -723,9 +779,7 @@ export async function convertPointsForBill(
 
   let pointsDec = 0;
   let cashbackValue = 0;
-  let freeItemReward:
-    | { rewardName: string; freeItemName: string | null }
-    | undefined;
+  let freeItemReward: FreeItemRewardParams | undefined;
 
   if (stage.rewardType === "FREE_ITEM") {
     const minOk =
@@ -738,6 +792,8 @@ export async function convertPointsForBill(
     freeItemReward = {
       rewardName: stage.rewardName ?? "Free item",
       freeItemName: stage.freeItemName ?? null,
+      freeItemSkuId: stage.freeItemSkuId ?? null,
+      rewardStageId: stage.id,
     };
   } else if (
     stage.rewardType === "PERCENTAGE_DISCOUNT" ||
@@ -1419,9 +1475,7 @@ export async function applyLoyaltyForBill(
   // Same semantics as applyRedemptionForBill: points → reward; discount = cashback (FREE_ITEM = points only).
   let redeemedPoints = 0;
   let pointsDiscount = 0;
-  let freeItemReward:
-    | { rewardName: string; freeItemName: string | null }
-    | undefined;
+  let freeItemReward: FreeItemRewardParams | undefined;
   if (!isCashbackType && (requested > 0 || rewardStageId)) {
     if (rewardStageId && loyalty) {
       const stages =
@@ -1441,6 +1495,8 @@ export async function applyLoyaltyForBill(
             freeItemReward = {
               rewardName: stage.rewardName ?? "Free item",
               freeItemName: stage.freeItemName ?? null,
+              freeItemSkuId: stage.freeItemSkuId ?? null,
+              rewardStageId: stage.id,
             };
           }
         } else if (

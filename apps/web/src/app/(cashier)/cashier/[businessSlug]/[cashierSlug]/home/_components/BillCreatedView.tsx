@@ -593,7 +593,7 @@ export function BillCreatedView({
             <Gift className="size-6 shrink-0 text-emerald-600 dark:text-emerald-400" />
             <div className="text-sm">
               <p className="font-semibold text-emerald-800 dark:text-emerald-200">
-                Free item(s) claimed on this bill
+                Free item added to wallet
               </p>
               <p className="mt-1 font-medium text-emerald-700 dark:text-emerald-300">
                 {bill
@@ -601,6 +601,9 @@ export function BillCreatedView({
                     (item) => item.freeItemName ?? item.rewardName,
                   )
                   .join(", ")}
+              </p>
+              <p className="text-muted-foreground mt-1 text-xs">
+                Claim when served using &quot;Free items to claim&quot; below.
               </p>
             </div>
           </div>
@@ -627,7 +630,9 @@ export function BillCreatedView({
                           (
                           {item.source === "REFERRAL"
                             ? "Referral"
-                            : item.source}
+                            : item.source === "LOYALTY"
+                              ? "Loyalty"
+                              : item.source}
                           )
                         </span>
                       )}

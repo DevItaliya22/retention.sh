@@ -11,6 +11,7 @@ import {
   LOYALTY_SKELETON_STORAGE_KEY,
   LoyaltySettingsSkeleton,
 } from "@/components/settings/loyalty/LoyaltySettingsSkeleton";
+import { useCurrentBusiness } from "@/hooks/business/useCurrentBusiness";
 import type { LoyaltyResponse } from "@/hooks/loyalty/useLoyaltySettings";
 import {
   useLoyaltySettingsQuery,
@@ -26,11 +27,14 @@ import {
   CardTitle,
   Form,
   FormProvider,
+  Label,
   SaveButton,
+  Switch,
   useForm,
 } from "@reelo/ui/components";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { LoyaltyPreviewPanel } from "./_components/LoyaltyPreviewPanel";
 import { AmountSpentSettingsCard } from "./amount-spent";
 import { CashbackSettingsCard } from "./cashback";
 import { TierSettingsCard } from "./tier";
@@ -314,6 +318,9 @@ function BrandingSettingsCard({
 }: BrandingSettingsCardProps) {
   const resolvePendingUploadsRef = useRef<null | (() => Promise<void>)>(null);
   const [hasPendingImageChanges, setHasPendingImageChanges] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const { data: businessData } = useCurrentBusiness();
+  const businessName = businessData?.business?.name ?? "Your Business";
   const branding = loyalty.branding ?? {
     logo: null,
     themeColor: null,
@@ -326,6 +333,9 @@ function BrandingSettingsCard({
   const form = useForm({
     defaultValues: { branding },
   });
+
+  const watchedBranding = form.watch("branding");
+
   const handleResolvePendingUploads = useCallback(
     (resolver: () => Promise<void>) => {
       resolvePendingUploadsRef.current = resolver;
@@ -361,43 +371,84 @@ function BrandingSettingsCard({
   return (
     <Card className="bg-sidebar-accent/50 flex min-h-0 flex-col gap-0 rounded-lg border-0 p-2">
       <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
-        <CardTitle className="text-foreground text-base leading-none font-semibold">
-          Branding
-        </CardTitle>
-        <CardDescription className="text-muted-foreground mt-0.5 text-sm">
-          Customize your loyalty program appearance
-        </CardDescription>
-      </CardHeader>
-      <Card className="border-border/45 bg-background/55 flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border shadow-none">
-        <FormProvider {...form}>
-          <Form {...form}>
-            <form
-              onSubmit={(e) => e.preventDefault()}
-              className="flex min-h-0 flex-1 flex-col"
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="text-foreground text-base leading-none font-semibold">
+              Branding
+            </CardTitle>
+            <CardDescription className="text-muted-foreground mt-0.5 text-sm">
+              Customize your loyalty program appearance
+            </CardDescription>
+          </div>
+          <div className="flex items-center gap-2">
+            <Label
+              htmlFor="branding-preview-toggle"
+              className="text-muted-foreground text-xs"
             >
-              <CardContent className="flex min-h-0 flex-1 flex-col overflow-auto px-4 py-4">
-                <BrandingFormFields
-                  prefix="branding"
-                  layout="settings"
-                  onResolvePendingUploads={handleResolvePendingUploads}
-                  onPendingImageChanges={setHasPendingImageChanges}
-                />
-              </CardContent>
-              <CardFooter className="flex shrink-0 justify-end border-0 px-4 py-2">
-                <SaveButton
-                  onSave={runSubmit}
-                  disabled={!form.formState.isDirty && !hasPendingImageChanges}
-                  labels={{
-                    idle: "Save changes",
-                    loading: "Saving",
-                    success: "Saved",
-                  }}
-                />
-              </CardFooter>
-            </form>
-          </Form>
-        </FormProvider>
-      </Card>
+              Preview
+            </Label>
+            <Switch
+              id="branding-preview-toggle"
+              checked={showPreview}
+              onCheckedChange={setShowPreview}
+            />
+          </div>
+        </div>
+      </CardHeader>
+
+      <div
+        className={showPreview ? "grid grid-cols-1 gap-4 xl:grid-cols-2" : ""}
+      >
+        <Card className="border-border/45 bg-background/55 flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border shadow-none">
+          <FormProvider {...form}>
+            <Form {...form}>
+              <form
+                onSubmit={(e) => e.preventDefault()}
+                className="flex min-h-0 flex-1 flex-col"
+              >
+                <CardContent className="flex min-h-0 flex-1 flex-col overflow-auto px-4 py-4">
+                  <BrandingFormFields
+                    prefix="branding"
+                    layout="settings"
+                    onResolvePendingUploads={handleResolvePendingUploads}
+                    onPendingImageChanges={setHasPendingImageChanges}
+                  />
+                </CardContent>
+                <CardFooter className="flex shrink-0 justify-end border-0 px-4 py-2">
+                  <SaveButton
+                    onSave={runSubmit}
+                    disabled={
+                      !form.formState.isDirty && !hasPendingImageChanges
+                    }
+                    labels={{
+                      idle: "Save changes",
+                      loading: "Saving",
+                      success: "Saved",
+                    }}
+                  />
+                </CardFooter>
+              </form>
+            </Form>
+          </FormProvider>
+        </Card>
+
+        {showPreview && (
+          <Card className="border-border/45 bg-background/55 flex min-h-0 flex-col gap-0 overflow-hidden rounded-lg border p-4 shadow-none">
+            <LoyaltyPreviewPanel
+              loyaltyType={loyalty.loyaltyType}
+              brandingValues={{
+                logo: watchedBranding?.logo ?? null,
+                bannerImage: watchedBranding?.bannerImage ?? null,
+                themeColor: watchedBranding?.themeColor ?? null,
+                textColor: watchedBranding?.textColor ?? null,
+                header: watchedBranding?.header ?? null,
+                subtitle: watchedBranding?.subtitle ?? null,
+              }}
+              businessName={businessName}
+            />
+          </Card>
+        )}
+      </div>
     </Card>
   );
 }

@@ -4,7 +4,10 @@ import type { CreateBillResponse } from "@/hooks/cashier/useBillCreation";
 import { useBillCreation } from "@/hooks/cashier/useBillCreation";
 import { useCashierNextBillNumber } from "@/hooks/cashier/useCashierNextBillNumber";
 import { useCashierSkusQuery } from "@/hooks/cashier/useCashierSkusQuery";
-import { useLoyaltyPreview } from "@/hooks/cashier/useLoyaltyPreview";
+import {
+  useLoyaltyPreview,
+  type RewardStagePreview,
+} from "@/hooks/cashier/useLoyaltyPreview";
 import type { BillLineItemInput } from "@/lib/schemas/bill";
 import { billFormSchema } from "@/lib/schemas/bill";
 import { getErrorMessageFromResponse } from "@/lib/utils/error-handler";
@@ -378,6 +381,10 @@ export function BillCreationForm() {
   const [notes, setNotes] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("");
   const [redeemPoints, setRedeemPoints] = useState("");
+  const [selectedRewardStageId, setSelectedRewardStageId] = useState<
+    string | null
+  >(null);
+  const [redeemCashbackWallet, setRedeemCashbackWallet] = useState("");
   const [redeemFromPartnerId, setRedeemFromPartnerId] = useState<string | null>(
     null,
   );
@@ -432,13 +439,43 @@ export function BillCreationForm() {
   const loyaltyPreview = loyaltyPreviewQuery.data?.preview;
   const loyaltyType = loyaltyPreview?.loyaltyType ?? "NONE";
   const redeemablePoints = loyaltyPreview?.redeemablePoints ?? 0;
-  const pointsBalance = loyaltyPreview?.pointsBalance ?? 0;
-  const cashbackBalance = loyaltyPreview?.cashbackBalance ?? 0;
+  const maxCashbackOnBill = loyaltyPreview?.maxRedeemableFromCashback ?? 0;
+  const rewardStages = loyaltyPreview?.rewardStages ?? [];
   const partnerRedeemable = loyaltyPreview?.partnerRedeemable ?? [];
+
+  const isStageUsableOnBill = useCallback(
+    (r: RewardStagePreview) => {
+      if (!r.canRedeem) return false;
+      if (
+        r.rewardType === "FREE_ITEM" &&
+        r.minPurchaseForRedemptionEnabled &&
+        r.minPurchaseForRedemption != null &&
+        finalAmountBeforeLoyalty < r.minPurchaseForRedemption
+      ) {
+        return false;
+      }
+      if (
+        (r.rewardType === "PERCENTAGE_DISCOUNT" ||
+          r.rewardType === "CASH_DISCOUNT") &&
+        finalAmountBeforeLoyalty <= 0
+      ) {
+        return false;
+      }
+      return true;
+    },
+    [finalAmountBeforeLoyalty],
+  );
 
   const isCashbackType = loyaltyType === "CASHBACK" || loyaltyType === "TIER";
   const isPointsType =
     loyaltyType === "AMOUNT_SPENT" || loyaltyType === "VISIT_MADE";
+
+  const selectedStage = selectedRewardStageId
+    ? rewardStages.find((s) => s.id === selectedRewardStageId)
+    : undefined;
+  const useRewardStage = Boolean(
+    selectedStage && isPointsType && isStageUsableOnBill(selectedStage),
+  );
 
   const selectedPartner = redeemFromPartnerId
     ? partnerRedeemable.find((p) => p.partnerBusinessId === redeemFromPartnerId)
@@ -484,20 +521,6 @@ export function BillCreationForm() {
         : 0
     : 0;
 
-  // Estimated amount user pays after loyalty (own + partner redemption reduce the bill).
-  const redeemValue = Math.max(
-    0,
-    redeemPoints
-      ? isCashbackType
-        ? parseFloat(redeemPoints) || 0
-        : parseInt(redeemPoints, 10) || 0
-      : 0,
-  );
-  const estimatedUserPays = Math.max(
-    0,
-    finalAmountBeforeLoyalty - redeemValue - effectivePartnerDiscount,
-  );
-
   // ─── Handlers ───────────────────────────────────────────────────────────
   const handleReset = useCallback(() => {
     setPhoneNumber("");
@@ -508,6 +531,8 @@ export function BillCreationForm() {
     setPaymentMethod("");
     setLineItems([]);
     setRedeemPoints("");
+    setSelectedRewardStageId(null);
+    setRedeemCashbackWallet("");
     setRedeemFromPartnerId(null);
     setRedeemPartnerValue("");
     clearSelectedCustomer();
@@ -600,6 +625,15 @@ export function BillCreationForm() {
     }
   }, [selectedCustomer]);
 
+  useEffect(() => {
+    if (!selectedRewardStageId) return;
+    const st = rewardStages.find((s) => s.id === selectedRewardStageId);
+    if (!st || !isStageUsableOnBill(st)) {
+      setSelectedRewardStageId(null);
+      setRedeemPoints("");
+    }
+  }, [selectedRewardStageId, rewardStages, isStageUsableOnBill]);
+
   // Auto-fill bill number from business nextBillNumber
   useEffect(() => {
     if (
@@ -687,11 +721,18 @@ export function BillCreationForm() {
       return;
     }
     try {
-      const parsedRedeemPoints = redeemPoints
-        ? isPointsType
-          ? Math.max(0, parseInt(redeemPoints, 10) || 0)
-          : Math.max(0, parseFloat(redeemPoints) || 0)
-        : 0;
+      const maxWalletCb = Math.min(maxCashbackOnBill, finalAmountBeforeLoyalty);
+      const parsedWalletCashback = Math.max(
+        0,
+        parseFloat(redeemCashbackWallet) || 0,
+      );
+      if (isPointsType && parsedWalletCashback > maxWalletCb + 0.001) {
+        const errorMessage = `Cannot apply more than ₹${maxWalletCb.toFixed(2)} cashback on this bill.`;
+        setError(errorMessage);
+        toast.error(errorMessage);
+        return;
+      }
+
       const parsedRedeemPartnerInput =
         redeemPartnerValue && selectedPartner
           ? isPartnerCashbackType
@@ -713,6 +754,30 @@ export function BillCreationForm() {
               )
             : parsedRedeemPartnerInput;
 
+      const cappedWalletCashback =
+        isPointsType && parsedWalletCashback > 0
+          ? Math.min(parsedWalletCashback, maxWalletCb)
+          : 0;
+      const cashbackFromMainField = isCashbackType
+        ? Math.max(0, parseFloat(redeemPoints) || 0)
+        : 0;
+      const pointsFromMainField =
+        isPointsType && !useRewardStage
+          ? Math.max(0, parseInt(redeemPoints, 10) || 0)
+          : 0;
+      const pointsForApi =
+        isPointsType && useRewardStage && selectedStage
+          ? selectedStage.pointsRequired
+          : isPointsType && pointsFromMainField > 0
+            ? pointsFromMainField
+            : undefined;
+      const redeemCashbackForApi =
+        isCashbackType && cashbackFromMainField > 0
+          ? cashbackFromMainField
+          : isPointsType && cappedWalletCashback > 0
+            ? cappedWalletCashback
+            : undefined;
+
       const validationResult = billFormSchema.safeParse({
         billNumber,
         phoneNumber,
@@ -720,10 +785,12 @@ export function BillCreationForm() {
         subtotal: subtotalForApi ?? undefined,
         storeDiscount: Math.max(0, discountAmount),
         tax: [],
-        redeemPoints:
-          isPointsType && redeemPoints ? parsedRedeemPoints : undefined,
-        redeemCashback:
-          isCashbackType && redeemPoints ? parsedRedeemPoints : undefined,
+        redeemPoints: pointsForApi,
+        redeemCashback: redeemCashbackForApi,
+        rewardStageId:
+          isPointsType && useRewardStage && selectedRewardStageId
+            ? selectedRewardStageId
+            : null,
         redeemFromPartnerBusinessId:
           redeemFromPartnerId && parsedRedeemPartner > 0
             ? redeemFromPartnerId
@@ -749,18 +816,23 @@ export function BillCreationForm() {
         return;
       }
 
-      const redeemVal = redeemPoints
-        ? Math.max(
-            0,
-            isCashbackType
-              ? parseFloat(redeemPoints) || 0
-              : parseInt(redeemPoints, 10) || 0,
-          )
-        : 0;
-      if (redeemVal > 0 && redeemVal > redeemablePoints) {
-        const errorMessage = isCashbackType
-          ? `Cannot redeem more than ₹${redeemablePoints.toFixed(2)} cashback.`
-          : `Cannot redeem more than ${redeemablePoints} points.`;
+      if (
+        isCashbackType &&
+        cashbackFromMainField > 0 &&
+        cashbackFromMainField > redeemablePoints + 0.001
+      ) {
+        const errorMessage = `Cannot redeem more than ₹${redeemablePoints.toFixed(2)} cashback.`;
+        setError(errorMessage);
+        toast.error(errorMessage);
+        return;
+      }
+      if (
+        isPointsType &&
+        !useRewardStage &&
+        pointsFromMainField > 0 &&
+        pointsFromMainField > redeemablePoints
+      ) {
+        const errorMessage = `Cannot redeem more than ${redeemablePoints} points.`;
         setError(errorMessage);
         toast.error(errorMessage);
         return;

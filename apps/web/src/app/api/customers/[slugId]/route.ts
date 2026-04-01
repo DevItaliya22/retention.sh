@@ -98,6 +98,11 @@ export const GET = withAdminAuth<{ slugId: string }>(
         );
       }
 
+      const loyaltyProgram = await db.loyalty.findUnique({
+        where: { businessId: context.business.id },
+        select: { loyaltyType: true },
+      });
+
       // Bills: paginated, sorted by latest first (server-side)
       const [billsRows, billsTotal] = await Promise.all([
         db.bill.findMany({
@@ -289,6 +294,18 @@ export const GET = withAdminAuth<{ slugId: string }>(
         rawCashback - lockedCashback - lockedReferralCashback,
       );
 
+      const amountSpentBalance =
+        businessCustomer.wallet?.amountSpentBalance ?? 0;
+      const visitPointsBalance =
+        businessCustomer.wallet?.visitPointsBalance ?? 0;
+      const loyaltyType = loyaltyProgram?.loyaltyType ?? null;
+      const pointsBalanceForProgram =
+        loyaltyType === "AMOUNT_SPENT"
+          ? amountSpentBalance
+          : loyaltyType === "VISIT_MADE"
+            ? visitPointsBalance
+            : amountSpentBalance + visitPointsBalance;
+
       const customer = {
         id: businessCustomer.slugId,
         slugId: businessCustomer.slugId,
@@ -296,9 +313,10 @@ export const GET = withAdminAuth<{ slugId: string }>(
         name: businessCustomer.customer.user.name,
         email: businessCustomer.customer.email,
         phone: businessCustomer.customer.user.phoneNumber,
-        pointsBalance:
-          (businessCustomer.wallet?.amountSpentBalance ?? 0) +
-          (businessCustomer.wallet?.visitPointsBalance ?? 0),
+        loyaltyType,
+        amountSpentBalance,
+        visitPointsBalance,
+        pointsBalance: pointsBalanceForProgram,
         cashbackBalance,
         freeItems: parseFreeItems(businessCustomer.wallet?.freeItems),
         createdAt: businessCustomer.createdAt.toISOString(),
