@@ -30,7 +30,7 @@ export function TierProgressionCard({
   return (
     <div
       className={
-        accentColor ? "rounded-xl border p-5" : "bg-card rounded-xl border p-5"
+        accentColor ? "rounded-xl border p-5" : "rounded-xl border bg-white p-5"
       }
       style={
         accentColor

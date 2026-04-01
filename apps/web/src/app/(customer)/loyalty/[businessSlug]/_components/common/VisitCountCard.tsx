@@ -18,7 +18,7 @@ export function VisitCountCard({
       className={
         ac
           ? "flex items-center gap-4 rounded-xl border p-4"
-          : "bg-card flex items-center gap-4 rounded-xl border p-4"
+          : "flex items-center gap-4 rounded-xl border bg-white p-4"
       }
       style={
         ac ? { backgroundColor: `${ac}0A`, borderColor: `${ac}22` } : undefined

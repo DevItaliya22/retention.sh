@@ -35,7 +35,7 @@ export function LoyaltyNavbar({
       className={
         hasTheme
           ? "sticky top-0 z-10 flex items-center justify-between px-4 py-3"
-          : "bg-background/95 sticky top-0 z-10 flex items-center justify-between border-b px-4 py-3 backdrop-blur-sm"
+          : "sticky top-0 z-10 flex items-center justify-between border-b bg-white/95 px-4 py-3 backdrop-blur-sm"
       }
       style={
         hasTheme

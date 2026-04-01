@@ -56,7 +56,7 @@ export function RewardOffersGrid({
                   : `relative rounded-xl border p-3.5 transition-colors ${
                       available
                         ? "border-primary/30 bg-primary/5"
-                        : "border-border bg-card opacity-75"
+                        : "border-border bg-white opacity-75"
                     }`
               }
               style={
@@ -79,7 +79,7 @@ export function RewardOffersGrid({
                       : `flex size-8 items-center justify-center rounded-lg ${
                           available
                             ? "bg-primary/10 text-primary"
-                            : "bg-muted text-muted-foreground"
+                            : "text-muted-foreground bg-white"
                         }`
                   }
                   style={

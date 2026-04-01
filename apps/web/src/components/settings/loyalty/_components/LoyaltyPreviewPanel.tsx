@@ -278,7 +278,7 @@ function PhoneFrame({ children }: { children: React.ReactNode }) {
           <div className="h-3 w-20 rounded-full bg-zinc-800" />
         </div>
         {/* Scrollable content — rendered at 430px then scaled to fit */}
-        <div className="bg-background relative h-[560px] overflow-hidden">
+        <div className="relative h-[560px] overflow-hidden bg-white">
           <div
             className="origin-top-left overflow-y-auto"
             style={{
@@ -307,7 +307,7 @@ function LoginPreview({
   const themeColor = branding.themeColor;
 
   return (
-    <div className="bg-background flex min-h-full flex-col">
+    <div className="flex min-h-full flex-col bg-white">
       {/* Header with optional logo — same as real login */}
       <div
         className="flex flex-col items-center px-6 pt-12 pb-6"
@@ -397,9 +397,7 @@ function LoyaltyPagePreview({
     <div
       className="flex min-h-full flex-col"
       style={{
-        backgroundColor: themeColor
-          ? `${themeColor}06`
-          : "var(--color-background)",
+        backgroundColor: themeColor ? `${themeColor}06` : "#ffffff",
       }}
     >
       <LoyaltyNavbar
