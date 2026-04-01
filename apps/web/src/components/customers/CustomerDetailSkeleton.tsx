@@ -24,12 +24,34 @@ export function CustomerDetailSkeleton() {
             <Skeleton className="h-9 w-24 rounded-lg" />
           </div>
         </div>
+
+        <Skeleton className="my-5 h-px w-full" />
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <Skeleton className="h-28 w-full rounded-xl" />
+          <Skeleton className="h-28 w-full rounded-xl" />
+          <Skeleton className="h-28 w-full rounded-xl" />
+        </div>
+      </div>
+
+      {/* Activity */}
+      <div className="bg-card overflow-hidden rounded-2xl border shadow-sm">
+        <div className="bg-muted/20 border-b px-6 py-4">
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="mt-2 h-3 w-72" />
+        </div>
+        <div className="space-y-3 p-6">
+          <Skeleton className="h-16 w-full rounded-xl" />
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="h-10 w-full rounded-lg" />
+          ))}
+        </div>
       </div>
 
       {/* Bills */}
       <div className="bg-card overflow-hidden rounded-2xl border shadow-sm">
         <div className="bg-muted/20 border-b px-6 py-4">
           <Skeleton className="h-4 w-20" />
+          <Skeleton className="mt-2 h-3 w-64" />
         </div>
         <div className="space-y-0 p-6">
           {[1, 2, 3, 4, 5].map((i) => (
