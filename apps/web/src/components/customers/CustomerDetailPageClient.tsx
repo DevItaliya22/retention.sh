@@ -315,17 +315,34 @@ function CustomerHeaderSection({ slugId }: { slugId: string }) {
                     })}`
                   : "—"
               }
-              hint="Available for cashback redemption"
+              hint="Wallet cashback (₹), redeemable on bills where allowed"
               icon={Coins}
             />
             <StatTile
-              label="Points Balance"
+              label={
+                customer?.loyaltyType === "AMOUNT_SPENT"
+                  ? "Spend points"
+                  : customer?.loyaltyType === "VISIT_MADE"
+                    ? "Visit points"
+                    : customer?.loyaltyType === "CASHBACK" ||
+                        customer?.loyaltyType === "TIER"
+                      ? "Points"
+                      : "Points balance"
+              }
               value={
                 customer?.pointsBalance != null
                   ? customer.pointsBalance.toLocaleString("en-IN")
                   : "—"
               }
-              hint="Earned from campaigns and purchases"
+              hint={
+                customer?.loyaltyType === "CASHBACK" ||
+                customer?.loyaltyType === "TIER"
+                  ? "Primary balance for this program is cashback (above)"
+                  : customer?.loyaltyType === "AMOUNT_SPENT" ||
+                      customer?.loyaltyType === "VISIT_MADE"
+                    ? "Points for this store’s loyalty program"
+                    : "Earned points where applicable"
+              }
               icon={Sparkles}
             />
             <StatTile
@@ -380,17 +397,29 @@ function CustomerFreeItemsSection({ slugId }: { slugId: string }) {
               Item
             </TableHead>
             <TableHead className="px-4 py-3 text-xs font-medium sm:px-6 sm:text-sm">
+              Source
+            </TableHead>
+            <TableHead className="px-4 py-3 text-xs font-medium sm:px-6 sm:text-sm">
               Expires On
             </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {freeItems.map((item: FreeItemEntry, index: number) => (
-            <TableRow
-              key={`${item.skuName}-${item.expiresAt ?? "none"}-${index}`}
-            >
+            <TableRow key={`${item.id}-${item.skuName}-${index}`}>
               <TableCell className="px-4 py-3 text-xs font-medium sm:px-6 sm:text-sm">
                 {item.skuName}
+              </TableCell>
+              <TableCell className="text-muted-foreground px-4 py-3 text-xs sm:px-6 sm:text-sm">
+                {item.source === "REFERRAL"
+                  ? "Referral"
+                  : item.source === "CAMPAIGN"
+                    ? "Campaign"
+                    : item.source === "LOYALTY"
+                      ? "Loyalty"
+                      : item.source === "OTHER"
+                        ? "—"
+                        : item.source}
               </TableCell>
               <TableCell className="text-muted-foreground px-4 py-3 text-xs sm:px-6 sm:text-sm">
                 {item.expiresAt ? (

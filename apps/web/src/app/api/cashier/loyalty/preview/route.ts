@@ -198,6 +198,7 @@ export const GET = withCashierAuth(async (request: NextRequest, context) => {
         pointsBalance: redeemInfo.pointsBalance ?? 0,
         cashbackBalance: redeemInfo.cashbackBalance,
         redeemablePoints,
+        maxRedeemableFromCashback: redeemInfo.maxRedeemableFromCashback ?? 0,
         earnablePoints,
         expiringBuckets: [],
         cashbackInFinalAmount:

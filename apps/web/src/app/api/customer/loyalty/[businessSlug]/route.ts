@@ -7,6 +7,7 @@ import { withCustomerAuth } from "@/lib/auth/middleware";
 import { runTransaction } from "@/lib/db/transaction";
 import { resolveTierForLifetimeSpend } from "@/lib/loyalty";
 import { businessSlugParamSchema } from "@/lib/schemas/common";
+import { getReadSignedUrl } from "@/lib/storage/r2";
 import {
   sanitizeErrorMessage,
   validateSchema,
@@ -36,6 +37,7 @@ export const GET = withCustomerAuth<{ businessSlug: string }>(
         include: {
           loyalty: {
             include: {
+              branding: true,
               tierConfig: {
                 include: { tiers: { orderBy: { rank: "asc" } } },
               },
@@ -276,6 +278,26 @@ export const GET = withCustomerAuth<{ businessSlug: string }>(
         };
       }
 
+      // Resolve branding with signed URLs
+      let branding = null;
+      const b = business.loyalty?.branding;
+      if (b) {
+        const [logoUrl, bannerImageUrl] = await Promise.all([
+          b.logo ? getReadSignedUrl(b.logo).catch(() => null) : null,
+          b.bannerImage
+            ? getReadSignedUrl(b.bannerImage).catch(() => null)
+            : null,
+        ]);
+        branding = {
+          logoUrl,
+          bannerImageUrl,
+          themeColor: b.themeColor ?? null,
+          textColor: b.textColor ?? null,
+          header: b.header ?? null,
+          subtitle: b.subtitle ?? null,
+        };
+      }
+
       return NextResponse.json({
         loyalty: {
           customer: {
@@ -306,6 +328,7 @@ export const GET = withCustomerAuth<{ businessSlug: string }>(
           tierInfo,
           amountSpentInfo,
           visitMadeInfo,
+          branding,
         },
       });
     } catch (error: any) {

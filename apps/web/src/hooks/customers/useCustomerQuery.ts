@@ -12,6 +12,10 @@ export interface CustomerProfile {
   name: string;
   email: string;
   phone: string | null;
+  /** Business loyalty program type (null if not configured). */
+  loyaltyType?: string | null;
+  amountSpentBalance?: number;
+  visitPointsBalance?: number;
   pointsBalance: number;
   cashbackBalance?: number;
   /** Unclaimed free items (e.g. from referral) to claim on next visit. */
