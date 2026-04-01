@@ -52,14 +52,7 @@ export const GET = withAdminAuth<{ slugId: string }>(
       // This keeps the endpoint fast while still supporting stable pagination UI.
       const takePerSource = Math.min(250, Math.max(30, page * perPage * 3));
 
-      const [
-        partnerTxs,
-        referralLogs,
-        walletTxs,
-        partnerTotal,
-        referralTotal,
-        walletTotal,
-      ] = await Promise.all([
+      const [partnerTxs, referralLogs, walletTxs] = await Promise.all([
         db.transaction.findMany({
           where: {
             businessId: context.business.id,
@@ -89,52 +82,22 @@ export const GET = withAdminAuth<{ slugId: string }>(
           where: {
             businessId: context.business.id,
             customerId: businessCustomer.customerId,
-            OR: [
-              { valueKind: "FREE_ITEM" },
-              { source: "CAMPAIGN" },
-              { source: "REFERRAL", valueKind: "CASHBACK" },
-            ],
           },
           include: { campaign: { select: { title: true } } },
           orderBy: { createdAt: "desc" },
           take: takePerSource,
         }),
-        db.transaction.count({
-          where: {
-            businessId: context.business.id,
-            customerId: businessCustomer.customerId,
-            type: "REDEEMED",
-            source: "BILL",
-          },
-        }),
-        db.referralLog.count({
-          where: {
-            referrerBusinessId: context.business.id,
-            referrerCustomerId: businessCustomer.customerId,
-          },
-        }),
-        db.transaction.count({
-          where: {
-            businessId: context.business.id,
-            customerId: businessCustomer.customerId,
-            OR: [
-              { valueKind: "FREE_ITEM" },
-              { source: "CAMPAIGN" },
-              { source: "REFERRAL", valueKind: "CASHBACK" },
-            ],
-          },
-        }),
       ]);
 
+      const hasPartnerRedemptionMetadata = (metadata: unknown) =>
+        metadata != null &&
+        typeof metadata === "object" &&
+        "redeemedAtBusinessId" in metadata &&
+        typeof (metadata as { redeemedAtBusinessId?: string })
+          .redeemedAtBusinessId === "string";
+
       const partnerRedemptionsRaw = partnerTxs
-        .filter(
-          (t) =>
-            t.metadata != null &&
-            typeof t.metadata === "object" &&
-            "redeemedAtBusinessId" in t.metadata &&
-            typeof (t.metadata as { redeemedAtBusinessId?: string })
-              .redeemedAtBusinessId === "string",
-        )
+        .filter((t) => hasPartnerRedemptionMetadata(t.metadata))
         .map((t) => {
           const meta = t.metadata as { redeemedAtBusinessId: string };
           return {
@@ -178,20 +141,22 @@ export const GET = withAdminAuth<{ slugId: string }>(
         type: "referral" as const,
       }));
 
-      const walletItems = walletTxs.map((tx) => {
-        const meta = tx.metadata as { freeItemName?: string } | null;
-        return {
-          id: tx.id,
-          valueKind: tx.valueKind,
-          txType: tx.type,
-          source: tx.source,
-          amount: tx.amount,
-          campaignTitle: tx.campaign?.title ?? null,
-          freeItemName: meta?.freeItemName ?? null,
-          createdAt: tx.createdAt.toISOString(),
-          type: "walletTx" as const,
-        };
-      });
+      const walletItems = walletTxs
+        .filter((tx) => !hasPartnerRedemptionMetadata(tx.metadata))
+        .map((tx) => {
+          const meta = tx.metadata as { freeItemName?: string } | null;
+          return {
+            id: tx.id,
+            valueKind: tx.valueKind,
+            txType: tx.type,
+            source: tx.source,
+            amount: tx.amount,
+            campaignTitle: tx.campaign?.title ?? null,
+            freeItemName: meta?.freeItemName ?? null,
+            createdAt: tx.createdAt.toISOString(),
+            type: "walletTx" as const,
+          };
+        });
 
       const activityAll = [
         ...partnerItems,
@@ -202,7 +167,7 @@ export const GET = withAdminAuth<{ slugId: string }>(
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
       );
 
-      const total = partnerTotal + referralTotal + walletTotal;
+      const total = activityAll.length;
       const items = activityAll.slice((page - 1) * perPage, page * perPage);
 
       return NextResponse.json({ items, total, page, perPage });

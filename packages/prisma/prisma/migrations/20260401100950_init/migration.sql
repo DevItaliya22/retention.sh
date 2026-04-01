@@ -77,10 +77,13 @@ CREATE TYPE "SegmentOperator" AS ENUM ('LESS_THAN', 'GREATER_THAN', 'LESS_THAN_O
 CREATE TYPE "RecencyUnit" AS ENUM ('DAYS', 'MONTHS');
 
 -- CreateEnum
+CREATE TYPE "MonetaryUnit" AS ENUM ('RATIO', 'ABSOLUTE');
+
+-- CreateEnum
 CREATE TYPE "MessageChannel" AS ENUM ('EMAIL', 'WHATSAPP', 'SMS');
 
 -- CreateEnum
-CREATE TYPE "MessageSource" AS ENUM ('LOYALTY_OTP', 'LOYALTY_REMINDER', 'LOYALTY_EARN', 'LOYALTY_EXPIRE', 'FEEDBACK_LINK', 'NEGATIVE_FEEDBACK_ALERT', 'REFERRAL_REMINDER', 'REFERRAL_CLAIM', 'MEMBERSHIP_ENROLLMENT', 'CAMPAIGN_APPLIED', 'QR_REWARD_EXPIRE');
+CREATE TYPE "MessageSource" AS ENUM ('LOYALTY_OTP', 'LOYALTY_REMINDER', 'LOYALTY_EARN', 'LOYALTY_EXPIRE', 'FEEDBACK_LINK', 'NEGATIVE_FEEDBACK_ALERT', 'REFERRAL_REMINDER', 'REFERRAL_CLAIM', 'MEMBERSHIP_ENROLLMENT', 'CAMPAIGN_APPLIED', 'CAMPAIGN_BROADCAST', 'QR_REWARD_EXPIRE');
 
 -- CreateEnum
 CREATE TYPE "MessageStatus" AS ENUM ('PENDING', 'SENT', 'FAILED');
@@ -90,6 +93,9 @@ CREATE TYPE "PartnerRequestStatus" AS ENUM ('PENDING', 'ACCEPTED', 'REJECTED', '
 
 -- CreateEnum
 CREATE TYPE "PartnershipStatus" AS ENUM ('ACTIVE', 'DISSOLVED');
+
+-- CreateEnum
+CREATE TYPE "PartnershipEventType" AS ENUM ('REQUEST_SENT', 'REQUEST_ACCEPTED', 'REQUEST_REJECTED', 'REQUEST_PERMANENTLY_REJECTED', 'REQUEST_UN_PERMANENTLY_REJECTED', 'PARTNERSHIP_DISSOLVED', 'SETTINGS_UPDATED', 'SETTINGS_LOCKED', 'SETTINGS_UNLOCK_REQUESTED', 'SETTINGS_UNLOCK_ACCEPTED', 'SETTINGS_UNLOCK_REJECTED');
 
 -- CreateTable
 CREATE TABLE "bill" (
@@ -142,7 +148,7 @@ CREATE TABLE "branding" (
     "posterTitle" TEXT,
     "posterThemeColor" TEXT,
     "posterTextColor" TEXT,
-    "businessId" TEXT NOT NULL,
+    "businessId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -158,6 +164,7 @@ CREATE TABLE "business" (
     "defaultPointsName" TEXT NOT NULL DEFAULT 'Points',
     "defaultCurrencySymbol" TEXT NOT NULL DEFAULT '₹',
     "defaultCurrencyCode" TEXT NOT NULL DEFAULT 'INR',
+    "useDefaultBrandingForServices" BOOLEAN NOT NULL DEFAULT false,
     "industries" TEXT[] DEFAULT ARRAY[]::TEXT[],
     "registrationBonusPoints" INTEGER NOT NULL DEFAULT 0,
     "nextBillNumber" INTEGER NOT NULL DEFAULT 1,
@@ -210,7 +217,6 @@ CREATE TABLE "campaign" (
     "contactNumber" TEXT,
     "startsAt" TIMESTAMP(3),
     "expiresAt" TIMESTAMP(3) NOT NULL,
-    "targetCustomerTags" TEXT[] DEFAULT ARRAY[]::TEXT[],
     "status" "CampaignStatus" NOT NULL DEFAULT 'DRAFT',
     "emailSubject" TEXT,
     "themeColor" TEXT,
@@ -232,6 +238,8 @@ CREATE TABLE "campaign" (
     "termsAndConditions" TEXT[] DEFAULT ARRAY[]::TEXT[],
     "whatsappEnabled" BOOLEAN NOT NULL DEFAULT false,
     "emailEnabled" BOOLEAN NOT NULL DEFAULT false,
+    "targetAudiences" TEXT[] DEFAULT ARRAY[]::TEXT[],
+    "messageScheduledAt" TIMESTAMP(3),
     "businessId" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -583,6 +591,8 @@ CREATE TABLE "message_log" (
     "body" TEXT NOT NULL,
     "source" "MessageSource" NOT NULL,
     "sourceId" TEXT,
+    "campaignId" TEXT,
+    "scheduledAt" TIMESTAMP(3),
     "status" "MessageStatus" NOT NULL DEFAULT 'PENDING',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -609,6 +619,9 @@ CREATE TABLE "business_partnership" (
     "sharedReferrals" BOOLEAN NOT NULL DEFAULT false,
     "shareReferralRewards" BOOLEAN NOT NULL DEFAULT false,
     "sharedCampaigns" BOOLEAN NOT NULL DEFAULT false,
+    "settingsLocked" BOOLEAN NOT NULL DEFAULT false,
+    "settingsLockedByBusinessId" TEXT,
+    "unlockRequestByBusinessId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -659,6 +672,19 @@ CREATE TABLE "partner_campaign" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "partner_campaign_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "partnership_event_log" (
+    "id" TEXT NOT NULL,
+    "partnershipId" TEXT,
+    "partnerRequestId" TEXT,
+    "actorBusinessId" TEXT NOT NULL,
+    "event" "PartnershipEventType" NOT NULL,
+    "metadata" JSONB,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "partnership_event_log_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -852,6 +878,7 @@ CREATE TABLE "segment" (
     "frequencyOperator" "SegmentOperator",
     "frequencyValue" INTEGER,
     "frequencyValue2" INTEGER,
+    "monetaryUnit" "MonetaryUnit" DEFAULT 'RATIO',
     "monetaryOperator" "SegmentOperator",
     "monetaryValue" DOUBLE PRECISION,
     "monetaryValue2" DOUBLE PRECISION,
@@ -1180,6 +1207,12 @@ CREATE INDEX "feedback_response_configId_idx" ON "feedback_response"("configId")
 CREATE INDEX "feedback_response_customerId_idx" ON "feedback_response"("customerId");
 
 -- CreateIndex
+CREATE INDEX "feedback_response_businessId_rating_idx" ON "feedback_response"("businessId", "rating");
+
+-- CreateIndex
+CREATE INDEX "feedback_response_businessId_customerId_idx" ON "feedback_response"("businessId", "customerId");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "feedback_link_token_key" ON "feedback_link"("token");
 
 -- CreateIndex
@@ -1264,6 +1297,9 @@ CREATE INDEX "message_log_status_idx" ON "message_log"("status");
 CREATE INDEX "message_log_source_idx" ON "message_log"("source");
 
 -- CreateIndex
+CREATE INDEX "message_log_campaignId_idx" ON "message_log"("campaignId");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "partner_request_partnershipId_key" ON "partner_request"("partnershipId");
 
 -- CreateIndex
@@ -1286,6 +1322,15 @@ CREATE INDEX "partner_campaign_partnershipId_idx" ON "partner_campaign"("partner
 
 -- CreateIndex
 CREATE INDEX "partner_campaign_createdByBusinessId_idx" ON "partner_campaign"("createdByBusinessId");
+
+-- CreateIndex
+CREATE INDEX "partnership_event_log_partnershipId_idx" ON "partnership_event_log"("partnershipId");
+
+-- CreateIndex
+CREATE INDEX "partnership_event_log_partnerRequestId_idx" ON "partnership_event_log"("partnerRequestId");
+
+-- CreateIndex
+CREATE INDEX "partnership_event_log_actorBusinessId_idx" ON "partnership_event_log"("actorBusinessId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "qr_brandingId_key" ON "qr"("brandingId");
@@ -1657,6 +1702,9 @@ ALTER TABLE "membership_action" ADD CONSTRAINT "membership_action_membershipId_f
 ALTER TABLE "message_log" ADD CONSTRAINT "message_log_businessId_fkey" FOREIGN KEY ("businessId") REFERENCES "business"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "message_log" ADD CONSTRAINT "message_log_campaignId_fkey" FOREIGN KEY ("campaignId") REFERENCES "campaign"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "partner_request" ADD CONSTRAINT "partner_request_senderBusinessId_fkey" FOREIGN KEY ("senderBusinessId") REFERENCES "business"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -1676,6 +1724,15 @@ ALTER TABLE "partner_campaign" ADD CONSTRAINT "partner_campaign_partnershipId_fk
 
 -- AddForeignKey
 ALTER TABLE "partner_campaign" ADD CONSTRAINT "partner_campaign_createdByBusinessId_fkey" FOREIGN KEY ("createdByBusinessId") REFERENCES "business"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "partnership_event_log" ADD CONSTRAINT "partnership_event_log_partnershipId_fkey" FOREIGN KEY ("partnershipId") REFERENCES "business_partnership"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "partnership_event_log" ADD CONSTRAINT "partnership_event_log_partnerRequestId_fkey" FOREIGN KEY ("partnerRequestId") REFERENCES "partner_request"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "partnership_event_log" ADD CONSTRAINT "partnership_event_log_actorBusinessId_fkey" FOREIGN KEY ("actorBusinessId") REFERENCES "business"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "qr" ADD CONSTRAINT "qr_businessId_fkey" FOREIGN KEY ("businessId") REFERENCES "business"("id") ON DELETE CASCADE ON UPDATE CASCADE;

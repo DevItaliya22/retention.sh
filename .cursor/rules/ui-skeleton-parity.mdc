@@ -1,0 +1,24 @@
+---
+alwaysApply: false
+---
+# UI Skeleton Parity
+
+When implementing loading states in UI components:
+
+- Keep all static content visible in loading state (titles, labels, helper text, section headings, fixed button text).
+- Skeleton only dynamic regions where fetched/runtime data appears (table cell values, metric values, avatars/images, async chips/tags).
+- Match final layout 1:1 in loading state: spacing, alignment, container widths, row heights, and responsive behavior.
+- Match typography parity for static text: same font size, weight, line-height, and color classes as the loaded view.
+- Keep table headers/toolbars visible; skeletonize rows/cells, not the entire table shell.
+
+## Component Structure Rules
+
+- Preferred: split into dedicated loading UI components (e.g. `FeatureTableSkeleton`) when layout is substantial.
+- If current pattern is inline conditional rendering (`isLoading ? skeleton : data`), keep it and make parity accurate there.
+- If only a small skeleton fragment exists, extract a full-page/component skeleton variant when that improves 1:1 visual parity.
+
+## Quick Check Before Merge
+
+- Compare loading and loaded views side-by-side for identical structure.
+- Confirm no static copy disappears during loading.
+- Confirm dynamic placeholders occupy the exact final value slots.
