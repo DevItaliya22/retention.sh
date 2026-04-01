@@ -36,6 +36,20 @@ import { CashbackSettingsCard } from "./cashback";
 import { TierSettingsCard } from "./tier";
 import { VisitMadeSettingsCard } from "./visit";
 
+function getLoyaltyTypeHeading(type: LoyaltyResponse["loyaltyType"]): string {
+  switch (type) {
+    case "TIER":
+      return "Tier-Based Loyalty";
+    case "AMOUNT_SPENT":
+      return "Amount-Spent-Based Loyalty";
+    case "VISIT_MADE":
+      return "Visit-Made-Based Loyalty";
+    case "CASHBACK":
+    default:
+      return "Basic Loyalty";
+  }
+}
+
 export function LoyaltyExistingSettings() {
   const { data, isLoading, isError } = useLoyaltySettingsQuery();
   const updateMutation = useUpdateLoyaltyMutation();
@@ -79,6 +93,10 @@ export function LoyaltyExistingSettings() {
 
   return (
     <div className="space-y-6 pb-12">
+      <h2 className="text-foreground text-2xl leading-tight font-bold">
+        {getLoyaltyTypeHeading(loyalty.loyaltyType)}
+      </h2>
+
       {loyalty.loyaltyType === "CASHBACK" && loyalty.cashbackConfig && (
         <CashbackSettingsCard
           config={loyalty.cashbackConfig}

@@ -1,51 +1,34 @@
 "use client";
 
-import { CustomerLogoutButton } from "@/components/customer-portal/CustomerLogoutButton";
 import { PageLayout, ScaffoldContainer } from "@/components/layouts";
 import { fetcher } from "@/lib/fetcher";
 import {
   Badge,
-  Button,
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-  DateDisplay,
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-  Skeleton,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
 } from "@reelo/ui/components";
 import { useQuery } from "@tanstack/react-query";
+import { useReducedMotion } from "framer-motion";
 import {
   ArrowUpRight,
   CheckCircle2,
-  ChevronLeft,
-  ChevronRight,
-  Coins,
-  Footprints,
   Gift,
-  Receipt,
   Sparkles,
   Star,
   Trophy,
-  Wallet,
 } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useMemo, useState } from "react";
+import {
+  LoyaltyContentView,
+  LoyaltyLoadingView,
+  LoyaltyStateView,
+} from "./_components";
 
-// ─── Types ──────────────────────────────────────────────────────────────────
-
-interface RewardStage {
+export interface RewardStage {
   id: string;
   rewardName: string;
   rewardType: string;
@@ -56,16 +39,13 @@ interface RewardStage {
   cashAmount: number | null;
 }
 
-interface TierInfo {
+export interface TierInfo {
   currentTier: {
     name: string;
-    rank: number;
     cashbackPercentage: number;
   } | null;
   allTiers: {
-    id: string;
     name: string;
-    rank: number;
     minLifetimeSpend: number;
     maxLifetimeSpend: number | null;
     cashbackPercentage: number;
@@ -81,8 +61,11 @@ interface TierInfo {
 
 interface LoyaltyDetailResponse {
   loyalty: {
+    customer: {
+      name: string | null;
+      email: string | null;
+    };
     business: {
-      id: string;
       name: string;
       slug: string;
       currencySymbol: string;
@@ -100,7 +83,6 @@ interface LoyaltyDetailResponse {
       createdAt: string;
     }>;
     transactions: {
-      id: string;
       valueKind: string;
       amount: number;
       type: string;
@@ -111,18 +93,7 @@ interface LoyaltyDetailResponse {
       metadata: unknown;
       campaignTitle: string | null;
     }[];
-    /** CASHBACK / TIER: history from CashbackTransaction + Bill (date, amount spent, cashback, tier). */
-    cashbackHistory: Array<{
-      id: string;
-      date: string;
-      billNumber: string;
-      amountSpent: number;
-      cashbackReceived: number;
-      tierName: string | null;
-      cashbackPercentage: number | null;
-    }>;
     tierInfo: TierInfo | null;
-    cashbackInfo: { cashbackPercentage: number } | null;
     amountSpentInfo: {
       pointsPerRupee: number;
       rewardStages: RewardStage[];
@@ -210,7 +181,7 @@ function TierProgressSection({ tierInfo }: { tierInfo: TierInfo }) {
         {/* Tier Track */}
         <div className="space-y-3">
           {allTiers.map((tier, index) => {
-            const isCurrent = currentTier?.rank === tier.rank;
+            const isCurrent = currentTier?.name === tier.name;
             const isAchieved = lifetimeSpend >= tier.minLifetimeSpend;
             const tierMax = tier.maxLifetimeSpend ?? maxSpend;
             const tierProgress = isAchieved
@@ -225,7 +196,7 @@ function TierProgressSection({ tierInfo }: { tierInfo: TierInfo }) {
               : 0;
 
             return (
-              <div key={tier.id} className="space-y-1.5">
+              <div key={`${tier.name}-${index}`} className="space-y-1.5">
                 <div className="flex items-center justify-between text-sm">
                   <div className="flex items-center gap-2">
                     <div
@@ -310,119 +281,6 @@ function TierProgressSection({ tierInfo }: { tierInfo: TierInfo }) {
   );
 }
 
-// ─── Reward Stages Progress ─────────────────────────────────────────────────
-
-function RewardStagesSection({
-  stages,
-  pointsBalance,
-  nextStage,
-  icon,
-  title,
-  subtitle,
-}: {
-  stages: RewardStage[];
-  pointsBalance: number;
-  nextStage: {
-    rewardName: string;
-    pointsRequired: number;
-    pointsNeeded: number;
-  } | null;
-  icon: React.ReactNode;
-  title: string;
-  subtitle?: string;
-}) {
-  if (stages.length === 0) return null;
-
-  return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-base">
-          {icon}
-          {title}
-        </CardTitle>
-        {subtitle && <CardDescription>{subtitle}</CardDescription>}
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Stages visualization */}
-        <div className="space-y-3">
-          {stages.map((stage) => {
-            const progressPct = Math.min(
-              100,
-              (pointsBalance / stage.pointsRequired) * 100,
-            );
-
-            return (
-              <div key={stage.id} className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-sm">
-                    {stage.canRedeem ? (
-                      <CheckCircle2 className="size-4 text-emerald-500" />
-                    ) : (
-                      <div className="bg-muted size-4 rounded-full" />
-                    )}
-                    <span
-                      className={
-                        stage.canRedeem
-                          ? "font-medium"
-                          : "text-muted-foreground"
-                      }
-                    >
-                      {stage.rewardName}
-                    </span>
-                  </div>
-                  <Badge
-                    variant={stage.canRedeem ? "default" : "outline"}
-                    className="text-xs"
-                  >
-                    {stage.pointsRequired} pts
-                  </Badge>
-                </div>
-                <ProgressBar
-                  value={Math.min(pointsBalance, stage.pointsRequired)}
-                  max={stage.pointsRequired}
-                  barClassName={
-                    stage.canRedeem ? "bg-emerald-500" : "bg-primary/60"
-                  }
-                />
-                {!stage.canRedeem && (
-                  <p className="text-muted-foreground text-[10px]">
-                    {stage.pointsRequired - pointsBalance} more points needed
-                  </p>
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Next stage callout */}
-        {nextStage && (
-          <div className="flex items-center gap-3 rounded-lg bg-blue-50 p-3 dark:bg-blue-900/20">
-            <Gift className="size-5 shrink-0 text-blue-600 dark:text-blue-400" />
-            <div className="text-sm">
-              <p className="font-medium text-blue-700 dark:text-blue-300">
-                {nextStage.pointsNeeded} more points for &quot;
-                {nextStage.rewardName}&quot;
-              </p>
-              <p className="text-muted-foreground text-xs">
-                {nextStage.pointsRequired} points required
-              </p>
-            </div>
-          </div>
-        )}
-
-        {!nextStage && stages.some((s) => s.canRedeem) && (
-          <div className="flex items-center gap-2 rounded-lg bg-emerald-50 p-3 text-sm dark:bg-emerald-900/20">
-            <Sparkles className="size-4 text-emerald-600 dark:text-emerald-400" />
-            <span className="text-emerald-700 dark:text-emerald-300">
-              You&apos;ve unlocked all rewards! Redeem on your next visit.
-            </span>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
 // ─── Transaction Type Badge ─────────────────────────────────────────────────
 
 function TransactionTypeBadge({ type }: { type: string }) {
@@ -468,11 +326,112 @@ function TransactionTypeBadge({ type }: { type: string }) {
   );
 }
 
+function RewardStagesSection({
+  stages,
+  pointsBalance,
+  nextStage,
+  icon,
+  title,
+  subtitle,
+}: {
+  stages: RewardStage[];
+  pointsBalance: number;
+  nextStage: {
+    rewardName: string;
+    pointsRequired: number;
+    pointsNeeded: number;
+  } | null;
+  icon: React.ReactNode;
+  title: string;
+  subtitle?: string;
+}) {
+  if (stages.length === 0) return null;
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-base">
+          {icon}
+          {title}
+        </CardTitle>
+        {subtitle && <CardDescription>{subtitle}</CardDescription>}
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-3">
+          {stages.map((stage) => (
+            <div key={stage.id} className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-sm">
+                  {stage.canRedeem ? (
+                    <CheckCircle2 className="size-4 text-emerald-500" />
+                  ) : (
+                    <div className="bg-muted size-4 rounded-full" />
+                  )}
+                  <span
+                    className={
+                      stage.canRedeem ? "font-medium" : "text-muted-foreground"
+                    }
+                  >
+                    {stage.rewardName}
+                  </span>
+                </div>
+                <Badge
+                  variant={stage.canRedeem ? "default" : "outline"}
+                  className="text-xs"
+                >
+                  {stage.pointsRequired} pts
+                </Badge>
+              </div>
+              <ProgressBar
+                value={Math.min(pointsBalance, stage.pointsRequired)}
+                max={stage.pointsRequired}
+                barClassName={
+                  stage.canRedeem ? "bg-emerald-500" : "bg-primary/60"
+                }
+              />
+              {!stage.canRedeem && (
+                <p className="text-muted-foreground text-[10px]">
+                  {stage.pointsRequired - pointsBalance} more points needed
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {nextStage && (
+          <div className="flex items-center gap-3 rounded-lg bg-blue-50 p-3 dark:bg-blue-900/20">
+            <Gift className="size-5 shrink-0 text-blue-600 dark:text-blue-400" />
+            <div className="text-sm">
+              <p className="font-medium text-blue-700 dark:text-blue-300">
+                {nextStage.pointsNeeded} more points for &quot;
+                {nextStage.rewardName}
+                &quot;
+              </p>
+              <p className="text-muted-foreground text-xs">
+                {nextStage.pointsRequired} points required
+              </p>
+            </div>
+          </div>
+        )}
+
+        {!nextStage && stages.some((s) => s.canRedeem) && (
+          <div className="flex items-center gap-2 rounded-lg bg-emerald-50 p-3 text-sm dark:bg-emerald-900/20">
+            <Sparkles className="size-4 text-emerald-600 dark:text-emerald-400" />
+            <span className="text-emerald-700 dark:text-emerald-300">
+              You&apos;ve unlocked all rewards! Redeem on your next visit.
+            </span>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 // ─── Transaction Label Helper ────────────────────────────────────────────────
 
 const TX_PER_PAGE = 15;
 
-type TxItem = {
+export type TxItem = {
   type: string;
   source: string;
   valueKind: string;
@@ -529,6 +488,8 @@ function getTransactionLabel(tx: TxItem): string {
   return tx.description || tx.source;
 }
 
+export type LoyaltyData = NonNullable<LoyaltyDetailResponse["loyalty"]>;
+
 // ─── Main Page ──────────────────────────────────────────────────────────────
 
 export default function LoyaltyDetailPage() {
@@ -546,6 +507,8 @@ export default function LoyaltyDetailPage() {
   });
 
   const [txPage, setTxPage] = useState(1);
+  const [ledgerPage, setLedgerPage] = useState(1);
+  const prefersReducedMotion = useReducedMotion();
 
   const paginatedTxs = useMemo(() => {
     const all = data?.loyalty?.transactions ?? [];
@@ -563,40 +526,16 @@ export default function LoyaltyDetailPage() {
 
   if (!businessSlug) {
     return (
-      <PageLayout
-        title="Loyalty"
+      <LoyaltyStateView
         subtitle="Invalid link"
-        size="default"
-        scaffoldSectionClassName="h-full w-full pt-2 pb-0"
-      >
-        <ScaffoldContainer>
-          <div className="flex flex-col items-center justify-center py-12">
-            <p className="text-destructive text-sm font-medium">
-              Missing business. Please use the link shared with you.
-            </p>
-          </div>
-        </ScaffoldContainer>
-      </PageLayout>
+        message="Missing business. Please use the link shared with you."
+        destructive
+      />
     );
   }
 
   if (isLoading) {
-    return (
-      <PageLayout
-        title="Loyalty"
-        subtitle="Loading..."
-        size="default"
-        scaffoldSectionClassName="h-full w-full pt-2 pb-0"
-      >
-        <ScaffoldContainer>
-          <div className="space-y-4">
-            <Skeleton className="h-28 w-full rounded-lg" />
-            <Skeleton className="h-48 w-full rounded-lg" />
-            <Skeleton className="h-64 w-full rounded-lg" />
-          </div>
-        </ScaffoldContainer>
-      </PageLayout>
-    );
+    return <LoyaltyLoadingView />;
   }
 
   if (isError) {
@@ -623,20 +562,10 @@ export default function LoyaltyDetailPage() {
 
   if (!data?.loyalty) {
     return (
-      <PageLayout
-        title="Loyalty"
+      <LoyaltyStateView
         subtitle="Not found"
-        size="default"
-        scaffoldSectionClassName="h-full w-full pt-2 pb-0"
-      >
-        <ScaffoldContainer>
-          <div className="flex flex-col items-center justify-center py-12">
-            <p className="text-muted-foreground text-sm">
-              Loyalty data not found.
-            </p>
-          </div>
-        </ScaffoldContainer>
-      </PageLayout>
+        message="Loyalty data not found."
+      />
     );
   }
 
@@ -646,332 +575,62 @@ export default function LoyaltyDetailPage() {
     pointsBalance,
     cashbackBalance,
     tierInfo,
-    cashbackInfo,
     amountSpentInfo,
     visitMadeInfo,
   } = loyalty;
 
-  const isCashbackType = loyaltyType === "CASHBACK" || loyaltyType === "TIER";
-
+  const LEDGER_PAGE_SIZE = 5;
+  const ledgerTotalPages = Math.max(
+    1,
+    Math.ceil(loyalty.transactions.length / LEDGER_PAGE_SIZE),
+  );
+  const safeLedgerPage = Math.min(ledgerPage, ledgerTotalPages);
+  const ledgerStart = (safeLedgerPage - 1) * LEDGER_PAGE_SIZE;
+  const ledgerItems = loyalty.transactions.slice(
+    ledgerStart,
+    ledgerStart + LEDGER_PAGE_SIZE,
+  );
+  const customerDisplayName =
+    loyalty.customer.name?.trim() ||
+    loyalty.customer.email?.split("@")[0] ||
+    "Member";
+  const currentTierName = tierInfo?.currentTier?.name ?? "Silver";
+  const currentCashbackPct = tierInfo?.currentTier?.cashbackPercentage ?? 0;
+  const topTier = tierInfo?.allTiers[tierInfo.allTiers.length - 1];
+  const totalTierRange =
+    topTier?.minLifetimeSpend && topTier.minLifetimeSpend > 0
+      ? topTier.minLifetimeSpend
+      : 50000;
+  const tierProgressPct = Math.min(
+    100,
+    ((tierInfo?.lifetimeSpend ?? 0) / totalTierRange) * 100,
+  );
   return (
-    <PageLayout
-      title={loyalty.business.name}
-      subtitle="Your loyalty rewards"
-      size="default"
-      scaffoldSectionClassName="h-full w-full pt-2 pb-0"
-      primaryActions={
-        <CustomerLogoutButton businessSlug={loyalty.business.slug} />
-      }
-    >
-      <ScaffoldContainer>
-        <div className="space-y-5 pb-8">
-          {/* ─── Balance Header ────────────────────────────────────────── */}
-          <Card>
-            <CardContent className="pt-6">
-              {isCashbackType ? (
-                <div className="flex items-center gap-4">
-                  <div className="bg-primary/10 flex size-14 items-center justify-center rounded-full">
-                    <Wallet className="text-primary size-7" />
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground text-sm">
-                      Cashback Balance
-                    </p>
-                    <p className="text-3xl font-bold">
-                      ₹
-                      {cashbackBalance.toLocaleString("en-IN", {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex flex-wrap items-start gap-6">
-                  <div className="flex items-center gap-4">
-                    <div className="bg-primary/10 flex size-14 items-center justify-center rounded-full">
-                      <Coins className="text-primary size-7" />
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground text-sm">
-                        Points Balance
-                      </p>
-                      <p className="text-3xl font-bold">
-                        {pointsBalance.toLocaleString()}{" "}
-                        <span className="text-muted-foreground text-base font-normal">
-                          pts
-                        </span>
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4 border-l pl-6">
-                    <div className="flex size-14 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/30">
-                      <Wallet className="size-7 text-emerald-600 dark:text-emerald-400" />
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground text-sm">
-                        Cashback Balance
-                      </p>
-                      <p className="text-2xl font-bold tabular-nums">
-                        ₹
-                        {cashbackBalance.toLocaleString("en-IN", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* CASHBACK / TIER type badge */}
-              {loyaltyType === "CASHBACK" && cashbackInfo && (
-                <div className="mt-4 flex items-center gap-2 rounded-lg bg-emerald-50 p-2.5 text-sm dark:bg-emerald-900/20">
-                  <Sparkles className="size-4 text-emerald-600 dark:text-emerald-400" />
-                  <span className="text-emerald-700 dark:text-emerald-300">
-                    You earn {cashbackInfo.cashbackPercentage}% cashback on
-                    every purchase
-                  </span>
-                </div>
-              )}
-              {loyaltyType === "TIER" && tierInfo?.currentTier && (
-                <div className="mt-4 flex items-center gap-2 rounded-lg bg-amber-50 p-2.5 text-sm dark:bg-amber-900/20">
-                  <Sparkles className="size-4 text-amber-600 dark:text-amber-400" />
-                  <span className="text-amber-700 dark:text-amber-300">
-                    Earning {tierInfo.currentTier.cashbackPercentage}% cashback
-                    on every bill
-                  </span>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* ─── Tier Progress (TIER type) ─────────────────────────────── */}
-          {loyaltyType === "TIER" && tierInfo && (
-            <TierProgressSection tierInfo={tierInfo} />
-          )}
-
-          {/* ─── Reward Stages (AMOUNT_SPENT type) ─────────────────────── */}
-          {loyaltyType === "AMOUNT_SPENT" && amountSpentInfo && (
-            <RewardStagesSection
-              stages={amountSpentInfo.rewardStages}
-              pointsBalance={pointsBalance}
-              nextStage={amountSpentInfo.nextStage}
-              icon={<Coins className="size-5 text-blue-500" />}
-              title="Reward Milestones"
-              subtitle={`Earn ${amountSpentInfo.pointsPerRupee} point${amountSpentInfo.pointsPerRupee !== 1 ? "s" : ""} per ₹1 spent`}
-            />
-          )}
-
-          {/* ─── Visit Progress (VISIT_MADE type) ──────────────────────── */}
-          {loyaltyType === "VISIT_MADE" && visitMadeInfo && (
-            <>
-              {/* Visit counter */}
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-4">
-                    <div className="flex size-14 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-900/30">
-                      <Footprints className="size-7 text-indigo-600 dark:text-indigo-400" />
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground text-sm">
-                        Total Visits
-                      </p>
-                      <p className="text-3xl font-bold">
-                        {visitMadeInfo.visitCount}
-                      </p>
-                    </div>
-                  </div>
-                  <p className="text-muted-foreground mt-2 text-xs">
-                    Earn {visitMadeInfo.pointsPerVisit} point
-                    {visitMadeInfo.pointsPerVisit !== 1 ? "s" : ""} per visit
-                  </p>
-                </CardContent>
-              </Card>
-
-              <RewardStagesSection
-                stages={visitMadeInfo.rewardStages}
-                pointsBalance={pointsBalance}
-                nextStage={visitMadeInfo.nextStage}
-                icon={<Footprints className="size-5 text-indigo-500" />}
-                title="Visit Rewards"
-                subtitle="Earn rewards as you visit more"
-              />
-            </>
-          )}
-
-          {/* ─── Free items to claim (e.g. from referral) ───────────────────────────────────────── */}
-          {(loyalty.freeItems?.length ?? 0) > 0 && (
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Gift className="size-5 text-purple-500" />
-                  Free items to claim
-                </CardTitle>
-                <CardDescription>
-                  Claim these at the store on your next visit.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2">
-                  {loyalty.freeItems.map((item) => (
-                    <li
-                      key={item.id}
-                      className="flex items-center justify-between rounded-md bg-purple-50 px-3 py-2 text-sm dark:bg-purple-900/20"
-                    >
-                      <span className="font-medium">{item.skuName}</span>
-                      {item.source !== "OTHER" && (
-                        <span className="text-muted-foreground text-xs">
-                          {item.source === "REFERRAL"
-                            ? "Referral"
-                            : item.source}
-                        </span>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* ─── Unified Transaction History ──────────────────────────────────────────── */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Receipt className="size-5" />
-                Transaction History
-              </CardTitle>
-              <CardDescription>
-                All earned, redeemed, and expired transactions — loyalty,
-                campaigns, referrals, and more.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {paginatedTxs.total > 0 ? (
-                <>
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Date</TableHead>
-                          <TableHead>Description</TableHead>
-                          <TableHead>Type</TableHead>
-                          <TableHead className="text-right">Amount</TableHead>
-                          <TableHead className="text-right">Expires</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {paginatedTxs.items.map((tx) => {
-                          const isCb = tx.valueKind === "CASHBACK";
-                          const isFreeItem = tx.valueKind === "FREE_ITEM";
-                          const freeItem = isFreeItem
-                            ? getFreeItemName(tx)
-                            : null;
-                          const amountStr = isCb
-                            ? `₹${Math.abs(tx.amount).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                            : isFreeItem
-                              ? freeItem || "Free item"
-                              : `${Math.abs(tx.amount)} pts`;
-                          return (
-                            <TableRow key={tx.id}>
-                              <TableCell className="text-sm whitespace-nowrap">
-                                <DateDisplay date={tx.createdAt} />
-                              </TableCell>
-                              <TableCell className="max-w-[220px] text-sm">
-                                <span className="font-medium">
-                                  {getTransactionLabel(tx)}
-                                </span>
-                              </TableCell>
-                              <TableCell>
-                                <TransactionTypeBadge type={tx.type} />
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {isFreeItem ? (
-                                  <span className="font-medium text-purple-600 dark:text-purple-400">
-                                    {tx.type === "REDEEMED"
-                                      ? "Claimed"
-                                      : "1 item"}
-                                  </span>
-                                ) : (
-                                  <span
-                                    className={`font-medium ${
-                                      tx.amount > 0
-                                        ? "text-emerald-600 dark:text-emerald-400"
-                                        : "text-red-600 dark:text-red-400"
-                                    }`}
-                                  >
-                                    {tx.amount > 0 ? "+" : "−"}
-                                    {amountStr}
-                                  </span>
-                                )}
-                              </TableCell>
-                              <TableCell className="text-muted-foreground text-right text-xs whitespace-nowrap">
-                                {tx.type === "EXPIRED" ? (
-                                  <span className="text-red-600 dark:text-red-400">
-                                    Expired
-                                  </span>
-                                ) : tx.expiresAt ? (
-                                  <DateDisplay date={tx.expiresAt} />
-                                ) : (
-                                  "—"
-                                )}
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                  </div>
-
-                  {paginatedTxs.totalPages > 1 && (
-                    <div className="flex items-center justify-between pt-2">
-                      <p className="text-muted-foreground text-xs">
-                        Page {paginatedTxs.page} of {paginatedTxs.totalPages} (
-                        {paginatedTxs.total} transactions)
-                      </p>
-                      <div className="flex gap-1">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="size-8"
-                          disabled={paginatedTxs.page <= 1}
-                          onClick={() => setTxPage((p) => Math.max(1, p - 1))}
-                        >
-                          <ChevronLeft className="size-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="size-8"
-                          disabled={
-                            paginatedTxs.page >= paginatedTxs.totalPages
-                          }
-                          onClick={() => setTxPage((p) => p + 1)}
-                        >
-                          <ChevronRight className="size-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <Empty className="py-8">
-                  <EmptyHeader>
-                    <EmptyMedia variant="icon">
-                      <Receipt className="size-6" />
-                    </EmptyMedia>
-                    <EmptyTitle>No transactions yet</EmptyTitle>
-                    <EmptyDescription>
-                      Your history will appear here after your first
-                      transaction.
-                    </EmptyDescription>
-                  </EmptyHeader>
-                </Empty>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      </ScaffoldContainer>
-    </PageLayout>
+    <LoyaltyContentView
+      loyalty={loyalty}
+      loyaltyType={loyaltyType}
+      pointsBalance={pointsBalance}
+      cashbackBalance={cashbackBalance}
+      tierInfo={tierInfo}
+      amountSpentInfo={amountSpentInfo}
+      visitMadeInfo={visitMadeInfo}
+      customerDisplayName={customerDisplayName}
+      currentTierName={currentTierName}
+      currentCashbackPct={currentCashbackPct}
+      totalTierRange={totalTierRange}
+      tierProgressPct={tierProgressPct}
+      ledgerItems={ledgerItems}
+      safeLedgerPage={safeLedgerPage}
+      ledgerTotalPages={ledgerTotalPages}
+      setLedgerPage={setLedgerPage}
+      paginatedTxs={paginatedTxs}
+      setTxPage={setTxPage}
+      prefersReducedMotion={Boolean(prefersReducedMotion)}
+      getTransactionLabel={getTransactionLabel}
+      getFreeItemName={getFreeItemName}
+      TransactionTypeBadge={TransactionTypeBadge}
+      TierProgressSection={TierProgressSection}
+      RewardStagesSection={RewardStagesSection}
+    />
   );
 }
