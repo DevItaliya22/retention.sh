@@ -29,6 +29,20 @@ interface LoyaltySettingsSkeletonProps {
   loyaltyType?: LoyaltyType;
 }
 
+function getLoyaltyTypeHeading(type: LoyaltyType): string {
+  switch (type) {
+    case "TIER":
+      return "Tier-Based Loyalty";
+    case "AMOUNT_SPENT":
+      return "Amount-Spent-Based Loyalty";
+    case "VISIT_MADE":
+      return "Visit-Made-Based Loyalty";
+    case "CASHBACK":
+    default:
+      return "Basic Loyalty";
+  }
+}
+
 export function LoyaltySettingsSkeleton({
   loyaltyType,
 }: LoyaltySettingsSkeletonProps) {
@@ -39,6 +53,10 @@ export function LoyaltySettingsSkeleton({
 
   return (
     <div className="space-y-6 pb-12">
+      <h2 className="text-foreground text-2xl leading-tight font-bold">
+        {getLoyaltyTypeHeading(type)}
+      </h2>
+
       {type === "CASHBACK" && <CashbackSkeleton />}
       {type === "TIER" && (
         <>
