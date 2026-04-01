@@ -5,10 +5,7 @@ import {
 } from "@/lib/actions/loyalty";
 import { withCustomerAuth } from "@/lib/auth/middleware";
 import { runTransaction } from "@/lib/db/transaction";
-import {
-  resolveTierForLifetimeSpend,
-  sumCashbackEarnedFromTransactions,
-} from "@/lib/loyalty";
+import { resolveTierForLifetimeSpend } from "@/lib/loyalty";
 import { businessSlugParamSchema } from "@/lib/schemas/common";
 import {
   sanitizeErrorMessage,
@@ -39,7 +36,6 @@ export const GET = withCustomerAuth<{ businessSlug: string }>(
         include: {
           loyalty: {
             include: {
-              cashbackConfig: true,
               tierConfig: {
                 include: { tiers: { orderBy: { rank: "asc" } } },
               },
@@ -155,16 +151,6 @@ export const GET = withCustomerAuth<{ businessSlug: string }>(
         take: 200,
       });
 
-      let cashbackHistory: Array<{
-        id: string;
-        date: string;
-        billNumber: string;
-        amountSpent: number;
-        cashbackReceived: number;
-        cashbackRedeemed: number;
-        tierName: string | null;
-        cashbackPercentage: number | null;
-      }> = [];
       const loyaltyType = business.loyalty?.loyaltyType ?? null;
       const pointsBalance =
         loyaltyType === "AMOUNT_SPENT"
@@ -173,64 +159,10 @@ export const GET = withCustomerAuth<{ businessSlug: string }>(
             ? visitPointsBalance
             : amountSpentBalance + visitPointsBalance;
 
-      if (loyaltyType === "CASHBACK" || loyaltyType === "TIER") {
-        const bills = await db.bill.findMany({
-          where: {
-            businessId: business.id,
-            customerId: businessCustomer.customerId,
-          },
-          include: {
-            transactions: {
-              where: { valueKind: "CASHBACK", type: "EARNED" },
-              select: {
-                type: true,
-                valueKind: true,
-                amount: true,
-                metadata: true,
-              },
-            },
-          },
-          orderBy: { createdAt: "desc" },
-          take: 50,
-        });
-        cashbackHistory = bills.map((bill) => {
-          const cashbackReceived = sumCashbackEarnedFromTransactions(
-            bill.transactions,
-          );
-          const ct = bill.transactions[0];
-          const meta =
-            (ct?.metadata as {
-              tierName?: string;
-              cashbackPercentage?: number;
-            } | null) ?? {};
-          return {
-            id: bill.id,
-            date: bill.createdAt.toISOString(),
-            billNumber: bill.billNumber,
-            amountSpent: bill.finalAmount ?? 0,
-            cashbackReceived:
-              cashbackReceived > 0
-                ? cashbackReceived
-                : (bill.cashbackAmount ?? 0),
-            cashbackRedeemed: bill.cashbackRedeemedAmount ?? 0,
-            tierName: meta.tierName ?? null,
-            cashbackPercentage: meta.cashbackPercentage ?? null,
-          };
-        });
-      }
-
       // Build type-specific data
       let tierInfo = null;
-      let cashbackInfo = null;
       let amountSpentInfo = null;
       let visitMadeInfo = null;
-
-      if (loyaltyType === "CASHBACK" && business.loyalty?.cashbackConfig) {
-        cashbackInfo = {
-          cashbackPercentage:
-            business.loyalty.cashbackConfig.cashbackPercentage,
-        };
-      }
 
       if (loyaltyType === "TIER" && business.loyalty?.tierConfig) {
         const tiers = business.loyalty.tierConfig.tiers;
@@ -262,14 +194,11 @@ export const GET = withCustomerAuth<{ businessSlug: string }>(
           currentTier: resolvedTier
             ? {
                 name: resolvedTier.name,
-                rank: resolvedTier.rank,
                 cashbackPercentage: resolvedTier.cashbackPercentage,
               }
             : null,
           allTiers: sortedTiers.map((t) => ({
-            id: t.id,
             name: t.name,
-            rank: t.rank,
             minLifetimeSpend: t.minLifetimeSpend,
             maxLifetimeSpend: t.maxLifetimeSpend,
             cashbackPercentage: t.cashbackPercentage,
@@ -349,8 +278,11 @@ export const GET = withCustomerAuth<{ businessSlug: string }>(
 
       return NextResponse.json({
         loyalty: {
+          customer: {
+            name: context.user.name ?? null,
+            email: context.user.email ?? null,
+          },
           business: {
-            id: business.id,
             name: business.name,
             slug: business.slug,
             currencySymbol: business.defaultCurrencySymbol,
@@ -361,7 +293,6 @@ export const GET = withCustomerAuth<{ businessSlug: string }>(
           cashbackBalance,
           freeItems: parseFreeItems(wallet?.freeItems),
           transactions: transactions.map((t) => ({
-            id: t.id,
             valueKind: t.valueKind,
             amount: t.amount,
             type: t.type,
@@ -372,9 +303,7 @@ export const GET = withCustomerAuth<{ businessSlug: string }>(
             metadata: t.metadata,
             campaignTitle: t.campaign?.title ?? null,
           })),
-          cashbackHistory,
           tierInfo,
-          cashbackInfo,
           amountSpentInfo,
           visitMadeInfo,
         },

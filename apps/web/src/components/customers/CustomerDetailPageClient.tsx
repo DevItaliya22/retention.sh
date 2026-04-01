@@ -26,34 +26,29 @@ import {
 } from "@reelo/ui/components";
 import { cn } from "@reelo/ui/lib/utils";
 import {
+  Activity,
   ChevronLeft,
   ChevronRight,
+  Coins,
   ExternalLink,
   Eye,
   Gift,
   Receipt,
+  Sparkles,
   User,
   UserPlus,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect } from "react";
+import {
+  useCallback,
+  useEffect,
+  type ComponentType,
+  type ReactNode,
+} from "react";
 
 interface CustomerDetailPageClientProps {
   slugId: string;
-}
-
-function formatUnclaimedFreeItems(
-  entries: FreeItemEntry[] | undefined,
-): string {
-  if (!entries?.length) return "—";
-  return entries
-    .map((e) =>
-      e.expiresAt
-        ? `${e.skuName} (expires ${new Date(e.expiresAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })})`
-        : e.skuName,
-    )
-    .join(", ");
 }
 
 const BILLS_PER_PAGE = 10;
@@ -112,10 +107,69 @@ function PaginationRow({
   );
 }
 
-function CustomerHeaderSection({ slugId }: { slugId: string }) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
+function StatTile({
+  label,
+  value,
+  hint,
+  icon: Icon,
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+  icon: ComponentType<{ className?: string }>;
+}) {
+  return (
+    <div className="from-card to-muted/20 relative overflow-hidden rounded-xl border bg-gradient-to-br p-4">
+      <div className="bg-primary/10 text-primary absolute top-3 right-3 flex size-7 items-center justify-center rounded-lg">
+        <Icon className="size-4" />
+      </div>
+      <p className="text-muted-foreground text-[11px] font-medium tracking-[0.14em] uppercase">
+        {label}
+      </p>
+      <p className="mt-1.5 font-mono text-lg font-semibold tracking-tight sm:text-xl">
+        {value}
+      </p>
+      {hint ? (
+        <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
+          {hint}
+        </p>
+      ) : null}
+    </div>
+  );
+}
 
+function SectionFrame({
+  title,
+  subtitle,
+  icon: Icon,
+  children,
+}: {
+  title: string;
+  subtitle: string;
+  icon: ComponentType<{ className?: string }>;
+  children: ReactNode;
+}) {
+  return (
+    <section className="bg-card overflow-hidden rounded-2xl border shadow-sm">
+      <div className="from-muted/30 to-muted/10 border-b bg-gradient-to-r px-4 py-3 sm:px-6 sm:py-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h3 className="text-foreground/90 flex items-center gap-2 text-xs font-semibold tracking-[0.18em] uppercase sm:text-sm">
+              <Icon className="text-muted-foreground size-4" />
+              {title}
+            </h3>
+            <p className="text-muted-foreground mt-1 text-xs sm:text-sm">
+              {subtitle}
+            </p>
+          </div>
+        </div>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function CustomerHeaderSection({ slugId }: { slugId: string }) {
   const profile = useCustomerProfileQuery(slugId);
   const setSegmentLabel = useBreadcrumbOverride()?.setSegmentLabel;
   const customer = profile.data?.customer ?? null;
@@ -141,11 +195,6 @@ function CustomerHeaderSection({ slugId }: { slugId: string }) {
       ? `${window.location.origin}/referral/${customer.businessSlug}/${customer.referralSlug}`
       : "";
 
-  const unclaimedFreeItemsDisplay =
-    !profile.isLoading && customer?.freeItems != null
-      ? formatUnclaimedFreeItems(customer.freeItems)
-      : null;
-
   useEffect(() => {
     if (customer?.name) {
       setSegmentLabel?.(customer.name);
@@ -157,7 +206,7 @@ function CustomerHeaderSection({ slugId }: { slugId: string }) {
 
   if (profile.isError) {
     return (
-      <div className="bg-muted/20 min-height-[320px] flex flex-col items-center justify-center rounded-2xl border border-dashed px-8 py-20 text-center">
+      <div className="bg-muted/20 flex min-h-[320px] flex-col items-center justify-center rounded-2xl border border-dashed px-8 py-20 text-center">
         <div className="bg-destructive/10 text-destructive flex size-14 items-center justify-center rounded-2xl">
           <User className="size-7" />
         </div>
@@ -173,123 +222,188 @@ function CustomerHeaderSection({ slugId }: { slugId: string }) {
 
   return (
     <section className="bg-card/80 relative overflow-hidden rounded-2xl border px-4 py-5 shadow-sm sm:px-6 sm:py-6">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,hsl(var(--primary)/0.08),transparent_55%)]" />
-      <div className="relative flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0 flex-1 space-y-3">
-          <div>
-            <p className="text-muted-foreground text-[11px] font-medium tracking-[0.16em] uppercase">
-              Customer
-            </p>
-            {profile.isLoading && !customer ? (
-              <Skeleton className="mt-1 h-7 w-44 sm:h-8 sm:w-56" />
-            ) : (
-              <p className="mt-1 text-xl font-semibold tracking-tight sm:text-2xl">
-                {customer?.name ?? "—"}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,hsl(var(--primary)/0.12),transparent_52%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_right,hsl(var(--accent)/0.12),transparent_55%)]" />
+
+      <div className="relative">
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0 flex-1 space-y-3">
+            <div>
+              <p className="text-muted-foreground text-[11px] font-medium tracking-[0.16em] uppercase">
+                Customer Profile
               </p>
-            )}
+              {profile.isLoading && !customer ? (
+                <Skeleton className="mt-1 h-7 w-44 sm:h-8 sm:w-56" />
+              ) : (
+                <p className="mt-1 text-xl font-semibold tracking-tight sm:text-3xl">
+                  {customer?.name ?? "—"}
+                </p>
+              )}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs sm:text-sm">
+              {profile.isLoading && !customer ? (
+                <Skeleton className="h-5 w-40" />
+              ) : (
+                <>
+                  <span className="text-muted-foreground truncate">
+                    {customer?.email ?? "—"}
+                  </span>
+                  <Separator
+                    orientation="vertical"
+                    className="hidden h-4 sm:inline-flex"
+                  />
+                  <span className="text-muted-foreground tabular-nums">
+                    {customer?.phone ?? "—"}
+                  </span>
+                </>
+              )}
+            </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs sm:text-sm">
-            {profile.isLoading && !customer ? (
-              <Skeleton className="h-5 w-40" />
-            ) : (
-              <>
-                <span className="text-muted-foreground truncate">
-                  {customer?.email ?? "—"}
-                </span>
-                <Separator
-                  orientation="vertical"
-                  className="hidden h-4 sm:inline-flex"
-                />
-                <span className="text-muted-foreground tabular-nums">
-                  {customer?.phone ?? "—"}
-                </span>
-              </>
-            )}
-          </div>
-
-          <Separator className="my-3" />
-
-          {profile.isLoading && !customer ? (
-            <Skeleton className="h-6 w-64" />
-          ) : (
-            <div className="text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1 text-xs sm:text-sm">
-              <span>
-                Cashback{" "}
-                <span className="text-foreground font-mono font-medium tabular-nums">
-                  {customer?.cashbackBalance != null
-                    ? `₹${customer.cashbackBalance.toLocaleString("en-IN", {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}`
-                    : "—"}
-                </span>
-              </span>
-              <span>
-                Points{" "}
-                <span className="text-foreground font-mono font-medium tabular-nums">
-                  {customer?.pointsBalance != null
-                    ? customer.pointsBalance.toLocaleString("en-IN")
-                    : "—"}
-                </span>
-              </span>
-              <span>Free (unclaimed): {unclaimedFreeItemsDisplay ?? "—"}</span>
-            </div>
-          )}
-
-          {!profile.isLoading && customer?.referredBy && (
-            <div className="mt-3 flex flex-wrap items-center gap-2 border-t pt-3">
-              <p className="text-muted-foreground text-[11px] font-medium tracking-[0.18em] uppercase">
-                Referred by
-              </p>
-              <Link
-                href={`/customers/${customer.referredBy.slugId}`}
-                className={cn(
-                  buttonVariants({ variant: "ghost", size: "sm" }),
-                  "h-auto justify-start gap-2 px-2 py-1 text-xs sm:text-sm",
-                )}
-              >
-                <UserPlus className="text-muted-foreground size-4 shrink-0" />
-                <span className="truncate">{customer.referredBy.name}</span>
-              </Link>
-            </div>
+          {(hasLoyaltyLink || hasReferralLink) && !profile.isLoading && (
+            <ButtonGroup className="shrink-0 gap-2 self-start">
+              {hasLoyaltyLink && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={() =>
+                    window.open(loyaltyUrl, "_blank", "noopener,noreferrer")
+                  }
+                >
+                  Loyalty
+                  <ExternalLink className="size-3.5" />
+                </Button>
+              )}
+              {hasReferralLink && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={() =>
+                    window.open(referralUrl, "_blank", "noopener,noreferrer")
+                  }
+                >
+                  Referral
+                  <ExternalLink className="size-3.5" />
+                </Button>
+              )}
+            </ButtonGroup>
           )}
         </div>
 
-        {(hasLoyaltyLink || hasReferralLink) && !profile.isLoading && (
-          <ButtonGroup className="shrink-0 gap-2 self-start">
-            {hasLoyaltyLink && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="gap-2"
-                onClick={() =>
-                  window.open(loyaltyUrl, "_blank", "noopener,noreferrer")
-                }
-              >
-                Loyalty
-                <ExternalLink className="size-3.5" />
-              </Button>
-            )}
-            {hasReferralLink && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="gap-2"
-                onClick={() =>
-                  window.open(referralUrl, "_blank", "noopener,noreferrer")
-                }
-              >
-                Referral
-                <ExternalLink className="size-3.5" />
-              </Button>
-            )}
-          </ButtonGroup>
+        <Separator className="my-5" />
+
+        {profile.isLoading && !customer ? (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <Skeleton className="h-28 w-full rounded-xl" />
+            <Skeleton className="h-28 w-full rounded-xl" />
+            <Skeleton className="h-28 w-full rounded-xl" />
+          </div>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <StatTile
+              label="Cashback Balance"
+              value={
+                customer?.cashbackBalance != null
+                  ? `₹${customer.cashbackBalance.toLocaleString("en-IN", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}`
+                  : "—"
+              }
+              hint="Available for cashback redemption"
+              icon={Coins}
+            />
+            <StatTile
+              label="Points Balance"
+              value={
+                customer?.pointsBalance != null
+                  ? customer.pointsBalance.toLocaleString("en-IN")
+                  : "—"
+              }
+              hint="Earned from campaigns and purchases"
+              icon={Sparkles}
+            />
+            <StatTile
+              label="Unclaimed Free Items"
+              value={customer?.freeItems?.length?.toString() ?? "0"}
+              hint="See details in the table below"
+              icon={Gift}
+            />
+          </div>
+        )}
+
+        {!profile.isLoading && customer?.referredBy && (
+          <div className="mt-4 flex flex-wrap items-center gap-2 border-t pt-4">
+            <p className="text-muted-foreground text-[11px] font-medium tracking-[0.18em] uppercase">
+              Referred by
+            </p>
+            <Link
+              href={`/customers/${customer.referredBy.slugId}`}
+              className={cn(
+                buttonVariants({ variant: "ghost", size: "sm" }),
+                "h-auto justify-start gap-2 rounded-lg px-2 py-1 text-xs sm:text-sm",
+              )}
+            >
+              <UserPlus className="text-muted-foreground size-4 shrink-0" />
+              <span className="truncate">{customer.referredBy.name}</span>
+            </Link>
+          </div>
         )}
       </div>
     </section>
+  );
+}
+
+function CustomerFreeItemsSection({ slugId }: { slugId: string }) {
+  const profile = useCustomerProfileQuery(slugId);
+  const freeItems = profile.data?.customer?.freeItems ?? [];
+
+  if (profile.isLoading || freeItems.length === 0) {
+    return null;
+  }
+
+  return (
+    <SectionFrame
+      title="Unclaimed Free Items"
+      subtitle="Items available for this customer to claim"
+      icon={Gift}
+    >
+      <Table>
+        <TableHeader>
+          <TableRow className="bg-muted/30 border-b hover:bg-transparent">
+            <TableHead className="px-4 py-3 text-xs font-medium sm:px-6 sm:text-sm">
+              Item
+            </TableHead>
+            <TableHead className="px-4 py-3 text-xs font-medium sm:px-6 sm:text-sm">
+              Expires On
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {freeItems.map((item: FreeItemEntry, index: number) => (
+            <TableRow
+              key={`${item.skuName}-${item.expiresAt ?? "none"}-${index}`}
+            >
+              <TableCell className="px-4 py-3 text-xs font-medium sm:px-6 sm:text-sm">
+                {item.skuName}
+              </TableCell>
+              <TableCell className="text-muted-foreground px-4 py-3 text-xs sm:px-6 sm:text-sm">
+                {item.expiresAt ? (
+                  <DateDisplay date={item.expiresAt} />
+                ) : (
+                  "No expiry"
+                )}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </SectionFrame>
   );
 }
 
@@ -309,6 +423,7 @@ function CustomerActivitySection({ slugId }: { slugId: string }) {
 
   const activityItems = activityQuery.data?.items ?? [];
   const activityTotal = activityQuery.data?.total ?? 0;
+  const hasActivityRows = activityItems.length > 0;
 
   const setActivityPage = useCallback(
     (p: number) => {
@@ -320,147 +435,147 @@ function CustomerActivitySection({ slugId }: { slugId: string }) {
   );
 
   return (
-    <section className="bg-card overflow-hidden rounded-2xl border shadow-sm">
-      <div className="bg-muted/20 border-b px-4 py-3 sm:px-6 sm:py-4">
-        <h3 className="text-foreground/90 flex items-center gap-2 text-xs font-semibold tracking-[0.18em] uppercase sm:text-sm">
-          <Gift className="text-muted-foreground size-4" />
-          Activity
-        </h3>
-      </div>
+    <SectionFrame
+      title="Activity"
+      subtitle="Timeline of points, cashback, referrals, and partner redemptions"
+      icon={Activity}
+    >
       <div className="space-y-4 p-4 sm:space-y-5 sm:p-6">
-        {activityQuery.isLoading && activityItems.length === 0 ? (
+        {activityQuery.isLoading && !hasActivityRows ? (
           <div className="space-y-3">
             {[1, 2, 3, 4, 5].map((i) => (
               <Skeleton key={i} className="h-10 w-full rounded-lg" />
             ))}
           </div>
-        ) : activityTotal > 0 ? (
+        ) : activityQuery.isError ? (
+          <p className="text-muted-foreground py-4 text-center text-sm">
+            Failed to load activity. Please try again.
+          </p>
+        ) : activityTotal > 0 && hasActivityRows ? (
           <>
-            {activityItems.length > 0 && (
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/30 border-b hover:bg-transparent">
-                    <TableHead className="px-4 py-3 text-xs font-medium sm:px-6 sm:text-sm">
-                      Type
-                    </TableHead>
-                    <TableHead className="px-4 py-3 text-xs font-medium sm:px-6 sm:text-sm">
-                      Date
-                    </TableHead>
-                    <TableHead className="px-4 py-3 text-xs font-medium sm:px-6 sm:text-sm">
-                      Details
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {activityItems.map((item: CustomerActivityItem) => {
-                    if (item.type === "partner") {
-                      return (
-                        <TableRow
-                          key={`p-${item.id}`}
-                          className="border-b last:border-b-0"
-                        >
-                          <TableCell className="px-4 py-3 text-xs font-medium sm:px-6 sm:text-sm">
-                            Partner
-                          </TableCell>
-                          <TableCell className="text-muted-foreground px-4 py-3 text-xs sm:px-6 sm:text-sm">
-                            <DateDisplay date={item.createdAt} />
-                          </TableCell>
-                          <TableCell className="px-4 py-3 text-xs sm:px-6 sm:text-sm">
-                            {item.valueKind === "CASHBACK"
-                              ? `₹${item.amount.toFixed(2)}`
-                              : `${Math.abs(Math.floor(item.amount))} pts`}{" "}
-                            at{" "}
-                            {item.redeemedAtBusinessName ??
-                              item.redeemedAtBusinessId}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    }
-
-                    if (item.type === "referral") {
-                      return (
-                        <TableRow
-                          key={`r-${item.id}`}
-                          className="last-border-b-0 border-b"
-                        >
-                          <TableCell className="px-4 py-3 text-xs font-medium sm:px-6 sm:text-sm">
-                            Referral
-                          </TableCell>
-                          <TableCell className="text-muted-foreground px-4 py-3 text-xs sm:px-6 sm:text-sm">
-                            <DateDisplay date={item.createdAt} />
-                          </TableCell>
-                          <TableCell className="px-4 py-3 text-xs sm:px-6 sm:text-sm">
-                            {item.newCustomerName || "—"} (
-                            {item.newCustomerPhone})
-                            {item.becameCustomer && (
-                              <Badge
-                                variant="secondary"
-                                size="xs"
-                                className="ml-2"
-                              >
-                                Claimed
-                              </Badge>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    }
-
-                    const isFreeItem = item.valueKind === "FREE_ITEM";
-                    const isCashback = item.valueKind === "CASHBACK";
-                    const sourceLabel =
-                      item.source === "CAMPAIGN"
-                        ? item.campaignTitle
-                          ? `Campaign: ${item.campaignTitle}`
-                          : "Campaign"
-                        : item.source === "REFERRAL"
-                          ? "Referral"
-                          : item.source;
-                    const itemName = isFreeItem
-                      ? (item.freeItemName ?? "Free item")
-                      : null;
-                    const typeLabel = isFreeItem
-                      ? item.txType === "EARNED"
-                        ? `${itemName} Earned`
-                        : `${itemName} Claimed`
-                      : isCashback
-                        ? item.txType === "EARNED"
-                          ? "Cashback Earned"
-                          : "Cashback Redeemed"
-                        : item.txType;
-                    const amountLabel = isFreeItem
-                      ? itemName!
-                      : isCashback
-                        ? `${item.amount > 0 ? "+" : "−"}₹${Math.abs(
-                            item.amount,
-                          ).toFixed(2)}`
-                        : `${item.amount > 0 ? "+" : "−"}${Math.abs(
-                            item.amount,
-                          )} pts`;
-
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/30 border-b hover:bg-transparent">
+                  <TableHead className="px-4 py-3 text-xs font-medium sm:px-6 sm:text-sm">
+                    Type
+                  </TableHead>
+                  <TableHead className="px-4 py-3 text-xs font-medium sm:px-6 sm:text-sm">
+                    Date
+                  </TableHead>
+                  <TableHead className="px-4 py-3 text-xs font-medium sm:px-6 sm:text-sm">
+                    Details
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {activityItems.map((item: CustomerActivityItem) => {
+                  if (item.type === "partner") {
                     return (
                       <TableRow
-                        key={`tx-${item.id}`}
+                        key={`p-${item.id}`}
                         className="border-b last:border-b-0"
                       >
                         <TableCell className="px-4 py-3 text-xs font-medium sm:px-6 sm:text-sm">
-                          {typeLabel}
+                          Partner
                         </TableCell>
                         <TableCell className="text-muted-foreground px-4 py-3 text-xs sm:px-6 sm:text-sm">
                           <DateDisplay date={item.createdAt} />
                         </TableCell>
                         <TableCell className="px-4 py-3 text-xs sm:px-6 sm:text-sm">
-                          {amountLabel}{" "}
-                          <span className="text-muted-foreground">
-                            ({sourceLabel})
-                          </span>
+                          {item.valueKind === "CASHBACK"
+                            ? `₹${item.amount.toFixed(2)}`
+                            : `${Math.abs(Math.floor(item.amount))} pts`}{" "}
+                          at{" "}
+                          {item.redeemedAtBusinessName ??
+                            item.redeemedAtBusinessId}
                         </TableCell>
                       </TableRow>
                     );
-                  })}
-                </TableBody>
-              </Table>
-            )}
+                  }
+
+                  if (item.type === "referral") {
+                    return (
+                      <TableRow
+                        key={`r-${item.id}`}
+                        className="last-border-b-0 border-b"
+                      >
+                        <TableCell className="px-4 py-3 text-xs font-medium sm:px-6 sm:text-sm">
+                          Referral
+                        </TableCell>
+                        <TableCell className="text-muted-foreground px-4 py-3 text-xs sm:px-6 sm:text-sm">
+                          <DateDisplay date={item.createdAt} />
+                        </TableCell>
+                        <TableCell className="px-4 py-3 text-xs sm:px-6 sm:text-sm">
+                          {item.newCustomerName || "—"} ({item.newCustomerPhone}
+                          )
+                          {item.becameCustomer && (
+                            <Badge
+                              variant="secondary"
+                              size="xs"
+                              className="ml-2"
+                            >
+                              Claimed
+                            </Badge>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  }
+
+                  const isFreeItem = item.valueKind === "FREE_ITEM";
+                  const isCashback = item.valueKind === "CASHBACK";
+                  const sourceLabel =
+                    item.source === "CAMPAIGN"
+                      ? item.campaignTitle
+                        ? `Campaign: ${item.campaignTitle}`
+                        : "Campaign"
+                      : item.source === "REFERRAL"
+                        ? "Referral"
+                        : item.source;
+                  const itemName = isFreeItem
+                    ? (item.freeItemName ?? "Free item")
+                    : null;
+                  const typeLabel = isFreeItem
+                    ? item.txType === "EARNED"
+                      ? `${itemName} Earned`
+                      : `${itemName} Claimed`
+                    : isCashback
+                      ? item.txType === "EARNED"
+                        ? "Cashback Earned"
+                        : "Cashback Redeemed"
+                      : item.txType;
+                  const amountLabel = isFreeItem
+                    ? itemName!
+                    : isCashback
+                      ? `${item.amount > 0 ? "+" : "−"}₹${Math.abs(
+                          item.amount,
+                        ).toFixed(2)}`
+                      : `${item.amount > 0 ? "+" : "−"}${Math.abs(
+                          item.amount,
+                        )} pts`;
+
+                  return (
+                    <TableRow
+                      key={`tx-${item.id}`}
+                      className="border-b last:border-b-0"
+                    >
+                      <TableCell className="px-4 py-3 text-xs font-medium sm:px-6 sm:text-sm">
+                        {typeLabel}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground px-4 py-3 text-xs sm:px-6 sm:text-sm">
+                        <DateDisplay date={item.createdAt} />
+                      </TableCell>
+                      <TableCell className="px-4 py-3 text-xs sm:px-6 sm:text-sm">
+                        {amountLabel}{" "}
+                        <span className="text-muted-foreground">
+                          ({sourceLabel})
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
 
             <PaginationRow
               label="Activity"
@@ -477,7 +592,7 @@ function CustomerActivitySection({ slugId }: { slugId: string }) {
           </p>
         )}
       </div>
-    </section>
+    </SectionFrame>
   );
 }
 
@@ -505,13 +620,11 @@ function CustomerBillsSection({ slugId }: { slugId: string }) {
   const showBillsSkeleton = billsQuery.isLoading && bills.length === 0;
 
   return (
-    <section className="bg-card overflow-hidden rounded-2xl border shadow-sm">
-      <div className="bg-muted/20 border-b px-4 py-3 sm:px-6 sm:py-4">
-        <h3 className="text-foreground/90 flex items-center gap-2 text-xs font-semibold tracking-[0.18em] uppercase sm:text-sm">
-          <Receipt className="text-muted-foreground size-4" />
-          Bills
-        </h3>
-      </div>
+    <SectionFrame
+      title="Bills"
+      subtitle="Purchase history and cashback movements across transactions"
+      icon={Receipt}
+    >
       {showBillsSkeleton ? (
         <div className="space-y-0 p-4 sm:p-6">
           {[1, 2, 3, 4, 5].map((i) => (
@@ -649,7 +762,7 @@ function CustomerBillsSection({ slugId }: { slugId: string }) {
           />
         </>
       )}
-    </section>
+    </SectionFrame>
   );
 }
 
@@ -659,6 +772,7 @@ export function CustomerDetailPageClient({
   return (
     <div className="space-y-6 sm:space-y-8">
       <CustomerHeaderSection slugId={slugId} />
+      <CustomerFreeItemsSection slugId={slugId} />
       <CustomerActivitySection slugId={slugId} />
       <CustomerBillsSection slugId={slugId} />
     </div>

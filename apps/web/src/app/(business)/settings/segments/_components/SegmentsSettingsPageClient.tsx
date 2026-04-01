@@ -6,6 +6,7 @@ import {
   useSegmentsQuery,
   type SegmentItem,
 } from "@/hooks/segments";
+import { DEFAULT_SEGMENTS } from "@/lib/segmentation/defaults";
 import {
   Button,
   Skeleton,
@@ -167,8 +168,89 @@ function FilterCell({
   );
 }
 
+export function SegmentsSettingsSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="bg-muted/40 flex flex-col gap-4 rounded-xl border p-4 md:flex-row md:items-center md:justify-between">
+        <div className="space-y-2">
+          <p className="text-muted-foreground text-sm font-medium">
+            Define smart customer slices using RFM-style rules.
+          </p>
+          <p className="text-muted-foreground text-xs">
+            Use recency, frequency, and monetary thresholds to group customers
+            into meaningful segments for campaigns and insights.
+          </p>
+        </div>
+        <div className="flex flex-col items-start gap-2 md:items-end">
+          <div className="text-muted-foreground flex items-center gap-3 text-xs">
+            <Skeleton className="h-4 w-20" />
+            <span className="bg-border h-4 w-px" />
+            <Skeleton className="h-4 w-16" />
+            <span className="bg-border h-4 w-px" />
+            <Skeleton className="h-4 w-16" />
+          </div>
+          <Skeleton className="h-9 w-32" />
+        </div>
+      </div>
+
+      <div className="bg-card overflow-hidden rounded-xl border shadow-sm">
+        <div className="bg-muted/40 border-b px-4 py-3">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <p className="text-sm font-medium">Segment rules</p>
+              <p className="text-muted-foreground text-xs">
+                Hover on values to see a plain-language explanation.
+              </p>
+            </div>
+          </div>
+        </div>
+        <div className="max-h-[540px] overflow-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Recency</TableHead>
+                <TableHead>Frequency</TableHead>
+                <TableHead>Monetary</TableHead>
+                <TableHead className="w-[112px] text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {Array.from({ length: 6 }).map((_, idx) => (
+                <TableRow key={`segments-skeleton-${idx}`}>
+                  <TableCell className="align-top">
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-36" />
+                      <Skeleton className="h-3 w-56" />
+                    </div>
+                  </TableCell>
+                  <TableCell className="align-top">
+                    <Skeleton className="h-4 w-24" />
+                  </TableCell>
+                  <TableCell className="align-top">
+                    <Skeleton className="h-4 w-24" />
+                  </TableCell>
+                  <TableCell className="align-top">
+                    <Skeleton className="h-4 w-24" />
+                  </TableCell>
+                  <TableCell className="align-top">
+                    <div className="flex justify-end gap-1">
+                      <Skeleton className="h-8 w-8" />
+                      <Skeleton className="h-8 w-8" />
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function SegmentsSettingsPageClient() {
-  const { data, isLoading } = useSegmentsQuery();
+  const { data } = useSegmentsQuery();
   const {
     createSegment,
     updateSegment,
@@ -183,6 +265,42 @@ export function SegmentsSettingsPageClient() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
   const segments = data?.items ?? [];
+  const hasResolvedSegments = Array.isArray(data?.items);
+  const showSystemValueSkeleton = !hasResolvedSegments;
+  const systemSegmentsMap = new Map(
+    segments
+      .filter((segment) => segment.isSystem)
+      .map((segment) => [segment.slug, segment]),
+  );
+  const systemSegments = DEFAULT_SEGMENTS.map((defaultSegment) => {
+    const liveSegment = systemSegmentsMap.get(defaultSegment.slug);
+    return {
+      id: liveSegment?.id ?? `default-${defaultSegment.slug}`,
+      name: liveSegment?.name ?? defaultSegment.name,
+      description: liveSegment?.description ?? defaultSegment.description,
+      recencyOperator:
+        liveSegment?.recencyOperator ?? defaultSegment.recencyOperator,
+      recencyValue: liveSegment?.recencyValue ?? defaultSegment.recencyValue,
+      recencyValue2: liveSegment?.recencyValue2 ?? defaultSegment.recencyValue2,
+      recencyUnit: liveSegment?.recencyUnit ?? "DAYS",
+      frequencyOperator:
+        liveSegment?.frequencyOperator ?? defaultSegment.frequencyOperator,
+      frequencyValue:
+        liveSegment?.frequencyValue ?? defaultSegment.frequencyValue,
+      frequencyValue2:
+        liveSegment?.frequencyValue2 ?? defaultSegment.frequencyValue2,
+      monetaryOperator:
+        liveSegment?.monetaryOperator ?? defaultSegment.monetaryOperator,
+      monetaryValue: liveSegment?.monetaryValue ?? defaultSegment.monetaryValue,
+      monetaryValue2:
+        liveSegment?.monetaryValue2 ?? defaultSegment.monetaryValue2,
+      monetaryUnit:
+        liveSegment?.monetaryUnit ?? defaultSegment.monetaryUnit ?? "RATIO",
+      isEditable: Boolean(liveSegment),
+      liveSegment,
+    };
+  });
+  const customSegments = segments.filter((segment) => !segment.isSystem);
 
   const handleEdit = (segment: SegmentItem) => {
     setEditingSegment(segment);
@@ -273,7 +391,7 @@ export function SegmentsSettingsPageClient() {
               </div>
             </div>
           </div>
-          <div className="max-h-[540px] overflow-auto">
+          <div>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -287,51 +405,110 @@ export function SegmentsSettingsPageClient() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {isLoading &&
-                  Array.from({ length: 4 }).map((_, idx) => (
-                    <TableRow key={`skeleton-${idx}`}>
-                      <TableCell>
-                        <Skeleton className="h-4 w-40" />
-                      </TableCell>
-                      <TableCell>
-                        <Skeleton className="h-4 w-32" />
-                      </TableCell>
-                      <TableCell>
-                        <Skeleton className="h-4 w-32" />
-                      </TableCell>
-                      <TableCell>
-                        <Skeleton className="h-4 w-32" />
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Skeleton className="ml-auto h-8 w-16" />
-                      </TableCell>
-                    </TableRow>
-                  ))}
-
-                {!isLoading && segments.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={5}>
-                      <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
-                        <p className="text-sm font-medium">No segments yet</p>
-                        <p className="text-muted-foreground max-w-md text-xs">
-                          Create your first segment to start grouping customers
-                          by how recently and frequently they visit, and how
-                          much they spend.
+                {systemSegments.map((seg) => (
+                  <TableRow key={seg.id}>
+                    <TableCell className="align-top">
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{seg.name}</span>
+                          <span className="bg-muted text-muted-foreground rounded-full border px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase">
+                            System
+                          </span>
+                        </div>
+                        <p className="text-muted-foreground line-clamp-2 text-xs">
+                          {seg.description}
                         </p>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground align-top text-sm">
+                      {showSystemValueSkeleton ? (
+                        <Skeleton className="h-4 w-24" />
+                      ) : (
+                        <FilterCell
+                          display={formatFilter(
+                            seg.recencyOperator,
+                            seg.recencyValue,
+                            seg.recencyValue2,
+                            seg.recencyUnit,
+                          )}
+                          tooltip={getRecencyTooltip(
+                            seg.recencyOperator,
+                            seg.recencyValue,
+                            seg.recencyValue2,
+                            seg.recencyUnit,
+                          )}
+                        />
+                      )}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground align-top text-sm">
+                      {showSystemValueSkeleton ? (
+                        <Skeleton className="h-4 w-24" />
+                      ) : (
+                        <FilterCell
+                          display={formatFilter(
+                            seg.frequencyOperator,
+                            seg.frequencyValue,
+                            seg.frequencyValue2,
+                            null,
+                          )}
+                          tooltip={getFrequencyTooltip(
+                            seg.frequencyOperator,
+                            seg.frequencyValue,
+                            seg.frequencyValue2,
+                          )}
+                        />
+                      )}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground align-top text-sm">
+                      {showSystemValueSkeleton ? (
+                        <Skeleton className="h-4 w-24" />
+                      ) : (
+                        <FilterCell
+                          display={formatFilter(
+                            seg.monetaryOperator,
+                            seg.monetaryValue,
+                            seg.monetaryValue2,
+                            seg.monetaryUnit,
+                          )}
+                          tooltip={getMonetaryTooltip(
+                            seg.monetaryOperator,
+                            seg.monetaryValue,
+                            seg.monetaryValue2,
+                            seg.monetaryUnit,
+                          )}
+                        />
+                      )}
+                    </TableCell>
+                    <TableCell className="align-top">
+                      <div className="flex justify-end gap-1">
                         <Button
-                          size="sm"
-                          onClick={() => setIsCreateOpen(true)}
-                          icon={<Plus className="h-4 w-4" />}
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() =>
+                            seg.liveSegment
+                              ? handleEdit(seg.liveSegment)
+                              : undefined
+                          }
+                          disabled={!seg.isEditable || isUpdating}
                         >
-                          Create segment
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          disabled
+                        >
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </TableCell>
                   </TableRow>
-                )}
+                ))}
 
-                {!isLoading &&
-                  segments.map((seg) => (
+                {hasResolvedSegments &&
+                  customSegments.map((seg) => (
                     <TableRow key={seg.id}>
                       <TableCell className="align-top">
                         <div className="flex flex-col gap-1">
