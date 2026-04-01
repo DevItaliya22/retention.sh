@@ -140,7 +140,7 @@ export function LoyaltyLoginPageClient() {
 
   return (
     <MobileLayout branding={branding}>
-      <div className="flex flex-1 flex-col">
+      <div className="flex flex-1 flex-col bg-white">
         {/* Header section with optional logo and branding */}
         <div
           className="flex flex-col items-center px-6 pt-12 pb-6"
@@ -186,9 +186,18 @@ export function LoyaltyLoginPageClient() {
         )}
 
         {/* Form section */}
-        <div className="flex flex-1 items-start justify-center px-6 pt-6 pb-8">
-          <Card className="w-full border-0 shadow-none">
-            <CardContent className="space-y-4 p-0">
+        <div
+          className="flex flex-1 items-start justify-center px-6 pt-6 pb-8"
+          style={{ backgroundColor: "#ffffff" }}
+        >
+          <Card
+            className="w-full border-0 shadow-none"
+            style={{ backgroundColor: "#ffffff", boxShadow: "none" }}
+          >
+            <CardContent
+              className="space-y-4 p-0"
+              style={{ backgroundColor: "#ffffff" }}
+            >
               {step === "request" && (
                 <form
                   onSubmit={(e) => {
@@ -200,6 +209,8 @@ export function LoyaltyLoginPageClient() {
                   <div className="space-y-2">
                     <Label>Phone Number</Label>
                     <Input
+                      className="!border-black/10 !bg-white"
+                      style={{ backgroundColor: "#ffffff" }}
                       value={phoneNumber}
                       onChange={(e) => setPhoneNumber(e.target.value)}
                       placeholder="9876543210"
@@ -209,6 +220,8 @@ export function LoyaltyLoginPageClient() {
                   <div className="space-y-2">
                     <Label>Name</Label>
                     <Input
+                      className="!border-black/10 !bg-white"
+                      style={{ backgroundColor: "#ffffff" }}
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       placeholder="Your name"
@@ -258,6 +271,8 @@ export function LoyaltyLoginPageClient() {
                   <div className="space-y-2">
                     <Label>OTP</Label>
                     <Input
+                      className="!border-black/10 !bg-white"
+                      style={{ backgroundColor: "#ffffff" }}
                       value={otp}
                       onChange={(e) => setOtp(e.target.value)}
                       placeholder="123456"
@@ -266,7 +281,7 @@ export function LoyaltyLoginPageClient() {
                   </div>
                   <Button
                     type="submit"
-                    className="w-full"
+                    className="bg-primary w-full"
                     loading={isLoading}
                     style={
                       themeColor

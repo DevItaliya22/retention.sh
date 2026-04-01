@@ -17,7 +17,7 @@ export function ProgressBar({
   const pct = max > 0 ? Math.min(100, (value / max) * 100) : 0;
   return (
     <div
-      className={`bg-muted h-2 w-full overflow-hidden rounded-full ${className}`}
+      className={`h-2 w-full overflow-hidden rounded-full bg-black/10 ${className}`}
     >
       <div
         className={`h-full rounded-full transition-all duration-500 ${barColor ? "" : barClassName || "bg-primary"}`}

@@ -10,7 +10,7 @@ export function PointsBalanceCard({
   subtitle,
 }: PointsBalanceCardProps) {
   return (
-    <div className="bg-card flex items-center gap-4 rounded-xl border p-4">
+    <div className="flex items-center gap-4 rounded-xl border bg-white p-4">
       <div className="bg-primary/10 flex size-12 shrink-0 items-center justify-center rounded-full">
         <Coins className="text-primary size-6" />
       </div>

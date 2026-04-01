@@ -30,7 +30,10 @@ const VARIANTS: Record<string, { label: string; className: string }> = {
 };
 
 export function TransactionTypeBadge({ type }: { type: string }) {
-  const v = VARIANTS[type] ?? { label: type, className: "bg-muted" };
+  const v = VARIANTS[type] ?? {
+    label: type,
+    className: "border border-black/10 bg-white text-foreground",
+  };
   return (
     <span
       className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${v.className}`}

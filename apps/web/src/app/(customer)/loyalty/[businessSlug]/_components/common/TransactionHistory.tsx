@@ -48,7 +48,9 @@ export function TransactionHistory({
 
   return (
     <div
-      className={ac ? "rounded-xl border p-4" : "bg-card rounded-xl border p-4"}
+      className={
+        ac ? "rounded-xl border p-4" : "rounded-xl border bg-white p-4"
+      }
       style={
         ac ? { backgroundColor: `${ac}0A`, borderColor: `${ac}22` } : undefined
       }

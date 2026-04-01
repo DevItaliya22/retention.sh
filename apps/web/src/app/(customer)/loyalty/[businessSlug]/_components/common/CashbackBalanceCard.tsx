@@ -13,7 +13,7 @@ export function CashbackBalanceCard({
   subtitle,
 }: CashbackBalanceCardProps) {
   return (
-    <div className="bg-card flex items-center gap-4 rounded-xl border p-4">
+    <div className="flex items-center gap-4 rounded-xl border bg-white p-4">
       <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/30">
         <Wallet className="size-6 text-emerald-600 dark:text-emerald-400" />
       </div>
