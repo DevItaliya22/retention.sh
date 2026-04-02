@@ -12,6 +12,7 @@ import {
   Label,
   useFormContext,
 } from "@reelo/ui/components";
+import { RefreshCw, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type {
   ControllerRenderProps,
@@ -44,49 +45,58 @@ function BrandingImageUploadControl({
   onRemoveClick: () => void;
   chooseDisabled: boolean;
 }) {
-  const showRemove = !!displayUrl;
-
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
+    <div className="flex flex-col gap-3">
       <div
-        className="bg-muted/40 border-border/60 relative flex h-28 w-full max-w-[280px] shrink-0 items-center justify-center overflow-hidden rounded-lg border border-dashed"
+        className="bg-muted/40 border-border/60 group relative flex h-28 w-full max-w-[280px] shrink-0 items-center justify-center overflow-hidden rounded-lg border border-dashed"
         aria-hidden={!displayUrl}
       >
         {displayUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element -- R2 / arbitrary branding URLs
-          <img
-            src={displayUrl}
-            alt=""
-            className="max-h-full max-w-full object-contain"
-          />
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element -- R2 / arbitrary branding URLs */}
+            <img
+              src={displayUrl}
+              alt=""
+              className="max-h-full max-w-full object-contain"
+            />
+            <div className="absolute inset-0 bg-black/0 transition-colors duration-200 group-focus-within:bg-black/35 group-hover:bg-black/35" />
+            <button
+              type="button"
+              aria-label="Remove image"
+              disabled={chooseDisabled}
+              onClick={onRemoveClick}
+              className="absolute top-2 right-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-red-600 text-white opacity-0 shadow-sm transition-all duration-200 group-focus-within:opacity-100 group-hover:opacity-100 hover:bg-red-700 disabled:pointer-events-none disabled:opacity-40"
+            >
+              <Trash2 className="size-4" />
+            </button>
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              disabled={chooseDisabled}
+              onClick={onChooseClick}
+              className="absolute top-1/2 left-1/2 h-8 -translate-x-1/2 -translate-y-1/2 rounded-full px-3 opacity-0 shadow-sm transition-all duration-200 group-focus-within:opacity-100 group-hover:opacity-100"
+            >
+              <RefreshCw className="mr-1.5 size-3.5" />
+              Replace
+            </Button>
+          </>
         ) : (
-          <span className="text-muted-foreground px-3 text-center text-xs">
-            No image selected
-          </span>
+          <div className="flex flex-col items-center gap-2">
+            <span className="text-muted-foreground px-3 text-center text-xs">
+              No image selected
+            </span>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={chooseDisabled}
+              onClick={onChooseClick}
+            >
+              Choose image
+            </Button>
+          </div>
         )}
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          disabled={chooseDisabled}
-          onClick={onChooseClick}
-        >
-          {displayUrl ? "Replace image" : "Choose image"}
-        </Button>
-        {showRemove ? (
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            className="text-muted-foreground"
-            disabled={chooseDisabled}
-            onClick={onRemoveClick}
-          >
-            Remove
-          </Button>
-        ) : null}
       </div>
     </div>
   );

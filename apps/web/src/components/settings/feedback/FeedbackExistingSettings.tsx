@@ -1,7 +1,9 @@
 "use client";
 
-import { BrandingFieldGroup } from "@/components/common/settings/BrandingFieldGroup";
+import { BrandingFormFields } from "@/components/common/form-sections";
 import { SettingsFieldGroup } from "@/components/common/settings/SettingsFieldGroup";
+import { FeedbackPreviewPanel } from "@/components/settings/feedback/_components/FeedbackPreviewPanel";
+import { useCurrentBusiness } from "@/hooks/business/useCurrentBusiness";
 import type {
   FeedbackConfigDto,
   FeedbackSelectionOptionDto,
@@ -30,7 +32,9 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormProvider,
   Input,
+  Label,
   SaveButton,
   Select,
   SelectContent,
@@ -41,6 +45,7 @@ import {
   SortableContent,
   SortableItem,
   SortableItemHandle,
+  Switch,
   Textarea,
 } from "@reelo/ui/components";
 import { GripVertical, Trash2 } from "lucide-react";
@@ -80,6 +85,20 @@ const ONLINE_REVIEW_PLATFORM_OPTIONS = [
 type SectionSaveHandle = {
   save: () => Promise<void>;
 };
+
+function useDebouncedValue<T>(value: T, delayMs: number): T {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(
+      () => setDebouncedValue(value),
+      delayMs,
+    );
+    return () => window.clearTimeout(timeoutId);
+  }, [value, delayMs]);
+
+  return debouncedValue;
+}
 
 const discoveryAndReviewsSchema = z
   .object({
@@ -1050,6 +1069,184 @@ function SelectionOptionsSuggestions({
   );
 }
 
+function FeedbackBrandingSettingsCard({
+  config,
+  onUpdate,
+}: {
+  config: FeedbackConfigDto;
+  onUpdate: (values: Record<string, string>) => Promise<{
+    success: boolean;
+    error?: string;
+  }>;
+}) {
+  const resolvePendingUploadsRef = useRef<null | (() => Promise<void>)>(null);
+  const [hasPendingImageChanges, setHasPendingImageChanges] = useState(false);
+  const [showPreview, setShowPreview] = useState(true);
+  const { data: businessData } = useCurrentBusiness();
+  const businessName = businessData?.business?.name ?? "Business";
+
+  const form = useForm({
+    defaultValues: {
+      branding: {
+        logo: config.branding?.logo ?? null,
+        themeColor: config.branding?.themeColor ?? null,
+        textColor: config.branding?.textColor ?? null,
+        bannerImage: config.branding?.bannerImage ?? null,
+        header: config.branding?.header ?? null,
+        subtitle: config.branding?.subtitle ?? null,
+      },
+    },
+  });
+  const watchedBranding = form.watch("branding");
+  const debouncedThemeColor = useDebouncedValue(
+    watchedBranding?.themeColor ?? null,
+    300,
+  );
+  const debouncedTextColor = useDebouncedValue(
+    watchedBranding?.textColor ?? null,
+    300,
+  );
+
+  useEffect(() => {
+    form.reset({
+      branding: {
+        logo: config.branding?.logo ?? null,
+        themeColor: config.branding?.themeColor ?? null,
+        textColor: config.branding?.textColor ?? null,
+        bannerImage: config.branding?.bannerImage ?? null,
+        header: config.branding?.header ?? null,
+        subtitle: config.branding?.subtitle ?? null,
+      },
+    });
+  }, [form, config.branding]);
+
+  const handleResolvePendingUploads = useCallback(
+    (resolver: () => Promise<void>) => {
+      resolvePendingUploadsRef.current = resolver;
+    },
+    [],
+  );
+
+  const runSubmit = async () => {
+    if (resolvePendingUploadsRef.current) {
+      await resolvePendingUploadsRef.current();
+    }
+
+    const valid = await form.trigger();
+    if (!valid) throw new Error("Validation failed");
+    const values = form.getValues();
+    const result = await onUpdate({
+      logo: values.branding.logo ?? "",
+      themeColor: values.branding.themeColor ?? "",
+      textColor: values.branding.textColor ?? "",
+      bannerImage: values.branding.bannerImage ?? "",
+      header: values.branding.header ?? "",
+      subtitle: values.branding.subtitle ?? "",
+    });
+
+    if (result.success) {
+      toast.success("Settings updated successfully");
+      form.reset(values, { keepDefaultValues: false });
+      return;
+    }
+
+    throw new Error(result.error || "Failed to update branding");
+  };
+
+  return (
+    <Card className="bg-sidebar-accent/50 flex min-h-0 flex-col gap-0 rounded-lg border-0 p-2">
+      <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="text-foreground text-base leading-none font-semibold">
+              Branding
+            </CardTitle>
+            <CardDescription className="text-muted-foreground mt-0.5 text-sm">
+              Customize appearance of the feedback page
+            </CardDescription>
+          </div>
+          <div className="flex items-center gap-2">
+            <Label
+              htmlFor="feedback-branding-preview-toggle"
+              className="text-muted-foreground text-xs"
+            >
+              Preview
+            </Label>
+            <Switch
+              id="feedback-branding-preview-toggle"
+              checked={showPreview}
+              onCheckedChange={setShowPreview}
+            />
+          </div>
+        </div>
+      </CardHeader>
+
+      <div
+        className={showPreview ? "grid grid-cols-1 gap-4 xl:grid-cols-2" : ""}
+      >
+        <Card className="border-border/45 bg-background/55 flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border shadow-none">
+          <FormProvider {...form}>
+            <Form {...form}>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void runSubmit().catch((error: unknown) => {
+                    toast.error(
+                      error instanceof Error
+                        ? error.message
+                        : "Failed to update branding",
+                    );
+                  });
+                }}
+                className="flex min-h-0 flex-1 flex-col"
+              >
+                <CardContent className="flex min-h-0 flex-1 flex-col gap-y-4 overflow-auto px-4 py-4">
+                  <BrandingFormFields
+                    prefix="branding"
+                    layout="settings"
+                    onResolvePendingUploads={handleResolvePendingUploads}
+                    onPendingImageChanges={setHasPendingImageChanges}
+                  />
+                </CardContent>
+                <CardFooter className="flex shrink-0 justify-end border-0 px-4 py-2">
+                  <SaveButton
+                    onSave={runSubmit}
+                    disabled={
+                      !form.formState.isDirty && !hasPendingImageChanges
+                    }
+                    labels={{
+                      idle: "Save changes",
+                      loading: "Saving",
+                      success: "Saved",
+                    }}
+                  />
+                </CardFooter>
+              </form>
+            </Form>
+          </FormProvider>
+        </Card>
+
+        {showPreview && (
+          <Card className="border-border/45 bg-background/55 flex min-h-0 flex-col gap-0 overflow-hidden rounded-lg border p-4 shadow-none">
+            <FeedbackPreviewPanel
+              config={config}
+              brandingValues={{
+                logo: watchedBranding?.logo ?? null,
+                bannerImage: watchedBranding?.bannerImage ?? null,
+                themeColor: debouncedThemeColor,
+                textColor: debouncedTextColor,
+                header: watchedBranding?.header ?? null,
+                subtitle: watchedBranding?.subtitle ?? null,
+              }}
+              previewBusinessName={businessName}
+            />
+          </Card>
+        )}
+      </div>
+    </Card>
+  );
+}
+
 interface FeedbackExistingSettingsProps {
   config: FeedbackConfigDto;
 }
@@ -1282,18 +1479,9 @@ export function FeedbackExistingSettings({
         onSubmit={handleUpdateNegativeAlerts}
       />
 
-      <BrandingFieldGroup
-        title="Branding"
-        description="Customize appearance of the feedback page"
-        defaultValues={{
-          logo: config.branding?.logo ?? "",
-          themeColor: config.branding?.themeColor ?? "",
-          textColor: config.branding?.textColor ?? "",
-          bannerImage: config.branding?.bannerImage ?? "",
-          header: config.branding?.header ?? "",
-          subtitle: config.branding?.subtitle ?? "",
-        }}
-        onSubmit={handleUpdateBranding}
+      <FeedbackBrandingSettingsCard
+        config={config}
+        onUpdate={handleUpdateBranding}
       />
     </div>
   );

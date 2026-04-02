@@ -318,7 +318,7 @@ function BrandingSettingsCard({
 }: BrandingSettingsCardProps) {
   const resolvePendingUploadsRef = useRef<null | (() => Promise<void>)>(null);
   const [hasPendingImageChanges, setHasPendingImageChanges] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
+  const [showPreview, setShowPreview] = useState(true);
   const { data: businessData } = useCurrentBusiness();
   const businessName = businessData?.business?.name ?? "Your Business";
   const branding = loyalty.branding ?? {

@@ -153,28 +153,36 @@ export interface PublicReferralProgramResponse {
   error?: string;
 }
 
-export function usePublicReferralProgram(businessSlug: string) {
+export function usePublicReferralProgram(
+  businessSlug: string,
+  options?: { enabled?: boolean },
+) {
+  const enabled = options?.enabled !== false;
   return useQuery<PublicReferralProgramResponse, Error>({
     queryKey: ["publicReferralProgram", businessSlug],
     queryFn: () =>
       fetcher<PublicReferralProgramResponse>(
         `/api/referral/program/${businessSlug}`,
       ),
-    enabled: !!businessSlug,
+    enabled: enabled && !!businessSlug,
     placeholderData: (prev) => prev,
     staleTime: 5000,
   });
 }
 
 /** Fetches referral program + business (with branding) by claim link slug for the claim page. */
-export function useReferralProgramByClaimSlug(referralSlug: string) {
+export function useReferralProgramByClaimSlug(
+  referralSlug: string,
+  options?: { enabled?: boolean },
+) {
+  const enabled = options?.enabled !== false;
   return useQuery<PublicReferralProgramResponse, Error>({
     queryKey: ["referralProgramByClaimSlug", referralSlug],
     queryFn: () =>
       fetcher<PublicReferralProgramResponse>(
         `/api/referral/program/by-claim/${referralSlug}`,
       ),
-    enabled: !!referralSlug,
+    enabled: enabled && !!referralSlug,
     placeholderData: (prev) => prev,
     staleTime: 5000,
   });

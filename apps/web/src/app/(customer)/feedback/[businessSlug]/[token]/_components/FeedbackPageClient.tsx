@@ -17,9 +17,16 @@ import { useCallback, useEffect, useState } from "react";
 interface FeedbackPageClientProps {
   businessSlug: string;
   token: string;
+  previewMode?: boolean;
+  previewView?: "form" | "thank-you";
+  previewBusinessName?: string;
+  onPreviewSubmit?: () => void;
+  previewConfig?: PublicFeedbackConfig & {
+    reward?: { enabled: boolean; amount: number | null };
+  };
 }
 
-interface PublicFeedbackConfig {
+export interface PublicFeedbackConfig {
   id: string;
   positiveFollowUp: string | null;
   negativeFollowUp: string | null;
@@ -108,6 +115,8 @@ function formatBillTime(isoString: string | null | undefined): string {
 
 const pageWrapperClass =
   "flex min-h-screen min-h-[100dvh] w-full items-center justify-center bg-white px-4 pb-4 pt-2 font-sans sm:px-6 sm:pb-6 sm:pt-4";
+const previewPageWrapperClass =
+  "flex min-h-full w-full items-start justify-center bg-white pt-2 sm:pt-3";
 
 const cardClass =
   "w-full max-w-[420px] rounded-[32px] border border-white/10 overflow-hidden flex flex-col bg-white shadow-xl !p-0";
@@ -185,6 +194,11 @@ function OnlineReviewCTA({
 export function FeedbackPageClient({
   businessSlug,
   token,
+  previewMode = false,
+  previewView = "form",
+  previewBusinessName,
+  onPreviewSubmit,
+  previewConfig,
 }: FeedbackPageClientProps) {
   const [rating, setRating] = useState<number | null>(null);
   const [comment, setComment] = useState("");
@@ -225,17 +239,42 @@ export function FeedbackPageClient({
         if (!res.ok) throw new Error("Failed to load feedback");
         return res.json();
       }),
-    enabled: !!businessSlug && !!token,
+    enabled: !!businessSlug && !!token && !previewMode,
   });
 
-  const config = data?.config ?? null;
-  const billAmount = data?.billAmount ?? null;
-  const billCreatedAt = data?.billCreatedAt ?? null;
-  const currencySymbol = data?.currencySymbol ?? "₹";
-  const alreadySubmitted = data?.alreadySubmitted ?? false;
-  const loadedFollowUp = data?.followUpMessage ?? null;
-  const loadedReward = data?.reward ?? null;
-  const loadedOnlineReview = data?.onlineReview ?? null;
+  const previewData: PublicFeedbackResponse | null = previewMode
+    ? {
+        config: previewConfig ?? null,
+        billNumber: "PREVIEW-001",
+        billAmount: 1234,
+        billCreatedAt: new Date().toISOString(),
+        currencySymbol: "₹",
+        followUpMessage: previewConfig?.positiveFollowUp ?? null,
+        reward: previewConfig?.reward ?? null,
+        onlineReview:
+          previewConfig?.askForOnlineReviews && previewConfig?.onlineReviewLink
+            ? {
+                link: previewConfig.onlineReviewLink,
+                platform: previewConfig.onlineReviewPlatform ?? null,
+              }
+            : null,
+      }
+    : null;
+  const effectiveData = previewData ?? data ?? null;
+  const config = effectiveData?.config ?? null;
+  const billAmount = effectiveData?.billAmount ?? null;
+  const billCreatedAt = effectiveData?.billCreatedAt ?? null;
+  const currencySymbol = effectiveData?.currencySymbol ?? "₹";
+  const alreadySubmitted =
+    previewMode && previewView === "thank-you"
+      ? true
+      : (effectiveData?.alreadySubmitted ?? false);
+  const loadedFollowUp = effectiveData?.followUpMessage ?? null;
+  const loadedReward = effectiveData?.reward ?? null;
+  const loadedOnlineReview = effectiveData?.onlineReview ?? null;
+  const loading = previewMode ? false : isLoading || (!data && !isError);
+  const displayBusiness = previewBusinessName || businessSlug;
+  const wrapperClass = previewMode ? previewPageWrapperClass : pageWrapperClass;
 
   // Keep form branding in state so thank-you view uses same theme (not default purple)
   useEffect(() => {
@@ -311,11 +350,9 @@ export function FeedbackPageClient({
     );
   };
 
-  const loading = isLoading || (!data && !isError);
-
-  if (isError || (!loading && !data)) {
+  if (isError || (!loading && !effectiveData)) {
     return (
-      <div className={pageWrapperClass}>
+      <div className={wrapperClass}>
         <Card className={cardClass}>
           <CardHeader className="px-4 pt-6 pb-6 text-center sm:px-6">
             <div className="bg-destructive/10 text-destructive mx-auto mb-2 flex size-12 items-center justify-center rounded-full">
@@ -380,7 +417,7 @@ export function FeedbackPageClient({
                     className="text-base font-semibold sm:text-lg"
                     style={{ color: themeColor }}
                   >
-                    {(businessSlug || "B").charAt(0).toUpperCase()}
+                    {(displayBusiness || "B").charAt(0).toUpperCase()}
                   </span>
                 )}
               </div>
@@ -489,7 +526,7 @@ export function FeedbackPageClient({
 
   if (!loading && !config) {
     return (
-      <div className={pageWrapperClass}>
+      <div className={wrapperClass}>
         <Card className={`${cardClass} border-gray-300/70 bg-white shadow-md`}>
           <div className="relative rounded-t-[32px] bg-gradient-to-br from-slate-900 via-slate-800 to-teal-900 px-6 pt-8 pb-7 text-center">
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(255,255,255,0.18),transparent_55%)]" />
@@ -535,7 +572,7 @@ export function FeedbackPageClient({
     : subtitleText;
 
   return (
-    <div className={pageWrapperClass}>
+    <div className={wrapperClass}>
       <style>{`
         .feedback-form textarea:-webkit-autofill,
         .feedback-form textarea:-webkit-autofill:hover,
@@ -583,12 +620,12 @@ export function FeedbackPageClient({
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={logo}
-                      alt={businessSlug}
+                      alt={displayBusiness}
                       className="h-full w-full object-contain"
                     />
                   ) : (
                     <span className="text-base font-semibold text-neutral-400 sm:text-lg">
-                      {(businessSlug || "B").charAt(0).toUpperCase()}
+                      {(displayBusiness || "B").charAt(0).toUpperCase()}
                     </span>
                   )}
                 </div>
@@ -878,7 +915,7 @@ export function FeedbackPageClient({
 
           <button
             type="button"
-            onClick={submitFeedback}
+            onClick={previewMode ? onPreviewSubmit : submitFeedback}
             disabled={loading || submitStatus === "submitting"}
             className="flex h-11 w-full items-center justify-center gap-2 rounded-[12px] text-[14px] font-medium transition-colors active:opacity-90 disabled:opacity-70"
             style={{ backgroundColor: themeColor, color: textColor }}

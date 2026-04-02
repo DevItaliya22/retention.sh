@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { nameSchema, textSchema, themeColorSchema, urlSchema } from "./common";
+import {
+  nameSchema,
+  storagePathOrUrlSchema,
+  textSchema,
+  themeColorSchema,
+} from "./common";
 
 // Information section schema
 export const informationSectionSchema = z.object({
@@ -24,10 +29,10 @@ export const REFERRAL_BENEFIT_TYPES = {
 // Branding schema for referral program
 export const referralBrandingSchema = z
   .object({
-    logo: urlSchema,
+    logo: storagePathOrUrlSchema,
     themeColor: themeColorSchema,
     textColor: themeColorSchema,
-    bannerImage: urlSchema,
+    bannerImage: storagePathOrUrlSchema,
     header: textSchema(200),
     subtitle: textSchema(500),
   })

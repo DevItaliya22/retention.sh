@@ -141,9 +141,9 @@ export function LoyaltyLoginPageClient() {
   return (
     <MobileLayout branding={branding}>
       <div className="flex flex-1 flex-col bg-white">
-        {/* Header section with optional logo and branding */}
+        {/* Header section with optional banner (with theme tint) and branding */}
         <div
-          className="flex flex-col items-center px-6 pt-12 pb-6"
+          className="relative flex flex-col items-center overflow-hidden px-6 pt-12 pb-6"
           style={
             themeColor
               ? {
@@ -153,37 +153,46 @@ export function LoyaltyLoginPageClient() {
               : undefined
           }
         >
-          {branding?.logoUrl && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={branding.logoUrl}
-              alt=""
-              className="mb-4 h-16 w-auto object-contain"
-            />
+          {branding?.bannerImageUrl && (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={branding.bannerImageUrl}
+                alt=""
+                className="absolute inset-0 h-full w-full object-cover"
+              />
+              <div
+                className="absolute inset-0"
+                style={{
+                  backgroundColor: themeColor || "#000000",
+                  opacity: 0.65,
+                }}
+              />
+            </>
           )}
-          <h1
-            className={`text-center text-lg font-bold ${!themeColor ? "text-foreground" : ""}`}
-          >
-            {businessName ? `Check your loyalty points` : "Customer Login"}
-          </h1>
-          {businessName && (
-            <p
-              className={`mt-1 text-center text-sm ${!themeColor ? "text-muted-foreground" : "opacity-80"}`}
+          <div className="relative z-10 flex flex-col items-center">
+            {branding?.logoUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={branding.logoUrl}
+                alt=""
+                className="mb-4 h-16 w-auto object-contain"
+              />
+            )}
+            <h1
+              className={`text-center text-lg font-bold ${!themeColor ? "text-foreground" : ""}`}
             >
-              for {businessName}
-            </p>
-          )}
+              {businessName ? `Check your loyalty points` : "Customer Login"}
+            </h1>
+            {businessName && (
+              <p
+                className={`mt-1 text-center text-sm ${!themeColor ? "text-muted-foreground" : "opacity-80"}`}
+              >
+                for {businessName}
+              </p>
+            )}
+          </div>
         </div>
-
-        {/* Banner image below header (if present, no logo header bg) */}
-        {branding?.bannerImageUrl && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={branding.bannerImageUrl}
-            alt=""
-            className="h-32 w-full object-cover"
-          />
-        )}
 
         {/* Form section */}
         <div

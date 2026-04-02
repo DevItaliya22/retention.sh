@@ -1,5 +1,9 @@
 "use client";
 
+import type {
+  PublicReferralProgramResponse,
+  ReferralProgram,
+} from "@/hooks/referral/useReferralProgram";
 import { usePublicReferralProgram } from "@/hooks/referral/useReferralProgram";
 import { Skeleton } from "@reelo/ui/components";
 import { Gift, MoveRight, Share2, Sparkles } from "lucide-react";
@@ -8,12 +12,24 @@ import { useMemo } from "react";
 interface ReferralLandingPageClientProps {
   businessSlug: string;
   referralSlug: string;
+  previewMode?: boolean;
+  previewBranding?: {
+    logo: string | null;
+    bannerImage: string | null;
+    themeColor: string | null;
+    textColor: string | null;
+    header: string | null;
+    subtitle: string | null;
+  };
+  previewProgram?: ReferralProgram;
 }
 
 const DEFAULT_THEME_COLOR = "#0f766e";
 const DEFAULT_TEXT_COLOR = "#f8fafc";
 const pageWrapClass =
   "flex min-h-screen items-center justify-center bg-white p-4 font-sans sm:p-6";
+const previewWrapClass =
+  "flex min-h-full items-start justify-center bg-white pt-2 sm:pt-3";
 
 const REFERRAL_LOCK_TERM =
   "Referrer's cashback will be locked until the person they referred makes their first bill. Locked amount shows in bill redemption UI. The referred customer can use their reward normally.";
@@ -51,8 +67,60 @@ function getContrastTextColor(bgColor: string): string {
 export function ReferralLandingPageClient({
   businessSlug,
   referralSlug,
+  previewMode = false,
+  previewBranding,
+  previewProgram,
 }: ReferralLandingPageClientProps) {
-  const { data, isLoading, isError } = usePublicReferralProgram(businessSlug);
+  const { data, isLoading, isError } = usePublicReferralProgram(businessSlug, {
+    enabled: !previewMode,
+  });
+
+  const previewData: PublicReferralProgramResponse = {
+    business: {
+      name: "Your Business",
+      slug: "preview-business",
+      defaultPointsName: "Points",
+      defaultCurrencySymbol: "₹",
+      defaultCurrencyCode: "INR",
+    },
+    referralProgram: {
+      id: "preview-referral-program",
+      businessId: "preview-business-id",
+      isEnabled: true,
+      newCustomerBenefitType: "AMOUNT_CASHBACK",
+      newCustomerBenefitValue: 100,
+      newCustomerBenefitExpiresInDays: 30,
+      newCustomerFreeItemSkuId: null,
+      newCustomerFreeItemSku: null,
+      existingCustomerBenefitType: "AMOUNT_CASHBACK",
+      existingCustomerBenefitValue: 50,
+      existingCustomerBenefitExpiresInDays: null,
+      existingCustomerFreeItemSkuId: null,
+      existingCustomerFreeItemSku: null,
+      lockReferralPointsUntilFirstPurchase: true,
+      whatsappEnabled: true,
+      emailEnabled: false,
+      smsEnabled: false,
+      sendReminderToCustomer: true,
+      informationSections: [],
+      branding: null,
+      termsAndConditionsNewCustomer: [],
+      termsAndConditionsExistingCustomer: [],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+  };
+  const pageData =
+    data ??
+    (previewMode
+      ? {
+          ...previewData,
+          referralProgram: {
+            ...previewData.referralProgram!,
+            ...(previewProgram ?? {}),
+          },
+        }
+      : undefined);
 
   const referralLink = useMemo(() => {
     if (typeof window !== "undefined") {
@@ -62,11 +130,12 @@ export function ReferralLandingPageClient({
   }, [referralSlug]);
 
   const handleShare = async () => {
+    if (previewMode) return;
     if (navigator.share) {
       try {
         await navigator.share({
-          title: `Join ${data?.business?.name || "us"} and get rewards!`,
-          text: `Check out ${data?.business?.name || "this"} referral program!`,
+          title: `Join ${pageData?.business?.name || "us"} and get rewards!`,
+          text: `Check out ${pageData?.business?.name || "this"} referral program!`,
           url: referralLink,
         });
       } catch (error) {
@@ -78,9 +147,28 @@ export function ReferralLandingPageClient({
     }
   };
 
-  if (isError || (!isLoading && (!data?.referralProgram || !data?.business))) {
+  const existingTerms = useMemo(() => {
+    const referralProgram = pageData?.referralProgram;
+    const raw =
+      referralProgram?.termsAndConditionsExistingCustomer?.map(
+        (t) => t.content,
+      ) ?? [];
+    const withLock =
+      referralProgram?.lockReferralPointsUntilFirstPurchase &&
+      !raw.includes(REFERRAL_LOCK_TERM)
+        ? [...raw, REFERRAL_LOCK_TERM]
+        : raw;
+    return withLock.map((s) => s.trim()).filter(Boolean);
+  }, [pageData?.referralProgram]);
+  const pageWrapperClass = previewMode ? previewWrapClass : pageWrapClass;
+
+  if (
+    !previewMode &&
+    (isError ||
+      (!isLoading && (!pageData?.referralProgram || !pageData?.business)))
+  ) {
     return (
-      <div className={pageWrapClass}>
+      <div className={pageWrapperClass}>
         <div className="w-full max-w-[420px] rounded-[32px] border border-white/10 bg-white p-10 text-center shadow-xl">
           <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
             <span className="text-2xl">😕</span>
@@ -94,37 +182,39 @@ export function ReferralLandingPageClient({
     );
   }
 
-  const loading = isLoading && !data;
+  const loading = !previewMode && isLoading && !pageData;
   const themeColor =
-    (data?.referralProgram?.branding?.themeColor as string | undefined) ||
+    (previewMode
+      ? (previewBranding?.themeColor as string | undefined)
+      : undefined) ||
+    (pageData?.referralProgram?.branding?.themeColor as string | undefined) ||
     DEFAULT_THEME_COLOR;
   const textColor =
-    (data?.referralProgram?.branding?.textColor as string | undefined) ||
+    (previewMode
+      ? (previewBranding?.textColor as string | undefined)
+      : undefined) ||
+    (pageData?.referralProgram?.branding?.textColor as string | undefined) ||
     getContrastTextColor(themeColor);
-  const branding = data?.referralProgram?.branding;
-  const bannerImage = branding?.bannerImage;
-  const logo = branding?.logo;
+  const branding = previewMode
+    ? {
+        logo: previewBranding?.logo ?? null,
+        bannerImage: previewBranding?.bannerImage ?? null,
+        themeColor: previewBranding?.themeColor ?? null,
+        textColor: previewBranding?.textColor ?? null,
+        header: previewBranding?.header ?? null,
+        subtitle: previewBranding?.subtitle ?? null,
+      }
+    : pageData?.referralProgram?.branding;
+  const bannerImage = branding?.bannerImage ?? null;
+  const logo = branding?.logo ?? null;
   const header =
     (branding?.header as string | undefined) ||
     "Welcome to our Referral Program";
   const subtitle =
     (branding?.subtitle as string | undefined) ||
     "Share with friends and earn exclusive rewards.";
-  const business = data?.business;
-  const referralProgram = data?.referralProgram;
-
-  const existingTerms = useMemo(() => {
-    const raw =
-      referralProgram?.termsAndConditionsExistingCustomer?.map(
-        (t) => t.content,
-      ) ?? [];
-    const withLock =
-      referralProgram?.lockReferralPointsUntilFirstPurchase &&
-      !raw.includes(REFERRAL_LOCK_TERM)
-        ? [...raw, REFERRAL_LOCK_TERM]
-        : raw;
-    return withLock.map((s) => s.trim()).filter(Boolean);
-  }, [referralProgram]);
+  const business = pageData?.business;
+  const referralProgram = pageData?.referralProgram;
 
   const youGetText =
     referralProgram && business
@@ -146,7 +236,7 @@ export function ReferralLandingPageClient({
       : null;
 
   return (
-    <div className={pageWrapClass}>
+    <div className={pageWrapperClass}>
       <div className="flex w-full max-w-[420px] flex-col overflow-hidden rounded-[32px] bg-white shadow-xl">
         {/* Top Header Block - Uses Theme Color Heavily */}
         <div
@@ -164,7 +254,7 @@ export function ReferralLandingPageClient({
               </div>
               <div
                 className="absolute inset-0 z-0"
-                style={{ backgroundColor: themeColor, opacity: 0.85 }}
+                style={{ backgroundColor: themeColor, opacity: 0.65 }}
               />
             </>
           )}
@@ -283,7 +373,7 @@ export function ReferralLandingPageClient({
           <div className="mt-auto space-y-2.5">
             <button
               type="button"
-              disabled={loading}
+              disabled={loading || previewMode}
               onClick={handleShare}
               className="flex h-11 w-full items-center justify-center gap-2 rounded-[12px] text-[14px] font-medium transition-colors active:opacity-90 disabled:pointer-events-none"
               style={{ backgroundColor: themeColor, color: textColor }}
@@ -294,8 +384,9 @@ export function ReferralLandingPageClient({
 
             <button
               type="button"
-              disabled={loading}
+              disabled={loading || previewMode}
               onClick={() => {
+                if (previewMode) return;
                 window.location.href = `/referral/claim/${referralSlug}`;
               }}
               className="flex h-11 w-full items-center justify-center gap-2 rounded-[12px] border text-[14px] font-medium transition-colors hover:bg-gray-50 active:opacity-90 disabled:pointer-events-none"

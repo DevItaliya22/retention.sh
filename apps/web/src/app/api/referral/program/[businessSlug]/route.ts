@@ -1,4 +1,5 @@
 import { businessSlugParamSchema } from "@/lib/schemas/common";
+import { getReadSignedUrl } from "@/lib/storage/r2";
 import {
   sanitizeErrorMessage,
   validateSchema,
@@ -73,9 +74,37 @@ export async function GET(
     }
 
     const referralProgram = business.referralProgram;
+    const rawBranding = referralProgram.branding;
+    const branding =
+      rawBranding &&
+      typeof rawBranding === "object" &&
+      !Array.isArray(rawBranding)
+        ? (rawBranding as Record<string, unknown>)
+        : null;
+    const logoSource =
+      typeof branding?.logo === "string" ? branding.logo.trim() : "";
+    const bannerSource =
+      typeof branding?.bannerImage === "string"
+        ? branding.bannerImage.trim()
+        : "";
+    const logo =
+      logoSource && !logoSource.startsWith("http")
+        ? await getReadSignedUrl(logoSource)
+        : logoSource || null;
+    const bannerImage =
+      bannerSource && !bannerSource.startsWith("http")
+        ? await getReadSignedUrl(bannerSource)
+        : bannerSource || null;
     const mapped = referralProgram
       ? {
           ...referralProgram,
+          branding: branding
+            ? {
+                ...branding,
+                logo,
+                bannerImage,
+              }
+            : null,
           termsAndConditionsNewCustomer:
             referralProgram.termsAndConditionsNewCustomer.map((t) => ({
               id: t.id,
