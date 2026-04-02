@@ -1,6 +1,5 @@
 "use client";
 
-import { BrandingHero } from "@/app/(customer)/loyalty/[businessSlug]/_components/common/BrandingHero";
 import { FreeItemsCard } from "@/app/(customer)/loyalty/[businessSlug]/_components/common/FreeItemsCard";
 import { LoyaltyNavbar } from "@/app/(customer)/loyalty/[businessSlug]/_components/common/LoyaltyNavbar";
 import { RewardOffersGrid } from "@/app/(customer)/loyalty/[businessSlug]/_components/common/RewardOffersGrid";
@@ -308,9 +307,9 @@ function LoginPreview({
 
   return (
     <div className="flex min-h-full flex-col bg-white">
-      {/* Header with optional logo — same as real login */}
+      {/* Header with optional banner (with theme tint) and logo */}
       <div
-        className="flex flex-col items-center px-6 pt-12 pb-6"
+        className="relative flex flex-col items-center overflow-hidden px-6 pt-12 pb-6"
         style={
           themeColor
             ? {
@@ -320,34 +319,44 @@ function LoginPreview({
             : undefined
         }
       >
-        {branding.logoUrl && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={branding.logoUrl}
-            alt=""
-            className="mb-4 h-16 w-auto object-contain"
-          />
+        {branding.bannerImageUrl && (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={branding.bannerImageUrl}
+              alt=""
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+            <div
+              className="absolute inset-0"
+              style={{
+                backgroundColor: themeColor || "#000000",
+                opacity: 0.65,
+              }}
+            />
+          </>
         )}
-        <h1
-          className={`text-center text-lg font-bold ${!themeColor ? "text-foreground" : ""}`}
-        >
-          Check your loyalty points
-        </h1>
-        <p
-          className={`mt-1 text-center text-sm ${!themeColor ? "text-muted-foreground" : "opacity-80"}`}
-        >
-          for {businessName}
-        </p>
+        <div className="relative z-10 flex flex-col items-center">
+          {branding.logoUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={branding.logoUrl}
+              alt=""
+              className="mb-4 h-16 w-auto object-contain"
+            />
+          )}
+          <h1
+            className={`text-center text-lg font-bold ${!themeColor ? "text-foreground" : ""}`}
+          >
+            Check your loyalty points
+          </h1>
+          <p
+            className={`mt-1 text-center text-sm ${!themeColor ? "text-muted-foreground" : "opacity-80"}`}
+          >
+            for {businessName}
+          </p>
+        </div>
       </div>
-
-      {branding.bannerImageUrl && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={branding.bannerImageUrl}
-          alt=""
-          className="h-32 w-full object-cover"
-        />
-      )}
 
       <div className="flex flex-1 items-start justify-center px-6 pt-6 pb-8">
         <div className="w-full space-y-4">
@@ -406,8 +415,6 @@ function LoyaltyPagePreview({
         branding={branding}
         previewMode
       />
-
-      <BrandingHero branding={branding} />
 
       <div className="space-y-4 p-4 pb-8">
         <WalletOverview

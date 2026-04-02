@@ -5,6 +5,7 @@ import {
   logNegativeFeedbackAlertWhatsApp,
 } from "@/lib/messaging";
 import { feedbackSubmitSchema } from "@/lib/schemas/feedback";
+import { getReadSignedUrl, normalizeR2Key } from "@/lib/storage/r2";
 import {
   sanitizeErrorMessage,
   validateSchema,
@@ -13,6 +14,51 @@ import type { IsServiceEnabled } from "@/lib/utils/service-enabled";
 import { isServiceEnabled } from "@/lib/utils/service-enabled";
 import { db } from "@reelo/db";
 import { NextRequest, NextResponse } from "next/server";
+
+type BrandingLike = {
+  logo?: string | null;
+  bannerImage?: string | null;
+  themeColor?: string | null;
+  textColor?: string | null;
+  header?: string | null;
+  subtitle?: string | null;
+} | null;
+
+async function resolveBrandingReadUrls(branding: BrandingLike): Promise<{
+  logo: string | null;
+  bannerImage: string | null;
+  themeColor: string | null;
+  textColor: string | null;
+  header: string | null;
+  subtitle: string | null;
+} | null> {
+  if (!branding) return null;
+
+  const resolveSrc = async (src: string | null | undefined) => {
+    if (!src) return null;
+    const normalized = normalizeR2Key(src);
+    if (!normalized) return src;
+    try {
+      return await getReadSignedUrl(normalized, 300);
+    } catch {
+      return src;
+    }
+  };
+
+  const [logoUrl, bannerUrl] = await Promise.all([
+    resolveSrc(branding.logo),
+    resolveSrc(branding.bannerImage),
+  ]);
+
+  return {
+    logo: logoUrl,
+    bannerImage: bannerUrl,
+    themeColor: branding.themeColor ?? null,
+    textColor: branding.textColor ?? null,
+    header: branding.header ?? null,
+    subtitle: branding.subtitle ?? null,
+  };
+}
 
 /**
  * Public GET: fetch feedback link and config by token + businessSlug.
@@ -165,10 +211,13 @@ export async function GET(
           where: { businessId: link.bill.businessId },
         });
       }
+      const resolvedAlreadySubmittedBranding = await resolveBrandingReadUrls(
+        alreadySubmittedBranding,
+      );
       return NextResponse.json({
         alreadySubmitted: true,
         config: null,
-        branding: alreadySubmittedBranding,
+        branding: resolvedAlreadySubmittedBranding,
         billNumber: link.bill.billNumber,
         followUpMessage: followUpMessage || "Thank you for your feedback.",
         reward,
@@ -200,6 +249,8 @@ export async function GET(
     }
 
     const defaultFollowUp = FEEDBACK_FORM_DEFAULTS.followUpMessage;
+    const resolvedBranding = await resolveBrandingReadUrls(brandingToUse);
+
     const config = configToUse
       ? {
           id: configToUse.id,
@@ -226,7 +277,7 @@ export async function GET(
           askForOnlineReviews: configToUse.askForOnlineReviews,
           onlineReviewLink: configToUse.onlineReviewLink,
           onlineReviewPlatform: configToUse.onlineReviewPlatform,
-          branding: brandingToUse,
+          branding: resolvedBranding,
         }
       : {
           id: "",
@@ -240,7 +291,7 @@ export async function GET(
           askForOnlineReviews: false,
           onlineReviewLink: null,
           onlineReviewPlatform: null,
-          branding: null,
+          branding: resolvedBranding,
         };
 
     const billAmount =

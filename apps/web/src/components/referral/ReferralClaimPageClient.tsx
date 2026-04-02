@@ -1,6 +1,10 @@
 "use client";
 
 import { useClaimReferral } from "@/hooks/referral/useClaimReferral";
+import type {
+  PublicReferralProgramResponse,
+  ReferralProgram,
+} from "@/hooks/referral/useReferralProgram";
 import { useReferralProgramByClaimSlug } from "@/hooks/referral/useReferralProgram";
 import { nameSchema } from "@/lib/schemas/common";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -37,12 +41,24 @@ type ClaimFormValues = z.infer<typeof claimFormSchema>;
 
 interface ReferralClaimPageClientProps {
   referralSlug: string;
+  previewMode?: boolean;
+  previewBranding?: {
+    logo: string | null;
+    bannerImage: string | null;
+    themeColor: string | null;
+    textColor: string | null;
+    header: string | null;
+    subtitle: string | null;
+  };
+  previewProgram?: ReferralProgram;
 }
 
 const DEFAULT_THEME_COLOR = "#0f766e";
 const DEFAULT_TEXT_COLOR = "#f8fafc";
 const pageWrapClass =
   "flex min-h-screen w-full items-center justify-center bg-white p-4 font-sans sm:p-6";
+const previewWrapClass =
+  "flex min-h-full w-full items-start justify-center bg-white pt-2 sm:pt-3";
 
 function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
   const value = hex.trim().replace("#", "");
@@ -76,10 +92,64 @@ function getContrastTextColor(bgColor: string): string {
 
 export function ReferralClaimPageClient({
   referralSlug,
+  previewMode = false,
+  previewBranding,
+  previewProgram,
 }: ReferralClaimPageClientProps) {
-  const { data, isLoading, isError } =
-    useReferralProgramByClaimSlug(referralSlug);
+  const { data, isLoading, isError } = useReferralProgramByClaimSlug(
+    referralSlug,
+    {
+      enabled: !previewMode,
+    },
+  );
   const { mutateAsync: claimReferral, isPending } = useClaimReferral();
+  const previewData: PublicReferralProgramResponse = {
+    business: {
+      name: "Your Business",
+      slug: "preview-business",
+      defaultPointsName: "Points",
+      defaultCurrencySymbol: "₹",
+      defaultCurrencyCode: "INR",
+    },
+    referralProgram: {
+      id: "preview-referral-program",
+      businessId: "preview-business-id",
+      isEnabled: true,
+      newCustomerBenefitType: "AMOUNT_CASHBACK",
+      newCustomerBenefitValue: 100,
+      newCustomerBenefitExpiresInDays: 30,
+      newCustomerFreeItemSkuId: null,
+      newCustomerFreeItemSku: null,
+      existingCustomerBenefitType: "AMOUNT_CASHBACK",
+      existingCustomerBenefitValue: 50,
+      existingCustomerBenefitExpiresInDays: null,
+      existingCustomerFreeItemSkuId: null,
+      existingCustomerFreeItemSku: null,
+      lockReferralPointsUntilFirstPurchase: true,
+      whatsappEnabled: true,
+      emailEnabled: false,
+      smsEnabled: false,
+      sendReminderToCustomer: true,
+      informationSections: [],
+      branding: null,
+      termsAndConditionsNewCustomer: [],
+      termsAndConditionsExistingCustomer: [],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+  };
+  const pageData =
+    data ??
+    (previewMode
+      ? {
+          ...previewData,
+          referralProgram: {
+            ...previewData.referralProgram!,
+            ...(previewProgram ?? {}),
+          },
+        }
+      : undefined);
+
   const [isSuccess, setIsSuccess] = useState(false);
   const [isFailed, setIsFailed] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>("");
@@ -93,6 +163,7 @@ export function ReferralClaimPageClient({
   });
 
   const onSubmit = async (values: ClaimFormValues) => {
+    if (previewMode) return;
     try {
       const result = await claimReferral({
         referralSlug,
@@ -122,8 +193,8 @@ export function ReferralClaimPageClient({
   };
 
   const newCustomerBenefitText = useMemo(() => {
-    if (!data?.referralProgram || !data?.business) return null;
-    const { referralProgram, business } = data;
+    if (!pageData?.referralProgram || !pageData?.business) return null;
+    const { referralProgram, business } = pageData;
     if (referralProgram.newCustomerBenefitType === "AMOUNT_CASHBACK") {
       return `${business.defaultCurrencySymbol}${referralProgram.newCustomerBenefitValue} Cashback`;
     }
@@ -133,24 +204,28 @@ export function ReferralClaimPageClient({
       return `Free ${referralProgram.newCustomerFreeItemSku?.name ?? "Item"}`;
     }
     return "Exclusive Reward";
-  }, [data]);
+  }, [pageData]);
 
   const newCustomerTerms = useMemo(() => {
     const raw =
-      data?.referralProgram?.termsAndConditionsNewCustomer?.map(
+      pageData?.referralProgram?.termsAndConditionsNewCustomer?.map(
         (t) => t.content,
       ) ?? [];
     const cleaned = raw.map((s) => s.trim()).filter(Boolean);
     // lock term does NOT apply to new customer terms; ensure it never leaks here
     return cleaned.filter((t) => t !== REFERRAL_LOCK_TERM);
-  }, [data]);
+  }, [pageData]);
 
-  const cardWrap = pageWrapClass;
+  const cardWrap = previewMode ? previewWrapClass : pageWrapClass;
   const cardInner =
     "flex w-full min-w-0 max-w-[420px] flex-col overflow-hidden rounded-2xl bg-white shadow-xl sm:rounded-[32px]";
-  const loading = isLoading && !data;
+  const loading = !previewMode && isLoading && !pageData;
 
-  if (isError || (!loading && (!data?.referralProgram || !data?.business))) {
+  if (
+    !previewMode &&
+    (isError ||
+      (!loading && (!pageData?.referralProgram || !pageData?.business)))
+  ) {
     return (
       <div className={cardWrap}>
         <div
@@ -170,16 +245,27 @@ export function ReferralClaimPageClient({
     );
   }
 
-  const referralProgram = data?.referralProgram;
-  const business = data?.business;
+  const referralProgram = pageData?.referralProgram;
+  const business = pageData?.business;
   const branding = referralProgram?.branding;
   const themeColor =
-    (branding?.themeColor as string | undefined) || DEFAULT_THEME_COLOR;
+    (previewMode
+      ? (previewBranding?.themeColor as string | undefined)
+      : undefined) ||
+    (branding?.themeColor as string | undefined) ||
+    DEFAULT_THEME_COLOR;
   const textColor =
+    (previewMode
+      ? (previewBranding?.textColor as string | undefined)
+      : undefined) ||
     (branding?.textColor as string | undefined) ||
     getContrastTextColor(themeColor);
-  const bannerImage = branding?.bannerImage;
-  const logo = branding?.logo;
+  const bannerImage = previewMode
+    ? (previewBranding?.bannerImage ?? null)
+    : (branding?.bannerImage ?? null);
+  const logo = previewMode
+    ? (previewBranding?.logo ?? null)
+    : (branding?.logo ?? null);
   const claimHeader = "Claim your reward";
   const claimSubtitle = loading
     ? "Enter your details to join and get your referral benefit."
@@ -204,7 +290,7 @@ export function ReferralClaimPageClient({
                 </div>
                 <div
                   className="absolute inset-0 z-0"
-                  style={{ backgroundColor: themeColor, opacity: 0.85 }}
+                  style={{ backgroundColor: themeColor, opacity: 0.65 }}
                 />
               </>
             )}
@@ -295,7 +381,7 @@ export function ReferralClaimPageClient({
                 </div>
                 <div
                   className="absolute inset-0 z-0"
-                  style={{ backgroundColor: themeColor, opacity: 0.85 }}
+                  style={{ backgroundColor: themeColor, opacity: 0.65 }}
                 />
               </>
             )}
@@ -416,7 +502,7 @@ export function ReferralClaimPageClient({
               </div>
               <div
                 className="absolute inset-0 z-0"
-                style={{ backgroundColor: themeColor, opacity: 0.85 }}
+                style={{ backgroundColor: themeColor, opacity: 0.65 }}
               />
             </>
           )}
@@ -484,7 +570,7 @@ export function ReferralClaimPageClient({
             </div>
           </div>
 
-          {loading ? (
+          {loading || previewMode ? (
             <div className="space-y-4">
               <div>
                 <label className="text-sm leading-none font-medium text-black">

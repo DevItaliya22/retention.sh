@@ -1,6 +1,5 @@
 "use client";
 
-import { BrandingHero } from "../common/BrandingHero";
 import { FreeItemsCard } from "../common/FreeItemsCard";
 import { LoyaltyNavbar } from "../common/LoyaltyNavbar";
 import { MobileLayout } from "../common/MobileLayout";
@@ -24,7 +23,6 @@ export function AmountSpentView({ data }: AmountSpentViewProps) {
         businessSlug={data.business.slug}
         branding={data.branding}
       />
-      <BrandingHero branding={data.branding} />
       <div className="space-y-4 p-4 pb-8">
         <WalletOverview
           pointsBalance={data.pointsBalance}
