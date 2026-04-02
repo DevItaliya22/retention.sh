@@ -249,8 +249,8 @@ export function FeedbackPageClient({
         billAmount: 1234,
         billCreatedAt: new Date().toISOString(),
         currencySymbol: "₹",
-        followUpMessage: previewConfig?.positiveFollowUp ?? null,
-        reward: previewConfig?.reward ?? null,
+        followUpMessage: previewConfig?.positiveFollowUp ?? undefined,
+        reward: previewConfig?.reward ?? undefined,
         onlineReview:
           previewConfig?.askForOnlineReviews && previewConfig?.onlineReviewLink
             ? {
