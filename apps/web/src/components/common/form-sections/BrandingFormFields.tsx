@@ -34,7 +34,7 @@ interface BrandingFormFieldsProps<T extends FieldValues> {
   onPendingImageChanges?: (hasPending: boolean) => void;
 }
 
-function BrandingImageUploadControl({
+export function BrandingImageUploadControl({
   displayUrl,
   onChooseClick,
   onRemoveClick,
