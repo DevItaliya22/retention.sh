@@ -108,7 +108,11 @@ export function DataTable<TData>({
                       key={header.id}
                       colSpan={header.colSpan}
                       style={{
-                        ...getCommonPinningStyles({ column: header.column }),
+                        ...getCommonPinningStyles({
+                          column: header.column,
+                          background: "var(--background)",
+                          opacity: 1,
+                        }),
                       }}
                     >
                       {header.isPlaceholder
@@ -129,7 +133,11 @@ export function DataTable<TData>({
                     <TableCell
                       key={cell.id}
                       style={{
-                        ...getCommonPinningStyles({ column: cell.column }),
+                        ...getCommonPinningStyles({
+                          column: cell.column,
+                          background: "inherit",
+                          opacity: 1,
+                        }),
                       }}
                     >
                       {flexRender(

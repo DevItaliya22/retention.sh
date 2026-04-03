@@ -11,7 +11,7 @@ import { downloadCampaignCardAsImage } from "@/lib/utils/campaign-card-image";
 import { Button } from "@reelo/ui/components";
 import { Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 /** Renders hidden campaign preview and triggers download when mounted. */
@@ -23,31 +23,77 @@ function CampaignDownloadPreview({
   onDone: () => void;
 }) {
   const { data: campaign } = useCampaignQuery(campaignId);
+  const previewRef = useRef<HTMLDivElement>(null);
+  const startedRef = useRef(false);
+
+  const resolvedLogoUrl = useMemo(() => {
+    if (!campaign?.logo) return null;
+    if (
+      campaign.logo.startsWith("http://") ||
+      campaign.logo.startsWith("https://") ||
+      campaign.logo.startsWith("blob:") ||
+      campaign.logo.startsWith("data:")
+    ) {
+      return campaign.logo;
+    }
+    return `/api/storage/read?src=${encodeURIComponent(campaign.logo)}`;
+  }, [campaign?.logo]);
+
+  const resolvedBannerUrl = useMemo(() => {
+    if (!campaign?.bannerImage) return null;
+    if (
+      campaign.bannerImage.startsWith("http://") ||
+      campaign.bannerImage.startsWith("https://") ||
+      campaign.bannerImage.startsWith("blob:") ||
+      campaign.bannerImage.startsWith("data:")
+    ) {
+      return campaign.bannerImage;
+    }
+    return `/api/storage/read?src=${encodeURIComponent(campaign.bannerImage)}`;
+  }, [campaign?.bannerImage]);
+
+  useEffect(() => {
+    if (!campaign || !previewRef.current || startedRef.current) return;
+
+    const brandingReady =
+      (!campaign.logo || !!resolvedLogoUrl) &&
+      (!campaign.bannerImage || !!resolvedBannerUrl);
+
+    if (!brandingReady) return;
+
+    startedRef.current = true;
+
+    const filename = (campaign.title || "campaign-card")
+      .replace(/\s+/g, "-")
+      .replace(/[^a-zA-Z0-9-]/g, "");
+
+    requestAnimationFrame(() => {
+      if (!previewRef.current) {
+        onDone();
+        return;
+      }
+
+      downloadCampaignCardAsImage(previewRef.current, filename)
+        .catch(() => toast.error("Failed to download image"))
+        .finally(onDone);
+    });
+  }, [
+    campaign,
+    onDone,
+    resolvedBannerUrl,
+    resolvedLogoUrl,
+    campaign?.bannerImage,
+    campaign?.logo,
+    campaign?.title,
+  ]);
 
   if (!campaign) return null;
 
   return (
-    <div
-      className="pointer-events-none fixed top-0 left-[-9999px] z-[-1] opacity-0"
-      ref={(el) => {
-        if (!el) return;
-        const previewEl = el.querySelector("[data-campaign-preview]");
-        if (previewEl instanceof HTMLElement) {
-          requestAnimationFrame(() => {
-            const filename = (campaign.title || "campaign-card")
-              .replace(/\s+/g, "-")
-              .replace(/[^a-zA-Z0-9-]/g, "");
-            downloadCampaignCardAsImage(previewEl, filename)
-              .catch(() => toast.error("Failed to download image"))
-              .finally(onDone);
-          });
-        } else {
-          onDone();
-        }
-      }}
-    >
+    <div className="pointer-events-none fixed top-0 left-[-9999px] z-[-1]">
       <div data-campaign-preview>
         <CampaignPreview
+          ref={previewRef}
           data={{
             title: campaign.title,
             description: campaign.description,
@@ -68,11 +114,13 @@ function CampaignDownloadPreview({
             redemptionLimit: campaign.redemptionLimit ?? "ONCE",
           }}
           branding={{
-            logo: campaign.logo ?? null,
+            logo: resolvedLogoUrl,
             themeColor: campaign.themeColor ?? null,
             textColor: campaign.textColor ?? null,
-            bannerImage: campaign.bannerImage ?? null,
+            bannerImage: resolvedBannerUrl,
           }}
+          className="w-[360px] max-w-none shadow-none"
+          showControls={false}
         />
       </div>
     </div>
@@ -99,11 +147,6 @@ export function CampaignsPageClient() {
     <DashboardPageShell
       title="Campaigns"
       subtitle="Create and manage marketing campaigns"
-      secondaryActions={
-        <Button variant="outline" onClick={() => router.push("/campaigns")}>
-          Reset filters
-        </Button>
-      }
       primaryActions={
         <Button
           icon={<Plus className="h-4 w-4" />}

@@ -1,7 +1,7 @@
 import type { ForwardRefExoticComponent, RefAttributes } from "react";
 import { Template1 } from "./Template1";
 import { Template2 } from "./Template2";
-import { Template9 } from "./Template9";
+import { Template3 } from "./Template3";
 import type { CampaignTemplateProps } from "./types";
 
 export interface PreviewTemplate {
@@ -19,5 +19,5 @@ export interface PreviewTemplate {
 export const CAMPAIGN_PREVIEW_TEMPLATES: PreviewTemplate[] = [
   { id: "template-1", name: "Classic Reelo", component: Template1 },
   { id: "template-2", name: "Modern Clean", component: Template2 },
-  { id: "template-9", name: "Elegant Serif", component: Template9 },
+  { id: "template-3", name: "Elegant Serif", component: Template3 },
 ];

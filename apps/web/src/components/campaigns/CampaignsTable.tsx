@@ -372,7 +372,7 @@ export function CampaignsTable({ onEdit, onDownload }: CampaignsTableProps) {
               <Button
                 variant="outline"
                 size="sm"
-                className="border-border/60 bg-background/55 h-8 rounded-md px-2.5 text-xs"
+                className="border-border/70 bg-background h-8 rounded-md px-2.5 text-xs shadow-sm"
                 icon={<Download className="h-3.5 w-3.5" />}
                 onClick={() => onDownload(campaign.id)}
               >
@@ -381,7 +381,7 @@ export function CampaignsTable({ onEdit, onDownload }: CampaignsTableProps) {
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 rounded-md px-2.5 text-xs"
+                className="bg-background hover:bg-background h-8 rounded-md px-2.5 text-xs shadow-sm"
                 onClick={() => onEdit(campaign.id)}
               >
                 Details
@@ -426,18 +426,6 @@ export function CampaignsTable({ onEdit, onDownload }: CampaignsTableProps) {
     <div className="space-y-3">
       <DataTable
         table={table}
-        getRowClassName={(row) => {
-          const campaign = row.original;
-          if (campaign.id.startsWith("skeleton-")) return "";
-
-          if (campaign.status === "ACTIVE")
-            return "[&>td]:!bg-emerald-500/10 hover:[&>td]:!bg-emerald-500/15";
-          if (campaign.status === "DRAFT")
-            return "[&>td]:!bg-amber-500/10 hover:[&>td]:!bg-amber-500/15";
-          if (campaign.status === "EXPIRED")
-            return "[&>td]:!bg-slate-500/10 hover:[&>td]:!bg-slate-500/15";
-          return "";
-        }}
         renderEmpty={() => (
           <Empty className="py-12">
             <EmptyHeader>

@@ -239,27 +239,24 @@ export function CampaignEditPageClient({
   const router = useRouter();
   const searchParams = useSearchParams();
   const audienceParam = searchParams.get("audience");
-  const previewRef = useRef<HTMLDivElement>(null);
+  const exportPreviewRef = useRef<HTMLDivElement>(null);
   const [sentenceEdited, setSentenceEdited] = useState(false);
   const [isFormHydrated, setIsFormHydrated] = useState(false);
   const [pendingLogoFile, setPendingLogoFile] = useState<File | null>(null);
   const [pendingBannerFile, setPendingBannerFile] = useState<File | null>(null);
   const [activeTab, setActiveTab] = useState<"setup" | "audience">("setup");
+  const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
   const [logoBlobUrl, setLogoBlobUrl] = useState<string | null>(null);
   const [bannerBlobUrl, setBannerBlobUrl] = useState<string | null>(null);
-  const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [audiencePreviewPage, setAudiencePreviewPage] = useState(1);
-  const [previewFocusedField, setPreviewFocusedField] = useState<string | null>(
-    null,
-  );
   const themeColorDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
   const textColorDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
-  const { getUploadSignedUrl, getReadSignedUrl } = useR2Upload();
+  const { getUploadSignedUrl } = useR2Upload();
   const {
     data: campaign,
     isLoading,
@@ -335,29 +332,34 @@ export function CampaignEditPageClient({
   );
   const audienceCount = audiencePreviewData?.count ?? 0;
   const previewCustomers = audiencePreviewData?.customers ?? [];
+  const buildBrowserSafeAssetUrl = useCallback(
+    (src: string | null | undefined) => {
+      if (!src) return null;
+      if (
+        src.startsWith("blob:") ||
+        src.startsWith("data:") ||
+        src.startsWith("http://") ||
+        src.startsWith("https://")
+      ) {
+        return src;
+      }
+      return `/api/storage/read?src=${encodeURIComponent(src)}`;
+    },
+    [],
+  );
   const resolvedLogoUrl =
     logoBlobUrl ||
-    (watched.logo
-      ? watched.logo.startsWith("http://") ||
-        watched.logo.startsWith("https://")
-        ? watched.logo
-        : (signedUrls[watched.logo] ?? null)
-      : null);
+    (watched.logo ? buildBrowserSafeAssetUrl(watched.logo) : null);
   const resolvedBannerUrl =
     bannerBlobUrl ||
     (watched.bannerImage
-      ? watched.bannerImage.startsWith("http://") ||
-        watched.bannerImage.startsWith("https://")
-        ? watched.bannerImage
-        : (signedUrls[watched.bannerImage] ?? null)
+      ? buildBrowserSafeAssetUrl(watched.bannerImage)
       : null);
 
   useEffect(() => {
     setIsFormHydrated(false);
     setPendingLogoFile(null);
     setPendingBannerFile(null);
-    setSignedUrls({});
-    setPreviewFocusedField(null);
   }, [campaignId]);
 
   useEffect(() => {
@@ -448,31 +450,6 @@ export function CampaignEditPageClient({
   }, [campaign, form]);
 
   useEffect(() => {
-    const candidates = [watched.logo, watched.bannerImage].filter(
-      (src): src is string =>
-        !!src &&
-        !src.startsWith("blob:") &&
-        !src.startsWith("http://") &&
-        !src.startsWith("https://"),
-    );
-    if (candidates.length === 0) return;
-
-    let isCancelled = false;
-    void Promise.all(
-      candidates.map(async (src) => {
-        if (signedUrls[src]) return;
-        const signed = await getReadSignedUrl(src);
-        if (isCancelled) return;
-        setSignedUrls((prev) => ({ ...prev, [src]: signed }));
-      }),
-    ).catch(() => {});
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [watched.logo, watched.bannerImage, signedUrls, getReadSignedUrl]);
-
-  useEffect(() => {
     if (isFormHydrated && audienceParam) {
       const keys = audienceParam
         .split(",")
@@ -516,8 +493,6 @@ export function CampaignEditPageClient({
           throw new Error("Failed to upload logo");
         }
         logoUrl = result.key;
-        const signed = await getReadSignedUrl(result.key);
-        setSignedUrls((prev) => ({ ...prev, [result.key]: signed }));
       }
       if (pendingBannerFile) {
         const result = await getUploadSignedUrl(pendingBannerFile, {
@@ -536,8 +511,6 @@ export function CampaignEditPageClient({
           throw new Error("Failed to upload banner");
         }
         bannerUrl = result.key;
-        const signed = await getReadSignedUrl(result.key);
-        setSignedUrls((prev) => ({ ...prev, [result.key]: signed }));
       }
 
       await updateCampaign.mutateAsync({
@@ -594,7 +567,6 @@ export function CampaignEditPageClient({
 
   const onFieldClick = useCallback(
     (fieldName: string) => {
-      setPreviewFocusedField(fieldName);
       try {
         form.setFocus(fieldName as keyof FormValues);
       } catch (e) {
@@ -777,9 +749,9 @@ export function CampaignEditPageClient({
               size="sm"
               icon={<Download className="h-3.5 w-3.5" />}
               onClick={() => {
-                if (previewRef.current) {
+                if (exportPreviewRef.current) {
                   downloadCampaignCardAsImage(
-                    previewRef.current,
+                    exportPreviewRef.current,
                     (watched.title || "campaign-card").replace(/\s+/g, "-"),
                   ).catch(() => toast.error("Failed to download image"));
                 }
@@ -802,6 +774,17 @@ export function CampaignEditPageClient({
       {/* ====== MAIN CONTENT ====== */}
       <ScaffoldContainer className="flex-1 py-8">
         <Form {...form}>
+          <div className="pointer-events-none fixed top-0 left-[-9999px] z-[-1]">
+            <CampaignPreview
+              ref={exportPreviewRef}
+              data={previewData}
+              branding={previewBranding}
+              businessName={businessData?.business?.name}
+              className="w-[360px] max-w-none shadow-none"
+              templateIndex={currentPreviewIndex}
+              showControls={false}
+            />
+          </div>
           <GooeyTabs
             gooeyId="campaign-editor-gooey"
             tabs={CAMPAIGN_EDITOR_TABS.map((tab) => ({ ...tab }))}
@@ -1668,15 +1651,19 @@ export function CampaignEditPageClient({
 
                 {/* RIGHT — Sticky Preview */}
                 <div className="lg:sticky lg:top-20 lg:self-start">
-                  <CampaignPreview
-                    ref={previewRef}
-                    data={previewData}
-                    branding={previewBranding}
-                    businessName={businessData?.business?.name}
-                    className="shadow-2xl"
-                    onFieldClick={onFieldClick}
-                    focusedField={previewFocusedField}
-                  />
+                  <div className="flex justify-center overflow-x-auto pb-2">
+                    <div className="mx-auto w-full max-w-[360px]">
+                      <CampaignPreview
+                        data={previewData}
+                        branding={previewBranding}
+                        businessName={businessData?.business?.name}
+                        className="w-[360px] max-w-none shadow-2xl"
+                        onFieldClick={onFieldClick}
+                        templateIndex={currentPreviewIndex}
+                        onTemplateIndexChange={setCurrentPreviewIndex}
+                      />
+                    </div>
+                  </div>
                 </div>
               </form>
             ) : (
