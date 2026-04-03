@@ -1,12 +1,6 @@
 "use client";
 
-import { fetcher } from "@/lib/fetcher";
-import {
-  buildApiParams,
-  getDataTableConfig,
-} from "@/lib/utils/data-table-params";
-import { useQuery } from "@tanstack/react-query";
-import { useSearchParams } from "next/navigation";
+import { useDataTableQuery } from "@/hooks/useDataTableQuery";
 
 export interface Customer {
   /** BusinessCustomer slugId – use for /customers/[slugId] links */
@@ -33,24 +27,9 @@ export interface CustomersResponse {
 }
 
 export function useCustomersQuery() {
-  const searchParams = useSearchParams();
-  const config = getDataTableConfig("customers");
-  const apiParams = buildApiParams(
-    searchParams,
-    config.prefix,
-    config.filterKeys,
+  return useDataTableQuery<CustomersResponse>(
+    "customers",
+    "customers",
+    "/api/customers",
   );
-  const queryString = apiParams.toString();
-
-  return useQuery<CustomersResponse, Error>({
-    queryKey: ["customers", searchParams.toString()],
-    queryFn: () => {
-      const url = queryString
-        ? `/api/customers?${queryString}`
-        : "/api/customers";
-      return fetcher<CustomersResponse>(url);
-    },
-    placeholderData: (previousData) => previousData,
-    staleTime: 5000,
-  });
 }

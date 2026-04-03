@@ -9,6 +9,7 @@ import {
   parseCsvHeaders,
   type ColumnMapping,
   type ColumnMappingConfig,
+  type FileLoadedPayload,
 } from "@/lib/utils/csv-mapping";
 import {
   Label,
@@ -23,9 +24,7 @@ import * as XLSX from "xlsx";
 
 const SKIP_LABEL = "— Skip";
 
-export type FileLoadedPayload =
-  | { type: "csv"; text: string }
-  | { type: "excel"; rows: string[][] };
+export type { FileLoadedPayload };
 
 export interface CsvHeaderMappingProps {
   /** Required and optional column keys (our schema). Lowercase, no special chars. */
