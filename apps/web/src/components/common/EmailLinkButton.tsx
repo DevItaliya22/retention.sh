@@ -28,15 +28,17 @@ export function EmailLinkButton({
   body,
   children,
   className,
-  title = "Open in email client",
+  title = "Open in Gmail",
   variant = "ghost",
   size = "xs",
 }: EmailLinkButtonProps) {
   const params = new URLSearchParams();
-  if (subject) params.set("subject", subject);
+  params.set("view", "cm");
+  params.set("fs", "1");
+  params.set("to", email);
+  if (subject) params.set("su", subject);
   if (body) params.set("body", body);
-  const query = params.toString();
-  const url = `mailto:${encodeURIComponent(email)}${query ? `?${query}` : ""}`;
+  const url = `https://mail.google.com/mail/?${params.toString()}`;
 
   return (
     <a

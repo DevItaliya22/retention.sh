@@ -22,6 +22,7 @@ interface GooeyTabsProps {
   contentClassName?: string;
   fullBleed?: boolean;
   bgClassName?: string;
+  stickySafeAnimation?: boolean;
 }
 
 const FULL_BLEED_CLASS =
@@ -36,6 +37,7 @@ export function GooeyTabs({
   contentClassName,
   fullBleed = true,
   bgClassName,
+  stickySafeAnimation = false,
 }: GooeyTabsProps) {
   const useGooey = useIsChromium();
   const bg = bgClassName ?? "bg-muted";
@@ -104,18 +106,22 @@ export function GooeyTabs({
             contentClassName,
           )}
         >
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeTab}
-              className="min-h-[calc(368px-2.5rem)]"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.2 }}
-            >
-              {children}
-            </motion.div>
-          </AnimatePresence>
+          {stickySafeAnimation ? (
+            <div className="min-h-[calc(368px-2.5rem)]">{children}</div>
+          ) : (
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeTab}
+                className="min-h-[calc(368px-2.5rem)]"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.2 }}
+              >
+                {children}
+              </motion.div>
+            </AnimatePresence>
+          )}
         </div>
       </div>
     </div>
