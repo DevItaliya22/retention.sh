@@ -4,6 +4,7 @@ import {
   S3Client,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import type { Readable } from "node:stream";
 import { sanitizeErrorMessage } from "../utils/error-handler";
 
 const R2_ENDPOINT = process.env.R2_ENDPOINT;
@@ -62,6 +63,43 @@ export async function getReadSignedUrl(key: string, expiresInSeconds = 300) {
   } catch (error) {
     throw new Error(sanitizeErrorMessage(error));
   }
+}
+
+export async function getObjectFromR2(key: string) {
+  try {
+    const command = new GetObjectCommand({
+      Bucket: R2_BUCKET_NAME,
+      Key: key,
+    });
+
+    return await r2Client.send(command);
+  } catch (error) {
+    throw new Error(sanitizeErrorMessage(error));
+  }
+}
+
+export async function readR2ObjectAsUint8Array(key: string) {
+  const result = await getObjectFromR2(key);
+  const body = result.Body;
+
+  if (!body) {
+    throw new Error("File not found");
+  }
+
+  const transformed = body as
+    | { transformToByteArray?: () => Promise<Uint8Array> }
+    | Readable;
+
+  if ("transformToByteArray" in transformed) {
+    const bytes = await transformed.transformToByteArray?.();
+    if (bytes) return bytes;
+  }
+
+  const chunks: Buffer[] = [];
+  for await (const chunk of transformed as Readable) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  return new Uint8Array(Buffer.concat(chunks));
 }
 
 function safeFilename(filename: string) {

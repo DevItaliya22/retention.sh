@@ -23,20 +23,20 @@ const AppLayout = ({ children }: PropsWithChildren) => {
 
   return (
     <BreadcrumbOverrideProvider>
-      <div>
+      <div className="bg-muted/35">
         <SidebarProvider
           open={isSidebarOpen}
           onOpenChange={setIsSidebarOpen}
-          className="flex h-screen flex-col"
+          className="bg-muted/35 flex h-screen flex-col"
         >
-          <div className="flex h-screen w-screen flex-col">
+          <div className="flex h-screen w-screen flex-col p-2 md:p-3">
             {/* Main Content Area */}
-            <div className="h-100svh flex flex-1 grow overflow-y-auto">
+            <div className="flex h-[100svh] flex-1 grow gap-3 overflow-y-auto">
               {/* Dynamic Sidebar */}
               <DynamicSidebar />
 
               {/* Main Content */}
-              <SidebarInset className="@container flex h-full w-full flex-1 flex-col overflow-x-hidden overflow-y-auto">
+              <SidebarInset className="@container flex h-full w-full min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto">
                 {/* Page Content */}
                 <div className="flex flex-1 flex-col">{children}</div>
               </SidebarInset>

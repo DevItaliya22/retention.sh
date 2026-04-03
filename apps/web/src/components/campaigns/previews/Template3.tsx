@@ -6,8 +6,8 @@ import { InteractiveField } from "./InteractiveField";
 import { type CampaignTemplateProps } from "./types";
 import { DEFAULT_THEME, formatExpiryDate, renderBoldText } from "./utils";
 
-export const Template9 = forwardRef<HTMLDivElement, CampaignTemplateProps>(
-  function Template9(
+export const Template3 = forwardRef<HTMLDivElement, CampaignTemplateProps>(
+  function Template3(
     { data, branding, businessName, className, onFieldClick, focusedField },
     ref,
   ) {
@@ -52,7 +52,7 @@ export const Template9 = forwardRef<HTMLDivElement, CampaignTemplateProps>(
               isFocused={focusedField === "offerStatement"}
             >
               <p
-                className="font-serif text-2xl font-medium tracking-wide"
+                className="font-serif text-2xl font-semibold tracking-wide"
                 style={{ color: themeColor }}
               >
                 {renderBoldText(data.rewardValue)}
@@ -118,17 +118,11 @@ export const Template9 = forwardRef<HTMLDivElement, CampaignTemplateProps>(
             </InteractiveField>
 
             {data.termsAndConditions.length > 0 && (
-              <InteractiveField
-                fieldName="termsAndConditions"
-                onClick={onFieldClick}
-                isFocused={focusedField === "termsAndConditions"}
-              >
-                <div className="w-full space-y-1 pt-2 text-center font-serif text-[11px] text-[#666] opacity-80">
-                  {data.termsAndConditions.map((t, i) => (
-                    <p key={i}>* {t}</p>
-                  ))}
-                </div>
-              </InteractiveField>
+              <div className="w-full space-y-2 pt-2 text-center font-serif text-[11px] leading-relaxed text-[#666] opacity-80">
+                {data.termsAndConditions.map((t, i) => (
+                  <p key={i}>{t}</p>
+                ))}
+              </div>
             )}
 
             {data.contactNumber && (

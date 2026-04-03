@@ -63,20 +63,25 @@ export function SimpleSidebar({
   const settingsCollapsibleId = React.useId();
 
   return (
-    <Sidebar collapsible="icon" {...props}>
-      <UISidebarHeader>
+    <Sidebar
+      collapsible="icon"
+      variant="floating"
+      className="md:py-3 md:pr-0 md:pl-3"
+      {...props}
+    >
+      <UISidebarHeader className="px-4 pt-3 pb-1">
         <SidebarHeader />
       </UISidebarHeader>
-      <SidebarContent>
+      <SidebarContent className="px-3 pb-3">
         <motion.div
           key="sidebar-content"
           variants={sidebarVariants}
           initial="initial"
           animate="animate"
-          className="space-y-2"
+          className="space-y-3"
         >
           <motion.div variants={groupVariants}>
-            <SidebarGroup className="gap-0.5">
+            <SidebarGroup className="gap-1 px-0">
               <SidebarMenu>
                 <SidebarMenuItem>
                   <SidebarMenuButton
@@ -87,18 +92,6 @@ export function SimpleSidebar({
                     <Link href="/dashboard">
                       <LayoutDashboard className="h-4 w-4" />
                       <span className="sidebar-text">Dashboard</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={pathname === "/bills"}
-                    tooltip="Bills"
-                  >
-                    <Link href="/bills">
-                      <FileText className="h-4 w-4" />
-                      <span className="sidebar-text">Bills</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -120,12 +113,15 @@ export function SimpleSidebar({
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     asChild
-                    isActive={pathname === "/referral-stats"}
-                    tooltip="Referral stats"
+                    isActive={
+                      pathname === "/campaigns" ||
+                      pathname.startsWith("/campaigns/")
+                    }
+                    tooltip="Campaigns"
                   >
-                    <Link href="/referral-stats">
-                      <Gift className="h-4 w-4" />
-                      <span className="sidebar-text">Referral stats</span>
+                    <Link href="/campaigns">
+                      <Megaphone className="h-4 w-4" />
+                      <span className="sidebar-text">Campaigns</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -141,6 +137,18 @@ export function SimpleSidebar({
                     <Link href="/loyalty-stats">
                       <Award className="h-4 w-4" />
                       <span className="sidebar-text">Loyalty stats</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname === "/referral-stats"}
+                    tooltip="Referral stats"
+                  >
+                    <Link href="/referral-stats">
+                      <Gift className="h-4 w-4" />
+                      <span className="sidebar-text">Referral stats</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -177,15 +185,12 @@ export function SimpleSidebar({
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     asChild
-                    isActive={
-                      pathname === "/campaigns" ||
-                      pathname.startsWith("/campaigns/")
-                    }
-                    tooltip="Campaigns"
+                    isActive={pathname === "/bills"}
+                    tooltip="Bills"
                   >
-                    <Link href="/campaigns">
-                      <Megaphone className="h-4 w-4" />
-                      <span className="sidebar-text">Campaigns</span>
+                    <Link href="/bills">
+                      <FileText className="h-4 w-4" />
+                      <span className="sidebar-text">Bills</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -221,14 +226,6 @@ export function SimpleSidebar({
                         <SidebarMenuSubItem>
                           <SidebarMenuSubButton
                             asChild
-                            isActive={pathname === "/settings/cashier"}
-                          >
-                            <Link href="/settings/cashier">Cashier</Link>
-                          </SidebarMenuSubButton>
-                        </SidebarMenuSubItem>
-                        <SidebarMenuSubItem>
-                          <SidebarMenuSubButton
-                            asChild
                             isActive={
                               pathname === "/settings/sku" ||
                               pathname.startsWith("/settings/sku/")
@@ -243,14 +240,12 @@ export function SimpleSidebar({
                         <SidebarMenuSubItem>
                           <SidebarMenuSubButton
                             asChild
-                            isActive={pathname === "/settings/referral"}
+                            isActive={pathname === "/settings/partners"}
                           >
-                            <Link href="/settings/referral">
-                              {/* <Layers className="h-4 w-4" /> */}
-                              Referral
-                            </Link>
+                            <Link href="/settings/partners">Partners</Link>
                           </SidebarMenuSubButton>
                         </SidebarMenuSubItem>
+                        <div className="bg-sidebar-border my-2 h-px rounded-full opacity-90" />
                         <SidebarMenuSubItem>
                           <SidebarMenuSubButton
                             asChild
@@ -262,33 +257,43 @@ export function SimpleSidebar({
                         <SidebarMenuSubItem>
                           <SidebarMenuSubButton
                             asChild
+                            isActive={pathname === "/settings/referral"}
+                          >
+                            <Link href="/settings/referral">Referral</Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                        <SidebarMenuSubItem>
+                          <SidebarMenuSubButton
+                            asChild
                             isActive={pathname === "/settings/feedback"}
                           >
                             <Link href="/settings/feedback">Feedback</Link>
                           </SidebarMenuSubButton>
                         </SidebarMenuSubItem>
-                        <SidebarMenuSubItem>
-                          <SidebarMenuSubButton
-                            asChild
-                            isActive={pathname === "/settings/shopify"}
-                          >
-                            <Link href="/settings/shopify">Shopify</Link>
-                          </SidebarMenuSubButton>
-                        </SidebarMenuSubItem>
-                        <SidebarMenuSubItem>
-                          <SidebarMenuSubButton
-                            asChild
-                            isActive={pathname === "/settings/partners"}
-                          >
-                            <Link href="/settings/partners">Partners</Link>
-                          </SidebarMenuSubButton>
-                        </SidebarMenuSubItem>
+                        <div className="bg-sidebar-border my-2 h-px rounded-full opacity-90" />
                         <SidebarMenuSubItem>
                           <SidebarMenuSubButton
                             asChild
                             isActive={pathname === "/settings/segments"}
                           >
                             <Link href="/settings/segments">Segments</Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                        <SidebarMenuSubItem>
+                          <SidebarMenuSubButton
+                            asChild
+                            isActive={pathname === "/settings/cashier"}
+                          >
+                            <Link href="/settings/cashier">Cashier</Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                        <div className="bg-sidebar-border my-2 h-px rounded-full opacity-90" />
+                        <SidebarMenuSubItem>
+                          <SidebarMenuSubButton
+                            asChild
+                            isActive={pathname === "/settings/shopify"}
+                          >
+                            <Link href="/settings/shopify">Shopify</Link>
                           </SidebarMenuSubButton>
                         </SidebarMenuSubItem>
                       </SidebarMenuSub>
@@ -300,12 +305,12 @@ export function SimpleSidebar({
           </motion.div>
         </motion.div>
       </SidebarContent>
-      <SidebarFooter>
+      <SidebarFooter className="px-3 pt-2 pb-3">
         <div
           role="button"
           tabIndex={0}
-          className={`bg-sidebar-accent/50 focus-visible:ring-sidebar-accent/60 group flex w-full items-center rounded-lg transition-colors focus-visible:ring-1 focus-visible:outline-none ${
-            isCollapsed ? "justify-center" : "px-2 py-2"
+          className={`border-sidebar-border/70 bg-background/80 focus-visible:ring-sidebar-accent/60 group flex w-full items-center rounded-2xl border transition-colors focus-visible:ring-1 focus-visible:outline-none ${
+            isCollapsed ? "justify-center px-0 py-2.5" : "px-3 py-3"
           }`}
         >
           <UserSidebarFooter

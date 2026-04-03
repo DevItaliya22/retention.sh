@@ -44,9 +44,9 @@ export function UserSidebarFooter({
   if (isLoading) {
     return (
       <div className={`flex items-center gap-2 ${className || ""}`}>
-        <div className="bg-muted h-6 w-6 animate-pulse rounded-md" />
+        <div className="bg-muted h-8 w-8 animate-pulse rounded-xl" />
         {!isCollapsed && (
-          <div className="bg-muted h-4 w-24 animate-pulse rounded" />
+          <div className="bg-muted h-4 w-24 animate-pulse rounded-md" />
         )}
       </div>
     );
@@ -77,7 +77,7 @@ export function UserSidebarFooter({
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <div className="text-primary-foreground bg-primary flex h-8 w-8 items-center justify-center rounded-md font-medium">
+                <div className="bg-primary text-primary-foreground flex h-9 w-9 items-center justify-center rounded-xl text-sm font-semibold">
                   {userInitials}
                 </div>
               </TooltipTrigger>
@@ -88,13 +88,18 @@ export function UserSidebarFooter({
           </TooltipProvider>
         ) : (
           <>
-            <div className="text-primary-foreground bg-primary flex h-6 w-6 items-center justify-center rounded-md text-xs font-medium">
+            <div className="bg-primary text-primary-foreground flex h-9 w-9 items-center justify-center rounded-xl text-sm font-semibold">
               {userInitials}
             </div>
 
-            <span className="text-foreground hidden max-w-32 truncate text-sm md:block lg:max-w-none">
-              {displayName}
-            </span>
+            <div className="min-w-0">
+              <span className="text-foreground block max-w-32 truncate text-sm font-medium md:block lg:max-w-none">
+                {displayName}
+              </span>
+              <span className="text-foreground-lighter block max-w-32 truncate text-xs md:block lg:max-w-none">
+                Account
+              </span>
+            </div>
           </>
         )}
       </div>

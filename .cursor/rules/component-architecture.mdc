@@ -54,6 +54,7 @@ alwaysApply: true
 - Never expose raw database errors to client
 
 Also check this fucker
+
 # Component Development Guide
 
 Architecture and patterns for building features in the dy codebase.
@@ -116,11 +117,11 @@ apps/web/src/
 
 ### For New Top-Level Pages
 
-| Step | File | Action |
-|------|------|--------|
-| Sidebar | `components/layouts/AppLayout/components/simple-sidebar.tsx` | Add `SidebarMenuItem` |
-| Metadata | `lib/utils/route-metadata.ts` | Add to `ROUTE_METADATA_MAP` |
-| Protection | `proxy.ts` | Add to `protectedAdminRoutes` |
+| Step       | File                                                         | Action                        |
+| ---------- | ------------------------------------------------------------ | ----------------------------- |
+| Sidebar    | `components/layouts/AppLayout/components/simple-sidebar.tsx` | Add `SidebarMenuItem`         |
+| Metadata   | `lib/utils/route-metadata.ts`                                | Add to `ROUTE_METADATA_MAP`   |
+| Protection | `proxy.ts`                                                   | Add to `protectedAdminRoutes` |
 
 ---
 
@@ -128,14 +129,14 @@ apps/web/src/
 
 ### Naming Conventions
 
-| Type | Pattern | Example |
-|------|---------|---------|
-| Page | `page.tsx` | `app/(business)/bills/page.tsx` |
-| API Route | `route.ts` | `app/api/bills/route.ts` |
-| Hook | `use[Feature]Query.ts` | `useBillsQuery.ts` |
-| Component | `[Feature][Type].tsx` | `BillsTable.tsx` |
-| Schema | `[feature].ts` | `bill.ts` |
-| Page Client | `[Feature]PageClient.tsx` | `BillsPageClient.tsx` |
+| Type        | Pattern                   | Example                         |
+| ----------- | ------------------------- | ------------------------------- |
+| Page        | `page.tsx`                | `app/(business)/bills/page.tsx` |
+| API Route   | `route.ts`                | `app/api/bills/route.ts`        |
+| Hook        | `use[Feature]Query.ts`    | `useBillsQuery.ts`              |
+| Component   | `[Feature][Type].tsx`     | `BillsTable.tsx`                |
+| Schema      | `[feature].ts`            | `bill.ts`                       |
+| Page Client | `[Feature]PageClient.tsx` | `BillsPageClient.tsx`           |
 
 ### Settings Pages (Special Pattern)
 
@@ -192,7 +193,7 @@ await authClient.signOut();
 
 ```typescript
 const protectedAdminRoutes = ["/", "/inbox", "/bills", "/settings"];
-const AuthRoutes = ["/login"];  // Only for unauthenticated users
+const AuthRoutes = ["/login"]; // Only for unauthenticated users
 ```
 
 ---
@@ -250,7 +251,7 @@ export function useFeatureQuery() {
   return useQuery({
     queryKey: ["features", queryString],
     queryFn: () => fetcher(`/api/feature?${queryString}`),
-    placeholderData: (prev) => prev,  // Optimistic updates
+    placeholderData: (prev) => prev, // Optimistic updates
     staleTime: 5000,
   });
 }
@@ -282,10 +283,10 @@ Wraps fetch with JSON headers and error handling via `handleApiError`.
 
 ```typescript
 // Field schemas with validation
-emailSchema    // max 254, trim, email format
-nameSchema     // max 255, trim
-passwordSchema // min 6, max 128
-slugSchema     // lowercase, alphanumeric + hyphens
+emailSchema; // max 254, trim, email format
+nameSchema; // max 255, trim
+passwordSchema; // min 6, max 128
+slugSchema; // lowercase, alphanumeric + hyphens
 ```
 
 ### Query Schema (for Data Tables)
@@ -329,13 +330,13 @@ export default function FeaturePage() {
 
 ### PageLayout Props
 
-| Prop | Type | Description |
-|------|------|-------------|
-| `title` | `string \| ReactNode` | Page title |
-| `subtitle` | `string \| ReactNode` | Page description |
-| `size` | `"default" \| "full" \| "large" \| "small"` | Width control |
-| `primaryActions` | `ReactNode` | Right-side buttons |
-| `navigationItems` | `NavigationItem[]` | Tab navigation |
+| Prop              | Type                                        | Description        |
+| ----------------- | ------------------------------------------- | ------------------ |
+| `title`           | `string \| ReactNode`                       | Page title         |
+| `subtitle`        | `string \| ReactNode`                       | Page description   |
+| `size`            | `"default" \| "full" \| "large" \| "small"` | Width control      |
+| `primaryActions`  | `ReactNode`                                 | Right-side buttons |
+| `navigationItems` | `NavigationItem[]`                          | Tab navigation     |
 
 ### Page Client Structure
 
@@ -360,12 +361,12 @@ function FeatureTableContent() {
 
 **Principle:** Static content visible, only dynamic content shows skeleton.
 
-| Content Type | Loading Behavior |
-|--------------|------------------|
-| Page titles, labels, descriptions | Always visible |
-| Input fields, buttons | Skeleton |
-| Table headers, toolbar | Always visible |
-| Table rows | Skeleton |
+| Content Type                      | Loading Behavior |
+| --------------------------------- | ---------------- |
+| Page titles, labels, descriptions | Always visible   |
+| Input fields, buttons             | Skeleton         |
+| Table headers, toolbar            | Always visible   |
+| Table rows                        | Skeleton         |
 
 ### Error & Empty States
 
@@ -388,7 +389,7 @@ function FeatureTableContent() {
 ```typescript
 import { toast } from "sonner";
 toast.success("Created successfully");
-toast.error(error.message);  // Message from sanitized server error
+toast.error(error.message); // Message from sanitized server error
 ```
 
 ---
@@ -404,13 +405,14 @@ const { table } = useDataTable({
   data: displayItems,
   columns,
   pageCount: Math.ceil(total / perPage),
-  shallow: false,  // CRITICAL: triggers URL changes to refetch
+  shallow: false, // CRITICAL: triggers URL changes to refetch
   initialState: {
     pagination: { pageIndex: 0, pageSize: perPage },
     sorting: [{ id: "createdAt", desc: true }],
     columnPinning: { right: ["actions"] },
   },
-  queryKeys: {  // Unique per table to avoid URL conflicts
+  queryKeys: {
+    // Unique per table to avoid URL conflicts
     page: "featurePage",
     perPage: "featurePerPage",
     sort: "featureSort",
@@ -457,18 +459,18 @@ if (item.id.startsWith("skeleton-")) return <Skeleton className="h-4 w-32" />;
 
 ### File Paths
 
-| Purpose | Path |
-|---------|------|
-| Server Auth | `lib/auth/auth.ts` |
-| Client Auth | `lib/auth/auth-client.ts` |
-| Route Protection | `proxy.ts` |
-| Error Handler | `lib/utils/error-handler.ts` |
-| Fetcher | `lib/fetcher.ts` |
-| Route Metadata | `lib/utils/route-metadata.ts` |
-| Sidebar | `components/layouts/AppLayout/components/simple-sidebar.tsx` |
-| Common Schemas | `lib/schemas/common.ts` |
-| PageLayout | `components/layouts/PageLayout/PageLayout.tsx` |
-| DataTable Types | `packages/ui/src/types/data-table.ts` |
+| Purpose          | Path                                                         |
+| ---------------- | ------------------------------------------------------------ |
+| Server Auth      | `lib/auth/auth.ts`                                           |
+| Client Auth      | `lib/auth/auth-client.ts`                                    |
+| Route Protection | `proxy.ts`                                                   |
+| Error Handler    | `lib/utils/error-handler.ts`                                 |
+| Fetcher          | `lib/fetcher.ts`                                             |
+| Route Metadata   | `lib/utils/route-metadata.ts`                                |
+| Sidebar          | `components/layouts/AppLayout/components/simple-sidebar.tsx` |
+| Common Schemas   | `lib/schemas/common.ts`                                      |
+| PageLayout       | `components/layouts/PageLayout/PageLayout.tsx`               |
+| DataTable Types  | `packages/ui/src/types/data-table.ts`                        |
 
 ### Checklist: New Feature
 
@@ -497,5 +499,46 @@ if (item.id.startsWith("skeleton-")) return <Skeleton className="h-4 w-32" />;
 6. **Consistent response shapes** - Include empty data on errors
 7. **Index files for clean imports** - Avoid deep import paths
 
+Also make sure dont make new new hooks for same service multiple times , one hook with multipl functions is OK , also one file with a hook and multiple function is also OK , mainly file should be single for hook for a service not multiple ,like there can be sitution like some is available on admin side and some on cahsier or customer side then make new file for that hooks otherwise let in one file of hook
 
-Also make sure dont make new new hooks for same service multiple times , one hook with multipl functions is OK , also one file with a hook and multiple function is also OK , mainly file should be single for hook for  a service not multiple ,like there can be sitution like some is available on admin side and some on cahsier or customer side then make new file for that hooks otherwise let in one file of hook
+## Collaboration & Delivery Expectations
+
+### 1) Clarify decisions and trade-offs first
+
+- Always ask questions when there is more than one valid way to solve an issue.
+- Even when there is only one clear implementation path, ask for confirmation if the change introduces any meaningful trade-off in the existing system.
+- Ask clarifying questions whenever requirements are incomplete or ambiguous.
+- Confirm key assumptions at least once before implementation.
+
+### 2) Maintain clean structure and avoid bloated files
+
+- Never degrade maintainability by putting too much unrelated logic into a single file.
+- Keep files focused and split code into proper folders by feature/responsibility.
+- Create reusable components in separate files only when reuse and maintainability justify it.
+- Avoid creating tiny component files (for example, very small 5-line wrappers) unless there is a strong reason.
+- Prefer practical, standard architecture over over-fragmentation.
+
+### 3) High-safety flow for large changes and removals
+
+- For large features, discuss the end-to-end approach and edge cases before coding starts.
+- If a new feature requires removing/replacing existing code paths, explicitly confirm before deletion.
+- For risky or high-impact removals, ask for confirmation twice before proceeding.
+
+### 4) Response style for implementation updates
+
+- After coding tasks, provide concise, clean summaries instead of verbose explanations.
+- Summaries should focus on what changed, what was added, and what was removed, in logical/product terms first.
+- Use technical/code-level detail only when it improves clarity.
+
+### 5) Summary completeness for large tasks
+
+- Never omit meaningful changes from the final summary.
+- For very large implementations, it is acceptable to provide a separate summary file if that is easier to consume.
+
+### 6) Cloudflare R2 signed URL usage
+
+- For Cloudflare R2 uploads and reads, prefer signed URLs in most cases.
+- Generate signed URLs from backend APIs/functions, not directly in frontend code.
+- Keep and use stored object paths/keys to request signed read URLs from backend helpers.
+- For static-ish data rendering (for example prefilled forms, page data, repeated asset views), fetch signed read URLs via backend using the stored object path.
+- Default approach: frontend stores/sends object key, backend returns short-lived signed URL when needed.
