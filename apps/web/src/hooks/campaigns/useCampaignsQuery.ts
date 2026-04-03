@@ -68,7 +68,14 @@ export function useCampaignsQuery() {
 
   return useQuery<CampaignsResponse, Error>({
     queryKey: ["campaigns", searchParams.toString()],
-    queryFn: () => {
+    queryFn: async () => {
+      await fetcher<{ updated: number; checkedAt: string }>(
+        "/api/campaigns/revalidate-status",
+        {
+          method: "POST",
+        },
+      );
+
       const url = queryString
         ? `/api/campaigns?${queryString}`
         : "/api/campaigns";

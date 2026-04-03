@@ -52,12 +52,38 @@ export async function applyCampaignForBill(
 
   if (activeCampaigns.length === 0) return noCampaignResult;
 
+  const activeCampaignIds = activeCampaigns.map((campaign) => campaign.id);
+  const priorCampaignEarned = await tx.transaction.findMany({
+    where: {
+      businessId,
+      customerId,
+      campaignId: { in: activeCampaignIds },
+      type: TransactionType.EARNED,
+      source: TransactionSource.CAMPAIGN,
+      valueKind: {
+        in: [TransactionValueKind.CASHBACK, TransactionValueKind.FREE_ITEM],
+      },
+    },
+    select: { campaignId: true },
+  });
+  const campaignUsedOnce = new Set(
+    priorCampaignEarned
+      .map((row) => row.campaignId)
+      .filter((campaignId): campaignId is string => !!campaignId),
+  );
+
   const appliedCampaigns: CampaignAppliedItem[] = [];
   let totalDiscount = 0;
   let remainingAmount = billAmount;
 
   for (const campaign of activeCampaigns) {
     if (campaign.rewardType === "NO_REWARD") continue;
+    if (
+      campaign.redemptionLimit === "ONCE" &&
+      campaignUsedOnce.has(campaign.id)
+    ) {
+      continue;
+    }
 
     const audiences = campaign.targetAudiences ?? [];
     if (audiences.length > 0) {

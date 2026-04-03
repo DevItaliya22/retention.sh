@@ -254,7 +254,7 @@ export function MessageLogsTable() {
                   email={item.recipient}
                   subject={item.subject ?? undefined}
                   body={item.body}
-                  title="Open in email client"
+                  title="Open in Gmail"
                 />
               )}
               {item.channel === "SMS" && (

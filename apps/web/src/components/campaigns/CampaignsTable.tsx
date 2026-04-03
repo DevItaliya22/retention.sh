@@ -42,6 +42,11 @@ interface CampaignsTableProps {
 }
 
 const EMPTY_CAMPAIGNS: CampaignListItem[] = [];
+const CAMPAIGN_STATUS_PRIORITY: Record<string, number> = {
+  ACTIVE: 0,
+  DRAFT: 1,
+  EXPIRED: 2,
+};
 
 function createSkeletonCampaign(id: string): CampaignListItem {
   return {
@@ -92,7 +97,13 @@ export function CampaignsTable({ onEdit, onDownload }: CampaignsTableProps) {
 
     if (isEmpty) return [] as CampaignListItem[];
 
-    return items;
+    return [...items].sort((a, b) => {
+      const aRank = CAMPAIGN_STATUS_PRIORITY[a.status] ?? 99;
+      const bRank = CAMPAIGN_STATUS_PRIORITY[b.status] ?? 99;
+      if (aRank !== bRank) return aRank - bRank;
+
+      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+    });
   }, [isEmpty, isLoading, items, perPage]);
 
   const columns = useMemo<ColumnDef<CampaignListItem>[]>(
@@ -412,23 +423,43 @@ export function CampaignsTable({ onEdit, onDownload }: CampaignsTableProps) {
   }
 
   return (
-    <DataTable
-      table={table}
-      renderEmpty={() => (
-        <Empty className="py-12">
-          <EmptyHeader>
-            <EmptyMedia variant="icon">
-              <Megaphone className="size-6" />
-            </EmptyMedia>
-            <EmptyTitle>No campaigns found</EmptyTitle>
-            <EmptyDescription>
-              Create a campaign or adjust your filters
-            </EmptyDescription>
-          </EmptyHeader>
-        </Empty>
-      )}
-    >
-      <DataTableToolbar table={table} maxTextFilters={1} />
-    </DataTable>
+    <div className="space-y-3">
+      <DataTable
+        table={table}
+        getRowClassName={(row) => {
+          const campaign = row.original;
+          if (campaign.id.startsWith("skeleton-")) return "";
+
+          if (campaign.status === "ACTIVE")
+            return "[&>td]:!bg-emerald-500/10 hover:[&>td]:!bg-emerald-500/15";
+          if (campaign.status === "DRAFT")
+            return "[&>td]:!bg-amber-500/10 hover:[&>td]:!bg-amber-500/15";
+          if (campaign.status === "EXPIRED")
+            return "[&>td]:!bg-slate-500/10 hover:[&>td]:!bg-slate-500/15";
+          return "";
+        }}
+        renderEmpty={() => (
+          <Empty className="py-12">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <Megaphone className="size-6" />
+              </EmptyMedia>
+              <EmptyTitle>No campaigns found</EmptyTitle>
+              <EmptyDescription>
+                Create a campaign or adjust your filters
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        )}
+      >
+        <DataTableToolbar table={table} maxTextFilters={1} />
+      </DataTable>
+
+      <div className="text-muted-foreground rounded-md border border-dashed px-3 py-2 text-xs">
+        If a customer qualifies for any active campaign, campaign benefits are
+        applied first for that bill. Loyalty earning is skipped on that same
+        bill and does not stack with campaign earning.
+      </div>
+    </div>
   );
 }
