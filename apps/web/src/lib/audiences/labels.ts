@@ -17,6 +17,7 @@ function parseAudienceKey(key: string): { prefix: string; param: string } {
 
 export function getAudienceLabel(key: string): string {
   const { prefix, param } = parseAudienceKey(key);
+  if (prefix === "all" && param === "customers") return "ALL customers";
   if (prefix === "segment") return param.replace(/-/g, " ");
   if (prefix === "feedback")
     return RATING_LABELS[param] ?? `Feedback: ${param}`;

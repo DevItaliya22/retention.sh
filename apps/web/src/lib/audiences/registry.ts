@@ -1,4 +1,5 @@
 import type { Prisma } from "@reelo/db";
+import { checkAllAudience, resolveAllAudience } from "./resolvers/all";
 import {
   checkFeedbackAudience,
   resolveFeedbackAudience,
@@ -10,11 +11,13 @@ import {
 import type { AudienceChecker, AudienceMeta, AudienceResolver } from "./types";
 
 const resolverMap: Record<string, AudienceResolver> = {
+  all: resolveAllAudience,
   segment: resolveSegmentAudience,
   feedback: resolveFeedbackAudience,
 };
 
 const checkerMap: Record<string, AudienceChecker> = {
+  all: checkAllAudience,
   segment: checkSegmentAudience,
   feedback: checkFeedbackAudience,
 };
@@ -80,6 +83,7 @@ const RATING_LABELS: Record<string, string> = {
 
 export function getAudienceLabel(key: string): string {
   const { prefix, param } = parseAudienceKey(key);
+  if (prefix === "all" && param === "customers") return "ALL customers";
   if (prefix === "segment") return `Segment: ${param}`;
   if (prefix === "feedback")
     return RATING_LABELS[param] ?? `Feedback: ${param}`;
@@ -88,6 +92,11 @@ export function getAudienceLabel(key: string): string {
 
 export function listBuiltinAudiences(): AudienceMeta[] {
   return [
+    {
+      key: "all:customers",
+      label: "ALL customers",
+      description: "All customers of this business",
+    },
     {
       key: "feedback:rating_1",
       label: "1-star feedback",
