@@ -3,7 +3,6 @@
 import { BusinessStep } from "@/components/forms/onboarding/steps/BusinessStep";
 import { CashierStep } from "@/components/forms/onboarding/steps/CashierStep";
 import { IndustryStep } from "@/components/forms/onboarding/steps/IndustryStep";
-import { ReviewStep } from "@/components/forms/onboarding/steps/ReviewStep";
 import { useCurrentBusiness } from "@/hooks/business/useCurrentBusiness";
 import { useManageCashier } from "@/hooks/cashier/useManageCashier";
 import useOnboarding from "@/hooks/onboarding/useOnboarding";
@@ -220,11 +219,6 @@ export function WelcomeForm({
             <CashierStep />
           </StepContent>
         ),
-      },
-      {
-        id: "review",
-        title: "Review",
-        Component: () => <ReviewStep />,
       },
     ],
   };

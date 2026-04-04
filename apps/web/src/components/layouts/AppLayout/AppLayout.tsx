@@ -31,7 +31,7 @@ const AppLayout = ({ children }: PropsWithChildren) => {
         >
           <div className="flex h-screen w-screen flex-col p-2 md:p-3">
             {/* Main Content Area */}
-            <div className="flex h-[100svh] flex-1 grow gap-3 overflow-y-auto">
+            <div className="flex h-[100svh] flex-1 grow gap-0 overflow-y-auto">
               {/* Dynamic Sidebar */}
               <DynamicSidebar />
 

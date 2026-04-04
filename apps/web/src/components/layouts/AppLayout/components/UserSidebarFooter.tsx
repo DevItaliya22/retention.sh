@@ -69,15 +69,20 @@ export function UserSidebarFooter({
 
   const displayName =
     user.name || (user.email ? user.email.split("@")[0] : null) || "User";
+  const rootClassName = isCollapsed
+    ? `flex h-full w-full items-center justify-center ${className || ""}`
+    : `flex w-full items-center justify-between ${className || ""}`;
 
   return (
-    <div className={`flex items-center gap-2 ${className || ""}`}>
-      <div className="flex items-center gap-2">
+    <div className={rootClassName}>
+      <div
+        className={`flex items-center gap-2 ${isCollapsed ? "h-full w-full" : ""}`}
+      >
         {isCollapsed ? (
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <div className="bg-primary text-primary-foreground flex h-9 w-9 items-center justify-center rounded-xl text-sm font-semibold">
+                <div className="text-primary-foreground flex h-full w-full items-center justify-center rounded-[inherit] text-sm font-semibold">
                   {userInitials}
                 </div>
               </TooltipTrigger>
