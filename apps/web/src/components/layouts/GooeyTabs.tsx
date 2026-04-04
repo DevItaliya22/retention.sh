@@ -25,8 +25,12 @@ interface GooeyTabsProps {
   stickySafeAnimation?: boolean;
 }
 
-const FULL_BLEED_CLASS =
-  "-mx-3 w-[calc(100%+1.5rem)] @lg:-mx-4 @lg:w-[calc(100%+2rem)] @xl:-mx-6 @xl:w-[calc(100%+3rem)]";
+/**
+ * Keep the gooey block inside the dashboard column padding.
+ * Negative margins + w-[calc(100%+…)] fought `overflow-x-hidden` on `SidebarInset` (@container)
+ * and `@lg`/`@xl` here are container queries — they often desynced from shell padding on tablet/phone.
+ */
+const GOOEY_OUTER_CLASS = "min-w-0 w-full max-w-full";
 
 export function GooeyTabs({
   gooeyId,
@@ -43,7 +47,7 @@ export function GooeyTabs({
   const bg = bgClassName ?? "bg-muted";
 
   return (
-    <div className={fullBleed ? FULL_BLEED_CLASS : undefined}>
+    <div className={fullBleed ? GOOEY_OUTER_CLASS : undefined}>
       <div className="relative min-h-[380px] w-full">
         {useGooey && <GooeySvgFilter id={gooeyId} strength={12} />}
 
@@ -102,7 +106,8 @@ export function GooeyTabs({
 
         <div
           className={cn(
-            "relative z-10 min-h-[368px] px-3 pt-4 pb-6 @lg:px-4 @xl:px-6",
+            // Viewport breakpoints only — do not use @lg/@xl (those follow @container on SidebarInset).
+            "relative z-10 box-border min-h-[368px] px-3 pt-5 pb-6 sm:px-4 lg:px-5 xl:px-6",
             contentClassName,
           )}
         >
