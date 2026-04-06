@@ -3,6 +3,7 @@ import { runTransaction } from "@/lib/db/transaction";
 import { getPartnerRedeemableInfo, getRedeemableInfo } from "@/lib/loyalty";
 import { sanitizeErrorMessage } from "@/lib/utils/error-handler";
 import { parseFreeItems } from "@/lib/utils/free-items";
+import { isServiceEnabled } from "@/lib/utils/service-enabled";
 import { db } from "@reelo/db";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -33,6 +34,46 @@ export const GET = withCashierAuth<{ id: string }>(
       }
 
       const currentAmountToPay = bill.userPaidAmount ?? bill.finalAmount ?? 0;
+      const feedbackLink = await db.feedbackLink.findUnique({
+        where: { billId: bill.id },
+        select: { token: true },
+      });
+      const businessServiceFlags = await db.business.findUnique({
+        where: { id: context.business.id },
+        select: { isServiceEnabled: true },
+      });
+      const isFeedbackOn = isServiceEnabled(
+        businessServiceFlags?.isServiceEnabled as
+          | Record<string, boolean>
+          | null
+          | undefined,
+        "feedback",
+      );
+      const isLoyaltyOn = isServiceEnabled(
+        businessServiceFlags?.isServiceEnabled as
+          | Record<string, boolean>
+          | null
+          | undefined,
+        "loyalty",
+      );
+      const customerForLoyalty = await db.customer.findUnique({
+        where: { id: bill.customerId },
+        select: {
+          user: {
+            select: { phoneNumber: true },
+          },
+        },
+      });
+      const customerPhone = customerForLoyalty?.user?.phoneNumber ?? null;
+      const baseUrl = process.env.NEXT_PUBLIC_URL || "https://dy.com";
+      const feedbackUrl =
+        isFeedbackOn && feedbackLink?.token
+          ? `${baseUrl}/feedback/${context.business.slug}/${feedbackLink.token}`
+          : null;
+      const loyaltyLoginUrl =
+        isLoyaltyOn && customerPhone
+          ? `${baseUrl}/loyalty/${context.business.slug}/login?phone=${encodeURIComponent(customerPhone)}`
+          : null;
 
       const alreadyCashbackRedeemedCount = await db.transaction.count({
         where: {
@@ -274,6 +315,8 @@ export const GET = withCashierAuth<{ id: string }>(
         freeItems,
         campaignEarnings:
           campaignEarnings.length > 0 ? campaignEarnings : undefined,
+        feedbackUrl,
+        loyaltyLoginUrl,
       });
     } catch (error: unknown) {
       console.error("Failed to fetch redeem info:", error);
