@@ -3,7 +3,7 @@
 import { useCashierBillsQuery } from "@/hooks/cashier/useCashierBillsQuery";
 import { buttonVariants, DateDisplay, Skeleton } from "@reelo/ui/components";
 import { cn } from "@reelo/ui/lib/utils";
-import { ExternalLink } from "lucide-react";
+import { ReceiptText } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCashierContext } from "../_context/CashierContext";
@@ -16,7 +16,7 @@ export function CashierBillsList() {
 
   if (isError) {
     return (
-      <div className="border-destructive/30 bg-destructive/5 rounded-lg border px-4 py-3">
+      <div className="bg-destructive/5 rounded-lg px-4 py-3">
         <p className="text-destructive text-sm">
           {error?.message ?? "Failed to load bills"}
         </p>
@@ -27,80 +27,83 @@ export function CashierBillsList() {
   const bills = data?.bills ?? [];
   const total = data?.total ?? 0;
   const page = data?.page ?? 1;
-  const perPage = data?.perPage ?? 20;
+  const perPage = data?.perPage ?? 10;
   const totalPages = Math.max(1, Math.ceil(total / perPage));
   const isEmpty = !isLoading && bills.length === 0;
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">My Bills</h2>
+    <div className="space-y-1">
+      <div className="flex items-center justify-between pb-2">
+        <h2 className="text-sm font-semibold">Recent Bills</h2>
         {total > 0 && (
-          <p className="text-muted-foreground text-sm">
-            {total} bill{total !== 1 ? "s" : ""} total
-          </p>
+          <span className="text-muted-foreground text-xs tabular-nums">
+            {total} bill{total !== 1 ? "s" : ""}
+          </span>
         )}
       </div>
 
       {isLoading ? (
-        <div className="space-y-2">
+        <div className="divide-y">
           {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} className="h-16 w-full rounded-lg" />
+            <div key={i} className="flex items-center justify-between py-3.5">
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-3 w-36" />
+              </div>
+              <Skeleton className="h-4 w-20" />
+            </div>
           ))}
         </div>
       ) : isEmpty ? (
-        <div className="rounded-lg border border-dashed py-12 text-center">
-          <p className="text-muted-foreground text-sm">
-            No bills yet. Create your first bill to see it here.
+        <div className="py-16 text-center">
+          <ReceiptText className="text-muted-foreground/30 mx-auto mb-3 h-12 w-12" />
+          <p className="text-muted-foreground text-sm font-medium">
+            No bills yet
+          </p>
+          <p className="text-muted-foreground/70 mt-1 text-xs">
+            Bills you create will appear here.
           </p>
         </div>
       ) : (
         <>
-          <ul className="space-y-2">
+          <div className="divide-y">
             {bills.map((bill) => (
-              <li key={bill.id}>
-                <button
-                  type="button"
-                  onClick={() =>
-                    window.open(
-                      `${billsPath}/${bill.id}`,
-                      "_blank",
-                      "noopener,noreferrer",
-                    )
-                  }
-                  className="bg-muted/30 hover:bg-muted/50 flex w-full items-center justify-between gap-3 rounded-lg border px-4 py-3 text-left transition-colors"
-                >
-                  <div className="min-w-0 flex-1">
-                    <span className="font-mono font-medium">
-                      {bill.billNumber}
-                    </span>
-                    <span className="text-muted-foreground ml-2 text-xs">
-                      <DateDisplay date={bill.createdAt} relative />
-                    </span>
+              <Link
+                key={bill.id}
+                href={`${billsPath}/${bill.id}`}
+                className="active:bg-muted/50 flex items-center justify-between py-3.5 transition-colors"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="font-mono text-sm leading-tight font-semibold">
+                    {bill.billNumber}
+                  </p>
+                  <div className="text-muted-foreground mt-1 flex items-center gap-1.5 text-xs">
                     {bill.customerName && (
-                      <p className="text-muted-foreground mt-0.5 truncate text-sm">
-                        {bill.customerName}
-                      </p>
+                      <>
+                        <span className="max-w-[140px] truncate">
+                          {bill.customerName}
+                        </span>
+                        <span className="text-muted-foreground/40">·</span>
+                      </>
                     )}
+                    <DateDisplay date={bill.createdAt} relative />
                   </div>
-                  <div className="flex shrink-0 items-center gap-2">
-                    <span className="text-muted-foreground text-sm tabular-nums">
-                      {bill.amount != null ? `₹${bill.amount.toFixed(2)}` : "—"}
-                    </span>
-                    <ExternalLink className="text-muted-foreground h-4 w-4 shrink-0" />
-                  </div>
-                </button>
-              </li>
+                </div>
+                <span className="shrink-0 pl-4 font-mono text-sm font-semibold tabular-nums">
+                  {bill.amount != null ? `₹${bill.amount.toFixed(2)}` : "—"}
+                </span>
+              </Link>
             ))}
-          </ul>
+          </div>
 
           {totalPages > 1 && (
-            <nav className="flex items-center justify-center gap-2 pt-2">
+            <nav className="flex items-center justify-center gap-3 pt-4">
               {page > 1 ? (
                 <Link
                   href={`?page=${page - 1}&perPage=${perPage}`}
                   className={cn(
                     buttonVariants({ variant: "outline", size: "sm" }),
+                    "h-8 text-xs",
                   )}
                 >
                   Previous
@@ -109,20 +112,21 @@ export function CashierBillsList() {
                 <span
                   className={cn(
                     buttonVariants({ variant: "outline", size: "sm" }),
-                    "cursor-not-allowed opacity-50",
+                    "h-8 cursor-not-allowed text-xs opacity-40",
                   )}
                 >
                   Previous
                 </span>
               )}
-              <span className="text-muted-foreground text-sm">
-                Page {page} of {totalPages}
+              <span className="text-muted-foreground text-xs tabular-nums">
+                {page} / {totalPages}
               </span>
               {page < totalPages ? (
                 <Link
                   href={`?page=${page + 1}&perPage=${perPage}`}
                   className={cn(
                     buttonVariants({ variant: "outline", size: "sm" }),
+                    "h-8 text-xs",
                   )}
                 >
                   Next
@@ -131,7 +135,7 @@ export function CashierBillsList() {
                 <span
                   className={cn(
                     buttonVariants({ variant: "outline", size: "sm" }),
-                    "cursor-not-allowed opacity-50",
+                    "h-8 cursor-not-allowed text-xs opacity-40",
                   )}
                 >
                   Next

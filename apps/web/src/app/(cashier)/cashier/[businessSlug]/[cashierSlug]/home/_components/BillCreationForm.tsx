@@ -78,6 +78,13 @@ function BillSuccessCard({
     loyalty?.loyaltyType === "VISIT_MADE";
   const wasUpgraded = loyalty?.tierUpgrade?.wasUpgraded ?? false;
   const redeemableRewards = rewardStages.filter((r) => r.canRedeem);
+  const campaignRewardsToShow =
+    campaignDiscount?.appliedCampaigns?.filter(
+      (campaign) =>
+        campaign.rewardType === "FREE_ITEM" ||
+        campaign.discountAmount > 0 ||
+        campaign.earnedAmount > 0,
+    ) ?? [];
 
   return (
     <Card className="w-full max-w-md">
@@ -172,14 +179,14 @@ function BillSuccessCard({
         </div>
 
         {/* Campaign Earnings */}
-        {(campaignDiscount?.appliedCampaigns?.length ?? 0) > 0 && (
+        {campaignRewardsToShow.length > 0 && (
           <>
             <Separator />
             <div className="space-y-2">
               <p className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
                 Campaign rewards
               </p>
-              {campaignDiscount!.appliedCampaigns.map((c) => (
+              {campaignRewardsToShow.map((c) => (
                 <div
                   key={c.campaignId}
                   className="flex items-center gap-3 rounded-lg bg-orange-50 p-3 dark:bg-orange-900/20"
@@ -867,452 +874,435 @@ export function BillCreationForm() {
   // ─── Render ─────────────────────────────────────────────────────────────
   // Success state: navigates to ?billCreated=billId; BillCreatedView handles display
   return (
-    <div className="w-full max-w-md">
-      <Card className="border-0 shadow-none">
-        <CardContent className="p-6 sm:p-8">
-          <h2 className="mb-6 text-xl font-semibold">Create Bill</h2>
-          {error && (
-            <div className="bg-destructive/10 border-destructive/20 text-destructive mb-4 rounded-lg border p-3 text-center text-sm">
-              {error}
+    <div>
+      {error && (
+        <div className="bg-destructive/10 border-destructive/20 text-destructive mb-4 rounded-lg border p-3 text-center text-sm">
+          {error}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-3" autoComplete="off">
+        {/* Hidden input to discourage browser autocomplete */}
+        <input
+          type="text"
+          autoComplete="off"
+          name="prevent_autofill"
+          tabIndex={-1}
+          className="pointer-events-none absolute -left-[9999px] h-0 w-0 opacity-0"
+          aria-hidden
+          readOnly
+        />
+
+        {/* ─── Bill Number ──────────────────────────────────────────── */}
+        <div className="space-y-1.5">
+          <Label htmlFor="billNumber">Bill Number *</Label>
+          <Input
+            id="billNumber"
+            variant="underline"
+            placeholder="BILL-001"
+            value={billNumber}
+            onChange={(e) => setBillNumber(e.target.value)}
+            required
+            disabled={isCreating}
+            autoComplete="off"
+          />
+        </div>
+
+        {/* ─── Phone Number + Search ────────────────────────────────── */}
+        <div className="relative space-y-1.5">
+          <Label htmlFor="phoneNumber">Customer Phone *</Label>
+          <div className="relative" ref={phoneInputRef}>
+            <PhoneInput
+              id="phoneNumber"
+              variant="underline"
+              placeholder="9876543210"
+              value={phoneNumber}
+              onChange={(value: string) => {
+                setPhoneNumber(value.toString());
+                clearSelectedCustomer();
+              }}
+              required
+              disabled={isCreating}
+              autoComplete="nope"
+              defaultCountry="IN"
+            />
+            {selectedCustomer && (
+              <button
+                type="button"
+                onClick={() => {
+                  clearSelectedCustomer();
+                  setPhoneNumber("");
+                }}
+                className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2 z-10 -translate-y-1/2"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          {showSuggestions && searchResults.length > 0 && (
+            <div
+              ref={suggestionsRef}
+              className="bg-popover absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border shadow-md"
+            >
+              {searchResults.map((customer) => (
+                <button
+                  key={customer.id}
+                  type="button"
+                  onClick={() => {
+                    handleCustomerSelect(customer);
+                    setShowSuggestions(false);
+                  }}
+                  className="hover:bg-accent focus:bg-accent w-full px-4 py-2 text-left focus:outline-none"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-medium">{customer.name}</div>
+                      <div className="text-muted-foreground text-sm">
+                        {customer.phoneNumber}
+                      </div>
+                    </div>
+                    {customer.isBusinessCustomer && (
+                      <span className="bg-primary/10 text-primary rounded-full px-2 py-1 text-xs">
+                        This Business
+                      </span>
+                    )}
+                  </div>
+                </button>
+              ))}
             </div>
           )}
+        </div>
 
-          <form
-            onSubmit={handleSubmit}
-            className="space-y-3"
-            autoComplete="off"
+        {/* ─── Name ─────────────────────────────────────────────────── */}
+        <div className="space-y-1.5">
+          <Label htmlFor="name">Customer Name</Label>
+          <Input
+            id="name"
+            variant="underline"
+            placeholder="John Doe"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            disabled={isCreating}
+            autoComplete="nope"
+          />
+        </div>
+
+        {/* ─── Subtotal (full line) ──────────────────────────────────── */}
+        <div className="space-y-1.5">
+          <Label htmlFor="amount">Subtotal</Label>
+          <Input
+            id="amount"
+            variant="underline"
+            type="number"
+            step="0.01"
+            min="0"
+            placeholder="0.00"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            disabled={isCreating}
+            className="w-full"
+          />
+        </div>
+
+        {/* ─── Store discount (full line) ─────────────────────────────── */}
+        <div className="space-y-1.5">
+          <Label
+            htmlFor="storeDiscount"
+            className={discountInvalid ? "text-destructive" : undefined}
           >
-            {/* Hidden input to discourage browser autocomplete */}
-            <input
-              type="text"
-              autoComplete="off"
-              name="prevent_autofill"
-              tabIndex={-1}
-              className="pointer-events-none absolute -left-[9999px] h-0 w-0 opacity-0"
-              aria-hidden
-              readOnly
-            />
+            Store Discount
+          </Label>
+          <Input
+            id="storeDiscount"
+            variant="underline"
+            type="number"
+            step="0.01"
+            min="0"
+            placeholder="0.00"
+            value={storeDiscount}
+            onChange={(e) => setStoreDiscount(e.target.value)}
+            disabled={isCreating}
+            className={`w-full ${discountInvalid ? "border-destructive text-destructive focus-visible:ring-destructive" : ""}`}
+          />
+          {discountInvalid && (
+            <p className="text-destructive text-sm">
+              Discount must be less than subtotal (₹
+              {subtotalValue.toFixed(2)}).
+            </p>
+          )}
+        </div>
 
-            {/* ─── Bill Number ──────────────────────────────────────────── */}
-            <div className="space-y-1.5">
-              <Label htmlFor="billNumber">Bill Number *</Label>
-              <Input
-                id="billNumber"
-                variant="underline"
-                placeholder="BILL-001"
-                value={billNumber}
-                onChange={(e) => setBillNumber(e.target.value)}
-                required
+        {/* ─── Bill total (full line, disabled) ──────────────────────── */}
+        <div className="space-y-1.5">
+          <Label htmlFor="billTotal">Bill total</Label>
+          <Input
+            id="billTotal"
+            variant="underline"
+            type="text"
+            readOnly
+            disabled
+            value={
+              subtotalValue > 0
+                ? `₹${finalAmountBeforeLoyalty.toFixed(2)}`
+                : "—"
+            }
+            className="w-full cursor-default"
+          />
+        </div>
+
+        {/* ─── Payment method buttons (equal width, full row) ─────────── */}
+        <div className="space-y-1.5">
+          <Label>Payment method</Label>
+          <div className="flex w-full gap-2">
+            {(
+              [
+                { value: "card", label: "Card" },
+                { value: "cash", label: "Cash" },
+                { value: "upi", label: "UPI" },
+                { value: "other", label: "Other" },
+              ] as const
+            ).map(({ value, label }) => (
+              <Button
+                key={value}
+                type="button"
+                variant={paymentMethod === value ? "default" : "outline"}
+                size="sm"
+                className="min-w-0 flex-1"
+                onClick={() => setPaymentMethod(value)}
                 disabled={isCreating}
+              >
+                {label}
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        {/* Tier/cashback % is shown only after bill is created (BillCreatedView), not during creation, to avoid flicker */}
+
+        {/* ─── Collapsible: Notes, Line Items, Redeem points ─────────── */}
+        <Collapsible open={extrasOpen} onOpenChange={setExtrasOpen}>
+          <CollapsibleTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              className="text-muted-foreground hover:text-foreground flex w-full items-center justify-between px-0"
+            >
+              <span className="text-sm">
+                Additional Details (Notes, Line Items)
+              </span>
+              <ChevronDown
+                className={`size-4 transition-transform ${extrasOpen ? "rotate-180" : ""}`}
+              />
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="space-y-4 pt-2">
+            {/* Notes */}
+            <div className="space-y-1.5">
+              <Label htmlFor="notes">Notes</Label>
+              <Textarea
+                id="notes"
+                variant="underline"
+                placeholder="Any notes for this bill"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                disabled={isCreating}
+                rows={2}
+                className="resize-none"
                 autoComplete="off"
               />
             </div>
 
-            {/* ─── Phone Number + Search ────────────────────────────────── */}
-            <div className="relative space-y-1.5">
-              <Label htmlFor="phoneNumber">Customer Phone *</Label>
-              <div className="relative" ref={phoneInputRef}>
-                <PhoneInput
-                  id="phoneNumber"
-                  variant="underline"
-                  placeholder="9876543210"
-                  value={phoneNumber}
-                  onChange={(value: string) => {
-                    setPhoneNumber(value.toString());
-                    clearSelectedCustomer();
-                  }}
-                  required
-                  disabled={isCreating}
-                  autoComplete="nope"
-                  defaultCountry="IN"
-                />
-                {selectedCustomer && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      clearSelectedCustomer();
-                      setPhoneNumber("");
+            {/* Redeem from partner (them → you) — when customer has balance at a partner */}
+            {partnerRedeemable.length > 0 && phoneNumber.length >= 4 && (
+              <div className="space-y-2 rounded-lg border border-dashed p-3">
+                <Label className="text-sm font-medium">
+                  Redeem from partner
+                </Label>
+                <p className="text-muted-foreground text-xs">
+                  Use points/cashback from a partner business at this store.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <Select
+                    value={redeemFromPartnerId ?? "__none__"}
+                    onValueChange={(v) => {
+                      setRedeemFromPartnerId(v === "__none__" ? null : v);
+                      setRedeemPartnerValue("");
                     }}
-                    className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2 z-10 -translate-y-1/2"
+                    disabled={isCreating}
                   >
-                    <X className="h-4 w-4" />
-                  </button>
-                )}
+                    <SelectTrigger className="max-w-[200px]">
+                      <SelectValue placeholder="Select partner" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">
+                        No partner redemption
+                      </SelectItem>
+                      {partnerRedeemable.map((p) => (
+                        <SelectItem
+                          key={p.partnerBusinessId}
+                          value={p.partnerBusinessId}
+                        >
+                          {p.partnerBusinessName} — ₹
+                          {p.valueAtCurrentStore.toFixed(2)} available
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {selectedPartner && (
+                    <div className="flex items-center gap-2">
+                      <Input
+                        variant="underline"
+                        type="number"
+                        min={0}
+                        max={maxPartnerRedeemValue}
+                        step={isPartnerCashbackType ? 0.01 : 1}
+                        placeholder="0"
+                        value={redeemPartnerValue}
+                        onChange={(e) => setRedeemPartnerValue(e.target.value)}
+                        disabled={isCreating}
+                        className="max-w-28"
+                        aria-label="Partner redeem amount"
+                      />
+                      <span className="text-muted-foreground text-xs">
+                        {isPartnerCashbackType ? "₹" : "pts"} (≈ ₹
+                        {effectivePartnerDiscount.toFixed(2)} off)
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
-              {showSuggestions && searchResults.length > 0 && (
-                <div
-                  ref={suggestionsRef}
-                  className="bg-popover absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border shadow-md"
+            )}
+
+            {/* Line Items */}
+            <div className="space-y-3 rounded-lg border p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-base">Line Items</Label>
+                  <p className="text-muted-foreground text-sm">
+                    Add SKUs and quantities
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addLineItem}
+                  disabled={isCreating || skuOptions.length === 0}
+                  className="gap-2"
                 >
-                  {searchResults.map((customer) => (
-                    <button
-                      key={customer.id}
-                      type="button"
-                      onClick={() => {
-                        handleCustomerSelect(customer);
-                        setShowSuggestions(false);
-                      }}
-                      className="hover:bg-accent focus:bg-accent w-full px-4 py-2 text-left focus:outline-none"
+                  <Plus className="size-4" />
+                  Add item
+                </Button>
+              </div>
+              {skuOptions.length === 0 && (
+                <p className="text-muted-foreground text-sm">
+                  No SKUs set up yet.
+                </p>
+              )}
+              {lineItems.length > 0 && (
+                <div className="space-y-3">
+                  {lineItems.map((row, index) => (
+                    <div
+                      key={index}
+                      className="bg-muted/30 flex flex-wrap items-end gap-3 rounded-md border p-3"
                     >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="font-medium">{customer.name}</div>
-                          <div className="text-muted-foreground text-sm">
-                            {customer.phoneNumber}
-                          </div>
-                        </div>
-                        {customer.isBusinessCustomer && (
-                          <span className="bg-primary/10 text-primary rounded-full px-2 py-1 text-xs">
-                            This Business
-                          </span>
-                        )}
+                      <div className="min-w-[180px] flex-1 space-y-2">
+                        <Label className="text-xs">SKU</Label>
+                        <Select
+                          value={row.skuId || "__none__"}
+                          onValueChange={(v) =>
+                            updateLineItem(
+                              index,
+                              "skuId",
+                              v === "__none__" ? "" : v,
+                            )
+                          }
+                          disabled={isCreating}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select SKU" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__none__">Select SKU</SelectItem>
+                            {skuOptions.map((s) => (
+                              <SelectItem key={s.id} value={s.id}>
+                                {s.sku} — {s.name}
+                                {s.price != null
+                                  ? ` (₹${s.price.toFixed(2)})`
+                                  : ""}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
-                    </button>
+                      <div className="w-24 space-y-2">
+                        <Label className="text-xs">Qty</Label>
+                        <Input
+                          variant="underline"
+                          type="number"
+                          min={1}
+                          value={row.qty}
+                          onChange={(e) =>
+                            updateLineItem(index, "qty", e.target.value)
+                          }
+                          disabled={isCreating}
+                          placeholder="1"
+                        />
+                      </div>
+                      <div className="w-28 space-y-2">
+                        <Label className="text-xs">Unit price</Label>
+                        <Input
+                          variant="underline"
+                          type="number"
+                          step="0.01"
+                          min={0}
+                          value={row.unitPrice}
+                          onChange={(e) =>
+                            updateLineItem(index, "unitPrice", e.target.value)
+                          }
+                          disabled={isCreating}
+                          placeholder="—"
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeLineItem(index)}
+                        disabled={isCreating}
+                        aria-label="Remove line item"
+                        className="text-muted-foreground hover:text-destructive shrink-0"
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </div>
                   ))}
                 </div>
               )}
             </div>
+          </CollapsibleContent>
+        </Collapsible>
 
-            {/* ─── Name ─────────────────────────────────────────────────── */}
-            <div className="space-y-1.5">
-              <Label htmlFor="name">Customer Name</Label>
-              <Input
-                id="name"
-                variant="underline"
-                placeholder="John Doe"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                disabled={isCreating}
-                autoComplete="nope"
-              />
-            </div>
-
-            {/* ─── Subtotal (full line) ──────────────────────────────────── */}
-            <div className="space-y-1.5">
-              <Label htmlFor="amount">Subtotal</Label>
-              <Input
-                id="amount"
-                variant="underline"
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="0.00"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                disabled={isCreating}
-                className="w-full"
-              />
-            </div>
-
-            {/* ─── Store discount (full line) ─────────────────────────────── */}
-            <div className="space-y-1.5">
-              <Label
-                htmlFor="storeDiscount"
-                className={discountInvalid ? "text-destructive" : undefined}
-              >
-                Store Discount
-              </Label>
-              <Input
-                id="storeDiscount"
-                variant="underline"
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="0.00"
-                value={storeDiscount}
-                onChange={(e) => setStoreDiscount(e.target.value)}
-                disabled={isCreating}
-                className={`w-full ${discountInvalid ? "border-destructive text-destructive focus-visible:ring-destructive" : ""}`}
-              />
-              {discountInvalid && (
-                <p className="text-destructive text-sm">
-                  Discount must be less than subtotal (₹
-                  {subtotalValue.toFixed(2)}).
-                </p>
-              )}
-            </div>
-
-            {/* ─── Bill total (full line, disabled) ──────────────────────── */}
-            <div className="space-y-1.5">
-              <Label htmlFor="billTotal">Bill total</Label>
-              <Input
-                id="billTotal"
-                variant="underline"
-                type="text"
-                readOnly
-                disabled
-                value={
-                  subtotalValue > 0
-                    ? `₹${finalAmountBeforeLoyalty.toFixed(2)}`
-                    : "—"
-                }
-                className="w-full cursor-default"
-              />
-            </div>
-
-            {/* ─── Payment method buttons (equal width, full row) ─────────── */}
-            <div className="space-y-1.5">
-              <Label>Payment method</Label>
-              <div className="flex w-full gap-2">
-                {(
-                  [
-                    { value: "card", label: "Card" },
-                    { value: "cash", label: "Cash" },
-                    { value: "upi", label: "UPI" },
-                    { value: "other", label: "Other" },
-                  ] as const
-                ).map(({ value, label }) => (
-                  <Button
-                    key={value}
-                    type="button"
-                    variant={paymentMethod === value ? "default" : "outline"}
-                    size="sm"
-                    className="min-w-0 flex-1"
-                    onClick={() => setPaymentMethod(value)}
-                    disabled={isCreating}
-                  >
-                    {label}
-                  </Button>
-                ))}
-              </div>
-            </div>
-
-            {/* Tier/cashback % is shown only after bill is created (BillCreatedView), not during creation, to avoid flicker */}
-
-            {/* ─── Collapsible: Notes, Line Items, Redeem points ─────────── */}
-            <Collapsible open={extrasOpen} onOpenChange={setExtrasOpen}>
-              <CollapsibleTrigger asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="text-muted-foreground hover:text-foreground flex w-full items-center justify-between px-0"
-                >
-                  <span className="text-sm">
-                    Additional Details (Notes, Line Items)
-                  </span>
-                  <ChevronDown
-                    className={`size-4 transition-transform ${extrasOpen ? "rotate-180" : ""}`}
-                  />
-                </Button>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="space-y-4 pt-2">
-                {/* Notes */}
-                <div className="space-y-1.5">
-                  <Label htmlFor="notes">Notes</Label>
-                  <Textarea
-                    id="notes"
-                    variant="underline"
-                    placeholder="Any notes for this bill"
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    disabled={isCreating}
-                    rows={2}
-                    className="resize-none"
-                    autoComplete="off"
-                  />
-                </div>
-
-                {/* Redeem from partner (them → you) — when customer has balance at a partner */}
-                {partnerRedeemable.length > 0 && phoneNumber.length >= 4 && (
-                  <div className="space-y-2 rounded-lg border border-dashed p-3">
-                    <Label className="text-sm font-medium">
-                      Redeem from partner
-                    </Label>
-                    <p className="text-muted-foreground text-xs">
-                      Use points/cashback from a partner business at this store.
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      <Select
-                        value={redeemFromPartnerId ?? "__none__"}
-                        onValueChange={(v) => {
-                          setRedeemFromPartnerId(v === "__none__" ? null : v);
-                          setRedeemPartnerValue("");
-                        }}
-                        disabled={isCreating}
-                      >
-                        <SelectTrigger className="max-w-[200px]">
-                          <SelectValue placeholder="Select partner" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="__none__">
-                            No partner redemption
-                          </SelectItem>
-                          {partnerRedeemable.map((p) => (
-                            <SelectItem
-                              key={p.partnerBusinessId}
-                              value={p.partnerBusinessId}
-                            >
-                              {p.partnerBusinessName} — ₹
-                              {p.valueAtCurrentStore.toFixed(2)} available
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {selectedPartner && (
-                        <div className="flex items-center gap-2">
-                          <Input
-                            variant="underline"
-                            type="number"
-                            min={0}
-                            max={maxPartnerRedeemValue}
-                            step={isPartnerCashbackType ? 0.01 : 1}
-                            placeholder="0"
-                            value={redeemPartnerValue}
-                            onChange={(e) =>
-                              setRedeemPartnerValue(e.target.value)
-                            }
-                            disabled={isCreating}
-                            className="max-w-28"
-                            aria-label="Partner redeem amount"
-                          />
-                          <span className="text-muted-foreground text-xs">
-                            {isPartnerCashbackType ? "₹" : "pts"} (≈ ₹
-                            {effectivePartnerDiscount.toFixed(2)} off)
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Line Items */}
-                <div className="space-y-3 rounded-lg border p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label className="text-base">Line Items</Label>
-                      <p className="text-muted-foreground text-sm">
-                        Add SKUs and quantities
-                      </p>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={addLineItem}
-                      disabled={isCreating || skuOptions.length === 0}
-                      className="gap-2"
-                    >
-                      <Plus className="size-4" />
-                      Add item
-                    </Button>
-                  </div>
-                  {skuOptions.length === 0 && (
-                    <p className="text-muted-foreground text-sm">
-                      No SKUs set up yet.
-                    </p>
-                  )}
-                  {lineItems.length > 0 && (
-                    <div className="space-y-3">
-                      {lineItems.map((row, index) => (
-                        <div
-                          key={index}
-                          className="bg-muted/30 flex flex-wrap items-end gap-3 rounded-md border p-3"
-                        >
-                          <div className="min-w-[180px] flex-1 space-y-2">
-                            <Label className="text-xs">SKU</Label>
-                            <Select
-                              value={row.skuId || "__none__"}
-                              onValueChange={(v) =>
-                                updateLineItem(
-                                  index,
-                                  "skuId",
-                                  v === "__none__" ? "" : v,
-                                )
-                              }
-                              disabled={isCreating}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select SKU" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="__none__">
-                                  Select SKU
-                                </SelectItem>
-                                {skuOptions.map((s) => (
-                                  <SelectItem key={s.id} value={s.id}>
-                                    {s.sku} — {s.name}
-                                    {s.price != null
-                                      ? ` (₹${s.price.toFixed(2)})`
-                                      : ""}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="w-24 space-y-2">
-                            <Label className="text-xs">Qty</Label>
-                            <Input
-                              variant="underline"
-                              type="number"
-                              min={1}
-                              value={row.qty}
-                              onChange={(e) =>
-                                updateLineItem(index, "qty", e.target.value)
-                              }
-                              disabled={isCreating}
-                              placeholder="1"
-                            />
-                          </div>
-                          <div className="w-28 space-y-2">
-                            <Label className="text-xs">Unit price</Label>
-                            <Input
-                              variant="underline"
-                              type="number"
-                              step="0.01"
-                              min={0}
-                              value={row.unitPrice}
-                              onChange={(e) =>
-                                updateLineItem(
-                                  index,
-                                  "unitPrice",
-                                  e.target.value,
-                                )
-                              }
-                              disabled={isCreating}
-                              placeholder="—"
-                            />
-                          </div>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => removeLineItem(index)}
-                            disabled={isCreating}
-                            aria-label="Remove line item"
-                            className="text-muted-foreground hover:text-destructive shrink-0"
-                          >
-                            <Trash2 className="size-4" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
-
-            {/* ─── Actions ──────────────────────────────────────────────── */}
-            <div className="flex gap-2 pt-4">
-              <Button
-                type="submit"
-                loading={isCreating}
-                className="flex-1"
-                disabled={isCreating || discountInvalid}
-              >
-                {isCreating ? "Creating..." : "Create Bill"}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleReset}
-                disabled={isCreating}
-              >
-                Reset
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+        {/* ─── Actions ──────────────────────────────────────────────── */}
+        <div className="flex gap-2 pt-4">
+          <Button
+            type="submit"
+            loading={isCreating}
+            className="flex-1"
+            disabled={isCreating || discountInvalid}
+          >
+            {isCreating ? "Creating..." : "Create Bill"}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleReset}
+            disabled={isCreating}
+          >
+            Reset
+          </Button>
+        </div>
+      </form>
     </div>
   );
 }

@@ -10,7 +10,7 @@ import { z } from "zod";
 
 const cashierBillsQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1).optional(),
-  perPage: z.coerce.number().int().min(1).max(50).default(20).optional(),
+  perPage: z.coerce.number().int().min(1).max(50).default(10).optional(),
 });
 
 export const GET = withCashierAuth(async (request: NextRequest, context) => {
@@ -21,12 +21,12 @@ export const GET = withCashierAuth(async (request: NextRequest, context) => {
     const validation = validateSchema(cashierBillsQuerySchema, queryParams);
     if (!validation.success) {
       return NextResponse.json(
-        { error: validation.error, bills: [], total: 0, perPage: 20 },
+        { error: validation.error, bills: [], total: 0, perPage: 10 },
         { status: 400 },
       );
     }
 
-    const { page = 1, perPage = 20 } = validation.data;
+    const { page = 1, perPage = 10 } = validation.data;
     const skip = (page - 1) * perPage;
     const take = perPage;
 
@@ -103,7 +103,7 @@ export const GET = withCashierAuth(async (request: NextRequest, context) => {
           "Failed to fetch bills. Please try again.",
         bills: [],
         total: 0,
-        perPage: 20,
+        perPage: 10,
       },
       { status: 500 },
     );

@@ -25,7 +25,7 @@ export interface CashierBillsResponse {
 export function useCashierBillsQuery() {
   const searchParams = useSearchParams();
   const page = searchParams.get("page") || "1";
-  const perPage = searchParams.get("perPage") || "20";
+  const perPage = searchParams.get("perPage") || "10";
 
   return useQuery<CashierBillsResponse, Error>({
     queryKey: ["cashier", "bills", page, perPage],

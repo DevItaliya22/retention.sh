@@ -1,6 +1,5 @@
 "use client";
 
-import { Button } from "@reelo/ui/components";
 import { LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -36,14 +35,14 @@ export function CashierLogoutButton({
   };
 
   return (
-    <Button
-      variant="outline"
+    <button
+      type="button"
       onClick={handleLogout}
       disabled={isLoading}
-      className="gap-2"
+      className="text-muted-foreground hover:text-foreground rounded-full p-2 transition-colors disabled:opacity-50"
+      aria-label="Logout"
     >
       <LogOut className="h-4 w-4" />
-      {isLoading ? "Logging out..." : "Logout"}
-    </Button>
+    </button>
   );
 }
