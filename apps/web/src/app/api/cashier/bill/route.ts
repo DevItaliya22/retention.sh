@@ -17,6 +17,7 @@ import {
   validateSchema,
 } from "@/lib/utils/error-handler";
 import { formatPhoneNumber } from "@/lib/utils/phone";
+import { isServiceEnabled } from "@/lib/utils/service-enabled";
 import { db } from "@reelo/db";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -278,16 +279,29 @@ export const POST = withCashierAuth(async (request: NextRequest, context) => {
         where: { businessId },
         select: { id: true, collectionChannel: true },
       });
+      const businessServiceFlags = await tx.business.findUnique({
+        where: { id: businessId },
+        select: { isServiceEnabled: true },
+      });
+      const isFeedbackOn = isServiceEnabled(
+        businessServiceFlags?.isServiceEnabled as
+          | Record<string, boolean>
+          | null
+          | undefined,
+        "feedback",
+      );
       const feedbackLink = await tx.feedbackLink.create({
         data: {
           billId: bill.id,
           configId: feedbackConfig?.id ?? undefined,
         },
       });
+      const baseUrl = process.env.NEXT_PUBLIC_URL || "https://dy.com";
+      const feedbackUrl = isFeedbackOn
+        ? `${baseUrl}/feedback/${context.business.slug}/${feedbackLink.token}`
+        : null;
 
-      if (feedbackConfig?.collectionChannel) {
-        const baseUrl = process.env.NEXT_PUBLIC_URL || "https://dy.com";
-        const feedbackUrl = `${baseUrl}/feedback/${context.business.slug}/${feedbackLink.token}`;
+      if (isFeedbackOn && feedbackConfig?.collectionChannel) {
         const recipient =
           feedbackConfig.collectionChannel === "EMAIL"
             ? (user.email ??
@@ -432,6 +446,7 @@ export const POST = withCashierAuth(async (request: NextRequest, context) => {
         loyalty,
         rewardStages,
         campaignDiscount: campaignResult,
+        feedbackUrl,
       };
     });
 

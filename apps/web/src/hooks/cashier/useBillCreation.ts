@@ -103,6 +103,7 @@ export interface CreateBillResponse {
   loyalty?: LoyaltyResult;
   rewardStages?: RewardStageResult[];
   campaignDiscount?: CampaignDiscountResult;
+  feedbackUrl?: string;
   error?: string;
 }
 

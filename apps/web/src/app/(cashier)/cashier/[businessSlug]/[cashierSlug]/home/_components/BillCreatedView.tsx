@@ -113,6 +113,8 @@ export function BillCreatedView({
     partnerRedeemable: PartnerRedeemableItem[];
     freeItems: FreeItemToClaim[];
     campaignEarnings: CampaignEarning[];
+    feedbackUrl: string | null;
+    loyaltyLoginUrl: string | null;
   } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -144,6 +146,8 @@ export function BillCreatedView({
         partnerRedeemable?: PartnerRedeemableItem[];
         freeItems?: FreeItemToClaim[];
         campaignEarnings?: CampaignEarning[];
+        feedbackUrl?: string | null;
+        loyaltyLoginUrl?: string | null;
         error?: string;
       }>(`${basePath}/redeem-info`);
       if (res.error) throw new Error(res.error);
@@ -153,6 +157,8 @@ export function BillCreatedView({
         partnerRedeemable: res.partnerRedeemable ?? [],
         freeItems: res.freeItems ?? [],
         campaignEarnings: res.campaignEarnings ?? [],
+        feedbackUrl: res.feedbackUrl ?? null,
+        loyaltyLoginUrl: res.loyaltyLoginUrl ?? null,
       });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to load bill");
@@ -395,6 +401,15 @@ export function BillCreatedView({
     const newPay = Math.max(0, currentPay - typed);
     return Math.round(baseEarn * (newPay / originalPayable));
   }, [data?.bill, redeemCashbackValue]);
+
+  const feedbackUrl = data?.feedbackUrl ?? null;
+  const feedbackQrUrl = feedbackUrl
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=0&data=${encodeURIComponent(feedbackUrl)}`
+    : null;
+  const loyaltyLoginUrl = data?.loyaltyLoginUrl ?? null;
+  const loyaltyQrUrl = loyaltyLoginUrl
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=0&data=${encodeURIComponent(loyaltyLoginUrl)}`
+    : null;
 
   if (loading) {
     return (
@@ -1011,6 +1026,40 @@ export function BillCreatedView({
         <ReceiptText className="mr-2 size-4" />
         {finalizing ? "Finishing…" : "Create Another Bill"}
       </Button>
+
+      {feedbackUrl && feedbackQrUrl && (
+        <>
+          <Separator />
+          <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed p-4 text-center">
+            <p className="text-sm font-semibold">Feedback QR</p>
+            <img
+              src={feedbackQrUrl}
+              alt="QR code for feedback form"
+              width={180}
+              height={180}
+              className="rounded-md border bg-white p-2"
+              loading="lazy"
+            />
+          </div>
+        </>
+      )}
+
+      {loyaltyLoginUrl && loyaltyQrUrl && (
+        <>
+          <Separator />
+          <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed p-4 text-center">
+            <p className="text-sm font-semibold">Loyalty Login QR</p>
+            <img
+              src={loyaltyQrUrl}
+              alt="QR code for loyalty login"
+              width={180}
+              height={180}
+              className="rounded-md border bg-white p-2"
+              loading="lazy"
+            />
+          </div>
+        </>
+      )}
     </div>
   );
 }
