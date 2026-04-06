@@ -15,7 +15,12 @@ import {
   useUpdateFeedbackConfig,
   useUpdateFeedbackSelectionOption,
 } from "@/hooks/feedback/useFeedbackConfig";
+import {
+  DEFAULT_BRANDING_TEXT_COLOR,
+  DEFAULT_BRANDING_THEME_COLOR,
+} from "@/lib/constants/branding";
 import { FEEDBACK_FORM_DEFAULTS } from "@/lib/constants/forms/feedback";
+import { resolveServiceBranding } from "@/lib/utils/service-branding";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Button,
@@ -46,6 +51,10 @@ import {
   SortableItem,
   SortableItemHandle,
   Switch,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
   Textarea,
 } from "@reelo/ui/components";
 import { GripVertical, Trash2 } from "lucide-react";
@@ -597,6 +606,8 @@ function FollowUpRewardsSelectionCard({
     error?: string;
   }>;
 }) {
+  const { data: businessData } = useCurrentBusiness();
+  const businessName = businessData?.business?.name ?? "Business";
   const form = useForm<FollowUpRewardsValues>({
     resolver: zodResolver(followUpRewardsSchema),
     defaultValues: {
@@ -606,6 +617,15 @@ function FollowUpRewardsSelectionCard({
       rewardAmount:
         config.rewardAmount != null ? String(config.rewardAmount) : "",
     },
+  });
+  const [previewTab, setPreviewTab] = useState<"positive" | "negative">(
+    "positive",
+  );
+  const previewBranding = resolveServiceBranding({
+    branding: config.branding,
+    defaultBranding: businessData?.business?.defaultBranding ?? null,
+    useDefaultBrandingForServices:
+      businessData?.business?.useDefaultBrandingForServices ?? false,
   });
 
   const rewardEnabled = form.watch("feedbackRewardEnabled") === "true";
@@ -639,184 +659,230 @@ function FollowUpRewardsSelectionCard({
           Follow-up messages, rewards, and selection options shown to customers.
         </CardDescription>
       </CardHeader>
-
-      <Form {...form}>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            void runSubmit();
-          }}
-          className="flex min-h-0 flex-1 flex-col"
-        >
-          <CardContent className="flex min-h-0 flex-1 flex-col gap-4 overflow-auto px-4 py-4">
-            <Card className="border-border/45 bg-background/55 flex flex-col gap-0 overflow-hidden rounded-lg border shadow-none">
-              <CardHeader className="mb-2 gap-0 border-0 px-4 pt-4 pb-0">
-                <CardTitle className="text-foreground text-sm font-semibold">
-                  Follow-up messages
-                </CardTitle>
-                <CardDescription className="text-muted-foreground mt-1 text-sm">
-                  Messages shown after positive or negative feedback.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-y-4 px-4 py-4">
-                <FormField
-                  control={form.control}
-                  name="positiveFollowUp"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col gap-2 md:grid md:grid-cols-12">
-                      <div className="col-span-4 flex flex-col gap-2">
-                        <FormLabel className="text-sm">
-                          Positive follow-up
-                        </FormLabel>
-                      </div>
-                      <div className="col-span-8 flex flex-col gap-1">
-                        <FormControl>
-                          <Textarea
-                            variant="underline"
-                            {...field}
-                            value={field.value || ""}
-                            placeholder="Thank you for your feedback!"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </div>
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="negativeFollowUp"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col gap-2 md:grid md:grid-cols-12">
-                      <div className="col-span-4 flex flex-col gap-2">
-                        <FormLabel className="text-sm">
-                          Negative follow-up
-                        </FormLabel>
-                      </div>
-                      <div className="col-span-8 flex flex-col gap-1">
-                        <FormControl>
-                          <Textarea
-                            variant="underline"
-                            {...field}
-                            value={field.value || ""}
-                            placeholder="We're sorry to hear that. We'll look into it."
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </div>
-                    </FormItem>
-                  )}
-                />
-              </CardContent>
-            </Card>
-
-            <Card className="border-border/45 bg-background/55 flex flex-col gap-0 overflow-hidden rounded-lg border shadow-none">
-              <CardHeader className="mb-2 gap-0 border-0 px-4 pt-4 pb-0">
-                <CardTitle className="text-foreground text-sm font-semibold">
-                  Feedback rewards
-                </CardTitle>
-                <CardDescription className="text-muted-foreground mt-1 text-sm">
-                  Credit cashback to the customer&apos;s wallet when they submit
-                  feedback.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-y-4 px-4 py-4">
-                <FormField
-                  control={form.control}
-                  name="feedbackRewardEnabled"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col gap-2 md:grid md:grid-cols-12">
-                      <div className="col-span-4">
-                        <FormLabel className="text-sm">Enable reward</FormLabel>
-                      </div>
-                      <div className="col-span-8">
-                        <FormControl>
-                          <div className="flex items-center gap-2">
-                            <Checkbox
-                              checked={field.value === "true"}
-                              onCheckedChange={(v) =>
-                                field.onChange(v ? "true" : "false")
-                              }
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <Form {...form}>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              void runSubmit();
+            }}
+            className="flex min-h-0 flex-1 flex-col"
+          >
+            <CardContent className="flex min-h-0 flex-1 flex-col gap-4 overflow-auto px-0 py-0">
+              <Card className="border-border/45 bg-background/55 flex flex-col gap-0 overflow-hidden rounded-lg border shadow-none">
+                <CardHeader className="mb-2 gap-0 border-0 px-4 pt-4 pb-0">
+                  <CardTitle className="text-foreground text-sm font-semibold">
+                    Follow-up messages
+                  </CardTitle>
+                  <CardDescription className="text-muted-foreground mt-1 text-sm">
+                    Messages shown after positive or negative feedback.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-y-4 px-4 py-4">
+                  <FormField
+                    control={form.control}
+                    name="positiveFollowUp"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col gap-2 md:grid md:grid-cols-12">
+                        <div className="col-span-4 flex flex-col gap-2">
+                          <FormLabel className="text-sm">
+                            Positive follow-up
+                          </FormLabel>
+                        </div>
+                        <div className="col-span-8 flex flex-col gap-1">
+                          <FormControl>
+                            <Textarea
+                              variant="underline"
+                              {...field}
+                              value={field.value || ""}
+                              placeholder="Thank you for your feedback!"
                             />
-                            <span className="text-muted-foreground text-sm">
-                              Give cashback for feedback
-                            </span>
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </div>
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="rewardAmount"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col gap-2 md:grid md:grid-cols-12">
-                      <div className="col-span-4 flex flex-col gap-2">
-                        <FormLabel className="text-sm">
-                          Reward amount (₹ cashback)
-                        </FormLabel>
-                      </div>
-                      <div className="col-span-8 flex flex-col gap-1">
-                        <FormControl>
-                          <Input
-                            variant="underline"
-                            type="number"
-                            {...field}
-                            value={field.value || ""}
-                            placeholder="0"
-                            min={0}
-                            disabled={!rewardEnabled}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </div>
-                    </FormItem>
-                  )}
-                />
-              </CardContent>
-            </Card>
+                          </FormControl>
+                          <FormMessage />
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="negativeFollowUp"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col gap-2 md:grid md:grid-cols-12">
+                        <div className="col-span-4 flex flex-col gap-2">
+                          <FormLabel className="text-sm">
+                            Negative follow-up
+                          </FormLabel>
+                        </div>
+                        <div className="col-span-8 flex flex-col gap-1">
+                          <FormControl>
+                            <Textarea
+                              variant="underline"
+                              {...field}
+                              value={field.value || ""}
+                              placeholder="We're sorry to hear that. We'll look into it."
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                </CardContent>
+              </Card>
 
-            <Card className="border-border/45 bg-background/55 flex flex-col gap-0 overflow-hidden rounded-lg border shadow-none">
-              <CardContent className="px-4 py-4">
-                <div className="flex flex-col gap-4 md:grid md:grid-cols-12">
-                  <div className="col-span-4 flex flex-col gap-2">
-                    <div className="text-foreground text-sm font-semibold">
-                      Selection options
+              <Card className="border-border/45 bg-background/55 flex flex-col gap-0 overflow-hidden rounded-lg border shadow-none">
+                <CardHeader className="mb-2 gap-0 border-0 px-4 pt-4 pb-0">
+                  <CardTitle className="text-foreground text-sm font-semibold">
+                    Feedback rewards
+                  </CardTitle>
+                  <CardDescription className="text-muted-foreground mt-1 text-sm">
+                    Credit cashback to the customer&apos;s wallet when they
+                    submit feedback.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-y-4 px-4 py-4">
+                  <FormField
+                    control={form.control}
+                    name="feedbackRewardEnabled"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col gap-2 md:grid md:grid-cols-12">
+                        <div className="col-span-4">
+                          <FormLabel className="text-sm">
+                            Enable reward
+                          </FormLabel>
+                        </div>
+                        <div className="col-span-8">
+                          <FormControl>
+                            <div className="flex items-center gap-2">
+                              <Checkbox
+                                checked={field.value === "true"}
+                                onCheckedChange={(v) =>
+                                  field.onChange(v ? "true" : "false")
+                                }
+                              />
+                              <span className="text-muted-foreground text-sm">
+                                Give cashback for feedback
+                              </span>
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="rewardAmount"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col gap-2 md:grid md:grid-cols-12">
+                        <div className="col-span-4 flex flex-col gap-2">
+                          <FormLabel className="text-sm">
+                            Reward amount (₹ cashback)
+                          </FormLabel>
+                        </div>
+                        <div className="col-span-8 flex flex-col gap-1">
+                          <FormControl>
+                            <Input
+                              variant="underline"
+                              type="number"
+                              {...field}
+                              value={field.value || ""}
+                              placeholder="0"
+                              min={0}
+                              disabled={!rewardEnabled}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                </CardContent>
+              </Card>
+
+              <Card className="border-border/45 bg-background/55 flex flex-col gap-0 overflow-hidden rounded-lg border shadow-none">
+                <CardContent className="px-4 py-4">
+                  <div className="flex flex-col gap-4 md:grid md:grid-cols-12">
+                    <div className="col-span-4 flex flex-col gap-2">
+                      <div className="text-foreground text-sm font-semibold">
+                        Selection options
+                      </div>
+                      <p className="text-muted-foreground text-sm">
+                        Options customers can select when giving feedback (for
+                        example what they liked or did not like). Order is used
+                        on the feedback form.
+                      </p>
+                      <SelectionOptionsSuggestions
+                        options={config.selectionOptions ?? []}
+                      />
                     </div>
-                    <p className="text-muted-foreground text-sm">
-                      Options customers can select when giving feedback (for
-                      example what they liked or did not like). Order is used on
-                      the feedback form.
-                    </p>
-                    <SelectionOptionsSuggestions
-                      options={config.selectionOptions ?? []}
-                    />
+                    <div className="col-span-8">
+                      <SelectionOptionsSection
+                        options={config.selectionOptions ?? []}
+                        embedded
+                      />
+                    </div>
                   </div>
-                  <div className="col-span-8">
-                    <SelectionOptionsSection
-                      options={config.selectionOptions ?? []}
-                      embedded
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </CardContent>
-          <CardFooter className="flex shrink-0 items-center justify-end border-0 px-4 py-2">
-            <SaveButton
-              onSave={runSubmit}
-              disabled={!form.formState.isDirty}
-              labels={{
-                idle: "Save changes",
-                loading: "Saving",
-                success: "Saved",
-              }}
-            />
-          </CardFooter>
-        </form>
-      </Form>
+                </CardContent>
+              </Card>
+            </CardContent>
+            <CardFooter className="flex shrink-0 items-center justify-end border-0 px-0 py-2">
+              <SaveButton
+                onSave={runSubmit}
+                disabled={!form.formState.isDirty}
+                labels={{
+                  idle: "Save changes",
+                  loading: "Saving",
+                  success: "Saved",
+                }}
+              />
+            </CardFooter>
+          </form>
+        </Form>
+
+        <Card className="border-border/45 bg-background/55 flex min-h-0 flex-col gap-0 overflow-hidden rounded-lg border p-4 shadow-none xl:items-center xl:justify-start">
+          <Tabs
+            value={previewTab}
+            onValueChange={(value) =>
+              setPreviewTab(value as "positive" | "negative")
+            }
+            className="w-full max-w-[420px]"
+          >
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="positive">Positive</TabsTrigger>
+              <TabsTrigger value="negative">Negative</TabsTrigger>
+            </TabsList>
+            <TabsContent value="positive" className="mt-4 flex justify-center">
+              <FeedbackPreviewPanel
+                config={{
+                  ...config,
+                  positiveFollowUp:
+                    form.watch("positiveFollowUp") || config.positiveFollowUp,
+                  negativeFollowUp:
+                    form.watch("negativeFollowUp") || config.negativeFollowUp,
+                }}
+                brandingValues={previewBranding}
+                previewBusinessName={businessName}
+                previewView="positive"
+              />
+            </TabsContent>
+            <TabsContent value="negative" className="mt-4 flex justify-center">
+              <FeedbackPreviewPanel
+                config={{
+                  ...config,
+                  positiveFollowUp:
+                    form.watch("positiveFollowUp") || config.positiveFollowUp,
+                  negativeFollowUp:
+                    form.watch("negativeFollowUp") || config.negativeFollowUp,
+                }}
+                brandingValues={previewBranding}
+                previewBusinessName={businessName}
+                previewView="negative"
+              />
+            </TabsContent>
+          </Tabs>
+        </Card>
+      </div>
     </Card>
   );
 }
@@ -1087,14 +1153,12 @@ function FeedbackBrandingSettingsCard({
 
   const form = useForm({
     defaultValues: {
-      branding: {
-        logo: config.branding?.logo ?? null,
-        themeColor: config.branding?.themeColor ?? null,
-        textColor: config.branding?.textColor ?? null,
-        bannerImage: config.branding?.bannerImage ?? null,
-        header: config.branding?.header ?? null,
-        subtitle: config.branding?.subtitle ?? null,
-      },
+      branding: resolveServiceBranding({
+        branding: config.branding,
+        defaultBranding: businessData?.business?.defaultBranding ?? null,
+        useDefaultBrandingForServices:
+          businessData?.business?.useDefaultBrandingForServices ?? false,
+      }),
     },
   });
   const watchedBranding = form.watch("branding");
@@ -1109,16 +1173,19 @@ function FeedbackBrandingSettingsCard({
 
   useEffect(() => {
     form.reset({
-      branding: {
-        logo: config.branding?.logo ?? null,
-        themeColor: config.branding?.themeColor ?? null,
-        textColor: config.branding?.textColor ?? null,
-        bannerImage: config.branding?.bannerImage ?? null,
-        header: config.branding?.header ?? null,
-        subtitle: config.branding?.subtitle ?? null,
-      },
+      branding: resolveServiceBranding({
+        branding: config.branding,
+        defaultBranding: businessData?.business?.defaultBranding ?? null,
+        useDefaultBrandingForServices:
+          businessData?.business?.useDefaultBrandingForServices ?? false,
+      }),
     });
-  }, [form, config.branding]);
+  }, [
+    businessData?.business?.defaultBranding,
+    businessData?.business?.useDefaultBrandingForServices,
+    config.branding,
+    form,
+  ]);
 
   const handleResolvePendingUploads = useCallback(
     (resolver: () => Promise<void>) => {
@@ -1233,12 +1300,13 @@ function FeedbackBrandingSettingsCard({
               brandingValues={{
                 logo: watchedBranding?.logo ?? null,
                 bannerImage: watchedBranding?.bannerImage ?? null,
-                themeColor: debouncedThemeColor,
-                textColor: debouncedTextColor,
+                themeColor: debouncedThemeColor ?? DEFAULT_BRANDING_THEME_COLOR,
+                textColor: debouncedTextColor ?? DEFAULT_BRANDING_TEXT_COLOR,
                 header: watchedBranding?.header ?? null,
                 subtitle: watchedBranding?.subtitle ?? null,
               }}
               previewBusinessName={businessName}
+              previewView="form"
             />
           </Card>
         )}

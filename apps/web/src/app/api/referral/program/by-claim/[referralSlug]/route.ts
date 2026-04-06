@@ -3,6 +3,7 @@ import {
   sanitizeErrorMessage,
   validateSchema,
 } from "@/lib/utils/error-handler";
+import { resolveServiceBranding } from "@/lib/utils/service-branding";
 import {
   type IsServiceEnabled,
   isServiceEnabled,
@@ -40,6 +41,7 @@ export async function GET(
       include: {
         business: {
           include: {
+            defaultBranding: true,
             referralProgram: {
               include: {
                 newCustomerFreeItemSku: { select: { id: true, name: true } },
@@ -101,12 +103,16 @@ export async function GET(
 
     const referralProgram = business.referralProgram;
     const rawBranding = referralProgram.branding;
-    const branding =
-      rawBranding &&
-      typeof rawBranding === "object" &&
-      !Array.isArray(rawBranding)
-        ? (rawBranding as Record<string, unknown>)
-        : null;
+    const branding = resolveServiceBranding({
+      branding:
+        rawBranding &&
+        typeof rawBranding === "object" &&
+        !Array.isArray(rawBranding)
+          ? (rawBranding as Record<string, unknown>)
+          : null,
+      defaultBranding: business.defaultBranding,
+      useDefaultBrandingForServices: business.useDefaultBrandingForServices,
+    });
     const logoSource =
       typeof branding?.logo === "string" ? branding.logo.trim() : "";
     const bannerSource =
@@ -124,13 +130,11 @@ export async function GET(
     const mapped = referralProgram
       ? {
           ...referralProgram,
-          branding: branding
-            ? {
-                ...branding,
-                logo,
-                bannerImage,
-              }
-            : null,
+          branding: {
+            ...branding,
+            logo,
+            bannerImage,
+          },
           termsAndConditionsNewCustomer:
             referralProgram.termsAndConditionsNewCustomer.map((t) => ({
               id: t.id,

@@ -1,9 +1,6 @@
 "use client";
 
-import {
-  BrandingFormFields,
-  ChannelSelector,
-} from "@/components/common/form-sections";
+import { BrandingFormFields } from "@/components/common/form-sections";
 import { TermCard } from "@/components/common/form-sections/TermCard";
 import { ReferralPreviewPanel } from "@/components/settings/referral/_components/ReferralPreviewPanel";
 import { useCurrentBusiness } from "@/hooks/business/useCurrentBusiness";
@@ -13,6 +10,11 @@ import {
   useUpdateReferralProgramTerms,
 } from "@/hooks/referral/useReferralProgram";
 import { useActiveSkusForSelect } from "@/hooks/sku/useSkusQuery";
+import {
+  DEFAULT_BRANDING_TEXT_COLOR,
+  DEFAULT_BRANDING_THEME_COLOR,
+} from "@/lib/constants/branding";
+import { resolveServiceBranding } from "@/lib/utils/service-branding";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Button,
@@ -694,98 +696,12 @@ const ExistingCustomerBenefitsCard = forwardRef<
   );
 });
 
-const referralChannelsSchema = z.object({
-  whatsappEnabled: z.boolean().optional().default(true),
-  emailEnabled: z.boolean().optional().default(false),
-  smsEnabled: z.boolean().optional().default(false),
-});
-
-type ReferralChannelsForm = z.infer<typeof referralChannelsSchema>;
-
-function ReferralChannelsCard({
-  referralProgram,
-  onUpdate,
-}: {
-  referralProgram: ReferralProgram;
-  onUpdate: ReturnType<typeof useUpdateReferralProgram>["mutateAsync"];
-}) {
-  const form = useForm<ReferralChannelsForm>({
-    resolver: zodResolver(
-      referralChannelsSchema,
-    ) as Resolver<ReferralChannelsForm>,
-    defaultValues: {
-      whatsappEnabled: referralProgram.whatsappEnabled ?? true,
-      emailEnabled: referralProgram.emailEnabled ?? false,
-      smsEnabled: referralProgram.smsEnabled ?? false,
-    },
-  });
-
-  useEffect(() => {
-    form.reset({
-      whatsappEnabled: referralProgram.whatsappEnabled ?? true,
-      emailEnabled: referralProgram.emailEnabled ?? false,
-      smsEnabled: referralProgram.smsEnabled ?? false,
-    });
-  }, [referralProgram, form]);
-
-  const runSubmit = async () => {
-    const valid = await form.trigger();
-    if (!valid) throw new Error("Validation failed");
-    const values = form.getValues();
-    await onUpdate({
-      whatsappEnabled: values.whatsappEnabled ?? true,
-      emailEnabled: values.emailEnabled ?? false,
-      smsEnabled: values.smsEnabled ?? false,
-    });
-    toast.success("Notification channels updated");
-    form.reset(values, { keepDefaultValues: false });
-  };
-
-  return (
-    <Card className="bg-sidebar-accent/50 flex min-h-0 flex-col gap-0 rounded-lg border-0 p-2">
-      <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
-        <CardTitle className="text-foreground text-base leading-none font-semibold">
-          Notification channels
-        </CardTitle>
-        <CardDescription className="text-muted-foreground mt-0.5 text-sm">
-          How to notify referrer and referred customer when someone joins via
-          referral
-        </CardDescription>
-      </CardHeader>
-      <Card className="border-border/45 bg-background/55 flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border shadow-none">
-        <FormProvider {...form}>
-          <Form {...form}>
-            <form
-              onSubmit={(e) => e.preventDefault()}
-              className="flex min-h-0 flex-1 flex-col"
-            >
-              <CardContent className="flex min-h-0 flex-1 flex-col gap-y-6 overflow-auto px-4 py-4">
-                <ChannelSelector layout="settings" />
-              </CardContent>
-              <CardFooter className="flex shrink-0 justify-end border-0 px-4 py-2">
-                <SaveButton
-                  onSave={runSubmit}
-                  disabled={!form.formState.isDirty}
-                  labels={{
-                    idle: "Save changes",
-                    loading: "Saving",
-                    success: "Saved",
-                  }}
-                />
-              </CardFooter>
-            </form>
-          </Form>
-        </FormProvider>
-      </Card>
-    </Card>
-  );
-}
-
 const referralNotificationsSchema = z.object({
   whatsappEnabled: z.boolean().optional().default(true),
   emailEnabled: z.boolean().optional().default(false),
   smsEnabled: z.boolean().optional().default(false),
   sendReminderToCustomer: z.boolean().optional().default(false),
+  reminderDelayDays: z.string().optional().default(""),
 });
 
 type ReferralNotificationsForm = z.infer<typeof referralNotificationsSchema>;
@@ -806,6 +722,10 @@ function ReferralNotificationsCard({
       emailEnabled: referralProgram.emailEnabled ?? false,
       smsEnabled: referralProgram.smsEnabled ?? false,
       sendReminderToCustomer: referralProgram.sendReminderToCustomer ?? false,
+      reminderDelayDays:
+        referralProgram.reminderDelayDays != null
+          ? String(referralProgram.reminderDelayDays)
+          : "",
     },
   });
 
@@ -815,12 +735,17 @@ function ReferralNotificationsCard({
       emailEnabled: referralProgram.emailEnabled ?? false,
       smsEnabled: referralProgram.smsEnabled ?? false,
       sendReminderToCustomer: referralProgram.sendReminderToCustomer ?? false,
+      reminderDelayDays:
+        referralProgram.reminderDelayDays != null
+          ? String(referralProgram.reminderDelayDays)
+          : "",
     });
   }, [
     referralProgram.whatsappEnabled,
     referralProgram.emailEnabled,
     referralProgram.smsEnabled,
     referralProgram.sendReminderToCustomer,
+    referralProgram.reminderDelayDays,
     form,
   ]);
 
@@ -833,6 +758,10 @@ function ReferralNotificationsCard({
       emailEnabled: values.emailEnabled ?? false,
       smsEnabled: values.smsEnabled ?? false,
       sendReminderToCustomer: values.sendReminderToCustomer ?? false,
+      reminderDelayDays:
+        values.sendReminderToCustomer && values.reminderDelayDays
+          ? Number(values.reminderDelayDays)
+          : null,
     });
     toast.success("Notification settings updated");
     form.reset(values, { keepDefaultValues: false });
@@ -860,7 +789,70 @@ function ReferralNotificationsCard({
               className="flex min-h-0 flex-1 flex-col"
             >
               <CardContent className="flex min-h-0 flex-1 flex-col gap-y-6 overflow-auto px-4 py-4">
-                <ChannelSelector layout="settings" />
+                <div className="grid gap-3 md:grid-cols-3">
+                  <FormField
+                    control={form.control}
+                    name="whatsappEnabled"
+                    render={({ field }) => (
+                      <FormItem className="border-border/60 bg-background/70 flex items-center justify-between rounded-xl border p-4">
+                        <div>
+                          <Label className="text-sm font-medium">
+                            WhatsApp
+                          </Label>
+                          <p className="text-muted-foreground mt-1 text-xs">
+                            Send referral updates on WhatsApp
+                          </p>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value ?? false}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="emailEnabled"
+                    render={({ field }) => (
+                      <FormItem className="border-border/60 bg-background/70 flex items-center justify-between rounded-xl border p-4">
+                        <div>
+                          <Label className="text-sm font-medium">Email</Label>
+                          <p className="text-muted-foreground mt-1 text-xs">
+                            Send referral updates by email
+                          </p>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value ?? false}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="smsEnabled"
+                    render={({ field }) => (
+                      <FormItem className="border-border/60 bg-background/70 flex items-center justify-between rounded-xl border p-4">
+                        <div>
+                          <Label className="text-sm font-medium">SMS</Label>
+                          <p className="text-muted-foreground mt-1 text-xs">
+                            Send referral updates through SMS
+                          </p>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value ?? false}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
                 <div className="border-border/45 border-t pt-4">
                   <FormField
@@ -886,6 +878,35 @@ function ReferralNotificationsCard({
                       </FormItem>
                     )}
                   />
+
+                  {form.watch("sendReminderToCustomer") && (
+                    <FormField
+                      control={form.control}
+                      name="reminderDelayDays"
+                      render={({ field }) => (
+                        <FormItem className="mt-4 flex flex-col gap-2 md:grid md:grid-cols-12">
+                          <div className="col-span-4">
+                            <FormLabel className="text-sm">
+                              Reminder after (days)
+                            </FormLabel>
+                          </div>
+                          <div className="col-span-8">
+                            <FormControl>
+                              <Input
+                                type="number"
+                                min={1}
+                                variant="underline"
+                                placeholder="3"
+                                {...field}
+                                value={field.value ?? ""}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </div>
+                        </FormItem>
+                      )}
+                    />
+                  )}
                 </div>
               </CardContent>
               <CardFooter className="flex shrink-0 justify-end border-0 px-4 py-2">
@@ -925,14 +946,12 @@ function ReferralBrandingSettingsCard({
 
   const form = useForm({
     defaultValues: {
-      branding: {
-        logo: referralProgram.branding?.logo ?? null,
-        themeColor: referralProgram.branding?.themeColor ?? null,
-        textColor: referralProgram.branding?.textColor ?? null,
-        bannerImage: referralProgram.branding?.bannerImage ?? null,
-        header: referralProgram.branding?.header ?? null,
-        subtitle: referralProgram.branding?.subtitle ?? null,
-      },
+      branding: resolveServiceBranding({
+        branding: referralProgram.branding ?? null,
+        defaultBranding: businessData?.business?.defaultBranding ?? null,
+        useDefaultBrandingForServices:
+          businessData?.business?.useDefaultBrandingForServices ?? false,
+      }),
     },
   });
   const watchedBranding = form.watch("branding");
@@ -947,16 +966,19 @@ function ReferralBrandingSettingsCard({
 
   useEffect(() => {
     form.reset({
-      branding: {
-        logo: referralProgram.branding?.logo ?? null,
-        themeColor: referralProgram.branding?.themeColor ?? null,
-        textColor: referralProgram.branding?.textColor ?? null,
-        bannerImage: referralProgram.branding?.bannerImage ?? null,
-        header: referralProgram.branding?.header ?? null,
-        subtitle: referralProgram.branding?.subtitle ?? null,
-      },
+      branding: resolveServiceBranding({
+        branding: referralProgram.branding ?? null,
+        defaultBranding: businessData?.business?.defaultBranding ?? null,
+        useDefaultBrandingForServices:
+          businessData?.business?.useDefaultBrandingForServices ?? false,
+      }),
     });
-  }, [form, referralProgram.branding]);
+  }, [
+    businessData?.business?.defaultBranding,
+    businessData?.business?.useDefaultBrandingForServices,
+    form,
+    referralProgram.branding,
+  ]);
 
   const handleResolvePendingUploads = useCallback(
     (resolver: () => Promise<void>) => {
@@ -1071,8 +1093,8 @@ function ReferralBrandingSettingsCard({
               brandingValues={{
                 logo: watchedBranding?.logo ?? null,
                 bannerImage: watchedBranding?.bannerImage ?? null,
-                themeColor: debouncedThemeColor,
-                textColor: debouncedTextColor,
+                themeColor: debouncedThemeColor ?? DEFAULT_BRANDING_THEME_COLOR,
+                textColor: debouncedTextColor ?? DEFAULT_BRANDING_TEXT_COLOR,
                 header: watchedBranding?.header ?? null,
                 subtitle: watchedBranding?.subtitle ?? null,
               }}

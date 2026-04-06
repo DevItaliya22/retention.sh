@@ -5,6 +5,10 @@ import type {
   ReferralProgram,
 } from "@/hooks/referral/useReferralProgram";
 import { usePublicReferralProgram } from "@/hooks/referral/useReferralProgram";
+import {
+  DEFAULT_BRANDING_TEXT_COLOR,
+  DEFAULT_BRANDING_THEME_COLOR,
+} from "@/lib/constants/branding";
 import { Skeleton } from "@reelo/ui/components";
 import { Gift, MoveRight, Share2, Sparkles } from "lucide-react";
 import { useMemo } from "react";
@@ -24,8 +28,8 @@ interface ReferralLandingPageClientProps {
   previewProgram?: ReferralProgram;
 }
 
-const DEFAULT_THEME_COLOR = "#0f766e";
-const DEFAULT_TEXT_COLOR = "#f8fafc";
+const DEFAULT_THEME_COLOR = DEFAULT_BRANDING_THEME_COLOR;
+const DEFAULT_TEXT_COLOR = DEFAULT_BRANDING_TEXT_COLOR;
 const pageWrapClass =
   "flex min-h-screen items-center justify-center bg-white p-4 font-sans sm:p-6";
 const previewWrapClass =

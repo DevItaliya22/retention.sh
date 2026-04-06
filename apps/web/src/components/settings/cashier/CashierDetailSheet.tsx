@@ -93,7 +93,7 @@ export function CashierDetailSheet({
                 variant={cashier.isActive ? "default" : "secondary"}
                 className={
                   cashier.isActive
-                    ? "bg-green-600/90 hover:bg-green-600/90"
+                    ? "bg-green-600/15 text-green-700 hover:bg-green-600/15 dark:text-green-300"
                     : ""
                 }
               >

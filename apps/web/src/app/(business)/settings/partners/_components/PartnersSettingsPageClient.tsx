@@ -52,7 +52,13 @@ import {
   Undo2,
   X,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import * as z from "zod";
@@ -486,6 +492,7 @@ function PartnershipActivity({ myBusinessId }: { myBusinessId: string }) {
       {
         id: "description",
         accessorKey: "descriptionTitle",
+        enableHiding: false,
         header: ({ column }) => (
           <DataTableColumnHeader column={column} label="Description" />
         ),
@@ -518,6 +525,7 @@ function PartnershipActivity({ myBusinessId }: { myBusinessId: string }) {
       {
         id: "createdAt",
         accessorKey: "createdAt",
+        enableHiding: false,
         header: ({ column }) => (
           <DataTableColumnHeader column={column} label="Date" />
         ),
@@ -538,6 +546,7 @@ function PartnershipActivity({ myBusinessId }: { myBusinessId: string }) {
       {
         id: "status",
         accessorKey: "statusLabel",
+        enableHiding: false,
         header: ({ column }) => (
           <DataTableColumnHeader column={column} label="Status / Actions" />
         ),
@@ -1225,9 +1234,18 @@ function PartnershipBlockEmbedded({
 const PAGE_SUBTITLE =
   "Share referrals, run joint campaigns, and let customers redeem loyalty value across partners.";
 
+const emptySubscribe = () => () => {};
+const getClientSnapshot = () => true;
+const getServerSnapshot = () => false;
+
 export function PartnersSettingsPageClient() {
   const { data: businessData } = useCurrentBusiness();
   const myBusinessId: string = businessData?.business?.id ?? "";
+  const isHydrated = useSyncExternalStore(
+    emptySubscribe,
+    getClientSnapshot,
+    getServerSnapshot,
+  );
 
   return (
     <DashboardPageShell
@@ -1236,8 +1254,17 @@ export function PartnersSettingsPageClient() {
       contentVariant="contained"
     >
       <div className="space-y-6 pb-6">
-        <PartnershipSettingsSingleSection myBusinessId={myBusinessId} />
-        <PartnershipActivity myBusinessId={myBusinessId} />
+        {!isHydrated ? (
+          <div className="space-y-6">
+            <Skeleton className="h-44 w-full rounded-2xl" />
+            <Skeleton className="h-80 w-full rounded-2xl" />
+          </div>
+        ) : (
+          <>
+            <PartnershipSettingsSingleSection myBusinessId={myBusinessId} />
+            <PartnershipActivity myBusinessId={myBusinessId} />
+          </>
+        )}
       </div>
     </DashboardPageShell>
   );

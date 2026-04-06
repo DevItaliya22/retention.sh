@@ -32,4 +32,13 @@ export const FEEDBACK_FORM_DEFAULTS = {
 
   /** Default selection options shown on the feedback form */
   selectionOptions: ["Service", "Ambience", "Cleanliness", "Value for money"],
+
+  /** Fixed frontend choices for "How did you hear about us?" */
+  howDidYouHearOptions: [
+    "Google",
+    "Instagram",
+    "Others",
+    "Friends",
+    "Referral",
+  ],
 } as const;

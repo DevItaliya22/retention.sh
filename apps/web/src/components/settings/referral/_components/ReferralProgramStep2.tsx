@@ -1,6 +1,5 @@
 "use client";
 
-import { ChannelSelector } from "@/components/common/form-sections/ChannelSelector";
 import { useActiveSkusForSelect } from "@/hooks/sku/useSkusQuery";
 import type { ReferralProgramFormValues } from "@/lib/schemas/referral-form";
 import {
@@ -10,6 +9,7 @@ import {
   FormLabel,
   FormMessage,
   Input,
+  Label,
   Select,
   SelectContent,
   SelectItem,
@@ -143,13 +143,74 @@ export function ReferralProgramStep2() {
         )}
       />
 
-      <div className="space-y-2">
+      <div className="space-y-3">
         <FormLabel className="text-base">Notification channels</FormLabel>
         <p className="text-muted-foreground text-sm">
           How to notify referrer and referred customer when someone joins via
           referral
         </p>
-        <ChannelSelector />
+        <div className="grid gap-3 sm:grid-cols-3">
+          <FormField
+            control={form.control}
+            name="whatsappEnabled"
+            render={({ field }) => (
+              <FormItem className="border-border/60 bg-background/70 flex items-center justify-between rounded-xl border p-4">
+                <div>
+                  <Label className="text-sm font-medium">WhatsApp</Label>
+                  <p className="text-muted-foreground mt-1 text-xs">
+                    Send referral updates on WhatsApp
+                  </p>
+                </div>
+                <FormControl>
+                  <Switch
+                    checked={field.value ?? false}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="emailEnabled"
+            render={({ field }) => (
+              <FormItem className="border-border/60 bg-background/70 flex items-center justify-between rounded-xl border p-4">
+                <div>
+                  <Label className="text-sm font-medium">Email</Label>
+                  <p className="text-muted-foreground mt-1 text-xs">
+                    Send referral updates by email
+                  </p>
+                </div>
+                <FormControl>
+                  <Switch
+                    checked={field.value ?? false}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="smsEnabled"
+            render={({ field }) => (
+              <FormItem className="border-border/60 bg-background/70 flex items-center justify-between rounded-xl border p-4">
+                <div>
+                  <Label className="text-sm font-medium">SMS</Label>
+                  <p className="text-muted-foreground mt-1 text-xs">
+                    Send referral updates through SMS
+                  </p>
+                </div>
+                <FormControl>
+                  <Switch
+                    checked={field.value ?? false}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+        </div>
       </div>
 
       <FormField

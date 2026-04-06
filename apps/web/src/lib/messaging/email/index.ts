@@ -112,6 +112,29 @@ export async function logReferralClaimEmail(
   });
 }
 
+export async function logReferralReminderEmail(
+  tx: Prisma.TransactionClient,
+  params: {
+    businessId: string;
+    recipient: string;
+    body: string;
+    subject?: string;
+    sourceId?: string;
+    scheduledAt: Date;
+  },
+): Promise<void> {
+  await logMessage(tx, {
+    businessId: params.businessId,
+    channel: "EMAIL",
+    recipient: params.recipient,
+    subject: params.subject ?? "Referral reward reminder",
+    body: params.body,
+    source: "REFERRAL_REMINDER",
+    sourceId: params.sourceId ?? undefined,
+    scheduledAt: params.scheduledAt,
+  });
+}
+
 export async function logOtpEmail(
   tx: Prisma.TransactionClient,
   params: {

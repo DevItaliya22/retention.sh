@@ -1,0 +1,16 @@
+export const SKU_UNIT_OPTIONS = [
+  "piece",
+  "pair",
+  "box",
+  "bottle",
+  "packet",
+  "plate",
+  "cup",
+  "glass",
+  "kg",
+  "g",
+  "l",
+  "ml",
+  "meter",
+  "dozen",
+] as const;

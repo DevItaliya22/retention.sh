@@ -225,6 +225,9 @@ export const POST = withAdminAuth(async (request, context) => {
           ? (validatedData.existingCustomerFreeItemSkuId ?? null)
           : null,
       sendReminderToCustomer: validatedData.sendReminderToCustomer,
+      reminderDelayDays: validatedData.sendReminderToCustomer
+        ? (validatedData.reminderDelayDays ?? null)
+        : null,
       whatsappEnabled: validatedData.whatsappEnabled ?? true,
       emailEnabled: validatedData.emailEnabled ?? false,
       smsEnabled: validatedData.smsEnabled ?? false,
@@ -236,8 +239,8 @@ export const POST = withAdminAuth(async (request, context) => {
 
     const referralProgram = await db.referralProgram.upsert({
       where: { businessId },
-      create: createData,
-      update: createData,
+      create: createData as any,
+      update: createData as any,
     });
 
     const business = await db.business.findUnique({
@@ -378,6 +381,11 @@ export const PUT = withAdminAuth(async (request, context) => {
         validatedData.existingCustomerBenefitExpiresInDays ?? null;
     if (validatedData.sendReminderToCustomer !== undefined)
       updateData.sendReminderToCustomer = validatedData.sendReminderToCustomer;
+    if (validatedData.reminderDelayDays !== undefined) {
+      updateData.reminderDelayDays = validatedData.sendReminderToCustomer
+        ? (validatedData.reminderDelayDays ?? null)
+        : null;
+    }
     if (validatedData.whatsappEnabled !== undefined)
       updateData.whatsappEnabled = validatedData.whatsappEnabled;
     if (validatedData.emailEnabled !== undefined)

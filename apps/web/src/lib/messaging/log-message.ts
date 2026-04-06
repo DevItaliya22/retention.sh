@@ -14,6 +14,7 @@ export async function logMessage(
       body: params.body,
       source: params.source,
       sourceId: params.sourceId ?? null,
+      scheduledAt: params.scheduledAt ?? null,
     },
   });
 }

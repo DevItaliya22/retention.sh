@@ -3,6 +3,7 @@
 import { useCategoriesListQuery } from "@/hooks/category/useCategoriesListQuery";
 import { useManageSku } from "@/hooks/sku/useManageSku";
 import type { SkuItem } from "@/hooks/sku/useSkusQuery";
+import { SKU_UNIT_OPTIONS } from "@/lib/constants/sku-units";
 import { updateSkuSchema } from "@/lib/schemas/sku";
 import { getErrorMessageFromResponse } from "@/lib/utils/error-handler";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -207,13 +208,26 @@ export function EditSkuModal({ isOpen, onClose, sku }: EditSkuModalProps) {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Unit (optional)</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="e.g. piece, kg"
-                          {...field}
-                          value={field.value ?? ""}
-                        />
-                      </FormControl>
+                      <Select
+                        onValueChange={(value) =>
+                          field.onChange(value === "__none__" ? "" : value)
+                        }
+                        value={field.value?.trim() ? field.value : "__none__"}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select unit" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="__none__">None</SelectItem>
+                          {SKU_UNIT_OPTIONS.map((unit) => (
+                            <SelectItem key={unit} value={unit}>
+                              {unit}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
