@@ -301,7 +301,7 @@ export const POST = withCashierAuth(async (request: NextRequest, context) => {
         ? `${baseUrl}/feedback/${context.business.slug}/${feedbackLink.token}`
         : null;
 
-      if (isFeedbackOn && feedbackConfig?.collectionChannel) {
+      if (isFeedbackOn && feedbackConfig?.collectionChannel && feedbackUrl) {
         const recipient =
           feedbackConfig.collectionChannel === "EMAIL"
             ? (user.email ??
