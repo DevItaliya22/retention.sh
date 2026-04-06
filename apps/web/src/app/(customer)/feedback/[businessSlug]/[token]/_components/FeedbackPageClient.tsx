@@ -1,5 +1,9 @@
 "use client";
 
+import {
+  DEFAULT_BRANDING_TEXT_COLOR,
+  DEFAULT_BRANDING_THEME_COLOR,
+} from "@/lib/constants/branding";
 import { FEEDBACK_FORM_DEFAULTS } from "@/lib/constants/forms";
 import {
   Card,
@@ -47,6 +51,9 @@ export interface PublicFeedbackConfig {
     subtitle: string | null;
   } | null;
 }
+
+const FIXED_HOW_DID_YOU_HEAR_OPTIONS =
+  FEEDBACK_FORM_DEFAULTS.howDidYouHearOptions;
 
 interface OnlineReview {
   link: string;
@@ -120,8 +127,8 @@ const previewPageWrapperClass =
 
 const cardClass =
   "w-full max-w-[420px] rounded-[32px] border border-white/10 overflow-hidden flex flex-col bg-white shadow-xl !p-0";
-const DEFAULT_THEME_COLOR = "#0f766e";
-const DEFAULT_TEXT_COLOR = "#f8fafc";
+const DEFAULT_THEME_COLOR = DEFAULT_BRANDING_THEME_COLOR;
+const DEFAULT_TEXT_COLOR = DEFAULT_BRANDING_TEXT_COLOR;
 
 function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
   const value = hex.trim().replace("#", "");
@@ -880,34 +887,32 @@ export function FeedbackPageClient({
             </div>
           )}
 
-          {!loading &&
-            config?.isHowDidYouHearEnabled &&
-            (config?.howDidYouHearOptions?.length ?? 0) > 0 && (
-              <div className="space-y-2">
-                <Label
-                  htmlFor="feedback-how"
-                  className="text-sm"
-                  style={{ color: "#111827", opacity: 1 }}
-                >
-                  {FEEDBACK_FORM_DEFAULTS.labels.howDidYouHear}
-                </Label>
-                <select
-                  id="feedback-how"
-                  value={howDidYouHear}
-                  onChange={(e) => setHowDidYouHear(e.target.value)}
-                  className="focus-visible:ring-ring min-h-[44px] w-full rounded-lg border border-slate-300 bg-white px-3 py-3 text-base text-slate-900 focus-visible:ring-2 focus-visible:outline-none"
-                >
-                  <option value="">
-                    {FEEDBACK_FORM_DEFAULTS.labels.selectOption}
+          {!loading && config?.isHowDidYouHearEnabled && (
+            <div className="space-y-2">
+              <Label
+                htmlFor="feedback-how"
+                className="text-sm"
+                style={{ color: "#111827", opacity: 1 }}
+              >
+                {FEEDBACK_FORM_DEFAULTS.labels.howDidYouHear}
+              </Label>
+              <select
+                id="feedback-how"
+                value={howDidYouHear}
+                onChange={(e) => setHowDidYouHear(e.target.value)}
+                className="focus-visible:ring-ring min-h-[44px] w-full rounded-lg border border-slate-300 bg-white px-3 py-3 text-base text-slate-900 focus-visible:ring-2 focus-visible:outline-none"
+              >
+                <option value="">
+                  {FEEDBACK_FORM_DEFAULTS.labels.selectOption}
+                </option>
+                {FIXED_HOW_DID_YOU_HEAR_OPTIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
                   </option>
-                  {config.howDidYouHearOptions.map((opt) => (
-                    <option key={opt.id} value={opt.name}>
-                      {opt.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
+                ))}
+              </select>
+            </div>
+          )}
 
           {submitStatus === "error" && (
             <p className="text-destructive text-sm">{followUpMessage}</p>

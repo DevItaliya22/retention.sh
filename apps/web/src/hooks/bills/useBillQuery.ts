@@ -50,7 +50,14 @@ export interface BillDetail {
   customerName: string;
   customerPhone: string | null;
   customerEmail: string;
-  feedbackLink: { token: string } | null;
+  feedback: {
+    rating: number | null;
+    comment: string | null;
+    howDidYouHear: string | null;
+    selectedCategories: string[];
+    selectionOptions: { id: string; label: string }[];
+    submittedAt: string;
+  } | null;
   lineItems: BillLineItemResponse[];
   createdAt: string;
   updatedAt: string;

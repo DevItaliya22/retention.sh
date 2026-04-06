@@ -1,4 +1,5 @@
 import { withAdminAuth } from "@/lib/auth/middleware";
+import { FEEDBACK_FORM_DEFAULTS } from "@/lib/constants/forms/feedback";
 import { sanitizeErrorMessage } from "@/lib/utils/error-handler";
 import { db } from "@reelo/db";
 import { NextRequest, NextResponse } from "next/server";
@@ -24,10 +25,6 @@ export const GET = withAdminAuth(async (_request: NextRequest, context) => {
         where: { businessId },
         select: {
           isHowDidYouHearEnabled: true,
-          howDidYouHearOptions: {
-            select: { name: true },
-            orderBy: { createdAt: "asc" },
-          },
         },
       }),
       db.feedbackResponse.findMany({
@@ -36,10 +33,7 @@ export const GET = withAdminAuth(async (_request: NextRequest, context) => {
       }),
     ]);
 
-    if (
-      !config?.isHowDidYouHearEnabled ||
-      !config.howDidYouHearOptions?.length
-    ) {
+    if (!config?.isHowDidYouHearEnabled) {
       return NextResponse.json({
         enabled: false,
         options: [],
@@ -57,16 +51,15 @@ export const GET = withAdminAuth(async (_request: NextRequest, context) => {
       }
     }
 
-    const options: HowDidYouHearOptionStat[] = config.howDidYouHearOptions.map(
-      (opt) => {
-        const count = counts.get(opt.name) ?? 0;
+    const options: HowDidYouHearOptionStat[] =
+      FEEDBACK_FORM_DEFAULTS.howDidYouHearOptions.map((name) => {
+        const count = counts.get(name) ?? 0;
         const percent =
           totalWithAnswer > 0
             ? Math.round((count / totalWithAnswer) * 10000) / 100
             : 0;
-        return { name: opt.name, count, percent };
-      },
-    );
+        return { name, count, percent };
+      });
 
     return NextResponse.json({
       enabled: true,

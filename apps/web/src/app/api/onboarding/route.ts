@@ -1,4 +1,8 @@
 import { withAdminAuthOptionalBusiness } from "@/lib/auth/middleware";
+import {
+  DEFAULT_BRANDING_TEXT_COLOR,
+  DEFAULT_BRANDING_THEME_COLOR,
+} from "@/lib/constants/branding";
 import { FEEDBACK_FORM_DEFAULTS } from "@/lib/constants/forms/feedback";
 import {
   type WelcomeFormValues,
@@ -68,7 +72,9 @@ export const POST = withAdminAuthOptionalBusiness(
             defaultBranding: {
               create: {
                 logo: validatedData.logo,
-                themeColor: validatedData.themeColor,
+                themeColor:
+                  validatedData.themeColor ?? DEFAULT_BRANDING_THEME_COLOR,
+                textColor: DEFAULT_BRANDING_TEXT_COLOR,
               },
             },
           },

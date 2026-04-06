@@ -3,7 +3,11 @@
 import { FeedbackPageClient } from "@/app/(customer)/feedback/[businessSlug]/[token]/_components/FeedbackPageClient";
 import type { FeedbackConfigDto } from "@/hooks/feedback/useFeedbackConfig";
 import { useR2Upload } from "@/hooks/storage/useR2Upload";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@reelo/ui/components";
+import {
+  DEFAULT_BRANDING_TEXT_COLOR,
+  DEFAULT_BRANDING_THEME_COLOR,
+} from "@/lib/constants/branding";
+import { FEEDBACK_FORM_DEFAULTS } from "@/lib/constants/forms/feedback";
 import { Smartphone } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -20,14 +24,15 @@ export function FeedbackPreviewPanel({
   config,
   brandingValues,
   previewBusinessName,
+  previewView = "form",
 }: {
   config: FeedbackConfigDto;
   brandingValues: FeedbackPreviewBrandingValues;
   previewBusinessName: string;
+  previewView?: "form" | "positive" | "negative";
 }) {
   const { getReadSignedUrl } = useR2Upload();
   const [resolvedUrls, setResolvedUrls] = useState<Record<string, string>>({});
-  const [activeTab, setActiveTab] = useState("feedback-page");
 
   const resolveKey = useCallback(
     (key: string | null) => {
@@ -81,10 +86,12 @@ export function FeedbackPreviewPanel({
       })),
       categories: config.categories.map((c) => ({ id: c.id, name: c.name })),
       isHowDidYouHearEnabled: config.isHowDidYouHearEnabled,
-      howDidYouHearOptions: config.howDidYouHearOptions.map((opt) => ({
-        id: opt.id,
-        name: opt.name,
-      })),
+      howDidYouHearOptions: FEEDBACK_FORM_DEFAULTS.howDidYouHearOptions.map(
+        (name, index) => ({
+          id: `preview-how-${index}`,
+          name,
+        }),
+      ),
       selectionOptions: config.selectionOptions.map((opt) => ({
         id: opt.id,
         label: opt.label,
@@ -95,8 +102,8 @@ export function FeedbackPreviewPanel({
       branding: {
         logo: resolveKey(brandingValues.logo),
         bannerImage: resolveKey(brandingValues.bannerImage),
-        themeColor: brandingValues.themeColor,
-        textColor: brandingValues.textColor,
+        themeColor: brandingValues.themeColor ?? DEFAULT_BRANDING_THEME_COLOR,
+        textColor: brandingValues.textColor ?? DEFAULT_BRANDING_TEXT_COLOR,
         header: brandingValues.header,
         subtitle: brandingValues.subtitle,
       },
@@ -109,75 +116,27 @@ export function FeedbackPreviewPanel({
   );
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex w-full flex-col items-center gap-4">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Smartphone className="text-muted-foreground size-4" />
           <p className="text-sm font-medium">Preview</p>
         </div>
       </div>
-
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="w-full">
-          <TabsTrigger value="feedback-page" className="flex-1">
-            Feedback Page
-          </TabsTrigger>
-          <TabsTrigger value="thank-you-page" className="flex-1">
-            Thank You
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="feedback-page" className="mt-3">
-          <PhoneFrame>
-            <FeedbackPageClient
-              businessSlug="preview-business"
-              token="preview-token"
-              previewMode
-              previewView="form"
-              previewBusinessName={previewBusinessName}
-              onPreviewSubmit={() => setActiveTab("thank-you-page")}
-              previewConfig={previewConfig}
-            />
-          </PhoneFrame>
-        </TabsContent>
-
-        <TabsContent value="thank-you-page" className="mt-3">
-          <PhoneFrame>
-            <FeedbackPageClient
-              businessSlug="preview-business"
-              token="preview-token"
-              previewMode
-              previewView="thank-you"
-              previewBusinessName={previewBusinessName}
-              previewConfig={previewConfig}
-            />
-          </PhoneFrame>
-        </TabsContent>
-      </Tabs>
-    </div>
-  );
-}
-
-function PhoneFrame({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="mx-auto w-full max-w-[340px]">
-      <div className="overflow-hidden rounded-[2rem] border-[3px] border-zinc-300 shadow-xl dark:border-zinc-600">
-        <div className="flex items-center justify-center bg-zinc-900 py-1.5">
-          <div className="h-3 w-20 rounded-full bg-zinc-800" />
-        </div>
-        <div className="relative h-[560px] overflow-hidden bg-white">
-          <div
-            className="origin-top-left overflow-y-auto"
-            style={{
-              width: 430,
-              height: 560 / 0.79,
-              transform: "scale(0.79)",
-            }}
-          >
-            {children}
-          </div>
-        </div>
-      </div>
+      <FeedbackPageClient
+        businessSlug="preview-business"
+        token="preview-token"
+        previewMode
+        previewView={previewView === "form" ? "form" : "thank-you"}
+        previewBusinessName={previewBusinessName}
+        previewConfig={{
+          ...previewConfig,
+          positiveFollowUp:
+            previewView === "negative"
+              ? previewConfig.negativeFollowUp
+              : previewConfig.positiveFollowUp,
+        }}
+      />
     </div>
   );
 }

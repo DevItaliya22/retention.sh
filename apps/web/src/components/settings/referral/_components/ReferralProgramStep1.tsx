@@ -26,6 +26,7 @@ const BENEFIT_TYPE_OPTIONS = [
 export function ReferralProgramStep1() {
   const form = useFormContext<ReferralProgramFormValues>();
   const newCustomerBenefitType = form.watch("newCustomerBenefitType");
+  const sendReminderToCustomer = form.watch("sendReminderToCustomer");
   const { data: skusData } = useActiveSkusForSelect();
   const skus = skusData?.items ?? [];
 
@@ -248,6 +249,36 @@ export function ReferralProgramStep1() {
           </FormItem>
         )}
       />
+
+      {sendReminderToCustomer && (
+        <FormField
+          control={form.control}
+          name="reminderDelayDays"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>
+                Reminder after (days) <span className="text-foreground">*</span>
+              </FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  variant="underline"
+                  min="1"
+                  placeholder="3"
+                  {...field}
+                  value={field.value ?? ""}
+                  onChange={(e) =>
+                    field.onChange(
+                      e.target.value ? parseInt(e.target.value, 10) : null,
+                    )
+                  }
+                />
+              </FormControl>
+              <FormMessage variant="banner" />
+            </FormItem>
+          )}
+        />
+      )}
     </div>
   );
 }

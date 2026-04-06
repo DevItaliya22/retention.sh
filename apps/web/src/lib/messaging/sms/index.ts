@@ -107,6 +107,27 @@ export async function logReferralClaimSms(
   });
 }
 
+export async function logReferralReminderSms(
+  tx: Prisma.TransactionClient,
+  params: {
+    businessId: string;
+    recipient: string;
+    body: string;
+    sourceId?: string;
+    scheduledAt: Date;
+  },
+): Promise<void> {
+  await logMessage(tx, {
+    businessId: params.businessId,
+    channel: "SMS",
+    recipient: params.recipient,
+    body: params.body,
+    source: "REFERRAL_REMINDER",
+    sourceId: params.sourceId ?? undefined,
+    scheduledAt: params.scheduledAt,
+  });
+}
+
 export async function logOtpSms(
   tx: Prisma.TransactionClient,
   params: {

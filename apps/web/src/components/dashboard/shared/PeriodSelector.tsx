@@ -27,7 +27,10 @@ interface PeriodSelectorProps {
 export function PeriodSelector({ value, onChange }: PeriodSelectorProps) {
   return (
     <Select value={value} onValueChange={(v) => onChange(v as AnalyticsPeriod)}>
-      <SelectTrigger size="sm" className="w-[160px]">
+      <SelectTrigger
+        size="sm"
+        className="border-border/60 bg-background text-foreground hover:bg-muted/40 w-[160px] shadow-none"
+      >
         <SelectValue />
       </SelectTrigger>
       <SelectContent>

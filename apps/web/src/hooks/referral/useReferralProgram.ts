@@ -52,6 +52,7 @@ export interface ReferralProgram {
   emailEnabled?: boolean;
   smsEnabled?: boolean;
   sendReminderToCustomer: boolean;
+  reminderDelayDays?: number | null;
   informationSections: Array<{ title: string; content: string }>;
   branding: {
     logo?: string | null;

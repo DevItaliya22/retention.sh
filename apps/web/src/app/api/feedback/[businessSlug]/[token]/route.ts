@@ -10,6 +10,7 @@ import {
   sanitizeErrorMessage,
   validateSchema,
 } from "@/lib/utils/error-handler";
+import { resolveServiceBranding } from "@/lib/utils/service-branding";
 import type { IsServiceEnabled } from "@/lib/utils/service-enabled";
 import { isServiceEnabled } from "@/lib/utils/service-enabled";
 import { db } from "@reelo/db";
@@ -128,10 +129,19 @@ export async function GET(
     }
 
     const businessId = link.bill.businessId;
+    let business: {
+      isServiceEnabled: unknown;
+      useDefaultBrandingForServices: boolean;
+      defaultBranding: BrandingLike;
+    } | null = null;
     if (businessId) {
-      const business = await db.business.findUnique({
+      business = await db.business.findUnique({
         where: { id: businessId },
-        select: { isServiceEnabled: true },
+        select: {
+          isServiceEnabled: true,
+          useDefaultBrandingForServices: true,
+          defaultBranding: true,
+        },
       });
       if (
         !isServiceEnabled(
@@ -205,12 +215,12 @@ export async function GET(
             }
           : null;
       // Include branding so thank-you view uses business theme (not default purple)
-      let alreadySubmittedBranding = link.config?.branding ?? null;
-      if (!alreadySubmittedBranding && link.bill.businessId) {
-        alreadySubmittedBranding = await db.branding.findUnique({
-          where: { businessId: link.bill.businessId },
-        });
-      }
+      const alreadySubmittedBranding = resolveServiceBranding({
+        branding: link.config?.branding ?? null,
+        defaultBranding: business?.defaultBranding ?? null,
+        useDefaultBrandingForServices:
+          business?.useDefaultBrandingForServices ?? false,
+      });
       const resolvedAlreadySubmittedBranding = await resolveBrandingReadUrls(
         alreadySubmittedBranding,
       );
@@ -241,12 +251,12 @@ export async function GET(
     }
 
     // Fallback: if feedback config has no branding linked, use business's branding (same DB record when saved from feedback settings)
-    let brandingToUse = configToUse?.branding ?? null;
-    if (!brandingToUse && link.bill.businessId) {
-      brandingToUse = await db.branding.findUnique({
-        where: { businessId: link.bill.businessId },
-      });
-    }
+    const brandingToUse = resolveServiceBranding({
+      branding: configToUse?.branding ?? null,
+      defaultBranding: business?.defaultBranding ?? null,
+      useDefaultBrandingForServices:
+        business?.useDefaultBrandingForServices ?? false,
+    });
 
     const defaultFollowUp = FEEDBACK_FORM_DEFAULTS.followUpMessage;
     const resolvedBranding = await resolveBrandingReadUrls(brandingToUse);
@@ -266,10 +276,12 @@ export async function GET(
             name: c.name,
           })),
           isHowDidYouHearEnabled: configToUse.isHowDidYouHearEnabled,
-          howDidYouHearOptions: configToUse.howDidYouHearOptions.map((o) => ({
-            id: o.id,
-            name: o.name,
-          })),
+          howDidYouHearOptions: FEEDBACK_FORM_DEFAULTS.howDidYouHearOptions.map(
+            (name, index) => ({
+              id: `default-${index}`,
+              name,
+            }),
+          ),
           selectionOptions: configToUse.selectionOptions.map((o) => ({
             id: o.id,
             label: o.label,

@@ -24,6 +24,7 @@ model ReferralProgram {
 
   // Reminder Settings
   sendReminderToCustomer Boolean @default(false)
+  reminderDelayDays      Int?
 
   // Messaging channels (for referral claim & reminder notifications)
   whatsappEnabled Boolean @default(false)

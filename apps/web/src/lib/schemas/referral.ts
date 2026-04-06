@@ -63,6 +63,7 @@ const referralProgramBaseSchema = z.object({
     .optional()
     .default([]),
   sendReminderToCustomer: z.boolean().default(false),
+  reminderDelayDays: z.coerce.number().int().min(1).optional().nullable(),
   whatsappEnabled: z.boolean().optional().default(true),
   emailEnabled: z.boolean().optional().default(false),
   smsEnabled: z.boolean().optional().default(false),
@@ -127,6 +128,13 @@ export const createReferralProgramSchema =
           path: ["existingCustomerFreeItemSkuId"],
         });
       }
+    }
+    if (data.sendReminderToCustomer && !data.reminderDelayDays) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Reminder days are required when reminders are enabled",
+        path: ["reminderDelayDays"],
+      });
     }
   });
 

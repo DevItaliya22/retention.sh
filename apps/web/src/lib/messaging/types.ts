@@ -14,4 +14,5 @@ export interface LogMessageParams {
   source: MessageSource;
   sourceId?: string | null;
   businessId: string;
+  scheduledAt?: Date | null;
 }

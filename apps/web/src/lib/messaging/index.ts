@@ -8,6 +8,7 @@ export {
   logNegativeFeedbackAlertEmail,
   logOtpEmail,
   logReferralClaimEmail,
+  logReferralReminderEmail,
 } from "./email";
 
 export {
@@ -17,6 +18,7 @@ export {
   logNegativeFeedbackAlertWhatsApp,
   logOtpWhatsApp,
   logReferralClaimWhatsApp,
+  logReferralReminderWhatsApp,
 } from "./whatsapp";
 
 export {
@@ -26,4 +28,5 @@ export {
   logNegativeFeedbackAlertSms,
   logOtpSms,
   logReferralClaimSms,
+  logReferralReminderSms,
 } from "./sms";

@@ -5,6 +5,10 @@ import { SettingsFieldGroup } from "@/components/common/settings/SettingsFieldGr
 import { DashboardPageShell } from "@/components/layouts";
 import type { CurrentBusiness } from "@/hooks/business/useCurrentBusiness";
 import { useUpdateBusiness } from "@/hooks/business/useCurrentBusiness";
+import {
+  DEFAULT_BRANDING_TEXT_COLOR,
+  DEFAULT_BRANDING_THEME_COLOR,
+} from "@/lib/constants/branding";
 import { isServiceEnabled } from "@/lib/utils/service-enabled";
 import {
   Card,
@@ -138,8 +142,8 @@ export function BusinessExistingSettings({
         defaultCurrencyCode: business.defaultCurrencyCode,
         defaultBranding: {
           logo: values.logo || null,
-          themeColor: values.themeColor || null,
-          textColor: values.textColor || null,
+          themeColor: values.themeColor || DEFAULT_BRANDING_THEME_COLOR,
+          textColor: values.textColor || DEFAULT_BRANDING_TEXT_COLOR,
           bannerImage: values.bannerImage || null,
           header: values.header || null,
           subtitle: values.subtitle || null,
@@ -252,8 +256,12 @@ export function BusinessExistingSettings({
           description="Customize your business appearance and messaging"
           defaultValues={{
             logo: business.defaultBranding?.logo ?? "",
-            themeColor: business.defaultBranding?.themeColor ?? "",
-            textColor: business.defaultBranding?.textColor ?? "",
+            themeColor:
+              business.defaultBranding?.themeColor ??
+              DEFAULT_BRANDING_THEME_COLOR,
+            textColor:
+              business.defaultBranding?.textColor ??
+              DEFAULT_BRANDING_TEXT_COLOR,
             bannerImage: business.defaultBranding?.bannerImage ?? "",
             header: business.defaultBranding?.header ?? "",
             subtitle: business.defaultBranding?.subtitle ?? "",

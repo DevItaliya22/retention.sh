@@ -71,18 +71,12 @@ function DetailRow({
 export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
   const prefersReducedMotion = useReducedMotion();
   const [isDownloadingInvoice, setIsDownloadingInvoice] = useState(false);
-  const [isUploadingReceipt, setIsUploadingReceipt] = useState(false);
   const { data, isLoading, isError, error } = useBillQuery(billId);
   const { data: invoiceData, isLoading: isInvoiceLoading } =
     useBillInvoiceQuery(billId);
   const setSegmentLabel = useBreadcrumbOverride()?.setSegmentLabel;
   const bill = data?.bill ?? null;
   const invoice = invoiceData?.invoice ?? null;
-  const businessSlug = data?.businessSlug ?? "";
-  const feedbackPath =
-    bill?.feedbackLink && businessSlug
-      ? `/feedback/${businessSlug}/${bill.feedbackLink.token}`
-      : null;
 
   useEffect(() => {
     if (bill?.billNumber) {
@@ -111,62 +105,6 @@ export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
     } finally {
       setIsDownloadingInvoice(false);
     }
-  };
-
-  const handleUploadReceipt = async () => {
-    if (!bill) return;
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = "image/*,application/pdf";
-    input.onchange = async () => {
-      const file = input.files?.[0];
-      if (!file) return;
-      try {
-        setIsUploadingReceipt(true);
-        const params = new URLSearchParams({
-          filename: file.name,
-          contentType: file.type || "application/octet-stream",
-        });
-        const res = await fetch(
-          `/api/bills/${bill.id}/receipt?${params.toString()}`,
-          {
-            method: "POST",
-            headers: {
-              "content-type": "application/octet-stream",
-            },
-            body: await file.arrayBuffer(),
-          },
-        );
-        if (!res.ok) {
-          const data = await res.json().catch(() => null);
-          throw new Error(data?.error || "Failed to upload receipt");
-        }
-        const data = (await res.json()) as {
-          receipt?: { uploadUrl?: string };
-        };
-        if (!data.receipt?.uploadUrl) {
-          throw new Error("Missing upload URL");
-        }
-        const uploadRes = await fetch(data.receipt.uploadUrl, {
-          method: "PUT",
-          headers: {
-            "content-type": file.type || "application/octet-stream",
-          },
-          body: file,
-        });
-        if (!uploadRes.ok) {
-          throw new Error("Failed to upload receipt file");
-        }
-        toast.success("Receipt uploaded");
-      } catch (e) {
-        toast.error(
-          e instanceof Error ? e.message : "Failed to upload receipt",
-        );
-      } finally {
-        setIsUploadingReceipt(false);
-      }
-    };
-    input.click();
   };
 
   if (isError) {
@@ -280,14 +218,6 @@ export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
               >
                 {isDownloadingInvoice ? "Preparing..." : "Download invoice"}
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={isUploadingReceipt || !bill}
-                onClick={handleUploadReceipt}
-              >
-                {isUploadingReceipt ? "Uploading..." : "Upload receipt"}
-              </Button>
               {bill?.businessCustomerId && (
                 <Link
                   href={`/customers/${bill.businessCustomerId}`}
@@ -394,24 +324,85 @@ export function BillDetailPageClient({ billId }: BillDetailPageClientProps) {
                 No contact details on file
               </p>
             )}
-            {!isLoading && feedbackPath && (
-              <div className="pt-3">
-                <DetailRow
-                  label="Feedback"
-                  value={
-                    <Link
-                      href={feedbackPath}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={cn(
-                        buttonVariants({ variant: "link", size: "sm" }),
-                        "inline-flex h-auto items-center p-0 font-normal",
-                      )}
-                    >
-                      Open form
-                    </Link>
-                  }
-                />
+            {!isLoading && bill && (
+              <div className="border-border mt-4 space-y-3 border-t pt-4">
+                <p className="text-muted-foreground text-[11px] font-medium tracking-wider uppercase">
+                  Feedback
+                </p>
+                {bill.feedback ? (
+                  <div className="space-y-3">
+                    {bill.feedback.rating != null && (
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-muted-foreground text-xs">
+                          Rating
+                        </span>
+                        <span className="text-sm font-semibold">
+                          {bill.feedback.rating}
+                          <span className="text-muted-foreground text-xs font-normal">
+                            /5
+                          </span>
+                        </span>
+                      </div>
+                    )}
+                    {bill.feedback.selectionOptions.length > 0 && (
+                      <div className="space-y-1.5">
+                        <span className="text-muted-foreground text-xs font-medium">
+                          Selection
+                        </span>
+                        <div className="flex flex-wrap gap-1">
+                          {bill.feedback.selectionOptions.map((opt) => (
+                            <span
+                              key={opt.id}
+                              className="bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-xs"
+                            >
+                              {opt.label}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {bill.feedback.selectedCategories.length > 0 && (
+                      <div className="space-y-1.5">
+                        <span className="text-muted-foreground text-xs font-medium">
+                          Categories
+                        </span>
+                        <div className="flex flex-wrap gap-1">
+                          {bill.feedback.selectedCategories.map((name) => (
+                            <span
+                              key={name}
+                              className="bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-xs"
+                            >
+                              {name}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {bill.feedback.howDidYouHear && (
+                      <DetailRow
+                        label="How they heard"
+                        value={bill.feedback.howDidYouHear}
+                      />
+                    )}
+                    {bill.feedback.comment && (
+                      <div className="space-y-1">
+                        <span className="text-muted-foreground text-xs font-medium">
+                          Comment
+                        </span>
+                        <p className="text-sm leading-snug whitespace-pre-wrap">
+                          {bill.feedback.comment}
+                        </p>
+                      </div>
+                    )}
+                    <p className="text-muted-foreground text-xs">
+                      Submitted <DateDisplay date={bill.feedback.submittedAt} />
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground text-sm">
+                    Not submitted yet
+                  </p>
+                )}
               </div>
             )}
           </div>

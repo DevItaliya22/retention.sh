@@ -22,6 +22,7 @@ export const referralProgramStep1Schema = z
       .optional()
       .default([]),
     sendReminderToCustomer: z.boolean().default(false),
+    reminderDelayDays: z.coerce.number().int().min(1).optional().nullable(),
   })
   .superRefine((data, ctx) => {
     if (data.newCustomerBenefitType === "AMOUNT_CASHBACK") {
@@ -44,6 +45,13 @@ export const referralProgramStep1Schema = z
           path: ["newCustomerFreeItemSkuId"],
         });
       }
+    }
+    if (data.sendReminderToCustomer && !data.reminderDelayDays) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Reminder days are required when reminders are enabled",
+        path: ["reminderDelayDays"],
+      });
     }
   });
 

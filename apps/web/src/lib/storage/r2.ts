@@ -140,9 +140,6 @@ export const r2KeyBuilders = {
   ) {
     return `business/${businessId}/campaigns/${campaignId}/${assetType}/${safeFilename(filename)}`;
   },
-  billReceipt(businessId: string, billId: string, filename: string) {
-    return `bills/${businessId}/${billId}/receipts/${filename}`;
-  },
 };
 
 export function normalizeR2Key(src: string) {

@@ -47,7 +47,20 @@ export const GET = withAdminAuth<{ id: string }>(
             },
           },
           feedbackLink: {
-            select: { token: true },
+            select: {
+              feedbackResponse: {
+                select: {
+                  rating: true,
+                  comment: true,
+                  howDidYouHear: true,
+                  selectedCategories: true,
+                  selectedSelectionOptions: {
+                    select: { id: true, label: true },
+                  },
+                  createdAt: true,
+                },
+              },
+            },
           },
           lineItems: {
             include: {
@@ -128,9 +141,22 @@ export const GET = withAdminAuth<{ id: string }>(
         customerName: bill.businessCustomer.customer.user.name,
         customerPhone: bill.businessCustomer.customer.user.phoneNumber,
         customerEmail: bill.businessCustomer.customer.email,
-        feedbackLink: bill.feedbackLink
-          ? { token: bill.feedbackLink.token }
-          : null,
+        feedback:
+          bill.feedbackLink?.feedbackResponse != null
+            ? {
+                rating: bill.feedbackLink.feedbackResponse.rating,
+                comment: bill.feedbackLink.feedbackResponse.comment,
+                howDidYouHear: bill.feedbackLink.feedbackResponse.howDidYouHear,
+                selectedCategories:
+                  bill.feedbackLink.feedbackResponse.selectedCategories,
+                selectionOptions:
+                  bill.feedbackLink.feedbackResponse.selectedSelectionOptions.map(
+                    (opt) => ({ id: opt.id, label: opt.label }),
+                  ),
+                submittedAt:
+                  bill.feedbackLink.feedbackResponse.createdAt.toISOString(),
+              }
+            : null,
         lineItems: bill.lineItems.map((li) => ({
           id: li.id,
           skuId: li.skuId,

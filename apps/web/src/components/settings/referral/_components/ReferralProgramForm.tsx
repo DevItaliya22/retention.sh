@@ -67,6 +67,9 @@ function ReferralProgramFormInner({
                   ? values.existingCustomerFreeItemSkuId || null
                   : null,
               sendReminderToCustomer: values.sendReminderToCustomer,
+              reminderDelayDays: values.sendReminderToCustomer
+                ? (values.reminderDelayDays ?? null)
+                : null,
               whatsappEnabled: values.whatsappEnabled ?? true,
               emailEnabled: values.emailEnabled ?? false,
               smsEnabled: values.smsEnabled ?? false,
@@ -118,6 +121,7 @@ function ReferralProgramFormInner({
               "newCustomerFreeItemSkuId",
               "newCustomerBenefitExpiresInDays",
               "sendReminderToCustomer",
+              "reminderDelayDays",
             ],
             schema: referralProgramStep1Schema,
             Component: ({ stepIndex, totalSteps }) => (
@@ -221,6 +225,7 @@ function ReferralProgramFormInner({
         emailEnabled: initialData.emailEnabled ?? false,
         smsEnabled: initialData.smsEnabled ?? false,
         sendReminderToCustomer: initialData.sendReminderToCustomer,
+        reminderDelayDays: initialData.reminderDelayDays ?? null,
         informationSections: initialData.informationSections || [],
         branding: initialData.branding,
         termsAndConditionsNewCustomer: Array.isArray(
@@ -252,6 +257,7 @@ function ReferralProgramFormInner({
         emailEnabled: false,
         smsEnabled: false,
         sendReminderToCustomer: false,
+        reminderDelayDays: null,
         informationSections: [],
         branding: null,
         termsAndConditionsNewCustomer: [],

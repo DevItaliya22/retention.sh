@@ -123,14 +123,6 @@ function BillFeedbackPopover({
               <p className="text-xs">{bill.feedback.howDidYouHear}</p>
             </div>
           )}
-          <Link
-            href={`/feedback/${businessSlug}/${bill.feedbackLink.token}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-primary text-xs font-medium underline underline-offset-2"
-          >
-            View full feedback form
-          </Link>
         </div>
       </PopoverContent>
     </Popover>

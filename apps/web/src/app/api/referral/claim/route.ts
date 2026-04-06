@@ -4,6 +4,9 @@ import {
   logReferralClaimEmail,
   logReferralClaimSms,
   logReferralClaimWhatsApp,
+  logReferralReminderEmail,
+  logReferralReminderSms,
+  logReferralReminderWhatsApp,
 } from "@/lib/messaging";
 import { claimReferralSchema } from "@/lib/schemas/referral";
 import {
@@ -358,6 +361,10 @@ export async function POST(request: NextRequest) {
       }
 
       const program = business.referralProgram!;
+      const reminderDelayDays = Number(
+        (program as { reminderDelayDays?: number | null }).reminderDelayDays ??
+          0,
+      );
       const hasChannels =
         program.whatsappEnabled || program.emailEnabled || program.smsEnabled;
 
@@ -444,6 +451,44 @@ export async function POST(request: NextRequest) {
             body: referredBody,
             sourceId: referralLog.id,
           });
+        }
+
+        if (program.sendReminderToCustomer && reminderDelayDays > 0) {
+          const scheduledAt = new Date();
+          scheduledAt.setDate(scheduledAt.getDate() + reminderDelayDays);
+
+          const reminderBody = `Reminder: your referral reward of ${referredRewardDesc} is waiting for you at ${business.name}.`;
+
+          if (program.whatsappEnabled) {
+            await logReferralReminderWhatsApp(tx, {
+              businessId,
+              recipient: formattedPhone,
+              body: reminderBody,
+              sourceId: referralLog.id,
+              scheduledAt,
+            });
+          }
+          if (program.emailEnabled) {
+            await logReferralReminderEmail(tx, {
+              businessId,
+              recipient:
+                referredEmail ??
+                `${formattedPhone}@${APP_CONSTANTS.CUSTOMER_EMAIL_DOMAIN}`,
+              subject: "Referral reward reminder",
+              body: reminderBody,
+              sourceId: referralLog.id,
+              scheduledAt,
+            });
+          }
+          if (program.smsEnabled) {
+            await logReferralReminderSms(tx, {
+              businessId,
+              recipient: formattedPhone,
+              body: reminderBody,
+              sourceId: referralLog.id,
+              scheduledAt,
+            });
+          }
         }
       }
 
