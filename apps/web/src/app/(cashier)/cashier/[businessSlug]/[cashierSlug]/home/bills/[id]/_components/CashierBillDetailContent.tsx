@@ -1,12 +1,12 @@
 "use client";
 
 import { fetcher } from "@/lib/fetcher";
-import { buttonVariants, DateDisplay, Skeleton } from "@reelo/ui/components";
-import { cn } from "@reelo/ui/lib/utils";
+import { DateDisplay, Separator, Skeleton } from "@reelo/ui/components";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
-import { CashierNav } from "../../../_components/CashierNav";
+import { CashierLogoutButton } from "../../../_components/CashierLogoutButton";
+import { CashierMobileLayout } from "../../../_components/CashierMobileLayout";
 import { useCashierContext } from "../../../_context/CashierContext";
 
 interface CashierBillDetailContentProps {
@@ -56,69 +56,65 @@ export function CashierBillDetailContent({
 
   const bill = data?.bill;
 
-  if (isError) {
-    return (
-      <div className="bg-background flex min-h-screen flex-col items-center p-4">
-        <div className="w-full max-w-2xl space-y-6">
-          <div className="flex justify-center">
-            <CashierNav />
+  return (
+    <CashierMobileLayout>
+      <header className="bg-background/95 sticky top-0 z-10 border-b backdrop-blur-sm">
+        <div className="flex items-center justify-between px-4 py-3">
+          <div className="flex min-w-0 items-center gap-2">
+            <Link
+              href={billsPath}
+              className="text-muted-foreground hover:text-foreground -ml-1 rounded-full p-1 transition-colors"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+            <h1 className="truncate text-base font-semibold tracking-tight">
+              Bill Details
+            </h1>
           </div>
-          <div className="border-destructive/30 bg-destructive/5 rounded-lg border px-4 py-3">
+          <CashierLogoutButton
+            businessSlug={businessSlug}
+            cashierSlug={cashierSlug}
+          />
+        </div>
+      </header>
+
+      <main className="flex-1 overflow-y-auto">
+        {isError ? (
+          <div className="px-4 py-12 text-center">
             <p className="text-destructive text-sm">
               {error?.message ?? "Failed to load bill"}
             </p>
+            <Link
+              href={billsPath}
+              className="text-primary mt-3 inline-block text-sm font-medium"
+            >
+              Back to My Bills
+            </Link>
           </div>
-          <Link
-            href={billsPath}
-            className={cn(buttonVariants({ variant: "outline" }))}
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to My Bills
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
-  if (isLoading || !bill) {
-    return (
-      <div className="bg-background flex min-h-screen flex-col items-center p-4">
-        <div className="w-full max-w-2xl space-y-6">
-          <div className="flex justify-center">
-            <CashierNav />
+        ) : isLoading || !bill ? (
+          <div className="space-y-6 p-4">
+            <div className="space-y-2 py-4 text-center">
+              <Skeleton className="mx-auto h-9 w-36" />
+              <Skeleton className="mx-auto h-4 w-24" />
+              <Skeleton className="mx-auto h-3 w-40" />
+            </div>
+            <Skeleton className="h-px w-full" />
+            <div className="space-y-2">
+              <Skeleton className="h-3 w-16" />
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-3 w-28" />
+            </div>
           </div>
-          <div className="w-full space-y-4">
-            <Skeleton className="h-8 w-48" />
-            <Skeleton className="h-24 w-full" />
-            <Skeleton className="h-32 w-full" />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="bg-background flex min-h-screen flex-col items-center p-4">
-      <div className="w-full max-w-2xl space-y-6">
-        <div className="flex justify-center">
-          <CashierNav />
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Link
-            href={billsPath}
-            className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
-          >
-            <ArrowLeft className="mr-1 h-4 w-4" />
-            Back
-          </Link>
-        </div>
-
-        <div className="space-y-6 rounded-lg border p-6">
-          <div className="flex items-start justify-between">
-            <div>
-              <h2 className="text-xl font-semibold">Bill #{bill.billNumber}</h2>
-              <p className="text-muted-foreground mt-1 text-sm">
+        ) : (
+          <div className="pb-8">
+            <div className="space-y-1.5 px-4 py-8 text-center">
+              <p className="font-mono text-3xl font-bold tracking-tight tabular-nums">
+                {bill.amount != null ? `₹${bill.amount.toFixed(2)}` : "—"}
+              </p>
+              <p className="text-muted-foreground text-sm font-medium">
+                Bill #{bill.billNumber}
+              </p>
+              <p className="text-muted-foreground/70 text-xs">
                 <DateDisplay
                   date={bill.createdAt}
                   relative={false}
@@ -132,66 +128,71 @@ export function CashierBillDetailContent({
                 />
               </p>
             </div>
-            <div className="text-right">
-              <p className="text-muted-foreground text-sm">Amount</p>
-              <p className="font-mono text-lg font-semibold">
-                {bill.amount != null ? `₹${bill.amount.toFixed(2)}` : "—"}
-              </p>
-            </div>
-          </div>
 
-          <div className="border-t pt-4">
-            <h3 className="text-muted-foreground mb-2 text-xs font-medium uppercase">
-              Customer
-            </h3>
-            <p className="font-medium">{bill.customerName}</p>
-            {bill.customerPhone && (
-              <p className="text-muted-foreground text-sm">
-                {bill.customerPhone}
+            <Separator />
+
+            <div className="space-y-1.5 px-4 py-4">
+              <p className="text-muted-foreground text-[10px] font-semibold tracking-widest uppercase">
+                Customer
               </p>
+              <p className="text-sm font-medium">{bill.customerName}</p>
+              {bill.customerPhone && (
+                <p className="text-muted-foreground text-xs">
+                  {bill.customerPhone}
+                </p>
+              )}
+              {bill.customerEmail && (
+                <p className="text-muted-foreground text-xs">
+                  {bill.customerEmail}
+                </p>
+              )}
+            </div>
+
+            {bill.lineItems.length > 0 && (
+              <>
+                <Separator />
+                <div className="space-y-3 px-4 py-4">
+                  <p className="text-muted-foreground text-[10px] font-semibold tracking-widest uppercase">
+                    Items
+                  </p>
+                  <div className="space-y-2">
+                    {bill.lineItems.map((li) => (
+                      <div
+                        key={li.id}
+                        className="flex items-baseline justify-between text-sm"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <span>{li.sku.name}</span>
+                          <span className="text-muted-foreground ml-1.5">
+                            × {li.qty}
+                          </span>
+                        </div>
+                        {li.unitPrice != null && (
+                          <span className="shrink-0 pl-3 font-mono tabular-nums">
+                            ₹{(li.unitPrice * li.qty).toFixed(2)}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
             )}
-            {bill.customerEmail && (
-              <p className="text-muted-foreground text-sm">
-                {bill.customerEmail}
-              </p>
+
+            {bill.notes && (
+              <>
+                <Separator />
+                <div className="space-y-1.5 px-4 py-4">
+                  <p className="text-muted-foreground text-[10px] font-semibold tracking-widest uppercase">
+                    Notes
+                  </p>
+                  <p className="text-muted-foreground text-sm">{bill.notes}</p>
+                </div>
+              </>
             )}
           </div>
-
-          {bill.lineItems.length > 0 && (
-            <div className="border-t pt-4">
-              <h3 className="text-muted-foreground mb-2 text-xs font-medium uppercase">
-                Line Items
-              </h3>
-              <ul className="space-y-2">
-                {bill.lineItems.map((li) => (
-                  <li
-                    key={li.id}
-                    className="flex items-center justify-between text-sm"
-                  >
-                    <span>
-                      {li.sku.name} × {li.qty}
-                    </span>
-                    {li.unitPrice != null && (
-                      <span className="font-mono">
-                        ₹{(li.unitPrice * li.qty).toFixed(2)}
-                      </span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {bill.notes && (
-            <div className="border-t pt-4">
-              <h3 className="text-muted-foreground mb-2 text-xs font-medium uppercase">
-                Notes
-              </h3>
-              <p className="text-sm">{bill.notes}</p>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
+        )}
+      </main>
+    </CashierMobileLayout>
   );
 }

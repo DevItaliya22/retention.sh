@@ -24,6 +24,69 @@ import {
   safeAmount,
 } from "./helpers";
 
+function floorCurrency(value: number): number {
+  return Math.floor(value * 100) / 100;
+}
+
+function convertCurrentToPartnerCurrency(
+  valueInCurrentStoreCurrency: number,
+  exchangeRate: number,
+): number {
+  const safeExchangeRate = Number.isFinite(exchangeRate) ? exchangeRate : 0;
+  if (safeExchangeRate <= 0) return 0;
+  return floorCurrency(valueInCurrentStoreCurrency / safeExchangeRate);
+}
+
+function resolvePartnerCapInCurrentCurrency(params: {
+  billAmountInCurrentCurrency: number;
+  partnerBalanceAtPartner: number;
+  exchangeRate: number;
+  pointToCurrencyRate: number;
+  partnerContext: ReturnType<typeof loyaltyRecordToContext>;
+  resolvedPartnerTier?: ReturnType<typeof resolveTierForLifetimeSpend> | null;
+}): number {
+  const {
+    billAmountInCurrentCurrency,
+    partnerBalanceAtPartner,
+    exchangeRate,
+    pointToCurrencyRate,
+    partnerContext,
+    resolvedPartnerTier,
+  } = params;
+
+  if (!partnerContext) return floorCurrency(billAmountInCurrentCurrency);
+
+  const billAmountAtPartner = convertCurrentToPartnerCurrency(
+    billAmountInCurrentCurrency,
+    exchangeRate,
+  );
+  if (billAmountAtPartner <= 0) return 0;
+
+  if (partnerContext.type === "CASHBACK" || partnerContext.type === "TIER") {
+    const maxAtPartner = floorCurrency(
+      calculateRedeemable(
+        billAmountAtPartner,
+        partnerBalanceAtPartner,
+        partnerContext,
+        { resolvedTier: resolvedPartnerTier ?? undefined },
+      ),
+    );
+    return floorCurrency(maxAtPartner * exchangeRate);
+  }
+
+  const pointValue = Number.isFinite(pointToCurrencyRate)
+    ? pointToCurrencyRate
+    : 0;
+  if (pointValue <= 0) return 0;
+
+  const maxPartnerPointsByBill = Math.floor(billAmountAtPartner / pointValue);
+  const maxPartnerPoints = Math.min(
+    Math.floor(partnerBalanceAtPartner),
+    maxPartnerPointsByBill,
+  );
+  return floorCurrency(maxPartnerPoints * pointValue * exchangeRate);
+}
+
 export interface RewardStageRedeemInfo {
   id: string;
   rewardName: string;
@@ -372,8 +435,9 @@ export interface PartnerRedeemableItem {
 /**
  * Returns list of partners where the customer has a wallet balance that can be
  * redeemed at the current business using the partner's exchange rate (them → you).
- * Max redeemable on this bill is capped by the **current (bill) business's** loyalty
- * rules (min bill to redeem, max cap, etc.) — the bill's business is the boss for loyalty.
+ * Max redeemable on this bill is capped by BOTH:
+ * - the current (bill) business's loyalty rules, and
+ * - the partner business's own loyalty rules converted into current-store currency.
  */
 export async function getPartnerRedeemableInfo(
   tx: Omit<
@@ -429,7 +493,6 @@ export async function getPartnerRedeemableInfo(
             select: {
               id: true,
               name: true,
-              loyalty: { select: { loyaltyType: true } },
             },
           },
         },
@@ -447,8 +510,18 @@ export async function getPartnerRedeemableInfo(
     if (!myMember || !partnerMember) continue;
 
     const partnerBusiness = partnerMember.business;
-    const partnerLoyalty = partnerBusiness.loyalty;
+    const partnerLoyalty = await tx.loyalty.findUnique({
+      where: { businessId: partnerMember.businessId },
+      include: {
+        cashbackConfig: true,
+        tierConfig: { include: { tiers: { orderBy: { rank: "asc" } } } },
+        amountSpentConfig: true,
+        visitMadeConfig: true,
+      },
+    });
     if (!partnerLoyalty) continue;
+    const partnerContext = loyaltyRecordToContext(partnerLoyalty);
+    if (!partnerContext) continue;
 
     const wallet = await tx.wallet.findUnique({
       where: {
@@ -459,6 +532,30 @@ export async function getPartnerRedeemableInfo(
       },
     });
     if (!wallet) continue;
+
+    let resolvedPartnerTier: ReturnType<typeof resolveTierForLifetimeSpend> =
+      null;
+    if (
+      partnerContext.type === "TIER" &&
+      partnerContext.config.tiers.length > 0
+    ) {
+      const partnerLifetimeSpend =
+        wallet.lifetimeSpend != null && wallet.lifetimeSpend > 0
+          ? wallet.lifetimeSpend
+          : ((
+              await tx.bill.aggregate({
+                where: {
+                  businessId: partnerMember.businessId,
+                  customerId,
+                },
+                _sum: { finalAmount: true },
+              })
+            )._sum.finalAmount ?? 0);
+      resolvedPartnerTier = resolveTierForLifetimeSpend(
+        partnerContext.config.tiers,
+        partnerLifetimeSpend,
+      );
+    }
 
     const exchangeRate = Number(partnerMember.exchangeRate) || 1;
     const pointToCurrencyRate = Number(partnerMember.pointToCurrencyRate) || 1;
@@ -507,21 +604,24 @@ export async function getPartnerRedeemableInfo(
     let maxRedeemableOnBill: number;
     if (currentContext) {
       const amt = safeAmount(billAmount);
-      const isCashbackOrTier =
+      const isCurrentCashbackOrTier =
         currentContext.type === "CASHBACK" || currentContext.type === "TIER";
+      let currentBusinessCap = Math.min(
+        valueAtCurrentStore,
+        floorCurrency(amt),
+      );
 
-      if (isCashbackOrTier) {
+      if (isCurrentCashbackOrTier) {
         if (currentContext.type === "CASHBACK") {
           // calculateCashbackRedeemable applies ALL caps: minPurchaseForRedemption,
           // redemptionBalanceLimit (% or ₹), redemptionBillLimit (% or ₹), maxCashbackCap
-          maxRedeemableOnBill =
-            Math.floor(
-              calculateCashbackRedeemable(
-                amt,
-                currentContext.config,
-                valueAtCurrentStore,
-              ) * 100,
-            ) / 100;
+          currentBusinessCap = floorCurrency(
+            calculateCashbackRedeemable(
+              amt,
+              currentContext.config,
+              valueAtCurrentStore,
+            ),
+          );
         } else {
           // TIER: use tier-specific limits (minPurchaseForRedemption, maxCashbackCap)
           const minPurchase = resolvedTier?.minPurchaseForRedemption;
@@ -532,7 +632,7 @@ export async function getPartnerRedeemableInfo(
             minPurchase > 0 &&
             amt < minPurchase
           ) {
-            maxRedeemableOnBill = 0;
+            currentBusinessCap = 0;
           } else {
             const loyaltyCapPartnerUnits = getMaxCashbackCapFromContext(
               currentContext,
@@ -540,30 +640,52 @@ export async function getPartnerRedeemableInfo(
             );
             const capInOurCurrency =
               (loyaltyCapPartnerUnits ?? Infinity) * exchangeRate;
-            maxRedeemableOnBill =
-              Math.floor(
-                Math.min(
-                  valueAtCurrentStore,
-                  capInOurCurrency,
-                  Math.floor(amt * 100) / 100,
-                ) * 100,
-              ) / 100;
+            currentBusinessCap = floorCurrency(
+              Math.min(
+                valueAtCurrentStore,
+                capInOurCurrency,
+                floorCurrency(amt),
+              ),
+            );
           }
         }
       } else {
-        maxRedeemableOnBill = Math.min(
+        currentBusinessCap = Math.min(
           valueAtCurrentStore,
-          Math.floor(
+          floorCurrency(
             calculateRedeemable(amt, valueAtCurrentStore, currentContext, {
               resolvedTier,
-            }) * 100,
-          ) / 100,
+            }),
+          ),
         );
       }
+
+      const partnerBusinessCap = resolvePartnerCapInCurrentCurrency({
+        billAmountInCurrentCurrency: amt,
+        partnerBalanceAtPartner: balance,
+        exchangeRate,
+        pointToCurrencyRate,
+        partnerContext,
+        resolvedPartnerTier,
+      });
+
+      maxRedeemableOnBill = floorCurrency(
+        Math.min(valueAtCurrentStore, currentBusinessCap, partnerBusinessCap),
+      );
     } else {
+      const partnerBusinessCap = resolvePartnerCapInCurrentCurrency({
+        billAmountInCurrentCurrency: billAmount,
+        partnerBalanceAtPartner: balance,
+        exchangeRate,
+        pointToCurrencyRate,
+        partnerContext,
+        resolvedPartnerTier,
+      });
+
       maxRedeemableOnBill = Math.min(
         valueAtCurrentStore,
-        Math.floor(billAmount * 100) / 100,
+        floorCurrency(billAmount),
+        partnerBusinessCap,
       );
     }
 

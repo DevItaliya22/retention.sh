@@ -16,7 +16,7 @@ export function CashierNav() {
   const basePath = `/cashier/${businessSlug}/${cashierSlug}`;
 
   return (
-    <nav className="flex gap-2">
+    <nav className="bg-muted flex rounded-lg p-1">
       {navItems.map((item) => {
         const href = `${basePath}/${item.href}`;
         const isActive =
@@ -28,10 +28,10 @@ export function CashierNav() {
             key={item.href}
             href={href}
             className={cn(
-              "rounded-md px-4 py-2 text-sm font-medium transition-colors",
+              "flex-1 rounded-md px-3 py-1.5 text-center text-sm font-medium transition-all",
               isActive
-                ? "bg-primary text-primary-foreground"
-                : "hover:bg-muted text-muted-foreground hover:text-foreground",
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground",
             )}
           >
             {item.label}
