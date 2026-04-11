@@ -1,10 +1,55 @@
 import { z } from "zod";
-import { optionalPasswordSchema } from "./common";
+import {
+  businessNameSchema,
+  optionalPasswordSchema,
+  websiteInputSchema,
+} from "./common";
 import { baseBusinessSchema, baseCashierSchema } from "./shared";
 
-export const businessStepSchema = z
+/** Fields collected on the business step of the welcome form (UI shows name + website only). */
+export const businessStepSchema = z.object({
+  businessName: businessNameSchema,
+  website: websiteInputSchema,
+});
+
+const industryFieldsSchema = z.object({
+  industries: z.array(z.string().max(64)).default([]),
+});
+
+export const industryStepSchema = industryFieldsSchema;
+
+const cashierFieldsSchema = z.object({
+  ...baseCashierSchema,
+  createCashier: z.boolean().default(false),
+  cashierPassword: optionalPasswordSchema,
+});
+
+export const cashierStepSchema = cashierFieldsSchema.refine(
+  (data) => {
+    if (data.createCashier) {
+      return (
+        !!data.cashierName &&
+        !!data.cashierEmailLocalPart &&
+        !!data.cashierEmailSuffix &&
+        !!data.cashierPassword &&
+        !!data.cashierLinkSlug
+      );
+    }
+    return true;
+  },
+  {
+    message: "Please fill all cashier fields if you want to create one",
+    path: ["cashierName"],
+  },
+);
+
+/** Full payload for POST /api/onboarding (includes fields not shown in the first step UI). */
+export const welcomeFormSchema = z
   .object({
     ...baseBusinessSchema,
+    ...industryFieldsSchema.shape,
+    ...cashierFieldsSchema.shape,
+    website: websiteInputSchema,
   })
   .refine(
     (data) => {
@@ -13,18 +58,7 @@ export const businessStepSchema = z
       return data.businessSlugAvailable === true;
     },
     { message: "Not available", path: ["businessSlug"] },
-  );
-
-export const industryStepSchema = z.object({
-  industries: z.array(z.string().max(64)).default([]),
-});
-
-export const cashierStepSchema = z
-  .object({
-    ...baseCashierSchema,
-    createCashier: z.boolean().default(false),
-    cashierPassword: optionalPasswordSchema,
-  })
+  )
   .refine(
     (data) => {
       if (data.createCashier) {
@@ -43,11 +77,5 @@ export const cashierStepSchema = z
       path: ["cashierName"],
     },
   );
-
-export const welcomeFormSchema = z.object({
-  ...businessStepSchema.shape,
-  ...industryStepSchema.shape,
-  ...cashierStepSchema.shape,
-});
 
 export type WelcomeFormValues = z.infer<typeof welcomeFormSchema>;

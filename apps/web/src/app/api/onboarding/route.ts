@@ -4,6 +4,7 @@ import {
   DEFAULT_BRANDING_THEME_COLOR,
 } from "@/lib/constants/branding";
 import { FEEDBACK_FORM_DEFAULTS } from "@/lib/constants/forms/feedback";
+import { normalizeOptionalWebsiteInput } from "@/lib/schemas/common";
 import {
   type WelcomeFormValues,
   welcomeFormSchema,
@@ -63,7 +64,8 @@ export const POST = withAdminAuthOptionalBusiness(
           data: {
             name: validatedData.businessName,
             slug: validatedData.businessSlug,
-            website: validatedData.website || null,
+            website:
+              normalizeOptionalWebsiteInput(validatedData.website) || null,
             defaultPointsName: validatedData.defaultPointsName || "Points",
             defaultCurrencySymbol: validatedData.defaultCurrencySymbol || "₹",
             defaultCurrencyCode: validatedData.defaultCurrencyCode || "INR",
