@@ -1,8 +1,7 @@
 "use client";
 
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "../button";
-import { ButtonGroup, ButtonGroupSeparator } from "../button-group";
 import { NavigationArgs } from "./types";
 
 export function FormNavigation({
@@ -22,32 +21,31 @@ export function FormNavigation({
   const prevEnabled = !isFirstStep && !isLoading && !isPrevDisabled;
 
   return (
-    <ButtonGroup>
+    <div className="flex w-full items-center justify-between gap-3">
       <Button
-        className="hit-area-y-2 hit-area-l-2"
         type="button"
         variant={prevEnabled ? "default" : "outline"}
-        size="icon"
+        size="default"
+        className="gap-2"
         onClick={prev}
         disabled={isFirstStep || isLoading || isPrevDisabled}
         loading={isLoadingPrev}
-        aria-label="Previous step"
       >
-        <ChevronUp className="size-4" />
+        <ChevronLeft className="size-4 shrink-0" aria-hidden />
+        Prev
       </Button>
-      <ButtonGroupSeparator orientation="vertical" className="bg-background" />
       <Button
-        className="hit-area-y-2 hit-area-r-2"
         type="button"
         variant={nextEnabled ? "default" : "outline"}
-        size="icon"
+        size="default"
+        className="gap-2"
         onClick={next}
         disabled={isLoading || isNextDisabled}
         loading={isLoadingNext || isSubmitting}
-        aria-label={isLastStep ? "Finish" : "Next step"}
       >
-        <ChevronDown className="size-4" />
+        {isLastStep ? "Finish" : "Next"}
+        <ChevronRight className="size-4 shrink-0" aria-hidden />
       </Button>
-    </ButtonGroup>
+    </div>
   );
 }

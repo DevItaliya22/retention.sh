@@ -1,5 +1,6 @@
 "use client";
 
+import { cn } from "@reelo/ui/lib/utils";
 import { AnimatePresence, motion } from "motion/react";
 import * as React from "react";
 import type { FieldValues } from "react-hook-form";
@@ -24,7 +25,8 @@ type StepTransitionDirection = "forward" | "backward";
 export function LinearMultiStepForm<TValues extends FieldValues>(props: {
   config: LinearMultiStepFormConfig<TValues>;
   initialValues?: Partial<TValues>;
-  navigationPosition?: "header" | "footer";
+  /** `inline` places Prev/Next below the step content (end of form). `footer` is fixed bottom-right. */
+  navigationPosition?: "header" | "footer" | "inline";
   NavigationComponent?: React.ComponentType<
     NavigationArgs & { allValues: TValues }
   >;
@@ -46,6 +48,8 @@ export function LinearMultiStepForm<TValues extends FieldValues>(props: {
 
   const StepComponent = msf.currentStep.Component;
   const animateSteps = props.animateSteps !== false;
+  const navPosition = props.navigationPosition ?? "footer";
+  const isInlineNav = navPosition === "inline";
 
   const prevStepIndexRef = React.useRef<number | null>(null);
   const directionRef = React.useRef<StepTransitionDirection>("forward");
@@ -153,12 +157,18 @@ export function LinearMultiStepForm<TValues extends FieldValues>(props: {
       stopPropagation: () => void;
     }) => {
       const key = e.key;
-      const isNext = (key === "Enter" && !e.shiftKey) || key === "ArrowDown";
-      const isPrev = key === "ArrowUp";
+      const isNext =
+        (key === "Enter" && !e.shiftKey) ||
+        key === "ArrowRight" ||
+        key === "ArrowDown";
+      const isPrev = key === "ArrowLeft" || key === "ArrowUp";
       if (!isNext && !isPrev) return;
       if (key === "Enter" && isFormControl(e.target)) return;
       if (
-        (key === "ArrowUp" || key === "ArrowDown") &&
+        (key === "ArrowLeft" ||
+          key === "ArrowRight" ||
+          key === "ArrowUp" ||
+          key === "ArrowDown") &&
         shouldSkipArrowNav(e.target)
       )
         return;
@@ -173,8 +183,9 @@ export function LinearMultiStepForm<TValues extends FieldValues>(props: {
         return;
       }
       if (isNext) {
-        // Arrow Down must not submit the form on last step (avoid accidental submit)
-        if (key === "ArrowDown" && current.isLastStep) return;
+        // Arrow keys must not submit the form on last step (avoid accidental submit)
+        if ((key === "ArrowDown" || key === "ArrowRight") && current.isLastStep)
+          return;
         e.preventDefault();
         e.stopPropagation();
         void current.next();
@@ -219,68 +230,93 @@ export function LinearMultiStepForm<TValues extends FieldValues>(props: {
           </div>
         )}
 
-        {props.navigationPosition === "header" && NavigationElement && (
+        {navPosition === "header" && NavigationElement && (
           <div className="shrink-0 px-4 py-4">{NavigationElement}</div>
         )}
 
         <div className="flex flex-1 flex-col overflow-y-auto">
-          <div className="relative flex flex-1 justify-center overflow-x-hidden px-4 pt-6 pb-28 sm:px-6 sm:pt-8">
-            {animateSteps ? (
-              <AnimatePresence mode="wait" initial={false}>
-                <motion.div
-                  key={msf.currentStep.id}
-                  initial={{
-                    opacity: 0,
-                    x:
-                      stepDirection === "forward"
-                        ? STEP_SLIDE_PX
-                        : -STEP_SLIDE_PX,
-                  }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{
-                    opacity: 0,
-                    x:
-                      stepDirection === "forward"
-                        ? -STEP_SLIDE_PX
-                        : STEP_SLIDE_PX,
-                  }}
-                  transition={{
-                    duration: STEP_TRANSITION_DURATION,
-                    ease: [0.32, 0.72, 0, 1],
-                  }}
-                  className="flex w-full max-w-full flex-1 flex-col items-center"
-                >
-                  <StepComponent
-                    formId={msf.formId}
-                    stepId={msf.currentStep.id}
-                    stepIndex={msf.currentStepIndex}
-                    totalSteps={msf.totalSteps}
-                    isFirstStep={msf.isFirstStep}
-                    isLastStep={msf.isLastStep}
-                  />
-                </motion.div>
-              </AnimatePresence>
-            ) : (
-              <StepComponent
-                formId={msf.formId}
-                stepId={msf.currentStep.id}
-                stepIndex={msf.currentStepIndex}
-                totalSteps={msf.totalSteps}
-                isFirstStep={msf.isFirstStep}
-                isLastStep={msf.isLastStep}
-              />
+          <div
+            className={cn(
+              "relative flex justify-center overflow-x-hidden px-4 pt-6 sm:px-6 sm:pt-8",
+              isInlineNav
+                ? "items-start pb-8"
+                : "min-h-0 flex-1 items-stretch pb-28",
             )}
+          >
+            <div
+              className={cn(
+                "flex w-full flex-col",
+                isInlineNav
+                  ? "max-w-2xl shrink-0"
+                  : "max-w-full flex-1 items-center",
+              )}
+            >
+              {animateSteps ? (
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.div
+                    key={msf.currentStep.id}
+                    initial={{
+                      opacity: 0,
+                      x:
+                        stepDirection === "forward"
+                          ? STEP_SLIDE_PX
+                          : -STEP_SLIDE_PX,
+                    }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{
+                      opacity: 0,
+                      x:
+                        stepDirection === "forward"
+                          ? -STEP_SLIDE_PX
+                          : STEP_SLIDE_PX,
+                    }}
+                    transition={{
+                      duration: STEP_TRANSITION_DURATION,
+                      ease: [0.32, 0.72, 0, 1],
+                    }}
+                    className={cn(
+                      "flex w-full flex-col",
+                      isInlineNav
+                        ? "shrink-0"
+                        : "max-w-full flex-1 items-center",
+                    )}
+                  >
+                    <StepComponent
+                      formId={msf.formId}
+                      stepId={msf.currentStep.id}
+                      stepIndex={msf.currentStepIndex}
+                      totalSteps={msf.totalSteps}
+                      isFirstStep={msf.isFirstStep}
+                      isLastStep={msf.isLastStep}
+                    />
+                  </motion.div>
+                </AnimatePresence>
+              ) : (
+                <StepComponent
+                  formId={msf.formId}
+                  stepId={msf.currentStep.id}
+                  stepIndex={msf.currentStepIndex}
+                  totalSteps={msf.totalSteps}
+                  isFirstStep={msf.isFirstStep}
+                  isLastStep={msf.isLastStep}
+                />
+              )}
+
+              {isInlineNav && NavigationElement && (
+                <div className="mt-8 flex w-full items-center justify-between pl-10">
+                  {NavigationElement}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
         {/* Navigation: fixed bottom-right */}
-        {(props.navigationPosition === "footer" ||
-          props.navigationPosition === undefined) &&
-          NavigationElement && (
-            <div className="fixed right-6 bottom-6 z-20 sm:right-8 sm:bottom-8">
-              {NavigationElement}
-            </div>
-          )}
+        {navPosition === "footer" && NavigationElement && (
+          <div className="fixed right-6 bottom-6 z-20 sm:right-8 sm:bottom-8">
+            {NavigationElement}
+          </div>
+        )}
       </div>
     </Form>
   );

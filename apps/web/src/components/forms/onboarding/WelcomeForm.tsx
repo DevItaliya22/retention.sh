@@ -6,7 +6,9 @@ import { IndustryStep } from "@/components/forms/onboarding/steps/IndustryStep";
 import { useCurrentBusiness } from "@/hooks/business/useCurrentBusiness";
 import { useManageCashier } from "@/hooks/cashier/useManageCashier";
 import useOnboarding from "@/hooks/onboarding/useOnboarding";
+import { DEFAULT_BRANDING_THEME_COLOR } from "@/lib/constants/branding";
 import { DEFAULT_EMAIL_DOMAIN_SUFFIX } from "@/lib/constants/email-domains";
+import { normalizeOptionalWebsiteInput } from "@/lib/schemas/common";
 import {
   businessStepSchema,
   cashierStepSchema,
@@ -46,21 +48,24 @@ export function WelcomeForm({
     title: "Setup your business",
     onSubmit: async ({ values }) => {
       try {
-        const businessData = {
+        const businessSlug = generateSlug(values.businessName);
+        const onboardingPayload = {
+          ...values,
           businessName: values.businessName,
-          businessSlug: values.businessSlug,
-          website: values.website,
-          defaultPointsName: values.defaultPointsName,
-          defaultCurrencySymbol: values.defaultCurrencySymbol,
-          defaultCurrencyCode: values.defaultCurrencyCode,
-          themeColor: values.themeColor,
-          logo: values.logo,
+          businessSlug,
+          businessSlugAvailable: true,
+          website: normalizeOptionalWebsiteInput(values.website),
+          defaultPointsName: values.defaultPointsName || "Points",
+          defaultCurrencySymbol: values.defaultCurrencySymbol || "₹",
+          defaultCurrencyCode: values.defaultCurrencyCode || "INR",
+          themeColor: values.themeColor ?? DEFAULT_BRANDING_THEME_COLOR,
+          logo: values.logo ?? "",
           industries: values.industries ?? [],
           createCashier: false,
         };
 
         const result = await submitOnboarding(
-          businessData as WelcomeFormValues,
+          onboardingPayload as WelcomeFormValues,
         );
         if (result.success) {
           await queryClient.invalidateQueries({
@@ -85,7 +90,7 @@ export function WelcomeForm({
             try {
               const cashierEmail = buildCashierEmail(
                 values.cashierEmailLocalPart,
-                values.businessSlug,
+                businessSlug,
                 values.cashierEmailSuffix,
               );
               await createCashier.mutateAsync({
@@ -142,31 +147,31 @@ export function WelcomeForm({
         throw error;
       }
     },
-    disableNext: ({ stepId, values }) => {
-      if (stepId !== "business") return false;
-      const slug = (values.businessSlug ?? "").trim();
-      const normalized = generateSlug(slug);
-      const isValid =
-        normalized.length >= 2 &&
-        /^[a-z0-9-]+$/.test(normalized) &&
-        !normalized.startsWith("-");
-      if (!isValid) return true;
-      if (values.businessSlugAvailable === false) return true;
-      return false;
-    },
+    // disableNext: ({ stepId, values }) => {
+    //   if (stepId !== "business") return false;
+    //   const slug = (values.businessSlug ?? "").trim();
+    //   const normalized = generateSlug(slug);
+    //   const isValid =
+    //     normalized.length >= 2 &&
+    //     /^[a-z0-9-]+$/.test(normalized) &&
+    //     !normalized.startsWith("-");
+    //   if (!isValid) return true;
+    //   if (values.businessSlugAvailable === false) return true;
+    //   return false;
+    // },
     steps: [
       {
         id: "business",
         title: "Business Info",
         fields: [
           "businessName",
-          "businessSlug",
-          "businessSlugAvailable",
+          // "businessSlug",
+          // "businessSlugAvailable",
           "website",
-          "defaultPointsName",
-          "defaultCurrencySymbol",
-          "defaultCurrencyCode",
-          "themeColor",
+          // "defaultPointsName",
+          // "defaultCurrencySymbol",
+          // "defaultCurrencyCode",
+          // "themeColor",
         ],
         schema: businessStepSchema,
         Component: ({ stepIndex, totalSteps }) => (
@@ -227,10 +232,12 @@ export function WelcomeForm({
     businessName: "",
     businessSlug: "",
     businessSlugAvailable: false,
-    website: "",
+    website: "https://",
     defaultPointsName: "Points",
     defaultCurrencySymbol: "₹",
     defaultCurrencyCode: "INR",
+    logo: "",
+    themeColor: null as string | null,
     industries: [] as string[],
     createCashier: false,
     cashierName: "",
@@ -246,7 +253,7 @@ export function WelcomeForm({
         <LinearMultiStepForm<WelcomeFormValues>
           config={config}
           initialValues={formInitialValues}
-          navigationPosition="footer"
+          navigationPosition="inline"
           NavigationComponent={FormNavigation}
           progressType="bar"
         />
@@ -259,7 +266,7 @@ export function WelcomeForm({
       <LinearMultiStepForm<WelcomeFormValues>
         config={config}
         initialValues={formInitialValues}
-        navigationPosition="footer"
+        navigationPosition="inline"
         NavigationComponent={FormNavigation}
         progressType="bar"
       />

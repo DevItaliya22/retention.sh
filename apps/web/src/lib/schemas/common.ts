@@ -87,6 +87,35 @@ export const urlSchema = z
   .nullable()
   .or(z.literal(""));
 
+/** Optional URL in forms: empty, bare `https://` while typing, or a full valid URL. */
+export const websiteInputSchema = z
+  .union([
+    z.literal(""),
+    z
+      .string()
+      .max(2048, "URL is too long (max 2048 characters)")
+      .refine(
+        (s) => {
+          const t = s.trim();
+          if (t === "") return true;
+          if (t === "https://") return true;
+          return z.string().url().safeParse(t).success;
+        },
+        { message: "Invalid URL format" },
+      ),
+  ])
+  .optional()
+  .nullable();
+
+/** Maps placeholder-only or empty website input to "" for API / DB. */
+export function normalizeOptionalWebsiteInput(
+  value: string | null | undefined,
+): string {
+  const t = (value ?? "").trim();
+  if (t === "" || t === "https://") return "";
+  return t;
+}
+
 export const storagePathOrUrlSchema = z
   .string()
   .max(2048, "Path is too long (max 2048 characters)")
