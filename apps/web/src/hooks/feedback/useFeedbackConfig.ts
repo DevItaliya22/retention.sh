@@ -261,6 +261,7 @@ export function useUpdateFeedbackConfig() {
           }),
         );
       }
+      queryClient.invalidateQueries({ queryKey: ["currentBusiness"] });
     },
   });
 }

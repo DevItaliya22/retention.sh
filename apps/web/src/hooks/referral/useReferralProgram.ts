@@ -138,6 +138,7 @@ export function useUpdateReferralProgramTerms() {
           }),
         );
       }
+      queryClient.invalidateQueries({ queryKey: ["currentBusiness"] });
     },
   });
 }
@@ -221,6 +222,7 @@ export function useCreateReferralProgram() {
           };
         },
       );
+      queryClient.invalidateQueries({ queryKey: ["currentBusiness"] });
     },
   });
 }
@@ -255,6 +257,7 @@ export function useUpdateReferralProgram() {
           }),
         );
       }
+      queryClient.invalidateQueries({ queryKey: ["currentBusiness"] });
     },
   });
 }

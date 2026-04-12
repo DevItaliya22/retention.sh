@@ -8,6 +8,11 @@ import { useManageCashier } from "@/hooks/cashier/useManageCashier";
 import useOnboarding from "@/hooks/onboarding/useOnboarding";
 import { DEFAULT_BRANDING_THEME_COLOR } from "@/lib/constants/branding";
 import { DEFAULT_EMAIL_DOMAIN_SUFFIX } from "@/lib/constants/email-domains";
+import {
+  ONBOARDING_TOUR_ACTIVE,
+  ONBOARDING_TOUR_CARD_POS_SESSION_KEY,
+  ONBOARDING_TOUR_STORAGE_KEY,
+} from "@/lib/constants/onboarding-tour";
 import { normalizeOptionalWebsiteInput } from "@/lib/schemas/common";
 import {
   businessStepSchema,
@@ -128,7 +133,18 @@ export function WelcomeForm({
           if (onCompleted) {
             onCompleted();
           } else {
-            router.replace("/dashboard");
+            try {
+              window.localStorage.setItem(
+                ONBOARDING_TOUR_STORAGE_KEY,
+                ONBOARDING_TOUR_ACTIVE,
+              );
+              window.sessionStorage.removeItem(
+                ONBOARDING_TOUR_CARD_POS_SESSION_KEY,
+              );
+            } catch {
+              // ignore
+            }
+            router.replace("/settings/loyalty");
           }
         } else {
           const errorMsg = getErrorMessageFromResponse(

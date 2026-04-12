@@ -30,6 +30,7 @@ export function useUpdatePartnershipSettings() {
       }),
     onSuccess: (updated) => {
       queryClient.setQueryData(["partnershipSettings"], updated);
+      queryClient.invalidateQueries({ queryKey: ["currentBusiness"] });
     },
   });
 }

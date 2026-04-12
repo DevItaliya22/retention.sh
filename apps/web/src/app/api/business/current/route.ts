@@ -12,6 +12,7 @@ import {
   type IsServiceEnabled,
   mergeServiceEnabled,
 } from "@/lib/utils/service-enabled";
+import { buildSetupChecklist } from "@/lib/utils/setup-checklist";
 import { db } from "@reelo/db";
 import { NextResponse } from "next/server";
 
@@ -58,7 +59,7 @@ function fillMissingBranding(
 export const GET = withAdminAuthOptionalBusiness(async (request, context) => {
   try {
     if (!context.business) {
-      return NextResponse.json({ business: null });
+      return NextResponse.json({ business: null, setupChecklist: null });
     }
 
     const business = await db.business.findUnique({
@@ -72,19 +73,29 @@ export const GET = withAdminAuthOptionalBusiness(async (request, context) => {
     });
 
     if (!business) {
-      return NextResponse.json({ business: null });
+      return NextResponse.json({ business: null, setupChecklist: null });
     }
 
     const businessWithComputed = {
       ...business,
     };
 
-    return NextResponse.json({ business: businessWithComputed });
+    const setupChecklist = buildSetupChecklist({
+      loyalty: business.loyalty,
+      referralProgram: business.referralProgram,
+      feedbackSetupCompletedAt: business.feedbackSetupCompletedAt,
+    });
+
+    return NextResponse.json({
+      business: businessWithComputed,
+      setupChecklist,
+    });
   } catch (error: any) {
     console.error("Failed to fetch current business:", error);
     return NextResponse.json(
       {
         business: null,
+        setupChecklist: null,
         error:
           sanitizeErrorMessage(error) ||
           "Failed to fetch business. Please try again.",
@@ -101,7 +112,7 @@ export const PUT = withAdminAuth(async (request, context) => {
     const validation = validateSchema(updateBusinessSchema, body);
     if (!validation.success) {
       return NextResponse.json(
-        { business: null, error: validation.error },
+        { business: null, setupChecklist: null, error: validation.error },
         { status: 400 },
       );
     }
@@ -336,12 +347,19 @@ export const PUT = withAdminAuth(async (request, context) => {
       ...updated,
     };
 
-    return NextResponse.json({ business: updatedWithComputed });
+    const setupChecklist = buildSetupChecklist({
+      loyalty: updated.loyalty,
+      referralProgram: updated.referralProgram,
+      feedbackSetupCompletedAt: updated.feedbackSetupCompletedAt,
+    });
+
+    return NextResponse.json({ business: updatedWithComputed, setupChecklist });
   } catch (error: any) {
     console.error("Failed to update current business:", error);
     return NextResponse.json(
       {
         business: null,
+        setupChecklist: null,
         error:
           sanitizeErrorMessage(error) ||
           "Failed to update business. Please try again.",

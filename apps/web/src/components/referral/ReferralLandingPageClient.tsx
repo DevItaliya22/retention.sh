@@ -10,8 +10,9 @@ import {
   DEFAULT_BRANDING_THEME_COLOR,
 } from "@/lib/constants/branding";
 import { Skeleton } from "@reelo/ui/components";
-import { Gift, MoveRight, Share2, Sparkles } from "lucide-react";
+import { Copy, Gift, MoveRight, Share2, Sparkles } from "lucide-react";
 import { useMemo } from "react";
+import { toast } from "sonner";
 
 interface ReferralLandingPageClientProps {
   businessSlug: string;
@@ -132,6 +133,24 @@ export function ReferralLandingPageClient({
     }
     return "";
   }, [referralSlug]);
+
+  const claimQrImageUrl = useMemo(
+    () =>
+      referralLink
+        ? `https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=2&data=${encodeURIComponent(referralLink)}`
+        : null,
+    [referralLink],
+  );
+
+  const handleCopyClaimLink = async () => {
+    if (!referralLink) return;
+    try {
+      await navigator.clipboard.writeText(referralLink);
+      toast.success("Claim link copied");
+    } catch {
+      toast.error("Could not copy link");
+    }
+  };
 
   const handleShare = async () => {
     if (previewMode) return;
@@ -386,19 +405,68 @@ export function ReferralLandingPageClient({
               Share with friend
             </button>
 
-            <button
-              type="button"
-              disabled={loading || previewMode}
-              onClick={() => {
-                if (previewMode) return;
-                window.location.href = `/referral/claim/${referralSlug}`;
-              }}
-              className="flex h-11 w-full items-center justify-center gap-2 rounded-[12px] border text-[14px] font-medium transition-colors hover:bg-gray-50 active:opacity-90 disabled:pointer-events-none"
-              style={{ borderColor: `${themeColor}30`, color: themeColor }}
+            <div
+              className="overflow-hidden rounded-[16px] border border-gray-100/80 bg-gray-50/50 px-4 py-4"
+              aria-label="Claim offer with QR code"
             >
-              Claim Offer
-              <MoveRight size={18} />
-            </button>
+              <p className="text-center text-[12px] font-semibold tracking-wider text-gray-400 uppercase">
+                Claim offer
+              </p>
+              {loading || !claimQrImageUrl ? (
+                <div className="mt-4 flex justify-center">
+                  <Skeleton className="h-40 w-40 rounded-xl bg-gray-200" />
+                </div>
+              ) : (
+                <div className="mt-4 flex justify-center">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- external QR API, matches BillCreatedView */}
+                  <img
+                    src={claimQrImageUrl}
+                    alt="QR code to open the referral claim page"
+                    className="h-40 w-40 rounded-xl border border-gray-200/80 bg-white p-2 shadow-sm"
+                    width={160}
+                    height={160}
+                  />
+                </div>
+              )}
+              {loading ? (
+                <div className="mt-3 flex gap-2">
+                  <Skeleton className="h-11 flex-1 rounded-[12px] bg-gray-200" />
+                  <Skeleton className="h-11 flex-1 rounded-[12px] bg-gray-200" />
+                </div>
+              ) : (
+                <div className="mt-3 flex gap-2">
+                  <button
+                    type="button"
+                    disabled={!referralLink}
+                    onClick={handleCopyClaimLink}
+                    className="flex h-11 flex-1 items-center justify-center gap-1.5 rounded-[12px] border border-gray-200/80 bg-white text-[14px] font-medium transition-colors hover:bg-gray-50 active:opacity-90 disabled:pointer-events-none disabled:opacity-50"
+                    style={{
+                      borderColor: `${themeColor}30`,
+                      color: themeColor,
+                    }}
+                  >
+                    <Copy size={16} />
+                    Copy link
+                  </button>
+                  <button
+                    type="button"
+                    disabled={previewMode}
+                    onClick={() => {
+                      if (previewMode) return;
+                      window.location.href = `/referral/claim/${referralSlug}`;
+                    }}
+                    className="flex h-11 flex-1 items-center justify-center gap-2 rounded-[12px] border text-[14px] font-medium transition-colors hover:bg-gray-50 active:opacity-90 disabled:pointer-events-none disabled:opacity-50"
+                    style={{
+                      borderColor: `${themeColor}30`,
+                      color: themeColor,
+                    }}
+                  >
+                    Claim
+                    <MoveRight size={18} />
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
           {existingTerms.length > 0 && (

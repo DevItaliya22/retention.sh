@@ -7,7 +7,11 @@ export const metadata: Metadata = generateRouteMetadata("/dashboard");
 
 export default async function DashboardPage() {
   return (
-    <DashboardPageShell title="Dashboard" subtitle="Overview and insights">
+    <DashboardPageShell
+      title="Dashboard"
+      subtitle="Overview and insights"
+      tourAnchor="onboarding-tour-dashboard"
+    >
       <DashboardPageClient />
     </DashboardPageShell>
   );

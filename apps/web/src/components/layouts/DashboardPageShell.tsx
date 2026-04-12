@@ -38,6 +38,8 @@ export interface DashboardPageShellProps extends Omit<
   sectionClassName?: string;
   headerContentClassName?: string;
   contentClassName?: string;
+  /** Optional anchor for onboarding product tour (`data-tour` on main content). */
+  tourAnchor?: string;
 }
 
 export function DashboardPageShell({
@@ -50,6 +52,7 @@ export function DashboardPageShell({
   sectionClassName,
   headerContentClassName,
   contentClassName,
+  tourAnchor,
   isWidthFull = true,
   ...pageLayoutProps
 }: DashboardPageShellProps) {
@@ -104,6 +107,7 @@ export function DashboardPageShell({
       <DataTableToolbarActionsProvider actions={toolbarActions}>
         <ScaffoldContainer
           size={contentSize}
+          data-tour={tourAnchor}
           className={cn(
             DASHBOARD_PAGE_CONTENT_CLASS,
             contentPadding === "none" && DASHBOARD_PAGE_NO_PADDING_CLASS,
