@@ -43,11 +43,13 @@ then just use the name if the store to connect (put the name exaclty in input )
 
 online menu and store
 
-QR in places like referal
-
 name segments as tags and check dub.sh for ui for tags if needed
 
 insta auto dm
+
+pre registration feat
+
+admin can change loyalry points
 
 ## ISSUES TO BE SOLVED / make sometign better
 
@@ -59,5 +61,3 @@ http://localhost:3000/settings/referral in onboading , if the "send reminder is 
 
 now in http://localhost:3000/settings/feedback this age , we have branding where we ave preview , now in preview we have 2 tabs , onyl have oen tab "feedback page " will be there and move the other tab in Follow-up messages
 section on top and here now we will have 2 more tabs one will be positiove and one will be negative tab and show both ui , also reduce the top paddgin or maybe it is middle aligned thats why right now we have to scroll in thank you tab , reduce it in preview becasue we dont need so much of scrollignn in this preview tabs , check in feedback age preview in brandng there we have reduced the scrolling , so make sure it woek like that only , also one more thing ,also see one more thing , this whole feedback page , right now everything is almost branding kiinda thing means alomst everything will reflect in ui such as "Discovery & reviews" section too , so make sure rigt now we dont chnage the postion but we will do it too , and one more thing right niw "how did you hear about us " is not there in ui so add that too in preview and customer facinf page too , also just like referal preview we will make sure the colour in brandinf selected are either coming from api from main setting brandig or if not then it matchd the preview colour fields
-
-http://localhost:3000/settings/cashier in this tab the sheet opens have "Active" tag on top but the bg colour is too much , redcue the bg opacity colour it looks good

@@ -4,14 +4,14 @@ model Business {
   slug    String  @unique
   website String?
 
-  defaultPointsName       String    @default("Points")
-  defaultCurrencySymbol   String    @default("₹")
-  defaultCurrencyCode     String    @default("INR")
-  useDefaultBrandingForServices Boolean @default(false)
-  industries              String[]  @default([]) // From onboarding: industry tags (e.g. retail, food-beverage)
-  registrationBonusPoints Int       @default(0) // Bonus points when customer registers from loyalty login page
-  nextBillNumber          Int       @default(1) // Next bill number to use in cashier (auto-incremented on bill create)
-  defaultBranding         Branding?
+  defaultPointsName             String    @default("Points")
+  defaultCurrencySymbol         String    @default("₹")
+  defaultCurrencyCode           String    @default("INR")
+  useDefaultBrandingForServices Boolean   @default(false)
+  industries                    String[]  @default([]) // From onboarding: industry tags (e.g. retail, food-beverage)
+  registrationBonusPoints       Int       @default(0) // Bonus points when customer registers from loyalty login page
+  nextBillNumber                Int       @default(1) // Next bill number to use in cashier (auto-incremented on bill create)
+  defaultBranding               Branding?
 
   // Service toggles: { referral?: boolean, loyalty?: boolean, ... }
   // Missing key = disabled. Add new keys in lib/schemas/service-enabled.ts
@@ -46,6 +46,9 @@ model Business {
   partnershipEventLogs    PartnershipEventLog[] @relation("PartnershipEventLogs")
 
   segments Segment[]
+
+  // Set when admin saves feedback settings (not set by onboarding seed alone).
+  feedbackSetupCompletedAt DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

@@ -1,5 +1,9 @@
 "use client";
 import { BreadcrumbOverrideProvider } from "@/components/layouts/context/breadcrumb-override";
+import {
+  OnboardingTourHost,
+  SetupChecklistWidget,
+} from "@/components/onboarding";
 import { PropsWithChildren, useEffect, useState } from "react";
 
 import { SidebarInset, SidebarProvider } from "@reelo/ui/components/sidebar";
@@ -9,6 +13,7 @@ const SIDEBAR_AUTO_EXPAND_BREAKPOINT = 1280;
 
 const AppLayout = ({ children }: PropsWithChildren) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [setupWidgetDismissed, setSetupWidgetDismissed] = useState(false);
 
   useEffect(() => {
     const syncSidebarState = () => {
@@ -43,6 +48,11 @@ const AppLayout = ({ children }: PropsWithChildren) => {
             </div>
           </div>
         </SidebarProvider>
+        <OnboardingTourHost />
+        <SetupChecklistWidget
+          dismissed={setupWidgetDismissed}
+          onDismiss={() => setSetupWidgetDismissed(true)}
+        />
       </div>
     </BreadcrumbOverrideProvider>
   );

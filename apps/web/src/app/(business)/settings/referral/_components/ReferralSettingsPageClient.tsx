@@ -49,6 +49,7 @@ export function ReferralSettingsPageClient() {
         title="Referral Program"
         subtitle="Set up your referral program to reward customers"
         contentVariant="contained"
+        tourAnchor="onboarding-tour-referral"
       >
         <ReferralSettingsSkeleton />
       </DashboardPageShell>
@@ -61,6 +62,7 @@ export function ReferralSettingsPageClient() {
         title="Referral Program"
         subtitle="Set up your referral program to reward customers"
         contentVariant="contained"
+        tourAnchor="onboarding-tour-referral"
       >
         <ReferralProgramForm initialData={null} embedded />
       </DashboardPageShell>
@@ -76,6 +78,7 @@ export function ReferralSettingsPageClient() {
       title="Referral Program"
       subtitle={subtitle}
       contentVariant="contained"
+      tourAnchor="onboarding-tour-referral"
     >
       {!referralEnabled ? (
         <Empty className="min-h-[200px]">

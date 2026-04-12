@@ -48,6 +48,7 @@ export function FeedbackSettingsPageClient() {
         title="Feedback"
         subtitle="Configure when and how to collect customer feedback"
         contentVariant="contained"
+        tourAnchor="onboarding-tour-feedback"
       >
         <FeedbackSettingsSkeleton />
       </DashboardPageShell>
@@ -59,6 +60,7 @@ export function FeedbackSettingsPageClient() {
       title="Feedback"
       subtitle="Configure when and how to collect customer feedback. A feedback link is created for every bill."
       contentVariant="contained"
+      tourAnchor="onboarding-tour-feedback"
     >
       <FeedbackExistingSettings config={config} />
     </DashboardPageShell>

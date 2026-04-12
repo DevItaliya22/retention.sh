@@ -1,6 +1,7 @@
 "use client";
 
 import { BrandingFieldGroup } from "@/components/common/settings/BrandingFieldGroup";
+import { SettingsField } from "@/components/common/settings/SettingsField";
 import { SettingsFieldGroup } from "@/components/common/settings/SettingsFieldGroup";
 import { DashboardPageShell } from "@/components/layouts";
 import type { CurrentBusiness } from "@/hooks/business/useCurrentBusiness";
@@ -10,6 +11,7 @@ import {
   DEFAULT_BRANDING_THEME_COLOR,
 } from "@/lib/constants/branding";
 import { isServiceEnabled } from "@/lib/utils/service-enabled";
+import { beginOnboardingTourManual } from "@/stores/onboarding-tour-store";
 import {
   Card,
   CardContent,
@@ -18,6 +20,7 @@ import {
   CardTitle,
   Switch,
 } from "@reelo/ui/components";
+import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { toast } from "sonner";
 
@@ -28,6 +31,7 @@ interface BusinessExistingSettingsProps {
 export function BusinessExistingSettings({
   business,
 }: BusinessExistingSettingsProps) {
+  const router = useRouter();
   const { mutateAsync: updateBusiness } = useUpdateBusiness();
   const [referralPending, startReferralTransition] = useTransition();
   const [loyaltyPending, startLoyaltyTransition] = useTransition();
@@ -249,6 +253,22 @@ export function BusinessExistingSettings({
             ),
           }}
           onSubmit={handleUpdateCurrencySettings}
+        />
+
+        <SettingsField
+          type="action"
+          title="Platform tour"
+          description="Walk through loyalty, referral, feedback, partners, and your dashboard."
+          action={{
+            rowLabel: "Guided walkthrough",
+            summary:
+              "Opens at Loyalty settings. Use Previous and Next to move between areas; Skip ends the tour anytime.",
+            helpText:
+              "The page stays fully visible. Drag the tour card by the top handle to reposition it—it snaps to the nearest screen corner.",
+            buttonLabel: "Start platform tour",
+            onButtonClick: () =>
+              beginOnboardingTourManual((href) => router.push(href)),
+          }}
         />
 
         <BrandingFieldGroup

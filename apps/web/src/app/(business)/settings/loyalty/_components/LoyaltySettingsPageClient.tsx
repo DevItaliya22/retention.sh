@@ -46,6 +46,7 @@ export function LoyaltySettingsPageClient() {
         title="Loyalty Settings"
         subtitle="Configure earning, redemption, expiry, and communication"
         contentVariant="contained"
+        tourAnchor="onboarding-tour-loyalty"
       >
         <LoyaltySettingsSkeleton />
       </DashboardPageShell>
@@ -58,6 +59,7 @@ export function LoyaltySettingsPageClient() {
         title="Loyalty Settings"
         subtitle="Set up earning, redemption, expiry, and communication"
         contentVariant="contained"
+        tourAnchor="onboarding-tour-loyalty"
       >
         <LoyaltyProgramForm initialData={null} embedded />
       </DashboardPageShell>
@@ -73,6 +75,7 @@ export function LoyaltySettingsPageClient() {
       title="Loyalty Settings"
       subtitle={subtitle}
       contentVariant="contained"
+      tourAnchor="onboarding-tour-loyalty"
     >
       {!loyaltyEnabled ? (
         <Empty className="min-h-[200px]">

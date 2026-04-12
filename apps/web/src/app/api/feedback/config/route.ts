@@ -198,6 +198,11 @@ export const PUT = withAdminAuth(async (request: NextRequest, context) => {
           },
         });
 
+    await db.business.update({
+      where: { id: businessId },
+      data: { feedbackSetupCompletedAt: new Date() },
+    });
+
     return NextResponse.json({ config });
   } catch (error: unknown) {
     console.error("Failed to update feedback config:", error);

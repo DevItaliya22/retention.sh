@@ -1252,6 +1252,7 @@ export function PartnersSettingsPageClient() {
       title="Partners"
       subtitle={PAGE_SUBTITLE}
       contentVariant="contained"
+      tourAnchor="onboarding-tour-partners"
     >
       <div className="space-y-6 pb-6">
         {!isHydrated ? (

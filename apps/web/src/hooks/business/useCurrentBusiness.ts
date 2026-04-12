@@ -2,6 +2,7 @@
 
 import { fetcher } from "@/lib/fetcher";
 import type { IsServiceEnabled } from "@/lib/utils/service-enabled";
+import type { SetupChecklistPayload } from "@/lib/utils/setup-checklist";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 export interface CurrentBusinessBranding {
@@ -30,17 +31,29 @@ export interface CurrentBusiness {
   referralProgram?: { id: string } | null;
   loyalty?: { id: string } | null;
   feedbackConfig?: { id: string } | null;
+  receivePartnershipOffers?: boolean;
+  feedbackSetupCompletedAt?: string | null;
 }
 
 export interface CurrentBusinessResponse {
   business: CurrentBusiness | null;
+  setupChecklist: SetupChecklistPayload | null;
   error?: string;
 }
 
 export function useCurrentBusiness() {
   return useQuery<CurrentBusinessResponse, Error>({
     queryKey: ["currentBusiness"],
-    queryFn: () => fetcher<CurrentBusinessResponse>("/api/business/current"),
+    queryFn: async () => {
+      const res = await fetcher<CurrentBusinessResponse>(
+        "/api/business/current",
+      );
+      return {
+        business: res.business,
+        setupChecklist: res.setupChecklist ?? null,
+        error: res.error,
+      };
+    },
   });
 }
 
@@ -68,6 +81,7 @@ export interface UpdateBusinessInput {
 
 export interface UpdateBusinessResponse {
   business: CurrentBusiness | null;
+  setupChecklist: SetupChecklistPayload | null;
   error?: string;
 }
 
@@ -86,10 +100,16 @@ export function useUpdateBusiness() {
         ["currentBusiness"],
         (existing) => {
           if (!data.business) {
-            return { business: null, error: data.error };
+            return {
+              business: null,
+              setupChecklist: data.setupChecklist ?? null,
+              error: data.error,
+            };
           }
           return {
             business: data.business,
+            setupChecklist:
+              data.setupChecklist ?? existing?.setupChecklist ?? null,
             error: data.error ?? existing?.error,
           };
         },

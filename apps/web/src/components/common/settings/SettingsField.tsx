@@ -27,15 +27,27 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import * as z from "zod";
 
+export type SettingsFieldActionConfig = {
+  /** Left column label (same grid as other settings rows). */
+  rowLabel: string;
+  /** Main copy in the right column. */
+  summary: string;
+  helpText?: string;
+  buttonLabel: string;
+  onButtonClick: () => void;
+};
+
 interface SettingsFieldProps {
   title: string;
   description?: string;
-  onSubmit: (data: { value: string | boolean }) => Promise<{
+  onSubmit?: (data: { value: string | boolean }) => Promise<{
     success: boolean;
     error?: string;
   }>;
   defaultValue?: string | boolean;
-  type?: "text" | "textarea" | "toggle";
+  type?: "text" | "textarea" | "toggle" | "action";
+  /** Required when type is "action". */
+  action?: SettingsFieldActionConfig;
   placeholder?: string;
   maxLength?: number;
   helpText?: string;
@@ -46,6 +58,60 @@ interface SettingsFieldProps {
     onDelete: () => Promise<{ success: boolean; error?: string }>;
     confirmText?: string;
   };
+}
+
+function SettingsFieldActionLayout({
+  title,
+  description,
+  action,
+}: {
+  title: string;
+  description?: string;
+  action: SettingsFieldActionConfig;
+}) {
+  return (
+    <Card className="bg-sidebar-accent/50 flex min-h-0 flex-col gap-0 rounded-lg border-0 p-2">
+      <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
+        <CardTitle className="text-foreground text-base leading-none font-semibold">
+          {title}
+        </CardTitle>
+        {description && (
+          <CardDescription className="text-muted-foreground mt-0.5 text-sm">
+            {description}
+          </CardDescription>
+        )}
+      </CardHeader>
+
+      <Card className="border-border/45 bg-background/55 flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border shadow-none">
+        <CardContent className="flex min-h-0 flex-1 flex-col gap-y-4 overflow-auto px-4 py-4">
+          <div className="flex flex-col gap-2 md:grid md:grid-cols-12">
+            <div className="col-span-4 flex flex-col gap-2">
+              <Label className="text-sm">{action.rowLabel}</Label>
+            </div>
+            <div className="col-span-8 flex flex-col gap-1">
+              <p className="text-foreground text-sm leading-relaxed">
+                {action.summary}
+              </p>
+              {action.helpText && (
+                <p className="text-foreground-lighter text-xs">
+                  {action.helpText}
+                </p>
+              )}
+            </div>
+          </div>
+        </CardContent>
+        <CardFooter className="flex shrink-0 items-center justify-end gap-2 border-0 px-4 py-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={action.onButtonClick}
+          >
+            {action.buttonLabel}
+          </Button>
+        </CardFooter>
+      </Card>
+    </Card>
+  );
 }
 
 const textSchema = z.object({
@@ -62,12 +128,30 @@ export function SettingsField({
   onSubmit,
   defaultValue,
   type = "text",
+  action,
   placeholder,
   maxLength,
   helpText,
   disabled = false,
   deleteAction,
 }: SettingsFieldProps) {
+  if (type === "action") {
+    if (!action) return null;
+    return (
+      <SettingsFieldActionLayout
+        title={title}
+        description={description}
+        action={action}
+      />
+    );
+  }
+
+  if (!onSubmit) {
+    throw new Error(
+      "SettingsField: onSubmit is required unless type is action",
+    );
+  }
+
   const [isDeleting, setIsDeleting] = useTransition();
 
   const schema = type === "toggle" ? toggleSchema : textSchema;
