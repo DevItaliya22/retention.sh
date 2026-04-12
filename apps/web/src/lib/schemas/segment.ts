@@ -1,4 +1,37 @@
+import {
+  isAllowedTagColourHex,
+  normalizeTagColourHex,
+} from "@/lib/segmentation/segment-tag-colours";
 import { z } from "zod";
+
+const tagColourRefine = (v: string | null | undefined) =>
+  v === undefined ||
+  v === null ||
+  v === "" ||
+  (normalizeTagColourHex(v) != null && isAllowedTagColourHex(v));
+
+/** Create: omitted / empty → null (use slug default). */
+const tagColourCreateSchema = z
+  .union([z.undefined(), z.null(), z.string()])
+  .refine(tagColourRefine, {
+    message: "Tag colour must be a #RRGGBB value from the palette",
+  })
+  .transform((v) => {
+    if (v === undefined || v === null || v === "") return null;
+    return normalizeTagColourHex(v)!;
+  });
+
+/** Update: omitted → undefined (do not clear DB); null → clear override. */
+const tagColourUpdateSchema = z
+  .union([z.undefined(), z.null(), z.string()])
+  .refine(tagColourRefine, {
+    message: "Tag colour must be a #RRGGBB value from the palette",
+  })
+  .transform((v) => {
+    if (v === undefined) return undefined;
+    if (v === null || v === "") return null;
+    return normalizeTagColourHex(v)!;
+  });
 
 const SEGMENT_OPERATORS = [
   "LESS_THAN",
@@ -20,6 +53,14 @@ export const FREQUENCY_MAX = 1000;
 export const MONETARY_MIN = 0;
 export const MONETARY_MAX = 100; // for RATIO (multiple of avg)
 export const MONETARY_ABSOLUTE_MAX = 999_999_999; // for ABSOLUTE (₹)
+
+/** Max segment rows per business (system + custom). */
+export const SEGMENTS_MAX_PER_BUSINESS = 20;
+/** Default / max `limit` for GET /api/segments */
+export const SEGMENTS_LIST_DEFAULT_LIMIT = 20;
+export const SEGMENT_NAME_MAX_LENGTH = 30;
+export const SEGMENT_SLUG_MAX_LENGTH = 40;
+export const SEGMENT_DESCRIPTION_MAX_LENGTH = 200;
 
 export const segmentParamSchema = z.object({
   segment: z.string().min(1).max(100),
@@ -188,22 +229,35 @@ const monetaryConfigSchema = z
 
 export const createSegmentSchema = z
   .object({
-    name: z.string().min(1).max(255).trim(),
+    name: z.string().min(1).max(SEGMENT_NAME_MAX_LENGTH).trim(),
     slug: z
       .string()
       .min(1)
-      .max(100)
+      .max(SEGMENT_SLUG_MAX_LENGTH)
       .regex(/^[a-z0-9-]+$/, "Slug must be lowercase alphanumeric with hyphens")
       .trim(),
-    description: z.string().max(1000).trim().optional().nullable(),
+    description: z
+      .string()
+      .max(SEGMENT_DESCRIPTION_MAX_LENGTH)
+      .trim()
+      .optional()
+      .nullable(),
     proTip: z.string().max(1000).trim().optional().nullable(),
     sortOrder: z.number().int().min(0).optional(),
+    tagColour: tagColourCreateSchema,
   })
   .merge(recencyConfigSchema)
   .merge(frequencyConfigSchema)
   .merge(monetaryConfigSchema);
 
-export const updateSegmentSchema = createSegmentSchema.partial();
+export const updateSegmentSchema = createSegmentSchema
+  .omit({ tagColour: true })
+  .partial()
+  .merge(
+    z.object({
+      tagColour: tagColourUpdateSchema.optional(),
+    }),
+  );
 
 export type CreateSegmentInput = z.infer<typeof createSegmentSchema>;
 export type UpdateSegmentInput = z.infer<typeof updateSegmentSchema>;

@@ -10,6 +10,7 @@ export interface SegmentSummary {
   percentage: number;
   description: string | null;
   proTip: string | null;
+  tagColour: string | null;
 }
 
 export interface SegmentsOverviewResponse {
@@ -54,6 +55,7 @@ export async function getSegmentsOverview(
         percentage: 0,
         description: s.description,
         proTip: s.proTip,
+        tagColour: s.tagColour ?? null,
       })),
     };
   }
@@ -146,6 +148,7 @@ export async function getSegmentsOverview(
           : 0,
       description: s.description,
       proTip: s.proTip,
+      tagColour: s.tagColour ?? null,
     };
   });
 

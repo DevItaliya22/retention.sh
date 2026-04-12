@@ -1,6 +1,7 @@
 "use client";
 
 import { fetcher } from "@/lib/fetcher";
+import { SEGMENTS_LIST_DEFAULT_LIMIT } from "@/lib/schemas/segment";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 export interface SegmentItem {
@@ -10,6 +11,8 @@ export interface SegmentItem {
   slug: string;
   description: string | null;
   proTip: string | null;
+  /** Null/absent = use default colour for slug */
+  tagColour?: string | null;
   recencyOperator: string | null;
   recencyValue: number | null;
   recencyValue2: number | null;
@@ -29,12 +32,17 @@ export interface SegmentItem {
 
 export interface SegmentsListResponse {
   items: SegmentItem[];
+  /** Total segments for this business (for caps); items may be truncated by limit */
+  total: number;
 }
 
 export function useSegmentsQuery() {
   return useQuery<SegmentsListResponse, Error>({
     queryKey: ["segments"],
-    queryFn: () => fetcher<SegmentsListResponse>("/api/segments"),
+    queryFn: () =>
+      fetcher<SegmentsListResponse>(
+        `/api/segments?limit=${SEGMENTS_LIST_DEFAULT_LIMIT}`,
+      ),
     placeholderData: (prev) => prev,
     staleTime: 30_000,
   });

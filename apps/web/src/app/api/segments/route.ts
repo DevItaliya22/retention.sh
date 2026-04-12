@@ -1,5 +1,9 @@
 import { withAdminAuth } from "@/lib/auth/middleware";
-import { createSegmentSchema } from "@/lib/schemas/segment";
+import {
+  SEGMENTS_LIST_DEFAULT_LIMIT,
+  SEGMENTS_MAX_PER_BUSINESS,
+  createSegmentSchema,
+} from "@/lib/schemas/segment";
 import { seedDefaultSegments } from "@/lib/segmentation";
 import {
   sanitizeErrorMessage,
@@ -8,29 +12,52 @@ import {
 import { db } from "@reelo/db";
 import { NextRequest, NextResponse } from "next/server";
 
-export const GET = withAdminAuth(async (_request: NextRequest, context) => {
+function parseListLimit(request: NextRequest): number {
+  const raw = request.nextUrl.searchParams.get("limit");
+  if (raw == null || raw === "") return SEGMENTS_LIST_DEFAULT_LIMIT;
+  const n = parseInt(raw, 10);
+  if (!Number.isFinite(n)) return SEGMENTS_LIST_DEFAULT_LIMIT;
+  return Math.min(SEGMENTS_MAX_PER_BUSINESS, Math.max(1, Math.trunc(n)));
+}
+
+export const GET = withAdminAuth(async (request: NextRequest, context) => {
   try {
     const businessId = context.business.id;
+    const limit = parseListLimit(request);
+
+    const total = await db.segment.count({ where: { businessId } });
+
     let segments = await db.segment.findMany({
       where: { businessId },
       orderBy: { sortOrder: "asc" },
+      take: limit,
     });
 
-    if (segments.length === 0) {
+    if (segments.length === 0 && total === 0) {
       await seedDefaultSegments(businessId);
+      const newTotal = await db.segment.count({ where: { businessId } });
       segments = await db.segment.findMany({
         where: { businessId },
         orderBy: { sortOrder: "asc" },
+        take: limit,
+      });
+      return NextResponse.json({
+        items: segments,
+        total: newTotal,
       });
     }
 
-    return NextResponse.json({ items: segments });
+    return NextResponse.json({
+      items: segments,
+      total,
+    });
   } catch (error: unknown) {
     console.error("Failed to fetch segments:", error);
     return NextResponse.json(
       {
         error: sanitizeErrorMessage(error) || "Failed to fetch segments.",
         items: [],
+        total: 0,
       },
       { status: 500 },
     );
@@ -47,6 +74,16 @@ export const POST = withAdminAuth(async (request: NextRequest, context) => {
 
     const businessId = context.business.id;
     const data = validation.data;
+
+    const segmentCount = await db.segment.count({ where: { businessId } });
+    if (segmentCount >= SEGMENTS_MAX_PER_BUSINESS) {
+      return NextResponse.json(
+        {
+          error: `You can have at most ${SEGMENTS_MAX_PER_BUSINESS} segments per account.`,
+        },
+        { status: 400 },
+      );
+    }
 
     const existing = await db.segment.findFirst({
       where: {
@@ -73,6 +110,7 @@ export const POST = withAdminAuth(async (request: NextRequest, context) => {
         slug: data.slug,
         description: data.description ?? null,
         proTip: data.proTip ?? null,
+        tagColour: data.tagColour ?? null,
         sortOrder: data.sortOrder ?? 0,
         isSystem: false,
         recencyOperator: data.recencyOperator ?? null,

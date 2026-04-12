@@ -118,6 +118,7 @@ export const PUT = withAdminAuth<{ id: string }>(
             description: data.description,
           }),
           ...(data.proTip !== undefined && { proTip: data.proTip }),
+          ...(data.tagColour !== undefined && { tagColour: data.tagColour }),
           ...(data.sortOrder != null && { sortOrder: data.sortOrder }),
           ...(data.recencyOperator !== undefined && {
             recencyOperator: data.recencyOperator,

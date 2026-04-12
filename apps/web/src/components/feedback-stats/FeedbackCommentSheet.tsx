@@ -63,7 +63,7 @@ export function FeedbackCommentSheet({
           </SheetTitle>
         </SheetHeader>
 
-        <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
           <div
             className="from-muted/30 min-h-full bg-gradient-to-b to-transparent px-4 py-5"
             style={{ paddingBottom: "1.5rem" }}

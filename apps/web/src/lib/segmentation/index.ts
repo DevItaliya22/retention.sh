@@ -8,4 +8,14 @@ export {
   getSegmentCustomerIdsForSlugs,
 } from "./get-segment-ids";
 export { seedDefaultSegments } from "./seed";
+export {
+  DEFAULT_SYSTEM_SLUG_TO_PALETTE_INDEX,
+  SEGMENT_TAG_PALETTE,
+  getDefaultTagHexForSlug,
+  getSegmentTagHex,
+  segmentCardSurfaceStyle,
+  segmentIconSurfaceStyle,
+  tagColourForPersist,
+} from "./segment-tag-colours";
+export type { SegmentTagHex } from "./segment-tag-colours";
 export type { CustomerData, SegmentConfig } from "./types";

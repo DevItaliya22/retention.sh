@@ -2,6 +2,10 @@
 
 import { useCustomerSegmentsQuery } from "@/hooks/analytics/useAnalyticsQuery";
 import { useCreateCampaignDraft } from "@/hooks/campaigns/useCampaignsQuery";
+import {
+  getSegmentTagHex,
+  segmentCardSurfaceStyle,
+} from "@/lib/segmentation/segment-tag-colours";
 import type { CustomerSegment } from "@/lib/types/analytics";
 import { InfoIcon } from "@reelo/ui/components";
 import { Skeleton } from "@reelo/ui/components/skeleton";
@@ -11,19 +15,6 @@ import { useRouter } from "next/navigation";
 import { useCallback } from "react";
 import { toast } from "sonner";
 import { SectionHeader } from "../shared";
-
-const SEGMENT_BG: Record<string, string> = {
-  vip: "bg-blue-50 dark:bg-blue-950/30",
-  loyal: "bg-green-50 dark:bg-green-950/30",
-  "cant-loose": "bg-amber-50 dark:bg-amber-950/30",
-  lost: "bg-red-50 dark:bg-red-950/30",
-  "about-to-sleep": "bg-orange-50 dark:bg-orange-950/30",
-  "at-risk": "bg-pink-50 dark:bg-pink-950/30",
-  "potential-loyalist": "bg-teal-50 dark:bg-teal-950/30",
-  promising: "bg-emerald-50 dark:bg-emerald-950/30",
-  "needs-attention": "bg-yellow-50 dark:bg-yellow-950/30",
-  other: "bg-muted",
-};
 
 type CardSize = "large" | "wide" | "tall" | "small";
 
@@ -57,7 +48,7 @@ function SegmentBlock({
   isCreatingCampaign?: boolean;
   size: CardSize;
 }) {
-  const bgClass = SEGMENT_BG[segment.slug] ?? "bg-muted";
+  const hex = getSegmentTagHex(segment.tagColour, segment.slug);
   const infoContent = [segment.description, segment.proTip]
     .filter(Boolean)
     .join("\n\nPro-tip: ");
@@ -77,9 +68,9 @@ function SegmentBlock({
       }}
       className={cn(
         "group flex cursor-pointer flex-col justify-between rounded-lg border p-4 text-left transition-all duration-200 hover:scale-[1.02] hover:shadow-md",
-        bgClass,
         SIZE_CLASSES[size],
       )}
+      style={segmentCardSurfaceStyle(hex)}
     >
       <div className="flex items-start justify-between gap-2">
         <p

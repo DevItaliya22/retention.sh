@@ -15,6 +15,8 @@ model Segment {
   slug        String // URL-safe: "vip", "cant-loose", unique per business
   description String?
   proTip      String?
+  /// Optional #RRGGBB from SEGMENT_TAG_PALETTE; null = use default for slug
+  tagColour   String?
 
   // Recency: days since last visit (lastVisitAt ?? lastBillDate ?? createdAt)
   recencyOperator SegmentOperator?

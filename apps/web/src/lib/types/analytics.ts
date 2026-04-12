@@ -138,6 +138,7 @@ export interface CustomerSegment {
   percentage: number;
   description?: string | null;
   proTip?: string | null;
+  tagColour?: string | null;
 }
 
 export interface CustomerSegmentsResponse {
