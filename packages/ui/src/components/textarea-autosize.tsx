@@ -39,7 +39,7 @@ const TextareaAutosize = React.forwardRef<
             ? "text-foreground placeholder:text-muted-foreground/60 border-input focus-visible:border-primary aria-invalid:border-destructive flex w-full min-w-0 resize-none border-0 border-b bg-transparent px-0 py-3 text-base leading-relaxed transition-colors outline-none disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 dark:bg-transparent"
             : cn(
                 "border-input placeholder:text-muted-foreground dark:bg-input/30 flex w-full resize-none rounded-md border bg-transparent px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
-                "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
+                "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:ring-inset",
                 "aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
               ),
           className,

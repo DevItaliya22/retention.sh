@@ -12,7 +12,15 @@ import {
   RECENCY_DAYS_MIN,
   RECENCY_MONTHS_MAX,
   RECENCY_MONTHS_MIN,
+  SEGMENT_DESCRIPTION_MAX_LENGTH,
+  SEGMENT_NAME_MAX_LENGTH,
+  SEGMENT_SLUG_MAX_LENGTH,
 } from "@/lib/schemas/segment";
+import {
+  getSegmentTagHex,
+  SEGMENT_TAG_PALETTE,
+  tagColourForPersist,
+} from "@/lib/segmentation/segment-tag-colours";
 import {
   Button,
   Input,
@@ -157,6 +165,9 @@ export function SegmentFormSheet({
   const [monOp, setMonOp] = useState<string | null>(null);
   const [monVal, setMonVal] = useState<string>("");
   const [monVal2, setMonVal2] = useState<string>("");
+  const [selectedTagColour, setSelectedTagColour] = useState<string>(
+    SEGMENT_TAG_PALETTE[10],
+  );
 
   useEffect(() => {
     if (segment) {
@@ -174,6 +185,7 @@ export function SegmentFormSheet({
       setMonOp(segment.monetaryOperator);
       setMonVal(segment.monetaryValue?.toString() ?? "");
       setMonVal2(segment.monetaryValue2?.toString() ?? "");
+      setSelectedTagColour(getSegmentTagHex(segment.tagColour, segment.slug));
     } else {
       setName("");
       setSlug("");
@@ -189,6 +201,7 @@ export function SegmentFormSheet({
       setMonOp(null);
       setMonVal("");
       setMonVal2("");
+      setSelectedTagColour(SEGMENT_TAG_PALETTE[10]);
     }
   }, [segment, open]);
 
@@ -204,12 +217,15 @@ export function SegmentFormSheet({
     const needsRange = (op: string | null) =>
       op === "IN_RANGE" || op === "NOT_IN_RANGE";
 
+    const slugKey = slug.trim().toLowerCase().replace(/\s+/g, "-") || "segment";
+
     return {
       name: name.trim(),
-      slug: slug.trim().toLowerCase().replace(/\s+/g, "-"),
+      slug: slugKey,
       description: description.trim() || null,
       ...(segment ? {} : { proTip: null }),
       sortOrder: 0,
+      tagColour: tagColourForPersist(selectedTagColour, slugKey),
       recencyOperator: recencyOp || null,
       recencyValue: recencyVal ? parseFloat(recencyVal) : null,
       recencyValue2:
@@ -240,6 +256,7 @@ export function SegmentFormSheet({
     monOp,
     monVal,
     monVal2,
+    selectedTagColour,
   ]);
 
   const handleSubmit = useCallback(async () => {
@@ -319,13 +336,14 @@ export function SegmentFormSheet({
         <SheetHeader>
           <SheetTitle>{segment ? "Edit segment" : "Create segment"}</SheetTitle>
         </SheetHeader>
-        <div className="mt-6 flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto">
+        <div className="mt-6 flex min-h-0 min-w-0 flex-1 flex-col gap-6 overflow-x-hidden overflow-y-auto">
           <div className="space-y-2">
             <Label>Name</Label>
             <Input
               value={name}
               onChange={(e) => handleNameChange(e.target.value)}
               placeholder="e.g. VIP"
+              maxLength={SEGMENT_NAME_MAX_LENGTH}
             />
           </div>
           <div className="space-y-2">
@@ -334,7 +352,41 @@ export function SegmentFormSheet({
               value={slug}
               onChange={(e) => setSlug(e.target.value)}
               placeholder="e.g. vip"
+              maxLength={SEGMENT_SLUG_MAX_LENGTH}
             />
+          </div>
+          <div className="space-y-2">
+            <Label>Tag colour</Label>
+            <p className="text-muted-foreground text-xs">
+              Shown on the segments list and RFM overview. Defaults follow
+              system presets; pick any swatch to override.
+            </p>
+            <div
+              className="grid w-full min-w-0 grid-cols-5 gap-2 p-1"
+              role="listbox"
+              aria-label="Segment colour"
+            >
+              {SEGMENT_TAG_PALETTE.map((hex) => {
+                const selected = selectedTagColour === hex;
+                return (
+                  <button
+                    key={hex}
+                    type="button"
+                    role="option"
+                    aria-selected={selected}
+                    className={cn(
+                      "focus-visible:ring-ring size-9 shrink-0 rounded-md border-2 transition-transform hover:scale-[1.02] focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset",
+                      selected
+                        ? "z-[1] scale-105 border-transparent shadow-sm ring-2 ring-blue-500 ring-inset dark:ring-blue-400"
+                        : "border-transparent ring-0",
+                    )}
+                    style={{ backgroundColor: hex }}
+                    title={hex}
+                    onClick={() => setSelectedTagColour(hex)}
+                  />
+                );
+              })}
+            </div>
           </div>
           <div className="space-y-2">
             <Label>Description</Label>
@@ -343,6 +395,7 @@ export function SegmentFormSheet({
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Describe this segment..."
               rows={2}
+              maxLength={SEGMENT_DESCRIPTION_MAX_LENGTH}
             />
           </div>
 

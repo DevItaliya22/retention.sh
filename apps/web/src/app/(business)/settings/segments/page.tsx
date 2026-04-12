@@ -14,8 +14,8 @@ export default function SegmentsSettingsPage() {
     <Suspense
       fallback={
         <SettingsPageFallback
-          title="Customer Segments"
-          subtitle="Configure recency, frequency, and monetary thresholds for customer segmentation"
+          title="Segments"
+          subtitle="Create and manage customer segments"
         >
           <SegmentsSettingsSkeleton />
         </SettingsPageFallback>

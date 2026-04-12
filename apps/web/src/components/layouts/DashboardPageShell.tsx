@@ -30,6 +30,8 @@ export interface DashboardPageShellProps extends Omit<
   | "pageHeaderClassName"
   | "scaffoldSectionClassName"
   | "scaffoldContainerClassName"
+  | "primaryActions"
+  | "secondaryActions"
 > {
   children: ReactNode;
   showSidebarTrigger?: boolean;
@@ -40,6 +42,15 @@ export interface DashboardPageShellProps extends Omit<
   contentClassName?: string;
   /** Optional anchor for onboarding product tour (`data-tour` on main content). */
   tourAnchor?: string;
+  /**
+   * Renders in the page header row (next to the title). Distinct from `primaryActions`,
+   * which are injected into data-table toolbars via context.
+   */
+  pageHeaderPrimaryActions?: ReactNode;
+  pageHeaderSecondaryActions?: ReactNode;
+  /** Injected into data-table toolbars (not the page header). */
+  primaryActions?: ReactNode;
+  secondaryActions?: ReactNode;
 }
 
 export function DashboardPageShell({
@@ -47,6 +58,8 @@ export function DashboardPageShell({
   showSidebarTrigger = true,
   primaryActions,
   secondaryActions,
+  pageHeaderPrimaryActions,
+  pageHeaderSecondaryActions,
   contentVariant = "contained",
   contentPadding = "default",
   sectionClassName,
@@ -87,8 +100,8 @@ export function DashboardPageShell({
       title={compactTitle}
       icon={undefined}
       subtitle={undefined}
-      primaryActions={undefined}
-      secondaryActions={undefined}
+      primaryActions={pageHeaderPrimaryActions}
+      secondaryActions={pageHeaderSecondaryActions}
       headerLeading={headerLeading}
       headerRowClassName={DASHBOARD_PAGE_HEADER_ROW_CLASS}
       isCompact={true}

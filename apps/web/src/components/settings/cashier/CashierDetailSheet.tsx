@@ -106,7 +106,7 @@ export function CashierDetailSheet({
           </SheetDescription>
         </SheetHeader>
 
-        <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 pb-4">
+        <div className="min-h-0 flex-1 space-y-2 overflow-x-hidden overflow-y-auto px-4 pb-4">
           {isLoading && (
             <div className="space-y-4">
               <div className="space-y-2">

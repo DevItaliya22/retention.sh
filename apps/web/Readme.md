@@ -1,5 +1,7 @@
 Ratelimiting
 
+write that "inc lifetime value " in landing page
+
 <!--  form https://www.openloyalty.io/  -->
 
 Games of chance
