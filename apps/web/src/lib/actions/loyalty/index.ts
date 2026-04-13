@@ -398,6 +398,206 @@ async function recordPointsRedemptionAsCashbackFlow(
   }
 }
 
+/**
+ * Same as bill flow but no bill: admin points → cashback / pending free item.
+ * ledger: MANUAL_ADJUSTMENT, billId null.
+ */
+async function recordPointsRedemptionAsAdminFlow(
+  tx: Prisma.TransactionClient,
+  params: {
+    businessId: string;
+    customerId: string;
+    loyaltyId: string | null;
+    context: LoyaltyContext;
+    pointsDec: number;
+    cashbackValue: number;
+    freeItemReward?: FreeItemRewardParams;
+    initiator?: "admin" | "customer";
+  },
+) {
+  const {
+    businessId,
+    customerId,
+    loyaltyId,
+    context,
+    pointsDec,
+    cashbackValue,
+    freeItemReward,
+    initiator = "admin",
+  } = params;
+  if (pointsDec <= 0 || context.type === "CASHBACK" || context.type === "TIER")
+    return;
+  const wallet = await tx.wallet.findUnique({
+    where: { businessId_customerId: { businessId, customerId } },
+  });
+  const balance =
+    context.type === "AMOUNT_SPENT"
+      ? Math.max(0, wallet?.amountSpentBalance ?? 0)
+      : Math.max(0, wallet?.visitPointsBalance ?? 0);
+  if (pointsDec > balance) {
+    throw new Error(
+      `Insufficient points balance: requested ${pointsDec}, available ${balance}`,
+    );
+  }
+  const valueKind = pointsValueKind(context);
+  const isAdminInitiated = initiator === "admin";
+  const conversionMetadata = isAdminInitiated
+    ? { adminConversion: true }
+    : { customerSelfRedeem: true };
+
+  const pointsDescription = freeItemReward
+    ? isAdminInitiated
+      ? `Admin: redeemed ${pointsDec} points for ${freeItemReward.freeItemName ?? freeItemReward.rewardName}`
+      : `Customer redeemed ${pointsDec} points for ${freeItemReward.freeItemName ?? freeItemReward.rewardName}`
+    : isAdminInitiated
+      ? `Admin: redeemed ${pointsDec} points for cashback`
+      : `Customer redeemed ${pointsDec} points for cashback`;
+
+  await tx.transaction.create({
+    data: {
+      businessId,
+      customerId,
+      billId: null,
+      loyaltyId,
+      valueKind,
+      amount: -pointsDec,
+      type: TransactionType.REDEEMED,
+      source: TransactionSource.MANUAL_ADJUSTMENT,
+      description: pointsDescription,
+      metadata: freeItemReward
+        ? {
+            rewardType: "FREE_ITEM",
+            rewardName: freeItemReward.rewardName,
+            freeItemName: freeItemReward.freeItemName,
+            ...conversionMetadata,
+          }
+        : conversionMetadata,
+    },
+  });
+
+  if (freeItemReward) {
+    const skuName =
+      freeItemReward.freeItemName?.trim() || freeItemReward.rewardName;
+    const entryId = crypto.randomUUID();
+    const newEntry: FreeItemEntry = {
+      id: entryId,
+      skuId: freeItemReward.freeItemSkuId,
+      skuName,
+      source: "LOYALTY",
+      sourceId: freeItemReward.rewardStageId,
+      createdAt: new Date().toISOString(),
+    };
+    const walletFresh = await tx.wallet.findUnique({
+      where: { businessId_customerId: { businessId, customerId } },
+    });
+    const existing = parseFreeItems(walletFresh?.freeItems);
+    await tx.transaction.create({
+      data: {
+        businessId,
+        customerId,
+        billId: null,
+        loyaltyId,
+        valueKind: TransactionValueKind.FREE_ITEM,
+        amount: 0,
+        type: TransactionType.EARNED,
+        source: TransactionSource.MANUAL_ADJUSTMENT,
+        description: isAdminInitiated
+          ? `Admin: free item from points — ${skuName}`
+          : `Customer: free item from points — ${skuName}`,
+        metadata: {
+          freeItemName: skuName,
+          rewardName: freeItemReward.rewardName,
+          freeItemId: entryId,
+          rewardStageId: freeItemReward.rewardStageId,
+          ...conversionMetadata,
+        },
+      },
+    });
+    if (cashbackValue > 0) {
+      await tx.transaction.create({
+        data: {
+          businessId,
+          customerId,
+          billId: null,
+          loyaltyId,
+          valueKind: TransactionValueKind.CASHBACK,
+          amount: cashbackValue,
+          type: TransactionType.EARNED,
+          source: TransactionSource.MANUAL_ADJUSTMENT,
+          description: isAdminInitiated
+            ? `Admin: points converted to ₹${cashbackValue} cashback`
+            : `Customer: points converted to ₹${cashbackValue} cashback`,
+          metadata: {
+            fromPointsConversion: true,
+            pointsDeducted: pointsDec,
+            ...conversionMetadata,
+          },
+        },
+      });
+    }
+    const pointsField =
+      context.type === "AMOUNT_SPENT"
+        ? { amountSpentBalance: { decrement: pointsDec } }
+        : { visitPointsBalance: { decrement: pointsDec } };
+    const data: {
+      amountSpentBalance?: { decrement: number };
+      visitPointsBalance?: { decrement: number };
+      cashbackBalance?: { increment: number };
+      freeItems?: Prisma.JsonArray;
+    } = {
+      ...pointsField,
+      freeItems: [...existing, newEntry] as unknown as Prisma.JsonArray,
+    };
+    if (cashbackValue > 0) {
+      data.cashbackBalance = { increment: cashbackValue };
+    }
+    await tx.wallet.update({
+      where: { businessId_customerId: { businessId, customerId } },
+      data,
+    });
+  } else {
+    if (cashbackValue > 0) {
+      await tx.transaction.create({
+        data: {
+          businessId,
+          customerId,
+          billId: null,
+          loyaltyId,
+          valueKind: TransactionValueKind.CASHBACK,
+          amount: cashbackValue,
+          type: TransactionType.EARNED,
+          source: TransactionSource.MANUAL_ADJUSTMENT,
+          description: isAdminInitiated
+            ? `Admin: points converted to ₹${cashbackValue} cashback`
+            : `Customer: points converted to ₹${cashbackValue} cashback`,
+          metadata: {
+            fromPointsConversion: true,
+            pointsDeducted: pointsDec,
+            ...conversionMetadata,
+          },
+        },
+      });
+    }
+
+    const pointsField =
+      context.type === "AMOUNT_SPENT"
+        ? { amountSpentBalance: { decrement: pointsDec } }
+        : { visitPointsBalance: { decrement: pointsDec } };
+    const data: {
+      amountSpentBalance?: { decrement: number };
+      visitPointsBalance?: { decrement: number };
+      cashbackBalance?: { increment: number };
+    } = pointsField;
+    if (cashbackValue > 0) {
+      data.cashbackBalance = { increment: cashbackValue };
+    }
+    await tx.wallet.update({
+      where: { businessId_customerId: { businessId, customerId } },
+      data,
+    });
+  }
+}
+
 async function recordCashbackEarned(
   tx: Prisma.TransactionClient,
   params: {
@@ -776,7 +976,6 @@ export async function convertPointsForBill(
   if (!stage || stage.pointsRequired > effectivePointsBalance) {
     throw new Error("Invalid reward stage or insufficient points");
   }
-
   let pointsDec = 0;
   let cashbackValue = 0;
   let freeItemReward: FreeItemRewardParams | undefined;
@@ -850,6 +1049,173 @@ export async function convertPointsForBill(
     pointsDec,
     cashbackValue,
     freeItemReward,
+  });
+
+  const updated = await tx.wallet.findUnique({
+    where: { businessId_customerId: { businessId, customerId } },
+  });
+  return {
+    pointsBalance:
+      context.type === "AMOUNT_SPENT"
+        ? (updated?.amountSpentBalance ?? 0)
+        : (updated?.visitPointsBalance ?? 0),
+    cashbackBalance: updated?.cashbackBalance ?? 0,
+    redeemedFreeItems:
+      freeItemReward != null
+        ? [
+            {
+              rewardName: freeItemReward.rewardName,
+              freeItemName: freeItemReward.freeItemName,
+            },
+          ]
+        : undefined,
+  };
+}
+
+const ADMIN_VIRTUAL_BILL_CAP = 1e12;
+
+/**
+ * Admin: convert AMOUNT_SPENT / VISIT_MADE points using a program reward stage (no bill).
+ * PERCENTAGE_DISCOUNT requires `referencePurchaseAmount` as the base for the percentage.
+ */
+export async function applyAdminConvertPointsToReward(
+  tx: Prisma.TransactionClient,
+  params: {
+    businessId: string;
+    customerId: string;
+    rewardStageId: string;
+    referencePurchaseAmount?: number;
+    initiator?: "admin" | "customer";
+  },
+): Promise<{
+  pointsBalance: number;
+  cashbackBalance: number;
+  redeemedFreeItems?: Array<{
+    rewardName: string;
+    freeItemName: string | null;
+  }>;
+}> {
+  const {
+    businessId,
+    customerId,
+    rewardStageId,
+    referencePurchaseAmount,
+    initiator = "admin",
+  } = params;
+  const context = await getBusinessLoyaltyContext(tx, businessId);
+  if (
+    !context ||
+    (context.type !== "AMOUNT_SPENT" && context.type !== "VISIT_MADE")
+  ) {
+    throw new Error(
+      "Convert points is only for AMOUNT_SPENT or VISIT_MADE loyalty",
+    );
+  }
+
+  await expirePointsForCustomer(tx, { businessId, customerId });
+  const wallet = await tx.wallet.findUnique({
+    where: { businessId_customerId: { businessId, customerId } },
+  });
+  const rawPointsBalance =
+    context.type === "AMOUNT_SPENT"
+      ? Math.max(0, wallet?.amountSpentBalance ?? 0)
+      : Math.max(0, wallet?.visitPointsBalance ?? 0);
+  const lockedPoints = await getLockedShopifyBalance(tx, {
+    businessId,
+    customerId,
+    valueKind:
+      context.type === "AMOUNT_SPENT"
+        ? TransactionValueKind.AMOUNT_SPENT_POINTS
+        : TransactionValueKind.VISIT_POINTS,
+  });
+  const effectivePointsBalance = Math.max(0, rawPointsBalance - lockedPoints);
+
+  const loyalty = await tx.loyalty.findUnique({
+    where: { businessId },
+    include: {
+      amountSpentConfig: { include: { rewardStages: true } },
+      visitMadeConfig: { include: { rewardStages: true } },
+    },
+  });
+  const stages =
+    context.type === "AMOUNT_SPENT"
+      ? (loyalty?.amountSpentConfig?.rewardStages ?? [])
+      : (loyalty?.visitMadeConfig?.rewardStages ?? []);
+  const stage = stages.find((s) => s.id === rewardStageId);
+  if (!stage || stage.pointsRequired > effectivePointsBalance) {
+    throw new Error("Invalid reward stage or insufficient points");
+  }
+  if (initiator === "customer" && stage.rewardType !== "FREE_ITEM") {
+    throw new Error("Only free-item rewards can be redeemed by customers");
+  }
+
+  let pointsDec = 0;
+  let cashbackValue = 0;
+  let freeItemReward: FreeItemRewardParams | undefined;
+
+  if (stage.rewardType === "FREE_ITEM") {
+    pointsDec = stage.pointsRequired;
+    freeItemReward = {
+      rewardName: stage.rewardName ?? "Free item",
+      freeItemName: stage.freeItemName ?? null,
+      freeItemSkuId: stage.freeItemSkuId ?? null,
+      rewardStageId: stage.id,
+    };
+  } else if (
+    stage.rewardType === "PERCENTAGE_DISCOUNT" ||
+    stage.rewardType === "CASH_DISCOUNT"
+  ) {
+    const baseAmount =
+      stage.rewardType === "PERCENTAGE_DISCOUNT"
+        ? (referencePurchaseAmount ?? 0)
+        : ADMIN_VIRTUAL_BILL_CAP;
+    if (stage.rewardType === "PERCENTAGE_DISCOUNT" && baseAmount <= 0) {
+      throw new Error(
+        "referencePurchaseAmount is required and must be positive for percentage rewards",
+      );
+    }
+    cashbackValue = calculateDiscountFromStage(
+      {
+        id: stage.id,
+        rewardType: stage.rewardType,
+        pointsRequired: stage.pointsRequired,
+        percentageValue: stage.percentageValue,
+        cashAmount: stage.cashAmount,
+        minPurchaseForRedemptionEnabled: stage.minPurchaseForRedemptionEnabled,
+        minPurchaseForRedemption: stage.minPurchaseForRedemption,
+        maxDiscountCapEnabled: stage.maxDiscountCapEnabled,
+        maxDiscountCap: stage.maxDiscountCap,
+      },
+      baseAmount,
+      { ignoreMinPurchase: true },
+    );
+    if (cashbackValue <= 0) {
+      const configMsg =
+        stage.rewardType === "PERCENTAGE_DISCOUNT"
+          ? stage.percentageValue == null || stage.percentageValue <= 0
+            ? " Reward has no percentage set."
+            : ""
+          : stage.cashAmount == null || stage.cashAmount <= 0
+            ? " Reward has no cash amount set."
+            : "";
+      throw new Error(
+        `Discount could not be computed for this reward.${configMsg}`,
+      );
+    }
+    pointsDec = stage.pointsRequired;
+  } else {
+    throw new Error("Unsupported reward type");
+  }
+
+  await recordPointsRedemptionAsAdminFlow(tx, {
+    businessId,
+    customerId,
+    loyaltyId: loyalty?.id ?? null,
+    context,
+    pointsDec,
+    cashbackValue,
+    freeItemReward,
+    initiator,
   });
 
   const updated = await tx.wallet.findUnique({
@@ -1679,7 +2045,10 @@ export async function applyLoyaltyForBill(
     if (context.type === "TIER") {
       updateData.visitCount = { increment: 1 };
       updateData.lastVisitAt = new Date();
-    } else if (context.type === "VISIT_MADE" && visitQualifies) {
+    } else if (context.type === "VISIT_MADE" && visitQualifies && !deferEarn) {
+      // When deferEarn: visitCount/lastVisitAt must not be updated here — finalizeBillEarn
+      // uses lastVisitAt for the interval check; updating early makes finalize think 0 time
+      // passed since the "visit" and awards 0 points.
       updateData.visitCount = { increment: 1 };
       updateData.lastVisitAt = new Date();
     }
@@ -1752,6 +2121,7 @@ export async function applyLoyaltyForBill(
     earnedPoints > 0 || (cashbackAmount != null && cashbackAmount > 0);
   if (
     hasEarned &&
+    !deferEarn &&
     loyalty &&
     (loyalty.whatsappEnabled || loyalty.emailEnabled || loyalty.smsEnabled)
   ) {
@@ -2008,4 +2378,258 @@ export async function expirePointsForBusiness(params: {
   }
 
   return { expiredCustomers };
+}
+
+/** Admin: add or subtract ₹ in wallet (CASHBACK / TIER programs). */
+export async function applyAdminCashbackAdjustment(
+  tx: Prisma.TransactionClient,
+  params: {
+    businessId: string;
+    customerId: string;
+    loyaltyId: string | null;
+    delta: number;
+    description?: string | null;
+  },
+): Promise<{ cashbackBalance: number }> {
+  const { businessId, customerId, loyaltyId, delta, description } = params;
+  if (delta === 0) {
+    const w = await tx.wallet.findUnique({
+      where: { businessId_customerId: { businessId, customerId } },
+    });
+    return { cashbackBalance: w?.cashbackBalance ?? 0 };
+  }
+  await ensureWallet(tx, businessId, customerId);
+  const wallet = await tx.wallet.findUnique({
+    where: { businessId_customerId: { businessId, customerId } },
+  });
+  const current = wallet?.cashbackBalance ?? 0;
+  const next = current + delta;
+  if (next < -1e-6) {
+    throw new Error(
+      `Cannot reduce cashback below zero (current ₹${current.toFixed(2)}, delta ₹${delta.toFixed(2)})`,
+    );
+  }
+  await tx.transaction.create({
+    data: {
+      businessId,
+      customerId,
+      billId: null,
+      loyaltyId,
+      valueKind: TransactionValueKind.CASHBACK,
+      amount: delta,
+      type: TransactionType.ADJUSTMENT,
+      source: TransactionSource.MANUAL_ADJUSTMENT,
+      description:
+        description?.trim() ||
+        (delta >= 0
+          ? `Admin adjustment: +₹${delta.toFixed(2)} cashback`
+          : `Admin adjustment: ₹${delta.toFixed(2)} cashback`),
+    },
+  });
+  await tx.wallet.update({
+    where: { businessId_customerId: { businessId, customerId } },
+    data: { cashbackBalance: { increment: delta } },
+  });
+  const updated = await tx.wallet.findUnique({
+    where: { businessId_customerId: { businessId, customerId } },
+  });
+  return { cashbackBalance: updated?.cashbackBalance ?? 0 };
+}
+
+/** Admin: add or subtract points (AMOUNT_SPENT or VISIT_MADE bucket). */
+export async function applyAdminPointsAdjustment(
+  tx: Prisma.TransactionClient,
+  params: {
+    businessId: string;
+    customerId: string;
+    loyaltyId: string | null;
+    loyaltyPointsKind: "AMOUNT_SPENT" | "VISIT_MADE";
+    delta: number;
+    description?: string | null;
+  },
+): Promise<{ pointsBalance: number }> {
+  const {
+    businessId,
+    customerId,
+    loyaltyId,
+    loyaltyPointsKind,
+    delta,
+    description,
+  } = params;
+  if (!Number.isInteger(delta)) {
+    throw new Error("Points delta must be a whole number");
+  }
+  if (delta === 0) {
+    const w = await tx.wallet.findUnique({
+      where: { businessId_customerId: { businessId, customerId } },
+    });
+    const bal =
+      loyaltyPointsKind === "AMOUNT_SPENT"
+        ? (w?.amountSpentBalance ?? 0)
+        : (w?.visitPointsBalance ?? 0);
+    return { pointsBalance: bal };
+  }
+  await ensureWallet(tx, businessId, customerId);
+  const wallet = await tx.wallet.findUnique({
+    where: { businessId_customerId: { businessId, customerId } },
+  });
+  const current =
+    loyaltyPointsKind === "AMOUNT_SPENT"
+      ? (wallet?.amountSpentBalance ?? 0)
+      : (wallet?.visitPointsBalance ?? 0);
+  const next = current + delta;
+  if (next < 0) {
+    throw new Error(
+      `Cannot reduce points below zero (current ${current}, delta ${delta})`,
+    );
+  }
+  const valueKind =
+    loyaltyPointsKind === "AMOUNT_SPENT"
+      ? TransactionValueKind.AMOUNT_SPENT_POINTS
+      : TransactionValueKind.VISIT_POINTS;
+  await tx.transaction.create({
+    data: {
+      businessId,
+      customerId,
+      billId: null,
+      loyaltyId,
+      valueKind,
+      amount: delta,
+      type: TransactionType.ADJUSTMENT,
+      source: TransactionSource.MANUAL_ADJUSTMENT,
+      description:
+        description?.trim() ||
+        (delta >= 0
+          ? `Admin adjustment: +${delta} points`
+          : `Admin adjustment: ${delta} points`),
+    },
+  });
+  const field =
+    loyaltyPointsKind === "AMOUNT_SPENT"
+      ? { amountSpentBalance: { increment: delta } }
+      : { visitPointsBalance: { increment: delta } };
+  await tx.wallet.update({
+    where: { businessId_customerId: { businessId, customerId } },
+    data: field,
+  });
+  const updated = await tx.wallet.findUnique({
+    where: { businessId_customerId: { businessId, customerId } },
+  });
+  const pointsBalance =
+    loyaltyPointsKind === "AMOUNT_SPENT"
+      ? (updated?.amountSpentBalance ?? 0)
+      : (updated?.visitPointsBalance ?? 0);
+  return { pointsBalance };
+}
+
+/** Admin: grant a pending free item (wallet queue). */
+export async function applyAdminAddFreeItem(
+  tx: Prisma.TransactionClient,
+  params: {
+    businessId: string;
+    customerId: string;
+    loyaltyId: string | null;
+    skuName: string;
+    skuId: string | null;
+    description?: string | null;
+  },
+): Promise<{ freeItemId: string; freeItems: FreeItemEntry[] }> {
+  const { businessId, customerId, loyaltyId, skuName, skuId, description } =
+    params;
+  const name = skuName.trim();
+  if (!name) throw new Error("Item name is required");
+  await ensureWallet(tx, businessId, customerId);
+  const entryId = crypto.randomUUID();
+  const newEntry: FreeItemEntry = {
+    id: entryId,
+    skuId,
+    skuName: name,
+    source: "ADMIN",
+    sourceId: null,
+    createdAt: new Date().toISOString(),
+  };
+  const wallet = await tx.wallet.findUnique({
+    where: { businessId_customerId: { businessId, customerId } },
+  });
+  const existing = parseFreeItems(wallet?.freeItems);
+  await tx.transaction.create({
+    data: {
+      businessId,
+      customerId,
+      billId: null,
+      loyaltyId,
+      valueKind: TransactionValueKind.FREE_ITEM,
+      amount: 0,
+      type: TransactionType.EARNED,
+      source: TransactionSource.MANUAL_ADJUSTMENT,
+      description: description?.trim() || `Admin: granted free item — ${name}`,
+      metadata: {
+        freeItemName: name,
+        freeItemId: entryId,
+        skuId,
+        adminGrant: true,
+      },
+    },
+  });
+  await tx.wallet.update({
+    where: { businessId_customerId: { businessId, customerId } },
+    data: {
+      freeItems: [...existing, newEntry] as unknown as Prisma.JsonArray,
+    },
+  });
+  const fresh = await tx.wallet.findUnique({
+    where: { businessId_customerId: { businessId, customerId } },
+  });
+  return {
+    freeItemId: entryId,
+    freeItems: parseFreeItems(fresh?.freeItems),
+  };
+}
+
+/** Admin: remove a pending free item from the wallet queue. */
+export async function applyAdminRemoveFreeItem(
+  tx: Prisma.TransactionClient,
+  params: {
+    businessId: string;
+    customerId: string;
+    loyaltyId: string | null;
+    freeItemId: string;
+  },
+): Promise<{ freeItems: FreeItemEntry[] }> {
+  const { businessId, customerId, loyaltyId, freeItemId } = params;
+  await ensureWallet(tx, businessId, customerId);
+  const wallet = await tx.wallet.findUnique({
+    where: { businessId_customerId: { businessId, customerId } },
+  });
+  const current = parseFreeItems(wallet?.freeItems);
+  const removed = current.find((i) => i.id === freeItemId);
+  if (!removed) {
+    throw new Error("Free item not found on this customer's wallet");
+  }
+  const remaining = current.filter((i) => i.id !== freeItemId);
+  await tx.transaction.create({
+    data: {
+      businessId,
+      customerId,
+      billId: null,
+      loyaltyId,
+      valueKind: TransactionValueKind.FREE_ITEM,
+      amount: 0,
+      type: TransactionType.ADJUSTMENT,
+      source: TransactionSource.MANUAL_ADJUSTMENT,
+      description: `Admin: removed pending free item — ${removed.skuName}`,
+      metadata: {
+        freeItemName: removed.skuName,
+        freeItemId: removed.id,
+        adminRemoval: true,
+      },
+    },
+  });
+  await tx.wallet.update({
+    where: { businessId_customerId: { businessId, customerId } },
+    data: {
+      freeItems: remaining as unknown as Prisma.JsonArray,
+    },
+  });
+  return { freeItems: remaining };
 }

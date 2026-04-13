@@ -117,9 +117,11 @@ export interface RewardStageInput {
 export function calculateDiscountFromStage(
   stage: RewardStageInput,
   billAmount: number,
+  options?: { ignoreMinPurchase?: boolean },
 ): number {
   if (billAmount <= 0) return 0;
   if (
+    !options?.ignoreMinPurchase &&
     stage.minPurchaseForRedemptionEnabled &&
     stage.minPurchaseForRedemption != null &&
     billAmount < stage.minPurchaseForRedemption

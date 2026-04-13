@@ -58,6 +58,7 @@ export function VisitMadeView({ data }: VisitMadeViewProps) {
             stages={visitMadeInfo.rewardStages}
             currentPoints={data.pointsBalance}
             accentColor={ac}
+            businessSlug={data.business.slug}
           />
         )}
 

@@ -1,10 +1,17 @@
+"use client";
+
+import { fetcher } from "@/lib/fetcher";
+import { useQueryClient } from "@tanstack/react-query";
 import { Banknote, Check, Gift, Lock, Percent } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 import type { RewardStage } from "./types";
 
 interface RewardOffersGridProps {
   stages: RewardStage[];
   currentPoints: number;
   accentColor?: string;
+  businessSlug?: string;
 }
 
 function getRewardIcon(type: string) {
@@ -36,9 +43,39 @@ export function RewardOffersGrid({
   stages,
   currentPoints,
   accentColor,
+  businessSlug,
 }: RewardOffersGridProps) {
   if (stages.length === 0) return null;
   const ac = accentColor;
+  const queryClient = useQueryClient();
+  const [redeemingStageId, setRedeemingStageId] = useState<string | null>(null);
+
+  async function redeemStage(stage: RewardStage) {
+    if (!businessSlug) return;
+    if (stage.rewardType !== "FREE_ITEM") {
+      toast.error("Only free-item rewards can be redeemed here.");
+      return;
+    }
+    setRedeemingStageId(stage.id);
+    try {
+      await fetcher(`/api/customer/loyalty/${businessSlug}/redeem`, {
+        method: "POST",
+        body: JSON.stringify({
+          rewardStageId: stage.id,
+        }),
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ["customer-loyalty-detail", businessSlug],
+      });
+      toast.success("Reward redeemed successfully.");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to redeem reward.",
+      );
+    } finally {
+      setRedeemingStageId(null);
+    }
+  }
 
   return (
     <div className="space-y-3">
@@ -47,6 +84,10 @@ export function RewardOffersGrid({
         {stages.map((stage) => {
           const Icon = getRewardIcon(stage.rewardType);
           const available = stage.canRedeem;
+          const isFreeItem = stage.rewardType === "FREE_ITEM";
+          const isRedeeming = redeemingStageId === stage.id;
+          const canRedeemNow =
+            Boolean(businessSlug) && isFreeItem && available && !isRedeeming;
           return (
             <div
               key={stage.id}
@@ -113,6 +154,30 @@ export function RewardOffersGrid({
                 <span className="font-semibold">{stage.pointsRequired}</span>{" "}
                 <span className="text-muted-foreground">pts required</span>
               </div>
+              {businessSlug && isFreeItem && (
+                <button
+                  type="button"
+                  onClick={() => redeemStage(stage)}
+                  disabled={!canRedeemNow}
+                  className="mt-3 w-full rounded-md border px-2 py-1.5 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-60"
+                  style={
+                    ac && available
+                      ? {
+                          borderColor: `${ac}40`,
+                          backgroundColor: `${ac}10`,
+                          color: ac,
+                        }
+                      : undefined
+                  }
+                >
+                  {isRedeeming ? "Redeeming..." : "Redeem"}
+                </button>
+              )}
+              {businessSlug && !isFreeItem && (
+                <p className="text-muted-foreground mt-3 text-center text-[11px]">
+                  Redeem at billing counter
+                </p>
+              )}
             </div>
           );
         })}
