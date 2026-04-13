@@ -124,7 +124,9 @@ export const POST = withCashierAuth<{ id: string }>(
         ? TransactionSource.CAMPAIGN
         : claimedItem.source === "REFERRAL"
           ? TransactionSource.REFERRAL
-          : TransactionSource.BILL;
+          : claimedItem.source === "ADMIN"
+            ? TransactionSource.MANUAL_ADJUSTMENT
+            : TransactionSource.BILL;
 
       await db.$transaction([
         db.wallet.update({

@@ -42,6 +42,7 @@ export function AmountSpentView({ data }: AmountSpentViewProps) {
             stages={amountSpentInfo.rewardStages}
             currentPoints={data.pointsBalance}
             accentColor={ac}
+            businessSlug={data.business.slug}
           />
         )}
 

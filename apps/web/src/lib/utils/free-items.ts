@@ -6,7 +6,7 @@ export interface FreeItemEntry {
   id: string;
   skuId: string | null;
   skuName: string;
-  /** CAMPAIGN | REFERRAL | LOYALTY | OTHER */
+  /** CAMPAIGN | REFERRAL | LOYALTY | ADMIN | OTHER */
   source: string;
   sourceId?: string | null;
   expiresAt?: string | null;

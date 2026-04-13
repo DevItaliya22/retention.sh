@@ -45,8 +45,6 @@ then just use the name if the store to connect (put the name exaclty in input )
 
 online menu and store
 
-name segments as tags and check dub.sh for ui for tags if needed
-
 insta auto dm
 
 pre registration feat
