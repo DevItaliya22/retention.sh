@@ -3,7 +3,7 @@
 import { fetcher } from "@/lib/fetcher";
 import type { FreeItemEntry } from "@/lib/utils/free-items";
 import type { IsServiceEnabled } from "@/lib/utils/service-enabled";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 export interface CustomerProfile {
   id: string;
@@ -163,5 +163,61 @@ export function useCustomerActivityQuery(
     enabled: !!slugId,
     staleTime: 5000,
     placeholderData: (prev) => prev,
+  });
+}
+
+type CustomerLoyaltyAdjustPayload =
+  | {
+      action: "cashback_delta";
+      delta: number;
+      description?: string;
+    }
+  | {
+      action: "points_delta";
+      delta: number;
+      description?: string;
+    }
+  | {
+      action: "add_free_item";
+      skuName: string;
+      skuId?: string | null;
+      description?: string;
+    }
+  | {
+      action: "remove_free_item";
+      freeItemId: string;
+    }
+  | {
+      action: "convert_points";
+      rewardStageId: string;
+      referencePurchaseAmount?: number;
+    };
+
+export function useCustomerLoyaltyAdjustMutation(slugId: string | null) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload: CustomerLoyaltyAdjustPayload) => {
+      if (!slugId) {
+        throw new Error("Customer not found");
+      }
+      return fetcher<{ success: boolean; result?: unknown; error?: string }>(
+        `/api/customers/${slugId}/loyalty-adjust`,
+        {
+          method: "POST",
+          body: JSON.stringify(payload),
+        },
+      );
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["customerProfile", slugId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["customerActivity", slugId],
+        }),
+      ]);
+    },
   });
 }

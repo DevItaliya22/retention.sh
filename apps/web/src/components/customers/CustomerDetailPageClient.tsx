@@ -1,5 +1,10 @@
 "use client";
 
+import { SplitActionButton } from "@/components/common/SplitActionButton";
+import {
+  CustomerLoyaltyControls,
+  FreeItemRemoveButton,
+} from "@/components/customers/CustomerLoyaltyControls";
 import { useBreadcrumbOverride } from "@/components/layouts/context/breadcrumb-override";
 import {
   useCustomerActivityQuery,
@@ -7,12 +12,16 @@ import {
   useCustomerProfileQuery,
   type CustomerActivityItem,
 } from "@/hooks/customers/useCustomerQuery";
+import {
+  buildLoyaltyPortalDefaultMessage,
+  buildReferralPortalDefaultMessage,
+} from "@/lib/messaging/whatsapp";
 import type { FreeItemEntry } from "@/lib/utils/free-items";
+import { formatPhoneNumber } from "@/lib/utils/phone";
 import { isServiceEnabled } from "@/lib/utils/service-enabled";
 import {
   Badge,
   Button,
-  ButtonGroup,
   buttonVariants,
   DateDisplay,
   Separator,
@@ -30,7 +39,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Coins,
-  ExternalLink,
   Eye,
   Gift,
   Receipt,
@@ -46,6 +54,7 @@ import {
   type ComponentType,
   type ReactNode,
 } from "react";
+import { toast } from "sonner";
 
 interface CustomerDetailPageClientProps {
   slugId: string;
@@ -195,6 +204,36 @@ function CustomerHeaderSection({ slugId }: { slugId: string }) {
       ? `${window.location.origin}/referral/${customer.businessSlug}/${customer.referralSlug}`
       : "";
 
+  const openExternalLink = (url: string) => {
+    if (!url) return;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  const copyLink = async (url: string, label: string) => {
+    if (!url) return;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success(`${label} copied`);
+    } catch {
+      toast.error(`Failed to copy ${label.toLowerCase()}`);
+    }
+  };
+
+  const openWhatsAppShare = (url: string, message: string) => {
+    if (!url) return;
+    let phone = "";
+    if (customer?.phone) {
+      try {
+        phone = formatPhoneNumber(customer.phone);
+      } catch {
+        phone = customer.phone;
+      }
+    }
+    const recipient = phone.replace(/^\+/, "");
+    const shareUrl = `https://api.whatsapp.com/send?phone=${encodeURIComponent(recipient)}&text=${encodeURIComponent(message)}`;
+    openExternalLink(shareUrl);
+  };
+
   useEffect(() => {
     if (customer?.name) {
       setSegmentLabel?.(customer.name);
@@ -261,37 +300,65 @@ function CustomerHeaderSection({ slugId }: { slugId: string }) {
             </div>
           </div>
 
-          {(hasLoyaltyLink || hasReferralLink) && !profile.isLoading && (
-            <ButtonGroup className="shrink-0 gap-2 self-start">
+          {!profile.isLoading && (
+            <div className="flex shrink-0 flex-wrap gap-2 self-start">
+              <CustomerLoyaltyControls slugId={slugId} />
               {hasLoyaltyLink && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="gap-2"
-                  onClick={() =>
-                    window.open(loyaltyUrl, "_blank", "noopener,noreferrer")
-                  }
-                >
-                  Loyalty
-                  <ExternalLink className="size-3.5" />
-                </Button>
+                <SplitActionButton
+                  label="Loyalty"
+                  onPrimaryClick={() => openExternalLink(loyaltyUrl)}
+                  items={[
+                    {
+                      label: "Open loyalty link",
+                      onSelect: () => openExternalLink(loyaltyUrl),
+                    },
+                    {
+                      label: "Copy loyalty link",
+                      onSelect: () => void copyLink(loyaltyUrl, "Loyalty link"),
+                    },
+                    {
+                      label: "Share on WhatsApp",
+                      onSelect: () =>
+                        openWhatsAppShare(
+                          loyaltyUrl,
+                          buildLoyaltyPortalDefaultMessage({
+                            businessName: customer?.businessSlug,
+                            loyaltyUrl,
+                          }),
+                        ),
+                    },
+                  ]}
+                />
               )}
               {hasReferralLink && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="gap-2"
-                  onClick={() =>
-                    window.open(referralUrl, "_blank", "noopener,noreferrer")
-                  }
-                >
-                  Referral
-                  <ExternalLink className="size-3.5" />
-                </Button>
+                <SplitActionButton
+                  label="Referral"
+                  onPrimaryClick={() => openExternalLink(referralUrl)}
+                  items={[
+                    {
+                      label: "Open referral link",
+                      onSelect: () => openExternalLink(referralUrl),
+                    },
+                    {
+                      label: "Copy referral link",
+                      onSelect: () =>
+                        void copyLink(referralUrl, "Referral link"),
+                    },
+                    {
+                      label: "Share on WhatsApp",
+                      onSelect: () =>
+                        openWhatsAppShare(
+                          referralUrl,
+                          buildReferralPortalDefaultMessage({
+                            businessName: customer?.businessSlug,
+                            referralUrl,
+                          }),
+                        ),
+                    },
+                  ]}
+                />
               )}
-            </ButtonGroup>
+            </div>
           )}
         </div>
 
@@ -402,6 +469,9 @@ function CustomerFreeItemsSection({ slugId }: { slugId: string }) {
             <TableHead className="px-4 py-3 text-xs font-medium sm:px-6 sm:text-sm">
               Expires On
             </TableHead>
+            <TableHead className="px-4 py-3 text-right text-xs font-medium sm:px-6 sm:text-sm">
+              Action
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -427,6 +497,9 @@ function CustomerFreeItemsSection({ slugId }: { slugId: string }) {
                 ) : (
                   "No expiry"
                 )}
+              </TableCell>
+              <TableCell className="px-4 py-3 text-right sm:px-6">
+                <FreeItemRemoveButton slugId={slugId} freeItem={item} />
               </TableCell>
             </TableRow>
           ))}
