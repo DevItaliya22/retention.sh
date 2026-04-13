@@ -12,34 +12,17 @@ import {
   CardHeader,
   CardTitle,
   ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
   type ChartConfig,
 } from "@reelo/ui/components";
 import { Skeleton } from "@reelo/ui/components/skeleton";
 import { useState } from "react";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  LabelList,
-  Pie,
-  PieChart,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { Cell, Pie, PieChart } from "recharts";
 import { PeriodSelector, SectionHeader } from "../shared";
 
 function formatDateLabel(dateStr: string): string {
   const d = new Date(dateStr + "T00:00:00");
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
-
-const barChartConfig = {
-  new: { label: "New", color: "var(--chart-7)" },
-  repeat: { label: "Returning", color: "var(--chart-9)" },
-} satisfies ChartConfig;
 
 const frequencyConfig = {
   visit1: { label: "1 visit", color: "var(--chart-1)" },
@@ -85,141 +68,48 @@ function SnapshotCards({ period }: { period: AnalyticsPeriod }) {
 
 function NewVsRepeatChart({ period }: { period: AnalyticsPeriod }) {
   const { data, isLoading } = useNewVsRepeatQuery(period);
-  const chartData = data?.data ?? [];
-  const barLabelByKey: Record<string, string> = {
-    new: barChartConfig.new.label,
-    repeat: barChartConfig.repeat.label,
-  };
+  const chartData = (data?.data ?? []).slice(-7).map((entry) => ({
+    date: entry.date,
+    total: (entry.new ?? 0) + (entry.repeat ?? 0),
+  }));
+  const maxValue = Math.max(...chartData.map((d) => d.total), 1);
 
   return (
     <div className="relative h-[260px] w-full">
-      <ChartContainer config={barChartConfig} className="h-full w-full">
-        <BarChart
-          accessibilityLayer
-          data={chartData}
-          margin={{ top: 18, right: 12, left: 0, bottom: 0 }}
-        >
-          <CartesianGrid vertical={false} strokeDasharray="3 3" />
-          <XAxis
-            dataKey="date"
-            tickLine={false}
-            axisLine={false}
-            tickMargin={8}
-            tickFormatter={formatDateLabel}
-            interval="preserveStartEnd"
-            minTickGap={40}
-          />
-          <YAxis
-            tickLine={false}
-            axisLine={false}
-            tickMargin={4}
-            width={40}
-            allowDecimals={false}
-            tickFormatter={(value) => Math.round(value as number).toString()}
-          />
-          <Bar dataKey="new" stackId="a" fill="var(--color-new)">
-            {chartData.map((d, i) => {
-              const hasNew = (d.new ?? 0) > 0;
-              const hasRepeat = (d.repeat ?? 0) > 0;
-              const radius: [number, number, number, number] = !hasNew
-                ? [0, 0, 0, 0]
-                : hasRepeat
-                  ? [0, 0, 4, 4] // bottom segment
-                  : [4, 4, 4, 4]; // only segment
+      <div className="h-full w-full overflow-x-auto overflow-y-hidden pb-2">
+        <div className="flex h-full min-w-max items-end gap-3 px-4 pb-10">
+          {chartData.map((bar) => {
+            const normalized = bar.total / maxValue;
+            const barHeight = Math.max(28, normalized * 180);
 
-              return (
-                <Cell
-                  key={`new-${d.date}-${i}`}
-                  radius={radius as unknown as number}
-                />
-              );
-            })}
-          </Bar>
-          <Bar dataKey="repeat" stackId="a" fill="var(--color-repeat)">
-            {chartData.map((d, i) => {
-              const hasNew = (d.new ?? 0) > 0;
-              const hasRepeat = (d.repeat ?? 0) > 0;
-              const radius: [number, number, number, number] = !hasRepeat
-                ? [0, 0, 0, 0]
-                : hasNew
-                  ? [4, 4, 0, 0] // top segment
-                  : [4, 4, 4, 4]; // only segment
-
-              return (
-                <Cell
-                  key={`repeat-${d.date}-${i}`}
-                  radius={radius as unknown as number}
-                />
-              );
-            })}
-            <LabelList
-              dataKey="repeat"
-              position="top"
-              content={(props) => {
-                const { x, y, width, index } = props;
-                const p = typeof index === "number" ? chartData[index] : null;
-                if (!p) return null;
-                const total = (p.new ?? 0) + (p.repeat ?? 0);
-                if (total <= 0) return null;
-                const cx = Number(x ?? 0) + Number(width ?? 0) / 2;
-                const cy = Number(y ?? 0) - 6;
-                return (
-                  <text
-                    x={cx}
-                    y={cy}
-                    textAnchor="middle"
-                    fill="hsl(var(--foreground))"
-                    fontSize={12}
-                  >
-                    {total.toLocaleString()}
-                  </text>
-                );
-              }}
-            />
-          </Bar>
-          <ChartTooltip
-            content={
-              <ChartTooltipContent
-                indicator="line"
-                labelFormatter={(label) =>
-                  typeof label === "string"
-                    ? formatDateLabel(label)
-                    : String(label)
-                }
-                formatter={(value, name, item) => {
-                  const formatted =
-                    typeof value === "number"
-                      ? Math.round(value).toLocaleString()
-                      : String(value);
-                  const label =
-                    typeof name === "string"
-                      ? (barLabelByKey[name] ?? name)
-                      : String(name);
-                  const indicatorColor =
-                    (item as any)?.payload?.fill || (item as any)?.color;
-
-                  return (
-                    <>
-                      <div
-                        className="h-2.5 w-2.5 shrink-0 rounded-[2px]"
-                        style={{ backgroundColor: indicatorColor }}
-                      />
-                      <div className="flex flex-1 items-center justify-between leading-none">
-                        <span className="text-muted-foreground">{label}</span>
-                        <span className="text-foreground font-mono font-medium tabular-nums">
-                          {formatted}
-                        </span>
-                      </div>
-                    </>
-                  );
-                }}
-              />
-            }
-            cursor={false}
-            defaultIndex={1}
-          />
-        </BarChart>
-      </ChartContainer>
+            return (
+              <div
+                key={bar.date}
+                className="relative flex w-[56px] shrink-0 flex-col items-center justify-end"
+              >
+                <div
+                  className="relative w-full overflow-hidden rounded-b-[6px] shadow-[0_12px_20px_-8px_rgba(92,77,255,0.45)]"
+                  style={{
+                    height: `${barHeight}px`,
+                    borderTopLeftRadius: "999px",
+                    borderTopRightRadius: "999px",
+                    background:
+                      "linear-gradient(180deg, #8B80FF 0%, #7568FF 62%, #5C4DFF 100%)",
+                  }}
+                >
+                  <div
+                    className="absolute top-3 left-1/2 h-3.5 w-[55%] -translate-x-1/2 rounded-full bg-white/75 blur-[1.8px]"
+                    aria-hidden="true"
+                  />
+                </div>
+                <p className="text-muted-foreground absolute -bottom-8 text-center text-sm font-medium">
+                  {formatDateLabel(bar.date)}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+      </div>
       {isLoading && (
         <Skeleton className="absolute inset-0 h-full w-full rounded-lg" />
       )}
