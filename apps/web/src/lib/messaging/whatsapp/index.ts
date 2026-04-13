@@ -1,6 +1,22 @@
 import type { Prisma } from "@reelo/db";
 import { logMessage } from "../log-message";
 
+export function buildLoyaltyPortalDefaultMessage(params: {
+  businessName?: string | null;
+  loyaltyUrl: string;
+}) {
+  const businessName = params.businessName?.trim() || "our store";
+  return `Hi! Access your loyalty wallet for ${businessName} here: ${params.loyaltyUrl}`;
+}
+
+export function buildReferralPortalDefaultMessage(params: {
+  businessName?: string | null;
+  referralUrl: string;
+}) {
+  const businessName = params.businessName?.trim() || "our store";
+  return `Hey! Join ${businessName} using my referral link and unlock rewards: ${params.referralUrl}`;
+}
+
 export async function logFeedbackLinkWhatsApp(
   tx: Prisma.TransactionClient,
   params: {
