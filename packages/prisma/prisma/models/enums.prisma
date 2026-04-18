@@ -130,6 +130,7 @@ enum TransactionSource {
   BILL // Points from a purchase/bill
   FEEDBACK // Points for providing feedback
   SCRATCH_CARD // Points from scratch card game
+  GAME_CAMPAIGN // Points/cashback from unified games of chance (wheel / lottery / scratch campaign)
   CAMPAIGN // Points from marketing campaign
   REFERRAL // Points from referral program
   REGISTRATION // Registration bonus (Business.registrationBonusPoints)
@@ -174,4 +175,77 @@ enum RecencyUnit {
 enum MonetaryUnit {
   RATIO // multiple of avg spend (e.g. 3 = 3x)
   ABSOLUTE // actual ₹ (e.g. 50000)
+}
+
+// ========================================================================
+// GAMES OF CHANCE (unified wheel / lottery / scratch campaigns)
+// ========================================================================
+
+enum GameType {
+  SPIN_WHEEL
+  LOTTERY
+  SCRATCH_CARD
+}
+
+enum GameCampaignStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  COMPLETED
+  ARCHIVED
+}
+
+enum GameEligibilityEventType {
+  BILL_CREATED
+  VISIT_QUALIFIED
+  REFERRAL_COMPLETED
+  CAMPAIGN_ACTION
+  MANUAL_GRANT
+  CUSTOM_EVENT
+}
+
+enum GameDistributionMode {
+  PROBABILITY_WEIGHTED
+  POPULATION_RATIO
+  FIXED_WINNER_COUNT
+  FIRST_N
+}
+
+enum GameFulfillmentMode {
+  INSTANT
+  SCHEDULED_DRAW
+}
+
+enum GameAttemptOutcome {
+  WON
+  NOT_WON
+  INELIGIBLE
+  RATE_LIMITED
+  EXHAUSTED
+  DRAW_PENDING
+}
+
+enum GameRewardKind {
+  NONE
+  LOYALTY_POINTS
+  CASHBACK
+  FREE_ITEM
+  PERCENTAGE_DISCOUNT
+  VOUCHER_CODE
+}
+
+enum GameFulfillmentStatus {
+  PENDING
+  SCHEDULED
+  FULFILLED
+  FAILED
+  CANCELLED
+}
+
+enum GameDrawBatchStatus {
+  SCHEDULED
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
 }

@@ -128,6 +128,16 @@ const ROUTE_METADATA_MAP: Record<string, RouteMetadataConfig> = {
     description:
       "Configure recency, frequency, and monetary thresholds for customer segmentation",
   },
+  "/settings/games": {
+    title: "Games of chance",
+    description:
+      "Configure spin wheel, lottery, and scratch campaigns with eligibility and rewards",
+  },
+  "/settings/games/analytics": {
+    title: "Games analytics",
+    description:
+      "Participation, win rates, reward distribution, and fraud signals for games of chance",
+  },
   "/feedback-stats": {
     title: "Feedback stats",
     description: "Customer feedback responses by rating and date",

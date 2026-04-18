@@ -71,6 +71,7 @@ model Bill {
   cashier   Cashier? @relation(fields: [cashierId], references: [id], onDelete: SetNull)
 
   scratchCardResponses ScratchCardResponse[]
+  gameAttempts         GameAttempt[]
 
   // One feedback link per bill (created when bill is created)
   feedbackLink FeedbackLink?

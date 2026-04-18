@@ -1,0 +1,361 @@
+// ========================================================================
+// GAMES OF CHANCE — unified campaigns (spin wheel, lottery, scratch)
+// Bridge: legacy ScratchCard stays; new campaigns may set legacyScratchCardId.
+// ========================================================================
+
+model GameCampaign {
+  id String @id @default(uuid())
+
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  type   GameType
+  name   String
+  slug   String
+  status GameCampaignStatus @default(DRAFT)
+
+  startsAt DateTime?
+  endsAt   DateTime?
+  timezone String    @default("UTC")
+
+  priority    Int     @default(0)
+  isStackable Boolean @default(false)
+
+  fulfillmentMode GameFulfillmentMode @default(INSTANT)
+  drawAt          DateTime?
+  drawWindowStart DateTime?
+  drawWindowEnd   DateTime?
+
+  /// Optional link to legacy scratch card row during migration
+  legacyScratchCardId String? @unique
+
+  createdByUserId String?
+  updatedByUserId String?
+
+  eligibilityRules   GameEligibilityRule[]
+  distributionPolicy GameDistributionPolicy?
+  rewards            GameReward[]
+  attempts           GameAttempt[]
+  drawBatches        GameDrawBatch[]
+  analyticsDaily     GameAnalyticsDaily[]
+  auditLogs          GameAuditLog[]
+  drawEntries        GameDrawEntry[]
+  transactions       Transaction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([businessId, slug])
+  @@index([businessId])
+  @@index([businessId, status])
+  @@map("game_campaign")
+}
+
+model GameEligibilityRule {
+  id String @id @default(uuid())
+
+  campaignId String
+  campaign   GameCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  eventType       GameEligibilityEventType
+  /// JSON filters (min bill amount, SKU, campaign id, etc.)
+  eventFilterJson Json?
+
+  intervalEnabled Boolean            @default(false)
+  intervalValue   Int?
+  intervalUnit    VisitIntervalUnit?
+
+  maxAttemptsPerUserPerInterval Int?
+  globalAttemptCap              Int?
+
+  firstNEligibleUsers Int?
+
+  segmentId String?
+  segment   Segment? @relation(fields: [segmentId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([campaignId, eventType])
+  @@index([campaignId])
+  @@index([segmentId])
+  @@map("game_eligibility_rule")
+}
+
+model GameDistributionPolicy {
+  id String @id @default(uuid())
+
+  campaignId String       @unique
+  campaign   GameCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  mode GameDistributionMode @default(PROBABILITY_WEIGHTED)
+
+  /// For POPULATION_RATIO: winners per window (e.g. 10 per 100)
+  populationWindowSize  Int?
+  populationWinnerCount Int?
+
+  maxWinnersTotal Int?
+
+  randomSeedVersion   Int     @default(1)
+  strictInventoryMode Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("game_distribution_policy")
+}
+
+model GameReward {
+  id String @id @default(uuid())
+
+  campaignId String
+  campaign   GameCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  kind               GameRewardKind @default(NONE)
+  displayName        String
+  /// Weight for weighted random (integer >= 0)
+  weight             Int            @default(1)
+  /// Optional explicit probability percent (0–100) when mode uses it
+  probabilityPercent Float?
+
+  maxWinners Int?
+  stock      Int?
+
+  priority Int @default(0)
+
+  isFallbackNoReward Boolean @default(false)
+
+  /// FREE_ITEM: sku id; LOYALTY_POINTS: points amount; CASHBACK: rupees; etc.
+  freeItemSkuId   String?
+  freeItemSku     Sku?    @relation(fields: [freeItemSkuId], references: [id], onDelete: SetNull)
+  pointsAmount    Int?
+  cashbackAmount  Float?
+  percentageValue Float?
+  voucherCode     String?
+
+  allocations GameAllocation[]
+  drawWinners GameDrawWinner[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([campaignId])
+  @@map("game_reward")
+}
+
+model GameAttempt {
+  id String @id @default(uuid())
+
+  campaignId String
+  campaign   GameCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  businessId String
+  customerId String
+
+  businessCustomer BusinessCustomer @relation(fields: [businessId, customerId], references: [businessId, customerId], onDelete: Cascade)
+
+  triggerEventType GameEligibilityEventType
+  triggerEventId   String
+
+  billId String?
+  bill   Bill?   @relation(fields: [billId], references: [id], onDelete: SetNull)
+
+  attemptAt      DateTime @default(now())
+  attemptOrdinal Int      @default(0)
+
+  eligibilitySnapshotJson Json?
+
+  /// Idempotency for client retries (scoped per campaign)
+  idempotencyKey String?
+
+  allocation GameAllocation?
+
+  drawEntries GameDrawEntry[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([campaignId, customerId, triggerEventType, triggerEventId])
+  @@unique([campaignId, idempotencyKey])
+  @@index([businessId, customerId])
+  @@index([campaignId, attemptAt])
+  @@index([billId])
+  @@map("game_attempt")
+}
+
+model GameAllocation {
+  id String @id @default(uuid())
+
+  attemptId String      @unique
+  attempt   GameAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+
+  outcome GameAttemptOutcome
+
+  rewardId String?
+  reward   GameReward? @relation(fields: [rewardId], references: [id], onDelete: SetNull)
+
+  allocationReason   String?
+  policySnapshotJson Json?
+  rngTraceJson       Json?
+
+  allocatedAt DateTime @default(now())
+
+  fulfillment  GameFulfillment?
+  transactions Transaction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([outcome])
+  @@index([rewardId])
+  @@map("game_allocation")
+}
+
+model GameFulfillment {
+  id String @id @default(uuid())
+
+  allocationId String         @unique
+  allocation   GameAllocation @relation(fields: [allocationId], references: [id], onDelete: Cascade)
+
+  mode   GameFulfillmentMode
+  status GameFulfillmentStatus @default(PENDING)
+
+  scheduledFor DateTime?
+  fulfilledAt  DateTime?
+
+  failureReason   String?
+  deliveryChannel String?
+  deliveryRef     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, scheduledFor])
+  @@map("game_fulfillment")
+}
+
+model GameDrawBatch {
+  id String @id @default(uuid())
+
+  campaignId String
+  campaign   GameCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  scheduledAt DateTime
+  executedAt  DateTime?
+
+  status GameDrawBatchStatus @default(SCHEDULED)
+
+  inputHash        String?
+  winnerCount      Int?
+  executionLogJson Json?
+
+  winners GameDrawWinner[]
+  entries GameDrawEntry[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([campaignId, scheduledAt])
+  @@index([status])
+  @@map("game_draw_batch")
+}
+
+model GameDrawEntry {
+  id String @id @default(uuid())
+
+  campaignId String
+  campaign   GameCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  drawBatchId String?
+  drawBatch   GameDrawBatch? @relation(fields: [drawBatchId], references: [id], onDelete: SetNull)
+
+  businessId String
+  customerId String
+
+  businessCustomer BusinessCustomer @relation(fields: [businessId, customerId], references: [businessId, customerId], onDelete: Cascade)
+
+  sourceAttemptId String?
+  sourceAttempt   GameAttempt? @relation(fields: [sourceAttemptId], references: [id], onDelete: SetNull)
+
+  entryCount Int @default(1)
+
+  createdAt DateTime @default(now())
+
+  @@index([campaignId, customerId])
+  @@index([sourceAttemptId])
+  @@index([drawBatchId])
+  @@map("game_draw_entry")
+}
+
+model GameDrawWinner {
+  id String @id @default(uuid())
+
+  drawBatchId String
+  drawBatch   GameDrawBatch @relation(fields: [drawBatchId], references: [id], onDelete: Cascade)
+
+  businessId String
+  customerId String
+
+  rewardId String?
+  reward   GameReward? @relation(fields: [rewardId], references: [id], onDelete: SetNull)
+
+  rank Int @default(0)
+
+  notifiedAt DateTime?
+  claimedAt  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([drawBatchId])
+  @@index([businessId, customerId])
+  @@map("game_draw_winner")
+}
+
+model GameAnalyticsDaily {
+  id String @id @default(uuid())
+
+  campaignId String
+  campaign   GameCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  day DateTime // UTC date bucket start
+
+  attemptsCount    Int @default(0)
+  eligibleCount    Int @default(0)
+  winnersCount     Int @default(0)
+  notWonCount      Int @default(0)
+  rateLimitedCount Int @default(0)
+
+  rewardCostEstimate Float?
+
+  fraudFlagCount Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([campaignId, day])
+  @@index([campaignId])
+  @@map("game_analytics_daily")
+}
+
+model GameAuditLog {
+  id String @id @default(uuid())
+
+  campaignId String?
+  campaign   GameCampaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+
+  businessId String
+
+  actorUserId String?
+  action      String
+  requestId   String?
+
+  beforeJson Json?
+  afterJson  Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([businessId, createdAt])
+  @@index([campaignId])
+  @@map("game_audit_log")
+}

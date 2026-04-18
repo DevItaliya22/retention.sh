@@ -6,11 +6,12 @@ write that "inc lifetime value " in landing page
 
 Games of chance
 Spin the wheel
-Achievements
 Lotteries
-Badges
-Leaderboard
 Scratch & win
+
+Badges
+Leaderboard -> crezy idea for marketing , like we can make someting like leaderboard platform which shows whcch user spends more for flexing
+Achievements
 
 https://www.youtube.com/watch?v=691KWbNnZHM&t=383s
 
@@ -49,7 +50,7 @@ insta auto dm
 
 pre registration feat
 
-admin can change loyalry points
+slip bill hova pade
 
 ## ISSUES TO BE SOLVED / make sometign better
 

@@ -14,7 +14,8 @@ export type DataTableConfigId =
   | "referralStats"
   | "loyaltyStats"
   | "feedbackStats"
-  | "messageLogs";
+  | "messageLogs"
+  | "games";
 
 export interface DataTableConfigEntry {
   prefix: string;
@@ -78,6 +79,10 @@ export const DATA_TABLE_CONFIG: Record<
   messageLogs: {
     prefix: "messageLogs",
     filterKeys: ["channel", "source", "dateFrom", "dateTo"],
+  },
+  games: {
+    prefix: "games",
+    filterKeys: ["name", "type", "status"],
   },
 };
 
