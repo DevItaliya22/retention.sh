@@ -48,6 +48,12 @@ model Transaction {
     campaignId String?
     campaign   Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
 
+    gameCampaignId String?
+    gameCampaign   GameCampaign? @relation(fields: [gameCampaignId], references: [id], onDelete: SetNull)
+
+    gameAllocationId String?         @unique
+    gameAllocation   GameAllocation? @relation(fields: [gameAllocationId], references: [id], onDelete: SetNull)
+
     shopifyOrderId String?
     shopifyOrder   ShopifyOrder? @relation(fields: [shopifyOrderId], references: [id], onDelete: SetNull)
 
@@ -68,5 +74,7 @@ model Transaction {
     @@index([expiresAt])
     @@index([shopifyOrderId])
     @@index([campaignId])
+    @@index([gameCampaignId])
+    @@index([gameAllocationId])
     @@map("transaction")
 }

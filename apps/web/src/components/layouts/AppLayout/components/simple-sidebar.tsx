@@ -234,6 +234,17 @@ export function SimpleSidebar({
                     <SidebarMenuSubItem>
                       <SidebarMenuSubButton
                         asChild
+                        isActive={
+                          pathname === "/settings/games" ||
+                          pathname.startsWith("/settings/games/")
+                        }
+                      >
+                        <Link href="/settings/games">Games of chance</Link>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        asChild
                         isActive={pathname === "/settings/referral"}
                       >
                         <Link href="/settings/referral">Referral</Link>

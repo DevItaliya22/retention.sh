@@ -81,6 +81,8 @@ model BusinessCustomer {
   transactions         Transaction[]
   feedbackResponses    FeedbackResponse[]
   scratchCardResponses ScratchCardResponse[]
+  gameAttempts         GameAttempt[]
+  gameDrawEntries      GameDrawEntry[]
   bills                Bill[]
   customerMemberships  CustomerMembership[]
 
