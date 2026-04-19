@@ -138,61 +138,60 @@ function BrandingFieldGroupInner({
   };
 
   return (
-    <Card className="bg-sidebar-accent/50 flex min-h-0 flex-col gap-0 rounded-lg border-0 p-2">
-      <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
+    <Card className="border-border/60 from-background via-background to-muted/20 overflow-hidden rounded-3xl border bg-gradient-to-br shadow-sm">
+      <CardHeader className="border-border/50 gap-1 border-b px-5 py-4 sm:px-6">
         <CardTitle className="text-foreground text-base leading-none font-semibold">
           {title}
         </CardTitle>
         {description && (
-          <CardDescription className="text-muted-foreground mt-0.5 text-sm">
+          <CardDescription className="text-muted-foreground text-sm leading-relaxed">
             {description}
           </CardDescription>
         )}
       </CardHeader>
 
-      <Card className="border-border/45 bg-background/55 flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border shadow-none">
-        <FormProvider {...form}>
-          <Form {...form}>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                void runSubmit();
-              }}
-              className="flex min-h-0 flex-1 flex-col"
-            >
-              <CardContent className="flex min-h-0 flex-1 flex-col gap-y-4 overflow-auto px-4 py-4">
-                <BrandingFormFields
-                  prefix="branding"
-                  layout="settings"
-                  onResolvePendingUploads={handleResolvePendingUploads}
-                  onPendingImageChanges={setHasPendingImageChanges}
-                />
-              </CardContent>
-              <CardFooter className="flex shrink-0 justify-end border-0 px-4 py-2">
-                <Button
-                  type="button"
-                  onClick={runSubmit}
-                  variant="outline"
-                  disabled={
-                    (!form.formState.isDirty && !hasPendingImageChanges) ||
-                    saveState === "loading"
-                  }
-                  className="flex items-center gap-2"
-                >
-                  <span className="inline-flex items-center gap-2">
-                    Save changes
-                    {saveState !== "idle" && (
-                      <PixelIcon
-                        state={saveState === "loading" ? "loading" : "success"}
-                      />
-                    )}
-                  </span>
-                </Button>
-              </CardFooter>
-            </form>
-          </Form>
-        </FormProvider>
-      </Card>
+      <FormProvider {...form}>
+        <Form {...form}>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              void runSubmit();
+            }}
+            className="flex min-h-0 flex-1 flex-col"
+          >
+            <CardContent className="flex min-h-0 flex-1 flex-col gap-y-5 px-5 py-5 sm:px-6">
+              <BrandingFormFields
+                prefix="branding"
+                layout="settings"
+                onResolvePendingUploads={handleResolvePendingUploads}
+                onPendingImageChanges={setHasPendingImageChanges}
+              />
+            </CardContent>
+            <CardFooter className="border-border/50 bg-muted/15 flex shrink-0 justify-end border-t px-5 py-4 sm:px-6">
+              <Button
+                type="button"
+                onClick={runSubmit}
+                disabled={
+                  (!form.formState.isDirty && !hasPendingImageChanges) ||
+                  saveState === "loading"
+                }
+                className="flex items-center gap-2"
+              >
+                <span className="inline-flex items-center gap-2">
+                  {form.formState.isDirty || hasPendingImageChanges
+                    ? "Save branding"
+                    : "Saved"}
+                  {saveState !== "idle" && (
+                    <PixelIcon
+                      state={saveState === "loading" ? "loading" : "success"}
+                    />
+                  )}
+                </span>
+              </Button>
+            </CardFooter>
+          </form>
+        </Form>
+      </FormProvider>
     </Card>
   );
 }
