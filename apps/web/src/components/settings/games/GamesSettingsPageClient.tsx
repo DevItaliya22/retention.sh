@@ -184,7 +184,7 @@ function GamesList({
   onCreate: (id: string) => void;
 }) {
   const { data, isLoading, isError, error } = useGameCampaignsQuery();
-  const items = data?.campaigns ?? [];
+  const items = useMemo(() => data?.campaigns ?? [], [data?.campaigns]);
   const perPage = 10;
   const total = items.length;
   const pageCount = Math.max(1, Math.ceil(total / perPage));
@@ -405,8 +405,80 @@ function GamesList({
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-3 gap-3">
-        <div className="bg-card rounded-xl border px-5 py-4">
+      <Card className="border-border/60 from-background via-background to-muted/25 overflow-hidden bg-gradient-to-r shadow-sm">
+        <CardContent className="flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="max-w-2xl space-y-2">
+            <p className="text-muted-foreground text-xs tracking-[0.18em] uppercase">
+              Campaign workspace
+            </p>
+            <p className="text-xl font-semibold tracking-tight">
+              Launch better-looking games, then tune rewards, eligibility, and
+              fulfillment from one place.
+            </p>
+            <p className="text-muted-foreground text-sm leading-relaxed">
+              The list below shows every campaign you have built, while each
+              game detail screen lets you clean up prize logic and publishing
+              flow without hopping between pages.
+            </p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-3 lg:min-w-[460px]">
+            <div className="border-border/60 bg-background/85 rounded-2xl border px-4 py-3">
+              <p className="text-muted-foreground text-xs tracking-[0.14em] uppercase">
+                Games
+              </p>
+              <div className="mt-2 flex h-9 items-center">
+                {isLoading ? (
+                  <Skeleton className="h-8 w-8" />
+                ) : (
+                  <p className="text-2xl font-bold tabular-nums">
+                    {total.toLocaleString("en-IN")}
+                  </p>
+                )}
+              </div>
+              <p className="text-muted-foreground mt-1 text-xs">
+                all campaigns
+              </p>
+            </div>
+            <div className="border-border/60 bg-background/85 rounded-2xl border px-4 py-3">
+              <p className="text-muted-foreground text-xs tracking-[0.14em] uppercase">
+                Running
+              </p>
+              <div className="mt-2 flex h-9 items-center">
+                {isLoading ? (
+                  <Skeleton className="h-8 w-8" />
+                ) : (
+                  <p className="text-2xl font-bold tabular-nums">
+                    {running.toLocaleString("en-IN")}
+                  </p>
+                )}
+              </div>
+              <p className="text-muted-foreground mt-1 text-xs">
+                currently live
+              </p>
+            </div>
+            <div className="border-border/60 bg-background/85 rounded-2xl border px-4 py-3">
+              <p className="text-muted-foreground text-xs tracking-[0.14em] uppercase">
+                Total plays
+              </p>
+              <div className="mt-2 flex h-9 items-center">
+                {isLoading ? (
+                  <Skeleton className="h-8 w-8" />
+                ) : (
+                  <p className="text-2xl font-bold tabular-nums">
+                    {totalPlays.toLocaleString("en-IN")}
+                  </p>
+                )}
+              </div>
+              <p className="text-muted-foreground mt-1 text-xs">
+                across all games
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-3 md:grid-cols-3">
+        <div className="border-border/60 bg-card rounded-2xl border px-5 py-4 shadow-sm">
           <p className="text-muted-foreground mb-1 text-xs font-medium">
             Games
           </p>
@@ -421,7 +493,7 @@ function GamesList({
           </div>
           <p className="text-muted-foreground mt-0.5 text-xs">all time</p>
         </div>
-        <div className="bg-card rounded-xl border px-5 py-4">
+        <div className="border-border/60 bg-card rounded-2xl border px-5 py-4 shadow-sm">
           <p className="text-muted-foreground mb-1 text-xs font-medium">
             Running now
           </p>
@@ -436,7 +508,7 @@ function GamesList({
           </div>
           <p className="text-muted-foreground mt-0.5 text-xs">live games</p>
         </div>
-        <div className="bg-card rounded-xl border px-5 py-4">
+        <div className="border-border/60 bg-card rounded-2xl border px-5 py-4 shadow-sm">
           <p className="text-muted-foreground mb-1 text-xs font-medium">
             Total plays
           </p>
@@ -455,25 +527,29 @@ function GamesList({
         </div>
       </div>
 
-      <DataTable
-        table={table}
-        renderEmpty={() => (
-          <Empty className="py-12">
-            <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <Gamepad2 className="size-6" />
-              </EmptyMedia>
-              <EmptyTitle>No games yet</EmptyTitle>
-              <EmptyDescription>
-                Create your first game to give customers a chance to win.
-              </EmptyDescription>
-            </EmptyHeader>
-            <NewGameDialog onCreated={onCreate} />
-          </Empty>
-        )}
-      >
-        <DataTableToolbar table={table} maxTextFilters={1} />
-      </DataTable>
+      <Card className="border-border/60 shadow-sm">
+        <CardContent className="p-4">
+          <DataTable
+            table={table}
+            renderEmpty={() => (
+              <Empty className="py-12">
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <Gamepad2 className="size-6" />
+                  </EmptyMedia>
+                  <EmptyTitle>No games yet</EmptyTitle>
+                  <EmptyDescription>
+                    Create your first game to give customers a chance to win.
+                  </EmptyDescription>
+                </EmptyHeader>
+                <NewGameDialog onCreated={onCreate} />
+              </Empty>
+            )}
+          >
+            <DataTableToolbar table={table} maxTextFilters={1} />
+          </DataTable>
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -528,7 +604,7 @@ function GameDetailCard({
 
   return (
     <div className="space-y-6">
-      <Card>
+      <Card className="border-border/60 from-background via-background to-muted/20 overflow-hidden bg-gradient-to-r shadow-sm">
         <CardHeader className="gap-3">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
@@ -539,9 +615,11 @@ function GameDetailCard({
                   {GAME_TYPE_LABELS[campaign.type] ?? campaign.type}
                 </Badge>
               </div>
-              <CardDescription className="mt-1">
+              <CardDescription className="mt-1 max-w-2xl text-sm">
                 {campaign.rewards.length} prize
-                {campaign.rewards.length === 1 ? "" : "s"} configured
+                {campaign.rewards.length === 1 ? "" : "s"} configured. Tune the
+                rules below to control who can play, what they can win, and how
+                fulfillment happens.
               </CardDescription>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -658,14 +736,46 @@ export function GamesSettingsPageClient() {
         </div>
       }
     >
-      {selectedId ? (
-        <GameDetailCard
-          gameId={selectedId}
-          onClose={() => setSelectedId(null)}
-        />
-      ) : (
-        <GamesList onOpen={setSelectedId} onCreate={setSelectedId} />
-      )}
+      <div className="space-y-6">
+        {!selectedId ? (
+          <div className="border-border/60 from-primary/8 via-background rounded-3xl border bg-gradient-to-r to-amber-500/10 p-6 shadow-sm">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+              <div className="max-w-2xl space-y-2">
+                <p className="text-muted-foreground text-xs tracking-[0.18em] uppercase">
+                  Games of chance
+                </p>
+                <h2 className="text-2xl font-semibold tracking-tight">
+                  Build polished play-to-win campaigns, not just a raw config
+                  form.
+                </h2>
+                <p className="text-muted-foreground text-sm leading-relaxed">
+                  Use this workspace to launch spin wheels, lotteries, and
+                  scratch cards, then jump into analytics to compare campaign
+                  performance one by one.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button variant="outline" size="sm" asChild>
+                  <Link href="/settings/games/analytics">
+                    <Sparkles className="size-4" />
+                    Open analytics
+                  </Link>
+                </Button>
+                <NewGameDialog onCreated={setSelectedId} />
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {selectedId ? (
+          <GameDetailCard
+            gameId={selectedId}
+            onClose={() => setSelectedId(null)}
+          />
+        ) : (
+          <GamesList onOpen={setSelectedId} onCreate={setSelectedId} />
+        )}
+      </div>
     </DashboardPageShell>
   );
 }
