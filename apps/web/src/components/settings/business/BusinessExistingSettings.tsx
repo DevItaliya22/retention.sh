@@ -289,19 +289,19 @@ export function BusinessExistingSettings({
           onSubmit={handleUpdateBranding}
         />
 
-        <Card className="bg-sidebar-accent/50 flex min-h-0 flex-col gap-0 rounded-lg border-0 p-2">
-          <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
-            <CardTitle className="text-base font-medium">
+        <Card className="border-border/60 from-background via-background to-muted/20 overflow-hidden rounded-3xl border bg-gradient-to-br shadow-sm">
+          <CardHeader className="border-border/50 gap-1 border-b px-5 py-4 sm:px-6">
+            <CardTitle className="text-base font-semibold">
               Branding behavior
             </CardTitle>
-            <CardDescription className="text-xs">
+            <CardDescription className="text-sm leading-relaxed">
               Apply your business default branding across referral, feedback,
               loyalty, and new campaigns.
             </CardDescription>
           </CardHeader>
-          <Card className="border-border/45 bg-background/55 flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border shadow-none">
-            <CardContent className="flex flex-col divide-y px-4 py-0">
-              <div className="flex flex-row items-center justify-between py-4">
+          <CardContent className="px-5 py-5 sm:px-6">
+            <div className="border-border/50 bg-background/75 rounded-2xl border p-4">
+              <div className="flex flex-row items-center justify-between gap-4">
                 <div className="flex flex-col gap-0.5">
                   <span className="text-sm font-medium">
                     Use this as default branding
@@ -317,84 +317,92 @@ export function BusinessExistingSettings({
                   disabled={defaultBrandingPending}
                 />
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </CardContent>
         </Card>
 
-        <Card className="bg-sidebar-accent/50 flex min-h-0 flex-col gap-0 rounded-lg border-0 p-2">
-          <CardHeader className="mb-3 shrink-0 gap-0 border-0 px-0 pt-0.5 pb-0 pl-3">
-            <CardTitle className="text-base font-medium">Services</CardTitle>
-            <CardDescription className="text-xs">
+        <Card className="border-border/60 from-background via-background to-muted/20 overflow-hidden rounded-3xl border bg-gradient-to-br shadow-sm">
+          <CardHeader className="border-border/50 gap-1 border-b px-5 py-4 sm:px-6">
+            <CardTitle className="text-base font-semibold">Services</CardTitle>
+            <CardDescription className="text-sm leading-relaxed">
               Enable or disable loyalty, referral, and feedback for your
               business
             </CardDescription>
           </CardHeader>
-          <Card className="border-border/45 bg-background/55 flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border shadow-none">
-            <CardContent className="flex flex-col divide-y px-4 py-0">
-              <div
-                id="loyalty"
-                className="flex scroll-mt-24 flex-col gap-1 py-4"
-              >
-                <div className="flex flex-row items-center justify-between">
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-sm font-medium">Loyalty</span>
-                    <span className="text-muted-foreground text-xs">
-                      Points and rewards
-                    </span>
+          <CardContent className="px-5 py-5 sm:px-6">
+            <div className="border-border/50 bg-background/75 overflow-hidden rounded-2xl border">
+              <div className="flex flex-col divide-y px-4 py-0">
+                <div
+                  id="loyalty"
+                  className="flex scroll-mt-24 flex-col gap-1 py-4"
+                >
+                  <div className="flex flex-row items-center justify-between">
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-sm font-medium">Loyalty</span>
+                      <span className="text-muted-foreground text-xs">
+                        Points and rewards
+                      </span>
+                    </div>
+                    <Switch
+                      checked={
+                        isServiceEnabled(
+                          business.isServiceEnabled,
+                          "loyalty",
+                        ) ?? false
+                      }
+                      onCheckedChange={handleLoyaltyEnabledChange}
+                      disabled={loyaltyPending}
+                    />
                   </div>
-                  <Switch
-                    checked={
-                      isServiceEnabled(business.isServiceEnabled, "loyalty") ??
-                      false
-                    }
-                    onCheckedChange={handleLoyaltyEnabledChange}
-                    disabled={loyaltyPending}
-                  />
                 </div>
-              </div>
 
-              <div
-                id="referral"
-                className="flex scroll-mt-24 flex-col gap-1 py-4"
-              >
-                <div className="flex flex-row items-center justify-between">
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-sm font-medium">Referral</span>
-                    <span className="text-muted-foreground text-xs">
-                      Referral program (requires loyalty)
-                    </span>
+                <div
+                  id="referral"
+                  className="flex scroll-mt-24 flex-col gap-1 py-4"
+                >
+                  <div className="flex flex-row items-center justify-between">
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-sm font-medium">Referral</span>
+                      <span className="text-muted-foreground text-xs">
+                        Referral program (requires loyalty)
+                      </span>
+                    </div>
+                    <Switch
+                      checked={
+                        isServiceEnabled(
+                          business.isServiceEnabled,
+                          "referral",
+                        ) ?? false
+                      }
+                      onCheckedChange={handleReferralEnabledChange}
+                      disabled={referralPending}
+                    />
                   </div>
-                  <Switch
-                    checked={
-                      isServiceEnabled(business.isServiceEnabled, "referral") ??
-                      false
-                    }
-                    onCheckedChange={handleReferralEnabledChange}
-                    disabled={referralPending}
-                  />
                 </div>
-              </div>
 
-              <div className="flex flex-col gap-1 py-4">
-                <div className="flex flex-row items-center justify-between">
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-sm font-medium">Feedback</span>
-                    <span className="text-muted-foreground text-xs">
-                      Feedback links on bills
-                    </span>
+                <div className="flex flex-col gap-1 py-4">
+                  <div className="flex flex-row items-center justify-between">
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-sm font-medium">Feedback</span>
+                      <span className="text-muted-foreground text-xs">
+                        Feedback links on bills
+                      </span>
+                    </div>
+                    <Switch
+                      checked={
+                        isServiceEnabled(
+                          business.isServiceEnabled,
+                          "feedback",
+                        ) ?? false
+                      }
+                      onCheckedChange={handleFeedbackEnabledChange}
+                      disabled={feedbackPending}
+                    />
                   </div>
-                  <Switch
-                    checked={
-                      isServiceEnabled(business.isServiceEnabled, "feedback") ??
-                      false
-                    }
-                    onCheckedChange={handleFeedbackEnabledChange}
-                    disabled={feedbackPending}
-                  />
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </CardContent>
         </Card>
       </div>
     </DashboardPageShell>
