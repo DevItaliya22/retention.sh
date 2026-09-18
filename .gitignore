@@ -5,7 +5,9 @@ node_modules
 .pnp
 .pnp.js
 
-demo 
+.pnpm-store
+
+demo
 # Local env files
 .env
 .env.local
@@ -35,3 +37,6 @@ npm-debug.log*
 # Misc
 .DS_Store
 *.pem
+branch_structure.json
+temp_auto_push.bat
+temp_interactive_push.bat

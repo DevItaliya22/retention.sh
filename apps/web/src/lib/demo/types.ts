@@ -7,7 +7,8 @@ export type DemoScenarioKey =
   | "visit_made"
   | "cashback_large"
   | "partner_left"
-  | "partner_right";
+  | "partner_right"
+  | "showcase";
 
 export interface DemoRunOptions {
   billsPerAccount?: number;
@@ -23,6 +24,8 @@ export interface DemoBillPlan {
   storeDiscount: number;
   taxes: number[];
   shouldCreateFeedback: boolean;
+  /** When set, feedback response uses this rating (1–5). */
+  feedbackRating?: number;
 }
 
 export interface DemoCustomerProfile {

@@ -1,0 +1,12 @@
+{
+  "admin": {
+    "url": "http://localhost:3000/login",
+    "email": "demo@aurora.collective",
+    "password": "DemoShowcase@123"
+  },
+  "cashier": {
+    "url": "http://localhost:3000/cashier/aurora-collective/aurora-collective-main",
+    "email": "cashier@aurora-collective.dy.com",
+    "password": "DemoCashier@123"
+  }
+}

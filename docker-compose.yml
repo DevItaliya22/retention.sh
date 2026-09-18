@@ -3,7 +3,7 @@
 # Stop:  docker compose down
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgres:17
     container_name: dy-postgres
     restart: unless-stopped
     environment:
