@@ -14,20 +14,26 @@ const modeArg = process.argv
   ?.split("=")[1];
 
 const menu: Array<{ id: string; label: string; keys: DemoScenarioKey[] }> = [
-  { id: "1", label: "Cashback account", keys: ["cashback"] },
-  { id: "2", label: "Tier account", keys: ["tier"] },
-  { id: "3", label: "Amount spent account", keys: ["amount_spent"] },
-  { id: "4", label: "Visit made account", keys: ["visit_made"] },
-  { id: "5", label: "Large data account", keys: ["cashback_large"] },
   {
-    id: "6",
+    id: "1",
+    label: "Client showcase (90-day analytics demo)",
+    keys: ["showcase"],
+  },
+  { id: "2", label: "Cashback account", keys: ["cashback"] },
+  { id: "3", label: "Tier account", keys: ["tier"] },
+  { id: "4", label: "Amount spent account", keys: ["amount_spent"] },
+  { id: "5", label: "Visit made account", keys: ["visit_made"] },
+  { id: "6", label: "Large data account", keys: ["cashback_large"] },
+  {
+    id: "7",
     label: "Partner accounts (both sides)",
     keys: ["partner_left", "partner_right"],
   },
   {
-    id: "7",
-    label: "All accounts",
+    id: "8",
+    label: "All accounts (incl. showcase)",
     keys: [
+      "showcase",
       "cashback",
       "tier",
       "amount_spent",
@@ -40,6 +46,7 @@ const menu: Array<{ id: string; label: string; keys: DemoScenarioKey[] }> = [
 ];
 
 const modeToKeys: Record<string, DemoScenarioKey[]> = {
+  showcase: ["showcase"],
   cashback: ["cashback"],
   tier: ["tier"],
   "amount-spent": ["amount_spent"],
@@ -47,6 +54,7 @@ const modeToKeys: Record<string, DemoScenarioKey[]> = {
   large: ["cashback_large"],
   partner: ["partner_left", "partner_right"],
   all: [
+    "showcase",
     "cashback",
     "tier",
     "amount_spent",
@@ -70,10 +78,10 @@ async function pickScenarioKeys(): Promise<DemoScenarioKey[]> {
 
   const rl = createInterface({ input, output });
   try {
-    const answer = (await rl.question("Enter option (1-6): ")).trim();
+    const answer = (await rl.question("Enter option (1-8): ")).trim();
     const picked = menu.find((m) => m.id === answer);
     if (!picked) {
-      throw new Error("Invalid option. Use 1 to 6.");
+      throw new Error("Invalid option. Use 1 to 8.");
     }
     return picked.keys;
   } finally {

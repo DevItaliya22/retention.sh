@@ -17,6 +17,7 @@
     "test:tier-e2e": "npx tsx scripts/tier-scenarios.e2e.ts",
     "test:amount-spent-e2e": "npx tsx scripts/amount-spent-scenarios.e2e.ts",
     "demo:seed": "npx tsx src/lib/demo/cli.ts",
+    "demo:seed:showcase": "npx tsx src/lib/demo/cli.ts --mode=showcase",
     "demo:test": "npx tsx src/lib/demo/test/cli.ts"
   },
   "dependencies": {

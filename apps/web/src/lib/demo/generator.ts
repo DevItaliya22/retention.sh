@@ -5,7 +5,8 @@ import {
 } from "@/lib/actions/loyalty";
 import { APP_CONSTANTS } from "@/lib/constants/app";
 import { seedDefaultSegments } from "@/lib/segmentation/seed";
-import { hashPassword } from "@/lib/utils/password";
+import { hashPassword as hashCashierPassword } from "@/lib/utils/password";
+import { hashPassword as hashBetterAuthPassword } from "better-auth/crypto";
 import { generateSlug } from "@/lib/utils/slug";
 import {
   db,
@@ -23,6 +24,20 @@ import {
   DEFAULT_CUSTOMERS_PER_ACCOUNT,
   DEMO_CUSTOMER_PROFILES,
 } from "./constants";
+import {
+  SHOWCASE_CATEGORIES,
+  SHOWCASE_CUSTOMER_NAMES,
+  SHOWCASE_DEFAULTS,
+  SHOWCASE_FEEDBACK_CATEGORIES,
+  SHOWCASE_HOW_DID_YOU_HEAR,
+  SHOWCASE_IDENTITY,
+  SHOWCASE_SELECTION_OPTIONS,
+  SHOWCASE_SKU_NAMES,
+  buildShowcaseBillPlans,
+  seedShowcaseMessageLogs,
+  showcaseCampaignWindow,
+  wipeShowcaseBusinessIfExists,
+} from "./showcase";
 import type {
   DemoAccountLog,
   DemoBillLog,
@@ -73,6 +88,7 @@ interface AccountScenario {
   skuCount: number;
   referralPairs: number;
   largeData?: boolean;
+  showcase?: boolean;
 }
 
 interface CreateBillOverrides {
@@ -202,13 +218,29 @@ async function createBusinessStack(
   accountIndex: number,
   options: BusinessStackOptions,
 ): Promise<DemoAccountContext> {
+  const isShowcase = options.accountKey === "showcase";
   const slugBase = generateSlug(
-    `demo-${options.accountKey}-${runId}-${accountIndex}`,
+    isShowcase
+      ? SHOWCASE_IDENTITY.businessSlug
+      : `demo-${options.accountKey}-${runId}-${accountIndex}`,
   );
-  const businessSlug = `${slugBase}-${Math.random().toString(36).slice(2, 7)}`;
-  const businessName = `Demo ${options.accountKey.replace(/_/g, " ")} ${runId}`;
-  const adminPassword = "DemoAdmin@123";
-  const cashierPassword = "DemoCashier@123";
+  const businessSlug = isShowcase
+    ? SHOWCASE_IDENTITY.businessSlug
+    : `${slugBase}-${Math.random().toString(36).slice(2, 7)}`;
+  const businessName = isShowcase
+    ? SHOWCASE_IDENTITY.businessName
+    : `Demo ${options.accountKey.replace(/_/g, " ")} ${runId}`;
+  const adminPassword = isShowcase
+    ? SHOWCASE_IDENTITY.adminPassword
+    : "DemoAdmin@123";
+  const cashierPassword = isShowcase
+    ? SHOWCASE_IDENTITY.cashierPassword
+    : "DemoCashier@123";
+
+  const businessCreatedAt = new Date();
+  if (isShowcase) {
+    businessCreatedAt.setDate(businessCreatedAt.getDate() - 120);
+  }
 
   const business = await db.business.create({
     data: {
@@ -223,13 +255,23 @@ async function createBusinessStack(
       defaultCurrencyCode: "INR",
       defaultCurrencySymbol: "₹",
       nextBillNumber: 1,
+      industries: isShowcase ? [...SHOWCASE_IDENTITY.industries] : [],
+      registrationBonusPoints: isShowcase ? 50 : 0,
+      feedbackSetupCompletedAt: isShowcase ? new Date() : null,
+      useDefaultBrandingForServices: isShowcase,
+      createdAt: businessCreatedAt,
+      updatedAt: businessCreatedAt,
     },
   });
 
-  const adminEmail = `demo.admin.${options.accountKey}.${runId}@dy.com`;
+  const adminEmail = isShowcase
+    ? SHOWCASE_IDENTITY.adminEmail
+    : `demo.admin.${options.accountKey}.${runId}@dy.com`;
   const adminUser = await db.user.create({
     data: {
-      name: `Demo Admin ${loyaltyType}`,
+      name: isShowcase
+        ? SHOWCASE_IDENTITY.adminName
+        : `Demo Admin ${loyaltyType}`,
       email: adminEmail,
       emailVerified: true,
       role: "ADMIN",
@@ -242,7 +284,7 @@ async function createBusinessStack(
       accountId: adminUser.id,
       providerId: "credential",
       userId: adminUser.id,
-      password: await hashPassword(adminPassword),
+      password: await hashBetterAuthPassword(adminPassword),
     },
   });
 
@@ -253,17 +295,21 @@ async function createBusinessStack(
     },
   });
 
-  const cashierEmail = `demo.cashier@${businessSlug}.dy.com`;
+  const cashierEmail = isShowcase
+    ? `cashier@${SHOWCASE_IDENTITY.businessSlug}.dy.com`
+    : `demo.cashier@${businessSlug}.dy.com`;
   const cashierUser = await db.user.create({
     data: {
-      name: `Demo Cashier ${loyaltyType}`,
-      email: `cashier.user.${options.accountKey}.${runId}@dy.com`,
+      name: isShowcase ? "Aurora Floor Cashier" : `Demo Cashier ${loyaltyType}`,
+      email: isShowcase
+        ? `cashier.user@${SHOWCASE_IDENTITY.businessSlug}.dy.com`
+        : `cashier.user.${options.accountKey}.${runId}@dy.com`,
       emailVerified: true,
       role: "CASHIER",
     },
   });
 
-  const hashedPassword = await hashPassword(cashierPassword);
+  const hashedPassword = await hashCashierPassword(cashierPassword);
   const cashier = await db.cashier.create({
     data: {
       userId: cashierUser.id,
@@ -278,10 +324,12 @@ async function createBusinessStack(
   const branding = await db.branding.create({
     data: {
       businessId: business.id,
-      themeColor: "#0f766e",
-      textColor: "#0f172a",
-      header: `${businessName} Loyalty`,
-      subtitle: "Demo loyalty setup",
+      themeColor: isShowcase ? SHOWCASE_IDENTITY.themeColor : "#0f766e",
+      textColor: isShowcase ? SHOWCASE_IDENTITY.textColor : "#0f172a",
+      header: isShowcase ? SHOWCASE_IDENTITY.header : `${businessName} Loyalty`,
+      subtitle: isShowcase
+        ? SHOWCASE_IDENTITY.subtitle
+        : "Demo loyalty setup",
     },
   });
 
@@ -294,11 +342,13 @@ async function createBusinessStack(
   const skuCount = options.skuCount ?? 6;
   const categories: Array<{ id: string }> = [];
   for (let i = 0; i < categoryCount; i += 1) {
+    const showcaseCategory = isShowcase ? SHOWCASE_CATEGORIES[i] : null;
     const category = await db.category.create({
       data: {
         businessId: business.id,
-        name: `Category ${i + 1}`,
-        description: `Demo category ${i + 1}`,
+        name: showcaseCategory?.name ?? `Category ${i + 1}`,
+        description:
+          showcaseCategory?.description ?? `Demo category ${i + 1}`,
         sortOrder: i + 1,
       },
       select: { id: true },
@@ -312,13 +362,16 @@ async function createBusinessStack(
       categories[idx % categories.length],
       `Missing category for SKU ${idx}`,
     );
+    const showcaseSkuName = isShowcase ? SHOWCASE_SKU_NAMES[idx] : null;
     const created = await db.sku.create({
       data: {
         businessId: business.id,
         categoryId: category.id,
         sku: `SKU-${String(idx + 1).padStart(3, "0")}-${accountIndex}`,
-        name: `Demo Item ${idx + 1}`,
-        price: 80 + ((idx * 17) % 450),
+        name: showcaseSkuName ?? `Demo Item ${idx + 1}`,
+        price: isShowcase
+          ? 120 + ((idx * 37) % 680)
+          : 80 + ((idx * 17) % 450),
         isActive: true,
       },
       select: { id: true },
@@ -340,8 +393,11 @@ async function createBusinessStack(
     branding.id,
     firstSku,
     secondSku,
+    { showcase: isShowcase },
   );
-  await createCampaignSetup(business.id, loyaltyType, runId);
+  await createCampaignSetup(business.id, loyaltyType, runId, {
+    showcase: isShowcase,
+  });
   await seedDefaultSegments(business.id);
 
   return {
@@ -570,15 +626,16 @@ async function createReferralAndFeedbackSetup(
   brandingId: string,
   newCustomerFreeSkuId: string,
   existingCustomerFreeSkuId: string,
+  options: { showcase?: boolean } = {},
 ) {
   const referralProgram = await db.referralProgram.create({
     data: {
       businessId,
       isEnabled: true,
       newCustomerBenefitType: "AMOUNT_CASHBACK",
-      newCustomerBenefitValue: 50,
+      newCustomerBenefitValue: options.showcase ? 75 : 50,
       existingCustomerBenefitType: "AMOUNT_CASHBACK",
-      existingCustomerBenefitValue: 75,
+      existingCustomerBenefitValue: options.showcase ? 100 : 75,
       lockReferralPointsUntilFirstPurchase: true,
       informationSections: [
         {
@@ -587,7 +644,9 @@ async function createReferralAndFeedbackSetup(
         },
       ] as unknown as Prisma.JsonArray,
       branding: {
-        themeColor: "#0f766e",
+        themeColor: options.showcase
+          ? SHOWCASE_IDENTITY.themeColor
+          : "#0f766e",
       } as Prisma.JsonObject,
       newCustomerFreeItemSkuId: newCustomerFreeSkuId,
       existingCustomerFreeItemSkuId: existingCustomerFreeSkuId,
@@ -618,30 +677,70 @@ async function createReferralAndFeedbackSetup(
       timing: "IMMEDIATELY",
       collectionChannel: "CASHIER_PORTAL",
       feedbackRewardEnabled: true,
-      rewardAmount: 25,
-      positiveFollowUp: "Thanks for your feedback.",
-      negativeFollowUp: "Thanks, we will improve.",
-      askForOnlineReviews: false,
+      rewardAmount: options.showcase ? 30 : 25,
+      positiveFollowUp: options.showcase
+        ? "Thanks! Glad you loved Aurora Collective."
+        : "Thanks for your feedback.",
+      negativeFollowUp: options.showcase
+        ? "Sorry we missed the mark — our team will follow up."
+        : "Thanks, we will improve.",
+      askForOnlineReviews: Boolean(options.showcase),
+      onlineReviewPlatform: options.showcase ? "GOOGLE" : null,
+      onlineReviewLink: options.showcase
+        ? "https://g.page/r/aurora-collective-demo"
+        : null,
       isHowDidYouHearEnabled: true,
+      negAlertChannelsEmail: Boolean(options.showcase),
+      negFeedbackAlertEmailAddress: options.showcase
+        ? SHOWCASE_IDENTITY.adminEmail
+        : null,
     },
   });
 
-  await db.feedbackSelectionOption.createMany({
-    data: [
-      { configId: feedbackConfig.id, label: "Service", seq: 1 },
-      { configId: feedbackConfig.id, label: "Product Quality", seq: 2 },
-      { configId: feedbackConfig.id, label: "Value", seq: 3 },
-    ],
-    skipDuplicates: true,
-  });
+  if (options.showcase) {
+    await db.feedbackCategory.createMany({
+      data: SHOWCASE_FEEDBACK_CATEGORIES.map((name) => ({
+        configId: feedbackConfig.id,
+        name,
+      })),
+      skipDuplicates: true,
+    });
+    await db.howDidYouHearOption.createMany({
+      data: SHOWCASE_HOW_DID_YOU_HEAR.map((name) => ({
+        configId: feedbackConfig.id,
+        name,
+      })),
+      skipDuplicates: true,
+    });
+    await db.feedbackSelectionOption.createMany({
+      data: SHOWCASE_SELECTION_OPTIONS.map((label, seq) => ({
+        configId: feedbackConfig.id,
+        label,
+        seq: seq + 1,
+      })),
+      skipDuplicates: true,
+    });
+  } else {
+    await db.feedbackSelectionOption.createMany({
+      data: [
+        { configId: feedbackConfig.id, label: "Service", seq: 1 },
+        { configId: feedbackConfig.id, label: "Product Quality", seq: 2 },
+        { configId: feedbackConfig.id, label: "Value", seq: 3 },
+      ],
+      skipDuplicates: true,
+    });
+  }
 }
 
 async function createCampaignSetup(
   businessId: string,
   loyaltyType: LoyaltyType,
   runId: string,
+  options: { showcase?: boolean } = {},
 ) {
-  const { startsAt, expiresAt } = campaignWindow();
+  const { startsAt, expiresAt } = options.showcase
+    ? showcaseCampaignWindow()
+    : campaignWindow();
 
   for (let i = 0; i < CAMPAIGN_REWARDS.length; i += 1) {
     const reward = required(
@@ -651,9 +750,15 @@ async function createCampaignSetup(
     await db.campaign.create({
       data: {
         businessId,
-        slug: `demo-${loyaltyType.toLowerCase()}-${runId}-${i}-${Math.random().toString(36).slice(2, 6)}`,
-        title: reward.title,
-        description: `${reward.title} for ${loyaltyType}`,
+        slug: options.showcase
+          ? `aurora-${reward.rewardType.toLowerCase()}-${i}`
+          : `demo-${loyaltyType.toLowerCase()}-${runId}-${i}-${Math.random().toString(36).slice(2, 6)}`,
+        title: options.showcase
+          ? reward.title.replace("Campaign", "— Aurora")
+          : reward.title,
+        description: options.showcase
+          ? `${reward.title} running across the last 90 days of visits.`
+          : `${reward.title} for ${loyaltyType}`,
         rewardType: reward.rewardType,
         rewardValue: reward.rewardValue,
         status: "ACTIVE",
@@ -763,15 +868,18 @@ async function createCustomers(
   customersPerAccount: number,
   runId: string,
 ) {
-  const names = DEMO_CUSTOMER_PROFILES.map((p) => p.name);
+  const isShowcase = account.accountKey === "showcase";
+  const names = isShowcase
+    ? [...SHOWCASE_CUSTOMER_NAMES]
+    : DEMO_CUSTOMER_PROFILES.map((p) => p.name);
   const count = customersPerAccount;
 
   const created = [] as PreparedCustomer[];
   await db.$transaction(async (tx) => {
     for (let i = 0; i < count; i += 1) {
-      const phoneSeed = Number(
-        `${runId.slice(-6)}${String(i + 1).padStart(2, "0")}`,
-      );
+      const phoneSeed = isShowcase
+        ? 8800000000 + i
+        : Number(`${runId.slice(-6)}${String(i + 1).padStart(2, "0")}`);
       const phoneNumber = buildCustomerPhone(phoneSeed);
       const customer = await findOrCreateCustomer(tx, {
         businessId: account.businessId,
@@ -783,6 +891,33 @@ async function createCustomers(
   });
 
   account.customers = created;
+
+  if (isShowcase) {
+    // Stagger customer join dates across ~100 days for new-vs-repeat charts
+    for (let i = 0; i < account.customers.length; i += 1) {
+      const customer = account.customers[i];
+      if (!customer) continue;
+      const joinedDaysAgo =
+        i < 8
+          ? 100 - (i % 5)
+          : i < 28
+            ? 70 - (i % 40)
+            : i < 36
+              ? 20 - (i % 18)
+              : 95 - (i % 20);
+      const createdAt = new Date();
+      createdAt.setDate(createdAt.getDate() - Math.max(1, joinedDaysAgo));
+      await db.businessCustomer.update({
+        where: {
+          businessId_customerId: {
+            businessId: account.businessId,
+            customerId: customer.customerId,
+          },
+        },
+        data: { createdAt, updatedAt: createdAt },
+      });
+    }
+  }
 }
 
 async function createReferrals(
@@ -802,6 +937,7 @@ async function createReferrals(
   }
 
   await db.$transaction(async (tx) => {
+    let pairOrdinal = 0;
     for (const [referrerIndex, referredIndex] of pairs) {
       const referrer = required(
         account.customers[referrerIndex],
@@ -811,6 +947,13 @@ async function createReferrals(
         account.customers[referredIndex],
         `Missing referred at index ${referredIndex}`,
       );
+
+      const referralCreatedAt = new Date();
+      if (account.accountKey === "showcase") {
+        referralCreatedAt.setDate(
+          referralCreatedAt.getDate() - (5 + pairOrdinal * 6),
+        );
+      }
 
       await tx.businessCustomer.update({
         where: {
@@ -835,6 +978,7 @@ async function createReferrals(
           becameCustomer: true,
           referredBusinessId: account.businessId,
           referredCustomerId: referred.customerId,
+          createdAt: referralCreatedAt,
         },
       });
 
@@ -863,6 +1007,8 @@ async function createReferrals(
             referralLogId: referralLog.id,
             lockUntilFirstPurchase: true,
           } as Prisma.JsonObject,
+          createdAt: referralCreatedAt,
+          updatedAt: referralCreatedAt,
         },
       });
 
@@ -890,6 +1036,8 @@ async function createReferrals(
           metadata: {
             referralLogId: referralLog.id,
           } as Prisma.JsonObject,
+          createdAt: referralCreatedAt,
+          updatedAt: referralCreatedAt,
         },
       });
 
@@ -898,6 +1046,7 @@ async function createReferrals(
         referred: `${referred.name} (${referred.phoneNumber})`,
         referralLogId: referralLog.id,
       });
+      pairOrdinal += 1;
     }
   });
 
@@ -935,6 +1084,7 @@ async function createFeedbackResponse(
     customerId: string;
     billId: string;
     createdAt: Date;
+    rating?: number;
   },
 ): Promise<void> {
   const link = await tx.feedbackLink.findUnique({
@@ -942,7 +1092,9 @@ async function createFeedbackResponse(
     include: {
       config: {
         include: {
-          selectionOptions: { orderBy: { seq: "asc" }, take: 2 },
+          selectionOptions: { orderBy: { seq: "asc" } },
+          categories: true,
+          howDidYouHearOptions: true,
         },
       },
     },
@@ -950,17 +1102,47 @@ async function createFeedbackResponse(
 
   if (!link?.config || link.feedbackResponseId) return;
 
+  const rating = Math.min(5, Math.max(1, params.rating ?? 4));
+  const options = link.config.selectionOptions;
+  const selectedOptions =
+    rating <= 2
+      ? options.slice(-2)
+      : options.slice(0, Math.min(3, options.length));
+
+  const categoryNames =
+    link.config.categories.length > 0
+      ? link.config.categories
+          .slice(0, rating >= 4 ? 2 : 1)
+          .map((c) => c.name)
+      : ["Service", "Product"];
+
+  const howDidYouHear =
+    link.config.howDidYouHearOptions.length > 0
+      ? (link.config.howDidYouHearOptions[
+          Math.abs(params.billId.charCodeAt(0) + rating) %
+            link.config.howDidYouHearOptions.length
+        ]?.name ?? "Walk-in")
+      : "Referral";
+
+  const commentsByRating: Record<number, string> = {
+    1: "Wait was long and order was wrong.",
+    2: "Okay, but expected better for the price.",
+    3: "Decent visit — room to improve service speed.",
+    4: "Really good — will come back this week.",
+    5: "Outstanding experience. Staff and product were excellent.",
+  };
+
   const response = await tx.feedbackResponse.create({
     data: {
       configId: link.config.id,
       businessId: params.businessId,
       customerId: params.customerId,
-      rating: 4,
-      comment: "Great demo experience.",
-      howDidYouHear: "Referral",
-      selectedCategories: ["Service", "Product"],
+      rating,
+      comment: commentsByRating[rating] ?? "Great demo experience.",
+      howDidYouHear,
+      selectedCategories: categoryNames,
       selectedSelectionOptions: {
-        connect: link.config.selectionOptions.map((o) => ({ id: o.id })),
+        connect: selectedOptions.map((o) => ({ id: o.id })),
       },
       createdAt: params.createdAt,
       updatedAt: params.createdAt,
@@ -1192,6 +1374,7 @@ async function createBill(
         customerId: customer.customerId,
         billId: bill.id,
         createdAt,
+        rating: plan.feedbackRating,
       });
       hadFeedback = true;
     }
@@ -1555,6 +1738,16 @@ export async function createDemoAccounts(
 
   const allScenarios: AccountScenario[] = [
     {
+      accountKey: "showcase",
+      loyaltyType: "CASHBACK",
+      bills: SHOWCASE_DEFAULTS.bills,
+      customers: SHOWCASE_DEFAULTS.customers,
+      categoryCount: SHOWCASE_DEFAULTS.categoryCount,
+      skuCount: SHOWCASE_DEFAULTS.skuCount,
+      referralPairs: SHOWCASE_DEFAULTS.referralPairs,
+      showcase: true,
+    },
+    {
       accountKey: "cashback",
       loyaltyType: "CASHBACK",
       bills: billsPerAccount,
@@ -1628,6 +1821,11 @@ export async function createDemoAccounts(
     ? allScenarios.filter((s) => selectedScenarioKeys.has(s.accountKey))
     : allScenarios;
 
+  if (scenarios.some((s) => s.showcase)) {
+    logProgress("wiping previous Aurora Collective showcase business (if any)");
+    await wipeShowcaseBusinessIfExists();
+  }
+
   const allLogs: DemoAccountLog[] = [];
   const accountByKey = new Map<string, DemoAccountContext>();
   const logByKey = new Map<string, DemoAccountLog>();
@@ -1666,9 +1864,11 @@ export async function createDemoAccounts(
       scenario.referralPairs,
     );
 
-    const plans = scenario.largeData
-      ? buildLargeBillPlans(scenario.customers, scenario.bills)
-      : buildBillPlans(scenario.customers, scenario.bills);
+    const plans = scenario.showcase
+      ? buildShowcaseBillPlans(scenario.customers, scenario.bills)
+      : scenario.largeData
+        ? buildLargeBillPlans(scenario.customers, scenario.bills)
+        : buildBillPlans(scenario.customers, scenario.bills);
     const billLogs: DemoBillLog[] = [];
 
     for (let billIndex = 0; billIndex < plans.length; billIndex += 1) {
@@ -1678,12 +1878,28 @@ export async function createDemoAccounts(
       );
       const log = await createBill(account, plan, billIndex);
       billLogs.push(log);
-      logProgress(
-        `${billIndex + 1}/${plans.length} bill created for ${account.businessSlug} (${scenario.accountKey})`,
-      );
+      if (billIndex === 0 || (billIndex + 1) % 25 === 0 || billIndex + 1 === plans.length) {
+        logProgress(
+          `${billIndex + 1}/${plans.length} bills created for ${account.businessSlug} (${scenario.accountKey})`,
+        );
+      }
     }
 
     await normalizeWalletLastVisitAt(account);
+
+    if (scenario.showcase) {
+      const campaigns = await db.campaign.findMany({
+        where: { businessId: account.businessId },
+        select: { id: true },
+      });
+      const messageCount = await seedShowcaseMessageLogs({
+        businessId: account.businessId,
+        campaignIds: campaigns.map((c) => c.id),
+        customerPhones: account.customers.map((c) => c.phoneNumber),
+        billsCreated: billLogs.length,
+      });
+      logProgress(`showcase message logs created: ${messageCount}`);
+    }
 
     const feedbackResponsesCreated = billLogs.filter(
       (b) => b.hadFeedback,
@@ -1749,6 +1965,21 @@ export async function createDemoAccounts(
   logProgress(
     `demo creation completed. logs written in ${path.join(process.cwd(), "demo", "logs")}`,
   );
+
+  const showcaseLog = allLogs.find((l) => l.accountKey === "showcase");
+  if (showcaseLog) {
+    logProgress("");
+    logProgress("=== CLIENT SHOWCASE LOGIN ===");
+    logProgress(`Business: ${showcaseLog.businessName} (${showcaseLog.businessSlug})`);
+    logProgress(`Admin:    ${showcaseLog.adminEmail}`);
+    logProgress(`Password: ${showcaseLog.adminPassword}`);
+    logProgress(`Cashier:  ${showcaseLog.cashierEmail}`);
+    logProgress(`Password: ${showcaseLog.cashierPassword}`);
+    logProgress(
+      `Stats:    ${showcaseLog.customersCreated} customers · ${showcaseLog.billsCreated} bills · ${showcaseLog.feedbackResponsesCreated} feedback · ${showcaseLog.referralsDone.length} referrals`,
+    );
+    logProgress("Open http://localhost:3000/login and use 90d analytics filters.");
+  }
 
   return allLogs;
 }
