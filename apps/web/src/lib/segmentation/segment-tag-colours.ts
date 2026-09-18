@@ -44,7 +44,7 @@ const HEX_RE = /^#([0-9A-Fa-f]{6})$/;
 
 export function normalizeTagColourHex(input: string): string | null {
   const m = input.trim().match(HEX_RE);
-  if (!m) return null;
+  if (!m?.[1]) return null;
   return `#${m[1].toUpperCase()}`;
 }
 
@@ -65,7 +65,7 @@ export function hashSlugToPaletteIndex(slug: string): number {
 export function getDefaultTagHexForSlug(slug: string): SegmentTagHex {
   const key = slug.trim().toLowerCase();
   const idx = DEFAULT_SYSTEM_SLUG_TO_PALETTE_INDEX[key];
-  if (idx !== undefined) return SEGMENT_TAG_PALETTE[idx];
+  if (idx !== undefined) return SEGMENT_TAG_PALETTE[idx]!;
   return SEGMENT_TAG_PALETTE[hashSlugToPaletteIndex(key)]!;
 }
 
