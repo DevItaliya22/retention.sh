@@ -9,8 +9,6 @@ node_modules
 
 demo
 # Local env files
-.env
-.env.local
 .env.development.local
 .env.test.local
 .env.production.local
@@ -40,3 +38,4 @@ npm-debug.log*
 branch_structure.json
 temp_auto_push.bat
 temp_interactive_push.bat
+config.bat

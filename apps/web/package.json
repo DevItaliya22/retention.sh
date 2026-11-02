@@ -4,9 +4,9 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
-    "build": "next build",
-    "start": "next start",
+    "dev": "node init && next dev --turbopack",
+    "build": "node init && next build",
+    "start": "node init && next start",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "lint": "eslint . --max-warnings=0",
     "lint:fix": "eslint . --fix",
