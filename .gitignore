@@ -7,6 +7,8 @@ node_modules
 
 demo 
 # Local env files
+.env
+.env.local
 .env.development.local
 .env.test.local
 .env.production.local
@@ -33,4 +35,3 @@ npm-debug.log*
 # Misc
 .DS_Store
 *.pem
-config.bat
